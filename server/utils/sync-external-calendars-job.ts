@@ -13,6 +13,8 @@ import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 
 export const FAILURE_NOTIFY_THRESHOLD = 3
+/** Platform inbox for repeated external-calendar sync failures. Not a tenant admin. */
+export const CALENDAR_SYNC_FAILURE_EMAIL = 'info@simy.ch'
 /** After this many consecutive failures, only retry on backoff cadence (not every 15 min). */
 export const FAILURE_BACKOFF_THRESHOLD = 5
 const FAILURE_BACKOFF_MS = 6 * 60 * 60 * 1000 // 6h
@@ -70,17 +72,6 @@ export async function notifyAdminBrokenCalendar(
     .eq('id', calendar.tenant_id)
     .single()
 
-  const { data: admins } = await supabase
-    .from('users')
-    .select('email')
-    .eq('tenant_id', calendar.tenant_id)
-    .eq('role', 'admin')
-    .not('email', 'is', null)
-    .limit(3)
-
-  const adminEmails = (admins || []).map((a: any) => a.email).filter(Boolean)
-  if (adminEmails.length === 0) return
-
   const tenantName = tenant?.name || 'Simy'
   const primaryColor = tenant?.primary_color || '#1e293b'
   const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
@@ -107,7 +98,7 @@ ${logoHtml}
 
   try {
     await sendEmail({
-      to: adminEmails,
+      to: CALENDAR_SYNC_FAILURE_EMAIL,
       subject: `Kalender-Sync fehlgeschlagen: ${calendar.calendar_name || 'Unbekannt'}`,
       html,
       fromName: tenantName,
@@ -118,7 +109,7 @@ ${logoHtml}
       .from('external_calendars')
       .update({ failure_notified_at: now.toISOString() })
       .eq('id', calendar.id)
-    logger.debug(`✅ Admin notified about broken calendar: ${calendar.calendar_name}`)
+    logger.debug(`✅ Calendar sync failure notification sent: ${calendar.calendar_name}`)
   } catch (e: any) {
     logger.warn('⚠️ Could not send broken calendar notification:', e.message)
   }
