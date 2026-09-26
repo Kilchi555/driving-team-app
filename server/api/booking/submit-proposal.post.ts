@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { recordAndUploadInquiryConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { upsertMarketingLeadSafe } from '~/server/utils/upsert-marketing-lead'
+import { resolveInquiryUserId } from '~/server/utils/resolve-inquiry-user'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
 import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
 
@@ -234,6 +235,23 @@ export default defineEventHandler(async (event) => {
       marketing_attribution,
     )
 
+    const resolvedUserId = await resolveInquiryUserId({
+      tenantId: tenant_id,
+      createdByUserId: created_by_user_id || null,
+      categoryCode: category_code || null,
+      fields: {
+        first_name: first_name?.trim() || '',
+        last_name: last_name?.trim() || '',
+        email: email?.trim() || '',
+        phone: phone?.trim() || '',
+        street: street?.trim() || '',
+        street_nr: house_number?.trim() || '',
+        zip: postal_code?.trim() || '',
+        city: city?.trim() || '',
+      },
+      admin: supabase,
+    })
+
     // Create the proposal via service_role – this is a server-side endpoint, input is
     // already validated above. Admin client bypasses RLS safely.
     const { data: proposal, error: proposalError } = await supabase
@@ -254,7 +272,7 @@ export default defineEventHandler(async (event) => {
         postal_code: postal_code?.trim() || null,
         city: city?.trim() || null,
         notes: notes?.trim() || null,
-        created_by_user_id: created_by_user_id || null,
+        created_by_user_id: resolvedUserId,
         status: 'pending',
         marketing_session_id: marketing_session_id || null,
         utm_source: resolvedAttribution?.utm_source ?? null,
