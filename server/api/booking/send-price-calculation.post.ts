@@ -1,8 +1,6 @@
 import { defineEventHandler, readBody } from 'h3'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 interface PriceCalculationRequest {
   email: string
   category: string
@@ -192,6 +190,7 @@ export default defineEventHandler(async (event) => {
       </html>
     `
 
+    const resend = new Resend(process.env.RESEND_API_KEY)
     const response = await resend.emails.send({
       from: 'noreply@drivingteam.ch',
       to: body.email,
