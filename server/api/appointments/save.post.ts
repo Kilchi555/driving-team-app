@@ -24,25 +24,15 @@ import { becameBindingConfirmed } from '~/server/utils/binding-booking'
 import { hashCustomerIdentifiers, reportBindingAppointmentConversionSafely } from '~/server/utils/binding-booking-conversion'
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 import { applyCreditToPayment } from '~/server/utils/apply-credit-to-payment'
-
-function mapStaffPaymentMethod(raw: unknown): string | null {
-  if (raw == null || raw === '') return null
-  const key = String(raw).trim().toLowerCase()
-  const mapping: Record<string, string> = {
-    wallee: 'wallee',
-    online: 'wallee',
-    twint: 'wallee',
-    card: 'wallee',
-    'credit-card': 'wallee',
-    cash: 'cash',
-    bar: 'cash',
-    invoice: 'invoice',
-    rechnung: 'invoice',
-  }
-  if (mapping[key]) return mapping[key]
-  if (['wallee', 'cash', 'invoice', 'credit'].includes(key)) return key
-  return 'wallee'
-}
+import {
+  classifyStaffPaymentChoice,
+  InvalidEventTypePaymentMethodError,
+  InvalidStaffPaymentMethodError,
+  loadEventTypePaymentMethod,
+  resolveAppointmentPaymentMethod,
+  type StaffPaymentMethod,
+} from '~/server/utils/appointment-payment-method'
+import { getTenantDefaultPaymentMethod } from '~/server/utils/tenant-default-payment-method'
 
 function bodyHasOwn(body: unknown, key: string): boolean {
   return !!body && typeof body === 'object' && Object.prototype.hasOwnProperty.call(body, key)
@@ -52,6 +42,50 @@ function asPlainObject(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : null
+}
+
+function staffPaymentMethodForEdit(raw: unknown): StaffPaymentMethod | null {
+  try {
+    const choice = classifyStaffPaymentChoice(raw, 'edit')
+    return choice.kind === 'explicit' ? choice.method : null
+  } catch (error) {
+    if (error instanceof InvalidStaffPaymentMethodError) {
+      throw createError({ statusCode: 400, statusMessage: 'Ungültige Zahlungsmethode' })
+    }
+    throw error
+  }
+}
+
+async function resolveStaffCreatePaymentMethod(opts: {
+  supabase: { from: (table: string) => any }
+  tenantId: string
+  eventTypeCode: string | null | undefined
+  paymentMethodForPayment: unknown
+}): Promise<StaffPaymentMethod> {
+  let choice
+  try {
+    choice = classifyStaffPaymentChoice(opts.paymentMethodForPayment, 'create')
+  } catch (error) {
+    if (error instanceof InvalidStaffPaymentMethodError) {
+      throw createError({ statusCode: 400, statusMessage: 'Ungültige Zahlungsmethode' })
+    }
+    throw error
+  }
+  if (choice.kind === 'explicit') return choice.method
+  try {
+    const eventTypePaymentMethod = await loadEventTypePaymentMethod(
+      opts.supabase,
+      opts.tenantId,
+      opts.eventTypeCode
+    )
+    const tenantDefault = await getTenantDefaultPaymentMethod(opts.supabase, opts.tenantId)
+    return resolveAppointmentPaymentMethod(tenantDefault, eventTypePaymentMethod)
+  } catch (error) {
+    if (error instanceof InvalidEventTypePaymentMethodError) {
+      throw createError({ statusCode: 400, statusMessage: 'Ungültige Terminart-Zahlungsmethode' })
+    }
+    throw error
+  }
 }
 
 export default defineEventHandler(async (event) => {
@@ -124,6 +158,18 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 403, statusMessage: 'Access denied: tenant mismatch' })
       }
     }
+
+    const explicitEditPaymentMethod = mode === 'edit'
+      ? staffPaymentMethodForEdit(paymentMethodForPayment)
+      : null
+    const createPaymentMethod = mode === 'edit'
+      ? null
+      : await resolveStaffCreatePaymentMethod({
+          supabase: getSupabaseAdmin(),
+          tenantId: appointmentData.tenant_id || callerProfile.tenant_id,
+          eventTypeCode: appointmentData.event_type_code,
+          paymentMethodForPayment,
+        })
 
     if (mode === 'edit' && !eventId) {
       throw createError({
@@ -438,7 +484,7 @@ export default defineEventHandler(async (event) => {
               creditUsed: (existingCreditUsed / 100).toFixed(2)
             })
             
-            const mappedPaymentMethod = mapStaffPaymentMethod(paymentMethodForPayment)
+            const mappedPaymentMethod = explicitEditPaymentMethod
             const invoiceSnapshot = asPlainObject(invoiceAddress)
             const paymentUpdateData: any = {
               lesson_price_rappen: finalBasePrice,
@@ -612,7 +658,8 @@ export default defineEventHandler(async (event) => {
       if (staffQuote.kind === 'paid') {
         const finalBasePrice = staffPayment.lessonPriceRappen
         const finalTotalAmount = staffPayment.totalAmountRappen
-        const markCashPaid = cashAlreadyPaid && paymentMethodForPayment === 'cash'
+        const effectivePaymentMethod = createPaymentMethod || 'wallee'
+        const markCashPaid = cashAlreadyPaid && effectivePaymentMethod === 'cash'
 
         const terms = await getTenantTerminology(supabase, appointmentData.tenant_id)
         const appointmentLabel = terms.appointment || 'Termin'
@@ -628,7 +675,7 @@ export default defineEventHandler(async (event) => {
           discount_amount_rappen: staffPayment.discountAmountRappen,
           voucher_discount_rappen: 0,
           total_amount_rappen: finalTotalAmount,
-          payment_method: paymentMethodForPayment || 'wallee',
+          payment_method: effectivePaymentMethod,
           payment_status: 'pending',
           credit_used_rappen: 0,
           ...(companyBillingAddressId ? { company_billing_address_id: companyBillingAddressId } : {}),
