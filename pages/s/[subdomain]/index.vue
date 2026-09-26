@@ -135,7 +135,7 @@
             <p>{{ svc.description }}</p>
             <p v-if="svc.duration_minutes" class="lp-meta">{{ svc.duration_minutes }} Min</p>
             <div class="lp-service-actions">
-              <NuxtLink v-if="svc.page_url" class="lp-service-more" :to="svc.page_url">Mehr zu {{ svc.page_label || svc.name }}</NuxtLink>
+              <NuxtLink v-if="svc.page_url" class="lp-service-more" :to="withPreviewToken(svc.page_url, previewToken)">Mehr zu {{ svc.page_label || svc.name }}</NuxtLink>
               <a
                 v-if="svc.book_url || landing.bookingUrl"
                 class="lp-service-book"
@@ -636,7 +636,8 @@ import '~/assets/css/website-landing-fonts.css'
 import WebsiteIcon from '~/components/website/WebsiteIcon.vue'
 import { isWebsiteIconKey, trustIconForLabel, type WebsiteIconKey } from '~/utils/website-icons'
 import { heroPreloadAttrs, offerPhotoSrc, offerPhotoSrcset, websiteImageProxyUrl } from '~/utils/website-responsive-image'
-import { websiteOverflowPages, websitePageCardHref, websitePageLinks, websiteStandardLinks } from '~/utils/website-nav'
+import { websiteOverflowPages, websitePageCardHref, websitePageLinks, websiteStandardLinks, type WebsiteNavPage, type WebsiteSectionLink } from '~/utils/website-nav'
+import { previewDataKey, previewQuerySuffix, readRoutePreviewToken, withPreviewToken } from '~/utils/website-preview-query'
 import { websiteFontCssVars, websiteFontHeadLinks } from '~/utils/website-fonts'
 import { isWebsitePickupMeetingPoint } from '~/utils/website-wizard-content'
 
@@ -647,7 +648,9 @@ definePageMeta({
 
 const route = useRoute()
 const subdomain = computed(() => String(route.params.subdomain || '').toLowerCase())
-const preview = computed(() => route.query.preview === '1')
+const previewToken = computed(() => readRoutePreviewToken(route.query as Record<string, unknown>))
+const preview = computed(() => previewToken.value.length > 0)
+const previewKey = computed(() => previewDataKey(previewToken.value))
 const mobileNavOpen = ref(false)
 const leadForm = ref({ first_name: '', email: '', phone: '', message: '', company: '' })
 const leadSending = ref(false)
@@ -667,19 +670,19 @@ if (import.meta.server && preview.value) {
 }
 
 const { data, pending, error } = await useAsyncData(
-  () => `site-${subdomain.value}-${preview.value ? 'p' : 'l'}`,
+  () => `site-${subdomain.value}-${previewKey.value}`,
   () =>
     $fetch(`/api/public/website/${encodeURIComponent(subdomain.value)}`, {
-      query: preview.value ? { preview: '1' } : undefined,
+      query: previewToken.value ? { preview_token: previewToken.value } : undefined,
     }),
-  { watch: [subdomain, preview] },
+  { watch: [subdomain, previewToken] },
 )
 
 const websiteId = computed(() => data.value?.website?.id || null)
 const { trackPageview, trackCta } = useWebsitePublicAnalytics(websiteId, preview)
 
 const { data: googleReviews } = await useAsyncData(
-  () => `site-reviews-${subdomain.value}-${preview.value ? 'p' : 'l'}`,
+  () => `site-reviews-${subdomain.value}-${previewKey.value}`,
   async () => {
     try {
       return await $fetch<{
@@ -697,7 +700,7 @@ const { data: googleReviews } = await useAsyncData(
         }>
       }>(`/api/public/website/${encodeURIComponent(subdomain.value)}/reviews`, {
         query: {
-          ...(preview.value ? { preview: '1' } : {}),
+          ...(previewToken.value ? { preview_token: previewToken.value } : {}),
           limit: 8,
         },
       })
@@ -705,7 +708,7 @@ const { data: googleReviews } = await useAsyncData(
       return null
     }
   },
-  { watch: [subdomain, preview] },
+  { watch: [subdomain, previewToken] },
 )
 
 const landing = computed(() => {
@@ -737,18 +740,38 @@ const photoCredits = computed(() => {
 })
 
 const homeHref = computed(() => `/s/${subdomain.value}`)
-const sectionLinks = computed(() =>
-  websiteStandardLinks({
+const sectionLinks = computed(() => {
+  const links = websiteStandardLinks({
     blocks: landing.value?.blocks,
     pages: (data.value as any)?.nav || [],
     homeHref: homeHref.value,
     onHome: true,
     slots: landing.value?.nav_slots || null,
-  }),
-)
-const pageLinks = computed(() =>
-  websiteOverflowPages(websitePageLinks((data.value as any)?.nav || []), sectionLinks.value),
-)
+  })
+  const token = previewToken.value
+  if (!token) return links
+  return links.map((link: WebsiteSectionLink) => ({
+    ...link,
+    href: withPreviewToken(link.href, token),
+    children: link.children?.map((child: { href: string; label: string }) => ({
+      ...child,
+      href: withPreviewToken(child.href, token),
+    })),
+  }))
+})
+const pageLinks = computed(() => {
+  const rawSection = websiteStandardLinks({
+    blocks: landing.value?.blocks,
+    pages: (data.value as any)?.nav || [],
+    homeHref: homeHref.value,
+    onHome: true,
+    slots: landing.value?.nav_slots || null,
+  })
+  return websiteOverflowPages(websitePageLinks((data.value as any)?.nav || []), rawSection).map((page: WebsiteNavPage) => ({
+    ...page,
+    href: withPreviewToken(page.href, previewToken.value),
+  }))
+})
 const hasDrawer = computed(() => sectionLinks.value.length + pageLinks.value.length > 0)
 
 // On app.simy.ch/s/... prefer verified custom domain (SEO)
@@ -880,7 +903,7 @@ async function checkPickupPlz() {
       plz?: string
     }>(`/api/public/website/${encodeURIComponent(subdomain.value)}/pickup-check`, {
       method: 'POST',
-      query: preview.value ? { preview: '1' } : undefined,
+      query: previewToken.value ? { preview_token: previewToken.value } : undefined,
       body: { plz },
     })
     pickupResult.value = res
@@ -927,7 +950,7 @@ const stickyActions = computed(() => {
   return out
 })
 
-const previewQs = computed(() => (preview.value ? '?preview=1' : ''))
+const previewQs = computed(() => previewQuerySuffix(previewToken.value))
 
 const defaultLegalLinks = computed(() => [
   { label: 'Impressum', href: `/s/${subdomain.value}/impressum${previewQs.value}` },
@@ -1077,7 +1100,7 @@ async function refreshSlotsQuietly() {
       `/api/public/website/${encodeURIComponent(subdomain.value)}/next-slots`,
       {
         query: {
-          ...(preview.value ? { preview: '1' } : {}),
+          ...(previewToken.value ? { preview_token: previewToken.value } : {}),
           _t: Date.now(),
         },
       },
@@ -1097,8 +1120,8 @@ async function submitLead() {
       `/api/public/website/${encodeURIComponent(subdomain.value)}/lead`,
       {
         method: 'POST',
-        query: preview.value ? { preview: '1' } : undefined,
-        body: { ...leadForm.value, category: 'contact', ...(preview.value ? { preview: '1' } : {}) },
+        query: previewToken.value ? { preview_token: previewToken.value } : undefined,
+        body: { ...leadForm.value, category: 'contact' },
       },
     )
     leadOk.value = true
@@ -1141,7 +1164,7 @@ function pageTypeLabel(type: string) {
   return 'Seite'
 }
 function pageCardHref(p: { href?: string; url?: string; slug?: string; title?: string }) {
-  return websitePageCardHref(p, subdomain.value, (data.value as any)?.nav || [])
+  return withPreviewToken(websitePageCardHref(p, subdomain.value, (data.value as any)?.nav || []), previewToken.value)
 }
 function pageBlockItems(block: any) {
   return (block?.content?.items || []).filter((p: any) => pageCardHref(p))

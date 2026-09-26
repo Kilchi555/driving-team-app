@@ -2,6 +2,8 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { renderWebsiteOgCard } from '~/server/utils/website-og-card'
+import { authorizePublicWebsiteRead } from '~/server/utils/website-preview-access'
+import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
 
 export default defineEventHandler(async (event) => {
   const subdomain = getRouterParam(event, 'subdomain')?.trim().toLowerCase()
@@ -9,7 +11,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'subdomain required' })
   }
 
-  const slug = String(getQuery(event).slug || 'index').trim().toLowerCase() || 'index'
+  const query = getQuery(event) as Record<string, unknown>
+  const slug = String(query.slug || 'index').trim().toLowerCase() || 'index'
   const supabase = getSupabaseAdmin()
 
   const { data: website } = await supabase
@@ -19,6 +22,12 @@ export default defineEventHandler(async (event) => {
     .maybeSingle()
 
   if (!website) {
+    throw createError({ statusCode: 404, statusMessage: 'Website not found' })
+  }
+
+  const access = await authorizePublicWebsiteRead(supabase, website, query, true)
+  if (!access.ok) {
+    setWebsitePublicCache(event, { preview: true })
     throw createError({ statusCode: 404, statusMessage: 'Website not found' })
   }
 
@@ -71,6 +80,10 @@ export default defineEventHandler(async (event) => {
   })
 
   setHeader(event, 'Content-Type', 'image/png')
-  setHeader(event, 'Cache-Control', 'public, max-age=3600, s-maxage=86400')
+  if (access.privateCache) {
+    setWebsitePublicCache(event, { preview: true })
+  } else {
+    setHeader(event, 'Cache-Control', 'public, max-age=3600, s-maxage=86400')
+  }
   return png
 })

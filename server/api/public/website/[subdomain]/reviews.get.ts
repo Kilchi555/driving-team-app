@@ -2,19 +2,15 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { fetchTenantGoogleReviews } from '~/server/utils/tenant-google-reviews'
 import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
-import { isDemoWebsiteTenant, isForeignGooglePlaceName } from '~/utils/website-google-reviews'
+import { authorizePublicWebsiteRead } from '~/server/utils/website-preview-access'
+import { isDemoWebsiteTenant } from '~/utils/website-google-reviews'
 
 /**
  * Server-memory cache for Google Places (rate-limit friendly).
  * CDN headers are set on the outer handler — defineCachedEventHandler
  * would overwrite Cache-Control with max-age=<maxAge>.
  */
-const loadReviewsCached = defineCachedFunction(
-  async (
-    subdomain: string,
-    preview: boolean,
-    limit: number,
-  ) => {
+async function loadReviews(subdomain: string, limit: number) {
     const supabase = getSupabaseAdmin()
 
     const { data: website, error } = await supabase
@@ -28,9 +24,6 @@ const loadReviewsCached = defineCachedFunction(
     }
     if (!website) {
       throw createError({ statusCode: 404, statusMessage: 'Website not found' })
-    }
-    if (!website.is_published && !preview) {
-      throw createError({ statusCode: 404, statusMessage: 'Website not published' })
     }
 
     const { data: tenant } = await supabase
@@ -112,13 +105,13 @@ const loadReviewsCached = defineCachedFunction(
       total: result.reviews.length,
       reviews: result.reviews,
     }
-  },
-  {
-    maxAge: 60 * 60 * 6,
-    name: 'tenant-website-google-reviews',
-    getKey: (subdomain, preview, limit) => `${subdomain}:${preview ? '1' : '0'}:${limit}`,
-  },
-)
+}
+
+const loadReviewsCached = defineCachedFunction(loadReviews, {
+  maxAge: 60 * 60 * 6,
+  name: 'tenant-website-google-reviews',
+  getKey: (subdomain: string, limit: number) => `${subdomain}:${limit}`,
+})
 
 export default defineEventHandler(async (event) => {
   const subdomain = getRouterParam(event, 'subdomain')?.trim().toLowerCase()
@@ -126,15 +119,35 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'subdomain required' })
   }
 
-  const preview = String(getQuery(event).preview || '') === '1'
-  const limit = Math.min(Math.max(Number(getQuery(event).limit) || 8, 1), 16)
+  const query = getQuery(event) as Record<string, unknown>
+  const limit = Math.min(Math.max(Number(query.limit) || 8, 1), 16)
+  const supabase = getSupabaseAdmin()
+  const { data: website, error } = await supabase
+    .from('website_tenants')
+    .select('id, tenant_id, subdomain, is_published')
+    .eq('subdomain', subdomain)
+    .maybeSingle()
+
+  if (error) {
+    throw createError({ statusCode: 500, statusMessage: error.message })
+  }
+  if (!website) {
+    throw createError({ statusCode: 404, statusMessage: 'Website not found' })
+  }
+
+  const access = await authorizePublicWebsiteRead(supabase, website, query, true)
+  if (!access.ok) {
+    setWebsitePublicCache(event, { preview: true })
+    throw createError({ statusCode: 404, statusMessage: 'Website not found' })
+  }
 
   setWebsitePublicCache(event, {
-    preview,
+    preview: access.privateCache,
     sMaxAge: 3600,
     swr: 86400,
     tag: `website-reviews-${subdomain}`,
   })
 
-  return await loadReviewsCached(subdomain, preview, limit)
+  if (access.draft) return await loadReviews(subdomain, limit)
+  return await loadReviewsCached(subdomain, limit)
 })

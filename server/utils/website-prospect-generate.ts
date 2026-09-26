@@ -225,8 +225,8 @@ async function finishProspectSite(opts: {
     .eq('id', website.id)
 
   const baseUrl = getAppUrl().replace(/\/$/, '')
-  const previewUrl = `${baseUrl}/s/${encodeURIComponent(website.subdomain)}?preview=1`
   const siteUrl = `${baseUrl}/s/${encodeURIComponent(website.subdomain)}`
+  const previewUrl = siteUrl
   const services = (scrape.services || []).map((s: any, i: number) => ({
     id: `svc-${i + 1}`,
     name: String(s.name || '').trim(),

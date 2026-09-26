@@ -9,7 +9,7 @@
       <div class="flex gap-2 flex-wrap">
         <span v-if="prospect" :class="['sa-badge', statusBadge(prospect.status)]">{{ statusLabel(prospect.status) }}</span>
         <a v-if="prospect?.existing_url" :href="prospect.existing_url" target="_blank" class="sa-btn-ghost">Ihre Seite</a>
-        <a v-if="prospect?.preview_url" :href="prospect.preview_url" target="_blank" class="sa-btn-ghost">Simy-Vorschau</a>
+        <button v-if="prospect?.tenant_id" type="button" class="sa-btn-ghost" @click="openMintedPreview()">Simy-Vorschau</button>
       </div>
     </div>
 
@@ -53,12 +53,12 @@
           <p class="sa-hint">{{ architecture.reason }}</p>
           <ul v-if="architecture.intents?.length" class="sa-arch-pages">
             <li v-for="intent in architecture.intents" :key="intent.slug || intent.title">
-              <a
+              <button
                 v-if="addonPreview(intent.slug)"
-                :href="addonPreview(intent.slug)"
-                target="_blank"
+                type="button"
                 class="sa-link"
-              >{{ intent.title }}</a>
+                @click="openMintedPreview(intent.slug)"
+              >{{ intent.title }}</button>
               <span v-else>{{ intent.title }}</span>
               <em>{{ intent.type }}</em>
             </li>
@@ -92,7 +92,7 @@
           </div>
           <div>
             <p class="sa-kpi-l">Simy-Vorschau (nicht indexiert)</p>
-            <a v-if="prospect.preview_url" :href="localPreview || prospect.preview_url" target="_blank" class="sa-link">{{ localPreview || prospect.preview_url }}</a>
+            <button v-if="prospect.preview_url" type="button" class="sa-link" @click="openMintedPreview()">{{ previewPath || prospect.preview_url }}</button>
             <div class="mt-2 flex gap-2 flex-wrap">
               <button class="sa-btn-primary" :disabled="generating" @click="generate">
                 {{ generating ? 'Baut Seite…' : prospect.preview_url ? 'Erneut generieren' : 'Website jetzt generieren' }}
@@ -151,11 +151,26 @@ const authHeaders = async () => {
   return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
 }
 
-const localPreview = computed(() => {
+const previewPath = computed(() => {
   const raw = String(prospect.value?.preview_url || '')
   const m = raw.match(/\/s\/[^/?#]+/)
-  return m ? `http://127.0.0.1:3000${m[0]}?preview=1` : ''
+  return m ? m[0] : ''
 })
+
+const openMintedPreview = async (slug?: string) => {
+  const tenantId = String(prospect.value?.tenant_id || '')
+  if (!tenantId) return
+  try {
+    const res = await $fetch<{ preview_url?: string }>(`/api/tenant-admin/websites/${tenantId}/preview-link`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: slug ? { slug } : {},
+    })
+    if (res?.preview_url) window.open(res.preview_url, '_blank', 'noopener')
+  } catch {
+    /* draft stays closed without a token */
+  }
+}
 
 const architecture = computed(() => prospect.value?.analysis?.architecture || null)
 
@@ -163,7 +178,7 @@ const addonPreview = (slug?: string) => {
   if (!slug) return ''
   const raw = String(prospect.value?.preview_url || '')
   const m = raw.match(/\/s\/[^/?#]+/)
-  return m ? `http://127.0.0.1:3000${m[0]}/${encodeURIComponent(slug)}?preview=1` : ''
+  return m ? `${m[0]}/${encodeURIComponent(slug)}` : ''
 }
 
 const applyProspect = (row: any) => {

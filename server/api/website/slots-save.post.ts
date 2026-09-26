@@ -4,6 +4,7 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { notifySuperadminsWebsitePublished } from '~/server/utils/website-publish-notify'
+import { issueWebsitePreviewToken, previewUrlForPath } from '~/server/utils/website-preview-access'
 import {
   applySlotPatch,
   getSlotValues,
@@ -186,7 +187,8 @@ export default defineEventHandler(async (event) => {
     isHome || page.slug === 'index'
       ? `/s/${encodeURIComponent(website.subdomain)}`
       : `/s/${encodeURIComponent(website.subdomain)}/${encodeURIComponent(page.slug)}`
-  const previewUrl = `${base}${path}?preview=1`
+  const issued = await issueWebsitePreviewToken(supabase, website.id)
+  const previewUrl = issued ? previewUrlForPath(base, path, issued.token) : `${base}${path}`
   const liveUrl =
     website.custom_domain_verified && website.custom_domain
       ? isHome || page.slug === 'index'
@@ -216,7 +218,7 @@ export default defineEventHandler(async (event) => {
       tenantSlug: tenant?.slug || website.subdomain,
       subdomain: website.subdomain,
       liveUrl,
-      previewUrl,
+      previewUrl: liveUrl,
     })
   }
 

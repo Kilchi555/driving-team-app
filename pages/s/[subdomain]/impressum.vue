@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import { previewDataKey, previewQuerySuffix, readRoutePreviewToken } from '~/utils/website-preview-query'
+
 definePageMeta({ layout: 'site', ssr: true })
 
 const route = useRoute()
 const subdomain = computed(() => String(route.params.subdomain || '').toLowerCase())
-const preview = computed(() => route.query.preview === '1')
-const homeHref = computed(() => `/s/${subdomain.value}${preview.value ? '?preview=1' : ''}`)
+const previewToken = computed(() => readRoutePreviewToken(route.query as Record<string, unknown>))
+const preview = computed(() => previewToken.value.length > 0)
+const previewKey = computed(() => previewDataKey(previewToken.value))
+const previewQs = computed(() => previewQuerySuffix(previewToken.value))
+const homeHref = computed(() => `/s/${subdomain.value}${previewQs.value}`)
 
 if (import.meta.server && preview.value) {
   const ev = useRequestEvent()
@@ -12,12 +17,12 @@ if (import.meta.server && preview.value) {
 }
 
 const { data, pending, error } = await useAsyncData(
-  () => `impressum-${subdomain.value}-${preview.value ? 'p' : 'l'}`,
+  () => `impressum-${subdomain.value}-${previewKey.value}`,
   () =>
     $fetch(`/api/public/website/${encodeURIComponent(subdomain.value)}/legal`, {
-      query: { type: 'impressum', ...(preview.value ? { preview: '1' } : {}) },
+      query: { type: 'impressum', ...(previewToken.value ? { preview_token: previewToken.value } : {}) },
     }),
-  { watch: [subdomain, preview] },
+  { watch: [subdomain, previewToken] },
 )
 
 useHead(() => ({
@@ -38,8 +43,8 @@ useHead(() => ({
     </header>
     <article class="legal-article" v-html="data.html" />
     <footer class="legal-footer">
-      <NuxtLink :to="`/s/${subdomain}/impressum${preview ? '?preview=1' : ''}`">Impressum</NuxtLink>
-      <NuxtLink :to="`/s/${subdomain}/datenschutz${preview ? '?preview=1' : ''}`">Datenschutz</NuxtLink>
+      <NuxtLink :to="`/s/${subdomain}/impressum${previewQs}`">Impressum</NuxtLink>
+      <NuxtLink :to="`/s/${subdomain}/datenschutz${previewQs}`">Datenschutz</NuxtLink>
     </footer>
   </div>
 </template>

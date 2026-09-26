@@ -81,9 +81,9 @@
                   >
                     Neu generieren
                   </NuxtLink>
-                  <a :href="`/s/${t.slug}?preview=1`" target="_blank" class="sa-action-btn">
+                  <button type="button" class="sa-action-btn" @click="openPreview(t.id)">
                     👁 Vorschau
-                  </a>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -132,6 +132,21 @@ const filteredTenants = computed(() => {
 const countByStatus = (status: string) => {
   if (status === 'all') return websiteTenants.value.length
   return allTenants.value.filter(t => t.website_status === status).length
+}
+
+const openPreview = async (tenantId: string, slug?: string) => {
+  const { data: { session } } = await supabase.auth.getSession()
+  const headers = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+  try {
+    const res = await $fetch<{ preview_url?: string }>(`/api/tenant-admin/websites/${tenantId}/preview-link`, {
+      method: 'POST',
+      headers,
+      body: slug ? { slug } : {},
+    })
+    if (res?.preview_url) window.open(res.preview_url, '_blank', 'noopener')
+  } catch {
+    /* no open preview without a token */
+  }
 }
 
 onMounted(async () => {

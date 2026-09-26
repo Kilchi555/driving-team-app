@@ -2,6 +2,7 @@
 import { createHash } from 'node:crypto'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { authorizePublicWebsiteRead } from '~/server/utils/website-preview-access'
 
 const recentByIp = new Map<string, number[]>()
 
@@ -45,11 +46,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 429, statusMessage: 'Zu viele Anfragen — bitte später erneut versuchen' })
   }
 
-  const preview =
-    String(getQuery(event).preview || '') === '1' ||
-    String(body?.preview || '') === '1' ||
-    body?.preview === true
-
+  const query = getQuery(event) as Record<string, unknown>
   const supabase = getSupabaseAdmin()
   const { data: website } = await supabase
     .from('website_tenants')
@@ -57,7 +54,12 @@ export default defineEventHandler(async (event) => {
     .eq('subdomain', subdomain)
     .maybeSingle()
 
-  if (!website?.tenant_id || (!website.is_published && !preview)) {
+  if (!website?.tenant_id) {
+    throw createError({ statusCode: 404, statusMessage: 'Website not found' })
+  }
+
+  const access = await authorizePublicWebsiteRead(supabase, website, query, true)
+  if (!access.ok) {
     throw createError({ statusCode: 404, statusMessage: 'Website not found' })
   }
 

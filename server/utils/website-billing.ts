@@ -111,7 +111,7 @@ export async function publishWebsiteForTenant(
     website.custom_domain_verified && website.custom_domain
       ? `https://${website.custom_domain}`
       : `${baseUrl}/s/${encodeURIComponent(website.subdomain)}`
-  const previewUrl = `${baseUrl}/s/${encodeURIComponent(website.subdomain)}?preview=1`
+  const previewUrl = liveUrl
 
   try {
     const { ensureWebsiteSeoPages } = await import('~/server/utils/website-ensure-seo-pages')

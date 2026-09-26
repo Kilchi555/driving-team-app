@@ -5,16 +5,17 @@ import {
   buildImpressumHtml,
 } from '~/server/utils/website-premium'
 import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
+import { authorizePublicWebsiteRead } from '~/server/utils/website-preview-access'
 import { sanitizeTenantHtml } from '~/utils/sanitize-tenant-html'
 
 export default defineEventHandler(async (event) => {
   const subdomain = getRouterParam(event, 'subdomain')?.trim().toLowerCase()
-  const type = String(getQuery(event).type || '').toLowerCase()
+  const query = getQuery(event) as Record<string, unknown>
+  const type = String(query.type || '').toLowerCase()
   if (!subdomain || !['impressum', 'datenschutz'].includes(type)) {
     throw createError({ statusCode: 400, statusMessage: 'subdomain and type required' })
   }
 
-  const preview = String(getQuery(event).preview || '') === '1'
   const supabase = getSupabaseAdmin()
 
   const { data: website } = await supabase
@@ -24,6 +25,12 @@ export default defineEventHandler(async (event) => {
     .maybeSingle()
 
   if (!website) {
+    throw createError({ statusCode: 404, statusMessage: 'Website not found' })
+  }
+
+  const access = await authorizePublicWebsiteRead(supabase, website, query, true)
+  if (!access.ok) {
+    setWebsitePublicCache(event, { preview: true })
     throw createError({ statusCode: 404, statusMessage: 'Website not found' })
   }
 
@@ -60,7 +67,7 @@ export default defineEventHandler(async (event) => {
         .maybeSingle()
       if (reg?.content) {
         setWebsitePublicCache(event, {
-          preview,
+          preview: access.privateCache,
           sMaxAge: 600,
           swr: 3600,
           tag: `website-legal-${subdomain}`,
@@ -81,7 +88,7 @@ export default defineEventHandler(async (event) => {
     type === 'impressum' ? buildImpressumHtml(tenantForLegal) : buildDatenschutzHtml(tenantForLegal)
 
   setWebsitePublicCache(event, {
-    preview,
+    preview: access.privateCache,
     sMaxAge: 600,
     swr: 3600,
     tag: `website-legal-${subdomain}`,

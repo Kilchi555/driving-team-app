@@ -32,15 +32,14 @@
         <p class="text-xs font-bold uppercase tracking-widest text-white/70 mb-1">Status</p>
         <h2 class="text-2xl font-extrabold">{{ websiteStatusTitle }}</h2>
         <p class="text-white/80 text-sm mt-1">{{ websiteStatusDetail }}</p>
-        <a
+        <button
           v-if="billing?.website_preview_url"
-          :href="billing.website_preview_url"
-          target="_blank"
-          rel="noopener"
+          type="button"
           class="inline-flex mt-4 px-4 py-2 rounded-xl bg-white/15 text-sm font-semibold hover:bg-white/25"
+          @click="openWebsitePreview"
         >
           Vorschau öffnen
-        </a>
+        </button>
       </div>
 
       <div v-if="!billing?.website_is_published || !billing?.website_hosting_plan" class="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 space-y-4">
@@ -507,6 +506,20 @@ interface BillingStatus {
 }
 
 const billing = ref<BillingStatus | null>(null)
+
+async function openWebsitePreview() {
+  try {
+    const res = await $fetch<{ preview_url?: string }>('/api/website/preview-link', { method: 'POST', body: {} })
+    if (res?.preview_url) {
+      window.open(res.preview_url, '_blank', 'noopener')
+      return
+    }
+  } catch {
+    /* published sites can still open the public URL */
+  }
+  const fallback = billing.value?.website_is_published ? billing.value.website_live_url : ''
+  if (fallback) window.open(fallback, '_blank', 'noopener')
+}
 const pricing = ref<PricingResponse | null>(null)
 
 /** Resolve a fresh access token – mirrors the logic in upgrade.vue.

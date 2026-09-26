@@ -51,6 +51,8 @@ export default defineEventHandler(async (event) => {
   return `User-agent: *
 Allow: /
 Disallow: /*?preview=1
+Disallow: /*?preview_token=
+Disallow: /*?*preview_token=
 Sitemap: ${sitemapUrl}
 `
 })

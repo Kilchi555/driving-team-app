@@ -83,14 +83,9 @@
               <NuxtLink :to="`/admin/website/editor?page=${encodeURIComponent(p.slug)}`" class="btn-ghost">
                 Review
               </NuxtLink>
-              <a
-                :href="`/s/${subdomain}/${p.slug}?preview=1`"
-                target="_blank"
-                rel="noopener"
-                class="btn-ghost"
-              >
+              <button type="button" class="btn-ghost" @click="openPreview(p.slug)">
                 Preview
-              </a>
+              </button>
             </div>
           </li>
         </ul>
@@ -141,6 +136,18 @@ function typeLabel(t: string) {
   if (t === 'category') return 'Kategorie'
   if (t === 'prices') return 'Preise'
   return t
+}
+
+async function openPreview(slug: string) {
+  try {
+    const res = await $fetch<{ preview_url?: string }>('/api/website/preview-link', {
+      method: 'POST',
+      body: { slug },
+    })
+    if (res?.preview_url) window.open(res.preview_url, '_blank', 'noopener')
+  } catch (err: any) {
+    genMsg.value = err?.data?.statusMessage || 'Vorschau nicht verfügbar'
+  }
 }
 
 async function load() {

@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
     live_url: liveUrl,
     sitemap_url: liveUrl ? `${liveUrl.replace(/\/$/, '')}/sitemap.xml` : null,
     robots_url: liveUrl ? `${liveUrl.replace(/\/$/, '')}/robots.txt` : null,
-    preview_url: website?.subdomain ? `https://app.simy.ch/s/${website.subdomain}?preview=1` : null,
+    preview_url: website?.subdomain ? `https://app.simy.ch/s/${website.subdomain}` : null,
     infomaniak_shop_url: domain ? infomaniakShopUrl(domain) : 'https://www.infomaniak.com/de/domains',
     infomaniak_dns_guide: infomaniakDnsGuideUrl(),
   }
