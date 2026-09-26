@@ -82,6 +82,8 @@
           </div>
         </div>
         <button
+          type="button"
+          aria-label="Profil schliessen"
           @click="$emit('close')"
           class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center active:opacity-60 transition-opacity"
         >
@@ -595,7 +597,7 @@
           </div>
           <div class="flex items-center justify-between px-5 pt-2 pb-4 border-b border-gray-100">
             <h2 class="text-base font-semibold text-gray-900">Arbeitszeiten</h2>
-            <button @click="showWorktimeSheet = false" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
+            <button type="button" aria-label="Arbeitszeiten schliessen" @click="showWorktimeSheet = false" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
@@ -605,7 +607,7 @@
               <!-- Info Text -->
               <div class="bg-blue-50 border border-blue-200 rounded-lg p-2">
                 <p class="text-sm text-blue-800">
-                  💡 <strong>Arbeitszeiten:</strong> Sie können mehrere Arbeitszeit-Blöcke pro Tag erstellen (z.B. Vormittag und Nachmittag mit Mittagspause). Nicht-Arbeitszeiten werden automatisch als "gesperrt" im Kalender angezeigt.
+                  💡 <strong>Arbeitszeiten:</strong> Sie können mehrere Arbeitszeit-Blöcke pro Tag erstellen (z.B. Vormittag und Nachmittag mit Mittagspause). Nicht-Arbeitszeiten werden automatisch als "gesperrt" im Kalender angezeigt. Der Stift öffnet eine Ausnahme für ein konkretes Datum und speichert den Wochenplan nicht.
                 </p>
               </div>
 
@@ -617,11 +619,31 @@
                   class="border border-gray-200 rounded-lg p-2"
                 >
                   <!-- Wochentag Header -->
-                  <div class="flex items-center justify-between mb-3">
-                    <h4 class="text-sm font-medium text-gray-700">{{ day.label }}</h4>
-                    
-                    <!-- Aktiv/Inaktiv Toggle Switch -->
-                    <label class="relative inline-flex items-center cursor-pointer">
+                  <div class="flex items-center justify-between gap-3 mb-3">
+                    <div class="min-w-0">
+                      <h4 class="text-sm font-medium text-gray-700">{{ day.label }}</h4>
+                      <p class="text-xs text-gray-500 truncate">{{ weeklyHoursLabel(day.value) }}</p>
+                      <p
+                        v-if="weekdayExceptionHint(day.value)"
+                        class="text-[11px] leading-4 text-gray-400"
+                        :data-testid="`exception-count-${day.value}`"
+                      >{{ weekdayExceptionHint(day.value) }}</p>
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        type="button"
+                        class="w-9 h-9 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+                        :aria-label="`Ausnahmen für ${day.label} bearbeiten`"
+                        :data-testid="`weekday-exception-${day.value}`"
+                        @click.stop="openWeekdayExceptions(day.value)"
+                      >
+                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M4 20h4.5L19.5 9.0a1.5 1.5 0 000-2.121l-2.379-2.379a1.5 1.5 0 00-2.121 0L4 15.5V20z"/>
+                        </svg>
+                      </button>
+                      <!-- Aktiv/Inaktiv Toggle Switch -->
+                      <label class="relative inline-flex items-center cursor-pointer">
                       <input 
                         type="checkbox" 
                         v-model="workingDayForm[day.value].is_active"
@@ -630,6 +652,7 @@
                       />
                       <div class="tenant-toggle relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                     </label>
+                    </div>
                   </div>
                   
                   <!-- Arbeitszeit-Blöcke -->
@@ -2138,6 +2161,16 @@
     @close="showStaffGuide = false"
   />
   <AccountSwitchModal :open="showAccountSwitch" @close="showAccountSwitch = false" />
+  <WorkingHourExceptionSheet
+    :visible="showExceptionSheet"
+    :staff-id="props.currentUser?.id || ''"
+    :staff-name="staffDisplayName"
+    :initial-date="exceptionInitialDate"
+    :listed-exceptions="listedExceptions"
+    @close="showExceptionSheet = false"
+    @saved="onExceptionSaved"
+    @updated="onExceptionsUpdated"
+  />
 </template>
 
 <script setup lang="ts">
@@ -2154,6 +2187,8 @@ import ExamLocationSearchDropdown from './ExamLocationSearchDropdown.vue'
 import StaffExamStatistics from './StaffExamStatistics.vue'
 import StaffCashBalance from './StaffCashBalance.vue'
 import { useStaffWorkingHours, WEEKDAYS, type WorkingDayForm, type WorkingHourBlock } from '~/composables/useStaffWorkingHours'
+import WorkingHourExceptionSheet from '~/components/WorkingHourExceptionSheet.vue'
+import { exceptionCountLabel, exceptionCountsByWeekday, nextCivilDateForWeekday, type ListedWorkingHourException } from '~/utils/working-hour-exception-entry'
 import { useTenant } from '~/composables/useTenant'
 import { useDatabaseQuery } from '~/composables/useDatabaseQuery'
 import { useTenantBranding } from '~/composables/useTenantBranding'
@@ -2287,6 +2322,11 @@ const handleSessionError = (err: any): boolean => {
 // ── Edit Profile ──────────────────────────────────────────────────────────────
 // Local copy of user data so the header updates immediately after save
 const localUser = ref({ ...props.currentUser })
+const staffDisplayName = computed(() => {
+  const first = localUser.value?.first_name || props.currentUser?.first_name || ''
+  const last = localUser.value?.last_name || props.currentUser?.last_name || ''
+  return `${first} ${last}`.trim()
+})
 
 watch(() => props.currentUser, (newUser) => {
   if (newUser) {
@@ -2617,6 +2657,10 @@ const showWorkingStatsSheet = ref(false)
 const showExamLocationsSheet = ref(false)
 const showLocationsSheet = ref(false)
 const showWorktimeSheet = ref(false)
+const showExceptionSheet = ref(false)
+const exceptionInitialDate = ref('')
+const exceptionCountByWeekday = ref<Record<number, number>>({})
+const listedExceptions = ref<ListedWorkingHourException[]>([])
 const showVoucherCodesSheet = ref(false)
 const showExpensesSheet = ref(false)
 
@@ -4569,6 +4613,65 @@ const autoSaveWorkingHour = async (dayOfWeek: number) => {
 const autoSaveTimeouts = ref<Record<number, NodeJS.Timeout>>({})
 // Flag um Race Conditions zu verhindern
 const isAutoSaveInProgress = ref(false)
+
+function weeklyHoursLabel(dayOfWeek: number): string {
+  const day = workingDayForm.value[dayOfWeek]
+  if (!day?.is_active || !day.blocks?.length) return 'inaktiv'
+  return day.blocks
+    .map((block) => `${String(block.start_time || '').slice(0, 5)}–${String(block.end_time || '').slice(0, 5)}`)
+    .join(' / ')
+}
+
+function weekdayExceptionHint(dayOfWeek: number): string {
+  return exceptionCountLabel(exceptionCountByWeekday.value[dayOfWeek] || 0)
+}
+
+async function loadExceptionCounts() {
+  const staffId = props.currentUser?.id
+  if (!staffId) return
+  try {
+    const response = await $fetch<{
+      success: boolean
+      exceptions: ListedWorkingHourException[]
+    }>('/api/staff/working-hour-exceptions', {
+      method: 'POST',
+      body: {
+        action: 'list',
+        staffId,
+        startDate: '2000-01-01',
+        endDate: '2100-12-31',
+      },
+    })
+    const rows = response?.success ? (response.exceptions || []) : []
+    listedExceptions.value = rows
+    exceptionCountByWeekday.value = exceptionCountsByWeekday(rows)
+  } catch {
+    logger.warn('ℹ️ Working-hour exception counts failed to load')
+    listedExceptions.value = []
+    exceptionCountByWeekday.value = {}
+  }
+}
+
+watch(showWorktimeSheet, (open) => {
+  if (open) void loadExceptionCounts()
+})
+
+function openWeekdayExceptions(dayOfWeek: number) {
+  if (!props.currentUser?.id) return
+  exceptionInitialDate.value = nextCivilDateForWeekday(dayOfWeek)
+  showExceptionSheet.value = true
+}
+
+function onExceptionSaved() {
+  showExceptionSheet.value = false
+  void loadExceptionCounts()
+  emit('settings-updated')
+}
+
+function onExceptionsUpdated() {
+  void loadExceptionCounts()
+  emit('settings-updated')
+}
 
 const autoSaveWorkingDay = (dayOfWeek: number) => {
   if (!props.currentUser?.id) return

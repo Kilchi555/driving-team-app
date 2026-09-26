@@ -29,6 +29,18 @@ import MoveAppointmentModal from './MoveAppointmentModal.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useStaffWorkingHours } from '~/composables/useStaffWorkingHours'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
+import {
+  zurichCivilDate,
+  type EffectiveException,
+} from '~/utils/effective-working-hours'
+import {
+  decideNonWorkingDisplay,
+  failClosedSpans,
+  finishCalendarReload,
+  graySpansForCivilDates,
+  requestCalendarReload,
+  type ReloadGate,
+} from '~/utils/calendar-non-working-display'
 
 // ✅ GLOBALE FEHLERBEHANDLUNG
 onErrorCaptured((error, instance, info) => {
@@ -376,6 +388,7 @@ type CalendarEvent = {
     isExternalBusy?: boolean
     isNonWorkingHours?: boolean
     isClickThrough?: boolean
+    isUnknownHours?: boolean
   }
 }
 
@@ -431,6 +444,15 @@ const { currentUser: composableCurrentUser } = useCurrentUser()
 
 const getCurrentUserId = () => {
   return props.currentUser?.id || composableCurrentUser.value?.id
+}
+
+const lastSuccessfulNonWorking = ref<CalendarEvent[] | null>(null)
+const nonWorkingLoadError = ref(false)
+const nonWorkingUsingFailClosed = ref(false)
+let nonWorkingReloadGate: ReloadGate = { busy: false, queuedForce: false }
+
+function localCivilDate(date: Date): string {
+  return zurichCivilDate(date)
 }
 
 const getCurrentUserData = () => {
@@ -574,155 +596,108 @@ const colorFromCategoryKey = (category: string): string => {
   return hslToHex(hue, 58, 46)
 }
 
-// NEUE FUNKTION: Nicht-Arbeitszeiten via Backend API laden
-const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate: Date, endDate: Date): Promise<CalendarEvent[]> => {
+function workingHoursUrl(staffId: string | undefined): string {
+  if (!staffId) return '/api/staff/get-working-hours'
+  return `/api/staff/get-working-hours?staffId=${encodeURIComponent(staffId)}`
+}
+
+function civilDatesInView(startDate: Date, endDate: Date): string[] {
+  const dates: string[] = []
+  const currentDate = new Date(startDate)
+  while (currentDate <= endDate) {
+    dates.push(localCivilDate(currentDate))
+    currentDate.setDate(currentDate.getDate() + 1)
+  }
+  return dates
+}
+
+function toNonWorkingEvents(spans: Array<{ date: string, start: string, end: string }>, unknown = false): CalendarEvent[] {
+  return spans.map((span, idx) => ({
+    id: `non-working-${unknown ? 'unknown' : 'known'}-${idx}-${span.date}-${span.start}`,
+    title: '',
+    start: `${span.date}T${span.start}`,
+    end: `${span.date}T${span.end}`,
+    backgroundColor: '#e5e7eb',
+    borderColor: 'transparent',
+    textColor: 'transparent',
+    display: 'background',
+    classNames: ['non-working-hours-block'],
+    extendedProps: {
+      type: 'non_working_hours',
+      isNonWorkingHours: true,
+      isClickThrough: true,
+      isUnknownHours: unknown,
+    },
+  }))
+}
+
+// Graue Flächen aus denselben effektiven Stunden wie die Slot-Engine.
+// A failed load is not an empty schedule.
+const loadNonWorkingHoursBlocks = async (
+  staffId: string | undefined,
+  startDate: Date,
+  endDate: Date,
+): Promise<{ ok: true, blocks: CalendarEvent[] } | { ok: false }> => {
   try {
     logger.debug('🔒 Loading non-working hours blocks via Backend API...')
-    
-    // Working hours via Backend API laden (kein Client-Cache — Settings müssen sofort greifen)
+
+    const hoursUrl = workingHoursUrl(staffId)
     let response: { success: boolean, workingHours: any[], staffId: string }
     try {
-      response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours')
+      response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>(hoursUrl)
     } catch (fetchError: any) {
       if (fetchError?.statusCode === 401 || fetchError?.status === 401) {
         logger.warn('⚠️ Working hours: 401 received, retrying...')
         await new Promise(resolve => setTimeout(resolve, 800))
-        response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours')
+        response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>(hoursUrl)
       } else {
         throw fetchError
       }
     }
-    
-    // Wenn workingHours leer zurückkommt obwohl User eingeloggt → einmal retry
-    if (response.success && (!response.workingHours || response.workingHours.length === 0)) {
-      logger.warn('⚠️ Working hours returned empty – retrying once')
-      await new Promise(resolve => setTimeout(resolve, 800))
-      try {
-        response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours')
-      } catch {
-        // Retry failed – continue with empty result
-      }
-    }
-    
+
     if (!response.success) {
-      logger.debug('⚠️ No working hours found')
-      return []
+      logger.warn('⚠️ Working hours response was not successful')
+      return { ok: false }
     }
-    
-    const allWorkingHours = response.workingHours
-    logger.debug('✅ Loaded all working hours via API:', allWorkingHours?.length || 0)
-    if (allWorkingHours && allWorkingHours.length > 0) {
-      logger.debug('🔍 Sample working hours from API:', allWorkingHours.slice(0, 3).map((wh: any) => ({
-        day_of_week: wh.day_of_week,
-        is_active: wh.is_active,
-        start_time: wh.start_time,
-        end_time: wh.end_time
-      })))
+
+    const dates = civilDatesInView(startDate, endDate)
+    const rangeStart = dates[0]
+    const rangeEnd = dates[dates.length - 1]
+    if (!rangeStart || !rangeEnd) return { ok: false }
+
+    let exceptionRows: Array<{ date: string, isClosed: boolean, timezone?: string, blocks: Array<{ start_time: string, end_time: string }> }> = []
+    try {
+      const listed = await $fetch<{ success: boolean, exceptions: typeof exceptionRows }>('/api/staff/working-hour-exceptions', {
+        method: 'POST',
+        body: {
+          action: 'list',
+          staffId: staffId || response.staffId,
+          startDate: rangeStart,
+          endDate: rangeEnd,
+        },
+      })
+      if (!listed.success) return { ok: false }
+      exceptionRows = listed.exceptions || []
+    } catch (exceptionError) {
+      logger.warn('⚠️ Working-hour exceptions failed to load', exceptionError)
+      return { ok: false }
     }
-    
-    const events: CalendarEvent[] = []
-    
-    // Für jeden Tag im sichtbaren Bereich
-    const currentDate = new Date(startDate)
-    while (currentDate <= endDate) {
-      const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay() // Sonntag = 7
-      
-      // Finde alle Working Hours für diesen Wochentag
-      const dayWorkingHours = allWorkingHours?.filter(wh => wh.day_of_week === dayOfWeek) || []
-      
-      // Prüfe ob der Tag aktive Working Hours hat
-      const hasActiveWorkingHours = dayWorkingHours.some(wh => wh.is_active === true)
-      
-      if (dayOfWeek === 1) { // Debug nur für Montag
-        logger.debug(`📊 Day ${dayOfWeek} (Montag): ${dayWorkingHours.length} entries, hasActiveWorkingHours: ${hasActiveWorkingHours}`, dayWorkingHours.map(wh => ({ is_active: wh.is_active, start: wh.start_time, end: wh.end_time })))
-      }
-      
-      const year = currentDate.getFullYear()
-      const month = String(currentDate.getMonth() + 1).padStart(2, '0')
-      const day = String(currentDate.getDate()).padStart(2, '0')
-      const dateStr = `${year}-${month}-${day}`
-      
-      // FALL 1: Tag hat KEINE aktiven Working Hours → ganzer Tag blockieren
-      if (!hasActiveWorkingHours) {
-        logger.debug(`🚫 Day ${dayOfWeek}: No active working hours - will gray out entire day`)
-        events.push({
-          id: `non-working-day-${dayOfWeek}-${dateStr}`,
-          title: '',
-          start: `${dateStr}T00:00`,
-          end: `${dateStr}T23:59`,
-          backgroundColor: '#e5e7eb', // Grau = Nicht-Arbeitszeit (Arbeitszeit bleibt weiß)
-          borderColor: 'transparent',
-          textColor: 'transparent',
-          display: 'background',
-          classNames: ['non-working-hours-block'],
-          extendedProps: {
-            type: 'non_working_hours',
-            isNonWorkingHours: true,
-            isClickThrough: true
-          }
-        })
-      } 
-      // FALL 2: Tag hat aktive Working Hours → Nicht-Arbeitszeiten aus Block-Grenzen berechnen
-      // (save_day API speichert nur is_active:true Blöcke → inaktive Blöcke werden berechnet)
-      else {
-        logger.debug(`✅ Day ${dayOfWeek}: Has active working hours - calculating non-working gaps`)
 
-        const activeBlocks = dayWorkingHours
-          .filter(wh => wh.is_active === true)
-          .sort((a, b) => a.start_time.localeCompare(b.start_time))
-
-        const makeGrayBlock = (startHHMM: string, endHHMM: string, idx: number) => ({
-          id: `non-working-${dayOfWeek}-${idx}-${dateStr}`,
-          title: '',
-          start: `${dateStr}T${startHHMM}`,
-          end: `${dateStr}T${endHHMM}`,
-          backgroundColor: '#e5e7eb',
-          borderColor: 'transparent',
-          textColor: 'transparent',
-          display: 'background',
-          classNames: ['non-working-hours-block'],
-          extendedProps: {
-            type: 'non_working_hours',
-            isNonWorkingHours: true,
-            isClickThrough: true
-          }
-        })
-
-        // HH:MM:SS → HH:MM (FullCalendar braucht nur HH:MM)
-        const toHHMM = (t: string) => t.substring(0, 5)
-
-        let grayIdx = 0
-
-        // Block vor der ersten Arbeitszeit (z.B. 00:00 – 07:00)
-        if (activeBlocks[0].start_time > '00:00:00') {
-          events.push(makeGrayBlock('00:00', toHHMM(activeBlocks[0].start_time), grayIdx++))
-        }
-
-        // Lücken zwischen Arbeitszeit-Blöcken (z.B. Mittagspause 12:00 – 13:00)
-        for (let i = 0; i < activeBlocks.length - 1; i++) {
-          const gapStart = activeBlocks[i].end_time
-          const gapEnd = activeBlocks[i + 1].start_time
-          if (gapStart < gapEnd) {
-            events.push(makeGrayBlock(toHHMM(gapStart), toHHMM(gapEnd), grayIdx++))
-          }
-        }
-
-        // Block nach der letzten Arbeitszeit (z.B. 19:00 – 23:59)
-        const lastEnd = activeBlocks[activeBlocks.length - 1].end_time
-        if (lastEnd < '23:59:00') {
-          events.push(makeGrayBlock(toHHMM(lastEnd), '23:59', grayIdx++))
-        }
-      }
-      
-      currentDate.setDate(currentDate.getDate() + 1)
+    const exceptionsByDate = new Map<string, EffectiveException>()
+    for (const row of exceptionRows) {
+      exceptionsByDate.set(row.date, {
+        isClosed: row.isClosed,
+        timezone: row.timezone,
+        intervals: row.blocks,
+      })
     }
-    
-    logger.debug('✅ Generated non-working hours events:', events.length)
-    return events
-    
+
+    const blocks = toNonWorkingEvents(graySpansForCivilDates(dates, response.workingHours || [], exceptionsByDate))
+    logger.debug('✅ Generated non-working hours events:', blocks.length)
+    return { ok: true, blocks }
   } catch (error) {
     console.error('Error loading non-working hours blocks:', error)
-    return []
+    return { ok: false }
   }
 }
 
@@ -1237,18 +1212,28 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
 const loadAppointments = async (forceReload = false) => {
   if (!calendar.value) {
     logger.debug('⚠️ Calendar not mounted, skipping load')
+    if (forceReload) nonWorkingReloadGate.queuedForce = true
     return
   }
-  
-  if (isUpdating.value) {
-    // Statt sofort abbrechen: kurz warten und nochmals prüfen (Race mit datesSet/onMounted)
+
+  const shouldForce = forceReload || nonWorkingReloadGate.queuedForce
+  if (nonWorkingReloadGate.busy) {
+    if (shouldForce) {
+      // Remember the save/delete refresh. The in-flight load finishes it.
+      nonWorkingReloadGate = requestCalendarReload(nonWorkingReloadGate, true).gate
+      return
+    }
     logger.debug('⚠️ Calendar update in progress, waiting briefly before retry...')
     await new Promise(resolve => setTimeout(resolve, 300))
-    if (isUpdating.value) {
+    if (nonWorkingReloadGate.busy) {
       logger.debug('⚠️ Calendar update still in progress after wait, skipping load')
       return
     }
   }
+
+  const started = requestCalendarReload({ busy: false, queuedForce: false }, shouldForce)
+  nonWorkingReloadGate = started.gate
+  if (!started.start) return
   
   const staffId = getCurrentUserId()
   logger.debug('🔍 loadAppointments staffId:', staffId)
@@ -1271,12 +1256,26 @@ const loadAppointments = async (forceReload = false) => {
     
     const startTime = performance.now()
     
-    const [appointments, externalBusyEvents, nonWorkingHoursEvents] = await Promise.all([
+    const [appointments, externalBusyEvents, nonWorkingResult] = await Promise.all([
       loadRegularAppointments(viewStart, viewEnd, forceReload),
       loadExternalBusyTimes(),
       loadNonWorkingHoursBlocks(staffId, viewStart, viewEnd),
     ])
-    logger.debug('📊 Loaded events:', { appointments: appointments.length, nonWorkingHours: nonWorkingHoursEvents.length, externalBusy: externalBusyEvents.length })
+    const viewDates = civilDatesInView(viewStart, viewEnd)
+    const nonWorkingDecision = decideNonWorkingDisplay(
+      lastSuccessfulNonWorking.value,
+      nonWorkingResult,
+      toNonWorkingEvents(failClosedSpans(viewDates), true),
+    )
+    lastSuccessfulNonWorking.value = nonWorkingDecision.lastSuccessful
+    nonWorkingLoadError.value = nonWorkingDecision.showError
+    nonWorkingUsingFailClosed.value = nonWorkingDecision.usingFailClosed
+    logger.debug('📊 Loaded events:', {
+      appointments: appointments.length,
+      nonWorkingHours: nonWorkingDecision.display.length,
+      nonWorkingFailed: nonWorkingDecision.showError,
+      externalBusy: externalBusyEvents.length,
+    })
     
     const loadDuration = (performance.now() - startTime).toFixed(0)
     logger.debug(`⏱️ Performance: All loads completed in ${loadDuration}ms`)
@@ -1286,11 +1285,11 @@ const loadAppointments = async (forceReload = false) => {
       return
     }
     
-    const allEvents = [...appointments, ...nonWorkingHoursEvents, ...externalBusyEvents]
+    const allEvents = [...appointments, ...nonWorkingDecision.display, ...externalBusyEvents]
     
     logger.debug('✅ Final calendar summary:', {
       appointments: appointments.length,
-      nonWorkingHours: nonWorkingHoursEvents.length,
+      nonWorkingHours: nonWorkingDecision.display.length,
       externalBusy: externalBusyEvents.length,
       total: allEvents.length
     })
@@ -1303,6 +1302,11 @@ const loadAppointments = async (forceReload = false) => {
   } finally {
     isLoadingEvents.value = false
     isUpdating.value = false
+    const finished = finishCalendarReload(nonWorkingReloadGate)
+    nonWorkingReloadGate = finished.gate
+    if (finished.startForce && calendar.value) {
+      await loadAppointments(true)
+    }
   }
 }
 
@@ -2894,15 +2898,34 @@ defineExpose({
       </div>
     </div>
     
+    <div
+      v-if="nonWorkingLoadError"
+      class="mx-2 mt-2 px-3 py-2 rounded-lg border border-amber-300 bg-amber-50 text-sm text-amber-950 flex items-center justify-between gap-3"
+      role="status"
+    >
+      <p>
+        {{ nonWorkingUsingFailClosed
+          ? 'Arbeitszeiten konnten nicht geladen werden. Der Kalender bleibt geschlossen dargestellt, bis der Ladevorgang gelingt.'
+          : 'Arbeitszeiten konnten nicht neu geladen werden. Der letzte bekannte Stand bleibt sichtbar.' }}
+      </p>
+      <button
+        type="button"
+        class="shrink-0 px-3 py-1 rounded-lg border border-amber-400 bg-white text-amber-950"
+        @click="loadAppointments(true)"
+      >
+        Erneut laden
+      </button>
+    </div>
+
     <FullCalendar
       v-if="isCalendarReady"
       ref="calendar"
       :options="calendarOptions"
     />
-    
     <div v-else>
       Kalender wird geladen...
     </div>
+
   </div>
 
  <EventModal
