@@ -8,10 +8,13 @@ import { checkPasswordPwned } from '~/server/utils/hibp-checker'
 import { logger } from '~/utils/logger'
 import { notifyTenantAdminsNewClient } from '~/server/utils/notify-new-client-registration'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function createServiceRoleClient() {
+  const supabaseUrl = process.env.SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  return createClient(supabaseUrl!, serviceRoleKey!)
+}
+
+type ServiceRoleClient = ReturnType<typeof createServiceRoleClient>
 
 interface RegisterRequest {
   action: string
@@ -45,13 +48,14 @@ export default defineEventHandler(async (event) => {
   try {
     const body = await readBody<RegisterRequest>(event)
     const { action } = body
+    const supabase = createServiceRoleClient()
 
     if (action === 'register-customer') {
-      return await registerCustomer(event, body)
+      return await registerCustomer(event, body, supabase)
     } else if (action === 'register-staff') {
-      return await registerStaff(event, body)
+      return await registerStaff(event, body, supabase)
     } else if (action === 'get-tenant-from-slug') {
-      return await getTenantFromSlug(body)
+      return await getTenantFromSlug(body, supabase)
     }
 
     logger.warn('❌ [REGISTER] Invalid action', { action })
@@ -70,7 +74,7 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-async function registerCustomer(event: any, body: RegisterRequest) {
+async function registerCustomer(event: any, body: RegisterRequest, supabase: ServiceRoleClient) {
   const { email, password, first_name, last_name, phone, birthdate, street, street_nr, zip, city, profession, assigned_staff_id, category, slug, tenant_id } = body
 
   // ===== LAYER 1: INPUT VALIDATION =====
@@ -346,7 +350,7 @@ async function registerCustomer(event: any, body: RegisterRequest) {
   }
 }
 
-async function registerStaff(event: any, body: RegisterRequest) {
+async function registerStaff(event: any, body: RegisterRequest, supabase: ServiceRoleClient) {
   const { email, password, first_name, last_name, phone, tenant_id } = body
 
   // ===== LAYER 1: INPUT VALIDATION =====
@@ -518,7 +522,7 @@ async function registerStaff(event: any, body: RegisterRequest) {
   }
 }
 
-async function getTenantFromSlug(body: RegisterRequest) {
+async function getTenantFromSlug(body: RegisterRequest, supabase: ServiceRoleClient) {
   const { slug } = body
 
   if (!slug) {
