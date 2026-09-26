@@ -14,6 +14,12 @@ export default defineEventHandler(async (event) => {
     if (!WEBSITE_PROSPECT_STATUSES.includes(body.status)) {
       throw createError({ statusCode: 400, statusMessage: 'Ungültiger Status' })
     }
+    if (body.status === 'claimed' || body.status === 'sent') {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Dieser Status kann nicht manuell gesetzt werden',
+      })
+    }
     patch.status = body.status
     if (['approved', 'skipped', 'rejected'].includes(body.status)) {
       patch.reviewed_at = new Date().toISOString()

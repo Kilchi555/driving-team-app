@@ -79,7 +79,7 @@
             :disabled="websiteCheckoutLoading"
             class="flex-1 px-4 py-3 rounded-xl text-white font-semibold disabled:opacity-50"
             :style="{ background: brandGradient }"
-            @click="startWebsiteCheckout({ includeSetup: false, publishAfterPay: false })"
+            @click="startWebsiteCheckout({ includeSetup: false })"
           >
             {{ websiteCheckoutLoading ? '…' : 'Hosting starten' }}
           </button>
@@ -555,22 +555,38 @@ const websiteStatusDetail = computed(() => {
     return `Noch ${trialDaysLeft.value} ${trialDaysLeft.value === 1 ? 'Tag' : 'Tage'} zum Einrichten. Vorschau ist gratis.`
   }
   if (websiteHostingLocked.value) return 'Monatsabo wählen, um weiterzuarbeiten.'
-  return 'Vorschau ist gratis. Live erst nach einmaliger Gebühr.'
+  return 'Vorschau ist gratis. Live erst nach Zahlung und interner Freigabe.'
 })
 const liveButtonLabel = computed(() => {
   const needSetup = !billing.value?.website_setup_paid_at
   const needHost = !billing.value?.website_hosting_plan
-  if (needSetup && needHost) return `Live schalten (CHF ${WEBSITE_SETUP_CHF} + Abo)`
-  if (needSetup) return `Live schalten (CHF ${WEBSITE_SETUP_CHF})`
-  if (needHost) return 'Live schalten + Hosting'
+  if (needSetup && needHost) return `Website bezahlen (CHF ${WEBSITE_SETUP_CHF} + Abo)`
+  if (needSetup) return `Website bezahlen (CHF ${WEBSITE_SETUP_CHF})`
+  if (needHost) return 'Hosting bezahlen'
   return 'Jetzt live schalten'
 })
 
 onMounted(async () => {
   await loadBillingStatus()
+  await claimWebsiteIfRequested()
   if (isWebsiteOnly.value) return
   await Promise.all([loadPrices(), loadSmsUsage(), loadPlatformReferral()])
 })
+
+async function claimWebsiteIfRequested() {
+  const token = typeof route.query.claim === 'string' ? route.query.claim : ''
+  if (!token) return
+  try {
+    await $fetch('/api/website/claim', {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: { token },
+    })
+    await loadBillingStatus()
+  } catch (e: any) {
+    error.value = e?.data?.statusMessage || e?.statusMessage || 'Claim fehlgeschlagen.'
+  }
+}
 
 async function loadPlatformReferral() {
   platformReferralLoading.value = true
@@ -615,7 +631,7 @@ async function loadSmsUsage() {
   } catch { /* non-critical */ }
 }
 
-async function startWebsiteCheckout(opts: { includeSetup: boolean; publishAfterPay: boolean }) {
+async function startWebsiteCheckout(opts: { includeSetup: boolean }) {
   websiteCheckoutLoading.value = true
   try {
     const res = await $fetch<{ url?: string }>('/api/website/checkout', {
@@ -624,7 +640,6 @@ async function startWebsiteCheckout(opts: { includeSetup: boolean; publishAfterP
       body: {
         hosting_plan: websiteHostingChoice.value,
         include_setup: opts.includeSetup,
-        publish_after_pay: opts.publishAfterPay,
       },
     })
     if (res?.url) {
@@ -649,7 +664,7 @@ async function goLiveWebsite() {
       await loadBillingStatus()
     } catch (e: any) {
       if (e?.statusCode === 402) {
-        await startWebsiteCheckout({ includeSetup: true, publishAfterPay: true })
+        await startWebsiteCheckout({ includeSetup: true })
         return
       }
       error.value = e?.data?.statusMessage || 'Veröffentlichen fehlgeschlagen.'
@@ -658,7 +673,7 @@ async function goLiveWebsite() {
     }
     return
   }
-  await startWebsiteCheckout({ includeSetup: needSetup, publishAfterPay: true })
+  await startWebsiteCheckout({ includeSetup: needSetup })
 }
 
 async function loadBillingStatus() {

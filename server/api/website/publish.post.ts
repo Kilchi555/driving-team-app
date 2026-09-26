@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('website_only, website_setup_paid_at, website_hosting_plan, trial_ends_at')
+    .select('website_only, website_setup_paid_at, website_hosting_plan, trial_ends_at, website_status')
     .eq('id', user.tenant_id)
     .maybeSingle()
 
