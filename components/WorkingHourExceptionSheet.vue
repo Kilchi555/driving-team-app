@@ -33,6 +33,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   saved: []
+  updated: []
 }>()
 
 interface DayDraft {
@@ -81,6 +82,7 @@ const savedOnWeekday = computed(() => {
   if (!date) return []
   try {
     return exceptionsForWeekday(props.listedExceptions || [], civilDayOfWeek(date))
+      .filter((row) => !removedDates.value.includes(row.date))
   } catch {
     return []
   }
@@ -93,19 +95,25 @@ const savePlan = computed(() => planExceptionSave(days.value))
 const willWrite = computed(() => savePlan.value.deletes.length + savePlan.value.upserts.length > 0)
 const restoreLabel = computed(() => savePlan.value.upserts.length === 0 && savePlan.value.deletes.length > 0)
 const confirmRestore = ref(false)
-const restoreDatesLabel = computed(() => savePlan.value.deletes
-  .map((date) => {
-    try {
-      return formatExceptionDateLabel(date)
-    } catch {
-      return date
-    }
-  })
-  .join(', '))
+const pendingDeleteDate = ref('')
+const removedDates = ref<string[]>([])
+const restoreDatesLabel = computed(() => {
+  const dates = pendingDeleteDate.value ? [pendingDeleteDate.value] : savePlan.value.deletes
+  return dates
+    .map((date) => {
+      try {
+        return formatExceptionDateLabel(date)
+      } catch {
+        return date
+      }
+    })
+    .join(', ')
+})
 
 watch(() => [props.visible, props.initialDate, props.staffId] as const, async ([visible, date, staffId], previous) => {
   if (!visible || !date || !staffId) return
   const becameVisible = !previous || !previous[0]
+  if (becameVisible) removedDates.value = []
   if (!becameVisible && previous && previous[1] === date && previous[2] === staffId) return
   const openDate = resolveExceptionOpenDate(date, startDate.value, today.value)
   startDate.value = openDate
@@ -229,6 +237,43 @@ function requestSave() {
 
 function cancelRestore() {
   confirmRestore.value = false
+  pendingDeleteDate.value = ''
+}
+
+function requestDeleteSaved(date: string) {
+  if (!date || saving.value) return
+  pendingDeleteDate.value = date
+  confirmRestore.value = true
+}
+
+async function confirmPendingDelete() {
+  const date = pendingDeleteDate.value
+  if (!date) {
+    await save()
+    return
+  }
+  if (!props.staffId || saving.value) return
+  saving.value = true
+  errorMessage.value = ''
+  try {
+    await $fetch('/api/staff/working-hour-exceptions', {
+      method: 'POST',
+      body: { action: 'delete', staffId: props.staffId, date },
+    })
+    removedDates.value = [...removedDates.value, date]
+    confirmRestore.value = false
+    pendingDeleteDate.value = ''
+    emit('updated')
+    if (days.value.some((day) => day.date === date)) {
+      await loadDays(days.value.map((day) => day.date), false)
+    }
+  } catch (error: unknown) {
+    errorMessage.value = germanMessage(error)
+    confirmRestore.value = false
+    pendingDeleteDate.value = ''
+  } finally {
+    saving.value = false
+  }
 }
 
 async function save() {
@@ -347,17 +392,32 @@ function germanMessage(error: unknown): string {
 
           <div v-if="savedOnWeekday.length > 0" class="space-y-1" data-testid="weekday-saved-exceptions">
             <p class="text-xs text-gray-500">{{ savedOnWeekdayLabel }}</p>
-            <button
+            <div
               v-for="row in savedOnWeekday"
               :key="row.date"
-              type="button"
-              class="block w-full text-left text-xs rounded-lg border px-2 py-1.5"
-              :class="row.date === startDate ? 'border-gray-900 bg-gray-50 text-gray-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
-              :data-testid="`saved-exception-${row.date}`"
-              @click="selectSavedDate(row.date)"
+              class="flex items-center gap-1 rounded-lg border pr-1"
+              :class="row.date === startDate ? 'border-gray-900 bg-gray-50' : 'border-gray-200'"
             >
-              {{ exceptionRowLabel(row) }}
-            </button>
+              <button
+                type="button"
+                class="min-w-0 flex-1 text-left text-xs px-2 py-1.5"
+                :class="row.date === startDate ? 'text-gray-900' : 'text-gray-600'"
+                :data-testid="`saved-exception-${row.date}`"
+                @click="selectSavedDate(row.date)"
+              >
+                {{ exceptionRowLabel(row) }}
+              </button>
+              <button
+                type="button"
+                class="shrink-0 text-sm text-red-600 px-2 py-1"
+                :aria-label="`Ausnahme ${row.date} löschen`"
+                :data-testid="`delete-saved-exception-${row.date}`"
+                :disabled="saving"
+                @click="requestDeleteSaved(row.date)"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           <p v-if="loading" class="text-sm text-gray-500">Laden…</p>
@@ -465,7 +525,7 @@ function germanMessage(error: unknown): string {
               class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-900 disabled:opacity-50"
               data-testid="confirm-restore-weekly-hours"
               :disabled="saving"
-              @click="save"
+              @click="confirmPendingDelete"
             >
               Ausnahme löschen
             </button>

@@ -2169,6 +2169,7 @@
     :listed-exceptions="listedExceptions"
     @close="showExceptionSheet = false"
     @saved="onExceptionSaved"
+    @updated="onExceptionsUpdated"
   />
 </template>
 
@@ -4663,6 +4664,11 @@ function openWeekdayExceptions(dayOfWeek: number) {
 
 function onExceptionSaved() {
   showExceptionSheet.value = false
+  void loadExceptionCounts()
+  emit('settings-updated')
+}
+
+function onExceptionsUpdated() {
   void loadExceptionCounts()
   emit('settings-updated')
 }
