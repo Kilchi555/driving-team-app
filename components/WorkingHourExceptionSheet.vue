@@ -8,11 +8,18 @@ import {
 } from '~/utils/effective-working-hours'
 import {
   civilDatesForWeekday,
+  draftBlocksForStoredException,
+  exceptionCountLabel,
+  exceptionRowLabel,
+  exceptionsForWeekday,
   formatExceptionDateLabel,
+  indexExceptionsByDate,
   modeFromStoredException,
   planExceptionSave,
+  resolveExceptionOpenDate,
   weekdayLabel,
   type ExceptionUiMode,
+  type ListedWorkingHourException,
 } from '~/utils/working-hour-exception-entry'
 
 const props = defineProps<{
@@ -20,6 +27,7 @@ const props = defineProps<{
   staffId: string
   staffName?: string
   initialDate: string
+  listedExceptions?: ListedWorkingHourException[]
 }>()
 
 const emit = defineEmits<{
@@ -30,8 +38,18 @@ const emit = defineEmits<{
 interface DayDraft {
   date: string
   mode: ExceptionUiMode
-  blocks: Array<{ start_time: string; end_time: string }>
+  blocks: Array<{ uid: number; start_time: string; end_time: string }>
   existed: boolean
+}
+
+let blockUid = 0
+
+function withIds(blocks: Array<{ start_time: string; end_time: string }>): DayDraft['blocks'] {
+  return blocks.map((block) => ({
+    uid: ++blockUid,
+    start_time: block.start_time,
+    end_time: block.end_time,
+  }))
 }
 
 const days = ref<DayDraft[]>([])
@@ -58,6 +76,19 @@ const startWeekdayLabel = computed(() => {
     return ''
   }
 })
+const savedOnWeekday = computed(() => {
+  const date = startDate.value || props.initialDate
+  if (!date) return []
+  try {
+    return exceptionsForWeekday(props.listedExceptions || [], civilDayOfWeek(date))
+  } catch {
+    return []
+  }
+})
+const savedOnWeekdayLabel = computed(() => {
+  const label = exceptionCountLabel(savedOnWeekday.value.length)
+  return label ? `${label} an diesem Wochentag` : ''
+})
 const savePlan = computed(() => planExceptionSave(days.value))
 const willWrite = computed(() => savePlan.value.deletes.length + savePlan.value.upserts.length > 0)
 const restoreLabel = computed(() => savePlan.value.upserts.length === 0 && savePlan.value.deletes.length > 0)
@@ -74,12 +105,14 @@ const restoreDatesLabel = computed(() => savePlan.value.deletes
 
 watch(() => [props.visible, props.initialDate, props.staffId] as const, async ([visible, date, staffId], previous) => {
   if (!visible || !date || !staffId) return
-  if (previous && previous[0] && previous[1] === date && previous[2] === staffId) return
-  startDate.value = date
+  const becameVisible = !previous || !previous[0]
+  if (!becameVisible && previous && previous[1] === date && previous[2] === staffId) return
+  const openDate = resolveExceptionOpenDate(date, startDate.value, today.value)
+  startDate.value = openDate
   multi.value = false
-  rangeEnd.value = date
+  rangeEnd.value = openDate
   errorMessage.value = ''
-  await loadDays([date], false)
+  await loadDays([openDate], false)
 })
 
 async function loadDays(dates: string[], useTemplate: boolean) {
@@ -98,25 +131,23 @@ async function loadDays(dates: string[], useTemplate: boolean) {
       body: { action: 'list', staffId: props.staffId, startDate: start, endDate: end },
     })
     if (token !== loadToken) return
-    const byDate = new Map((response.exceptions || []).map((row) => [row.date, row]))
+    const byDate = indexExceptionsByDate(response.exceptions || [])
     days.value = dates.map((date) => {
       const existing = byDate.get(date)
       if (existing) {
         return {
           date,
           mode: modeFromStoredException(existing),
-          blocks: existing.blocks.length > 0
-            ? existing.blocks.map((block) => ({ start_time: block.start_time, end_time: block.end_time }))
-            : [{ start_time: '08:00', end_time: '12:00' }],
+          blocks: withIds(draftBlocksForStoredException(existing)),
           existed: true,
         }
       }
       return {
         date,
         mode: template?.mode || 'normal',
-        blocks: template
-          ? template.blocks.map((block) => ({ ...block }))
-          : [{ start_time: '08:00', end_time: '12:00' }],
+        blocks: withIds(template
+          ? template.blocks.map((block) => ({ start_time: block.start_time, end_time: block.end_time }))
+          : [{ start_time: '08:00', end_time: '12:00' }]),
         existed: false,
       }
     })
@@ -135,21 +166,29 @@ async function onStartDateChange() {
   await loadDays([startDate.value], false)
 }
 
+async function selectSavedDate(date: string) {
+  startDate.value = date
+  multi.value = false
+  rangeEnd.value = date
+  errorMessage.value = ''
+  await loadDays([date], false)
+}
+
 function onModeChange(day: DayDraft) {
   if (day.mode === 'custom' && day.blocks.length === 0) {
-    day.blocks.push({ start_time: '08:00', end_time: '12:00' })
+    day.blocks.push({ uid: ++blockUid, start_time: '08:00', end_time: '12:00' })
   }
 }
 
 function addBlock(day: DayDraft) {
   day.mode = 'custom'
-  day.blocks.push({ start_time: '13:00', end_time: '17:00' })
+  day.blocks.push({ uid: ++blockUid, start_time: '13:00', end_time: '17:00' })
 }
 
 function removeBlock(day: DayDraft, index: number) {
   day.blocks.splice(index, 1)
   if (day.blocks.length === 0) {
-    day.blocks.push({ start_time: '08:00', end_time: '12:00' })
+    day.blocks.push({ uid: ++blockUid, start_time: '08:00', end_time: '12:00' })
   }
 }
 
@@ -306,6 +345,21 @@ function germanMessage(error: unknown): string {
           </label>
           <p v-if="startLabel" class="text-sm font-medium text-gray-900">{{ startLabel }}</p>
 
+          <div v-if="savedOnWeekday.length > 0" class="space-y-1" data-testid="weekday-saved-exceptions">
+            <p class="text-xs text-gray-500">{{ savedOnWeekdayLabel }}</p>
+            <button
+              v-for="row in savedOnWeekday"
+              :key="row.date"
+              type="button"
+              class="block w-full text-left text-xs rounded-lg border px-2 py-1.5"
+              :class="row.date === startDate ? 'border-gray-900 bg-gray-50 text-gray-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
+              :data-testid="`saved-exception-${row.date}`"
+              @click="selectSavedDate(row.date)"
+            >
+              {{ exceptionRowLabel(row) }}
+            </button>
+          </div>
+
           <p v-if="loading" class="text-sm text-gray-500">Laden…</p>
 
           <div v-else class="space-y-3">
@@ -333,7 +387,7 @@ function germanMessage(error: unknown): string {
               </fieldset>
 
               <div v-if="day.mode === 'custom'" class="space-y-2">
-                <div v-for="(block, index) in day.blocks" :key="index" class="flex items-end gap-2">
+                <div v-for="(block, index) in day.blocks" :key="block.uid" class="flex items-end gap-2" data-testid="exception-interval">
                   <label class="flex-1 text-xs text-gray-500">
                     Von
                     <input v-model="block.start_time" type="time" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm">

@@ -281,6 +281,92 @@ describe('working-hour exception API authorization', () => {
     expect(mocks.enqueueStaffAvailabilityRecalc).not.toHaveBeenCalled()
   })
 
+  it('lists every interval of one exception and leaves a closed day without blocks', async () => {
+    const tables: string[] = []
+    const filters: Array<{ column: string; value: unknown }> = []
+    function query(result: { data: unknown; error: unknown }) {
+      const chain: {
+        select: ReturnType<typeof vi.fn>
+        eq: ReturnType<typeof vi.fn>
+        gte: ReturnType<typeof vi.fn>
+        lte: ReturnType<typeof vi.fn>
+        in: ReturnType<typeof vi.fn>
+        order: ReturnType<typeof vi.fn>
+        maybeSingle: ReturnType<typeof vi.fn>
+        then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => Promise<unknown>
+      } = {
+        select: vi.fn(() => chain),
+        eq: vi.fn((column: string, value: unknown) => {
+          filters.push({ column, value })
+          return chain
+        }),
+        gte: vi.fn(() => chain),
+        lte: vi.fn(() => chain),
+        in: vi.fn((column: string, value: unknown) => {
+          filters.push({ column, value })
+          return chain
+        }),
+        order: vi.fn(() => chain),
+        maybeSingle: vi.fn(async () => result),
+        then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
+      }
+      return chain
+    }
+
+    const client = {
+      from: vi.fn((table: string) => {
+        tables.push(table)
+        if (table === 'users') return query({ data: staffRow('staff-a'), error: null })
+        if (table === 'staff_working_hour_exceptions') {
+          return query({
+            data: [
+              { id: 'open-day', exception_date: '2099-01-05', is_closed: false, timezone: 'Europe/Zurich' },
+              { id: 'closed-day', exception_date: '2099-01-06', is_closed: true, timezone: 'Europe/Zurich' },
+            ],
+            error: null,
+          })
+        }
+        return query({
+          data: [
+            { exception_id: 'open-day', start_time: '15:00:00', end_time: '18:00:00' },
+            { exception_id: 'open-day', start_time: '08:00:00', end_time: '10:00:00' },
+            { exception_id: 'open-day', start_time: '11:00:00', end_time: '14:00:00' },
+            { exception_id: 'other-staff', start_time: '09:00:00', end_time: '10:00:00' },
+          ],
+          error: null,
+        })
+      }),
+      rpc: vi.fn(),
+    }
+
+    mocks.requireTenantStaff.mockResolvedValue(staffA)
+    mocks.readBody.mockResolvedValue({
+      action: 'list',
+      staffId: 'staff-a',
+      startDate: '2099-01-05',
+      endDate: '2099-01-06',
+      tenant_id: 'tenant-b',
+    })
+    mocks.getSupabaseAdmin.mockReturnValue(client)
+
+    const result = await (await handler())({}) as {
+      exceptions: Array<{ date: string; isClosed: boolean; blocks: Array<{ start_time: string; end_time: string }> }>
+    }
+    const open = result.exceptions.find((row) => row.date === '2099-01-05')
+    const closed = result.exceptions.find((row) => row.date === '2099-01-06')
+    expect(open?.blocks).toEqual([
+      { start_time: '08:00', end_time: '10:00' },
+      { start_time: '11:00', end_time: '14:00' },
+      { start_time: '15:00', end_time: '18:00' },
+    ])
+    expect(closed).toMatchObject({ isClosed: true, blocks: [] })
+    expect(filters).toContainEqual({ column: 'tenant_id', value: 'tenant-a' })
+    expect(filters).toContainEqual({ column: 'staff_id', value: 'staff-a' })
+    expect(filters.some((filter) => filter.column === 'tenant_id' && filter.value === 'tenant-b')).toBe(false)
+    expect(client.rpc).not.toHaveBeenCalled()
+    expect(tables).not.toContain('staff_working_hours')
+  })
+
   it('does not reference weekly hours or appointments in the handler source', () => {
     const source = readFileSync(
       resolve(process.cwd(), 'server/api/staff/working-hour-exceptions.post.ts'),

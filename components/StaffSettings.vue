@@ -623,6 +623,11 @@
                     <div class="min-w-0">
                       <h4 class="text-sm font-medium text-gray-700">{{ day.label }}</h4>
                       <p class="text-xs text-gray-500 truncate">{{ weeklyHoursLabel(day.value) }}</p>
+                      <p
+                        v-if="weekdayExceptionHint(day.value)"
+                        class="text-[11px] leading-4 text-gray-400"
+                        :data-testid="`exception-count-${day.value}`"
+                      >{{ weekdayExceptionHint(day.value) }}</p>
                     </div>
 
                     <div class="flex items-center gap-2 flex-shrink-0">
@@ -2161,6 +2166,7 @@
     :staff-id="props.currentUser?.id || ''"
     :staff-name="staffDisplayName"
     :initial-date="exceptionInitialDate"
+    :listed-exceptions="listedExceptions"
     @close="showExceptionSheet = false"
     @saved="onExceptionSaved"
   />
@@ -2181,7 +2187,7 @@ import StaffExamStatistics from './StaffExamStatistics.vue'
 import StaffCashBalance from './StaffCashBalance.vue'
 import { useStaffWorkingHours, WEEKDAYS, type WorkingDayForm, type WorkingHourBlock } from '~/composables/useStaffWorkingHours'
 import WorkingHourExceptionSheet from '~/components/WorkingHourExceptionSheet.vue'
-import { nextCivilDateForWeekday } from '~/utils/working-hour-exception-entry'
+import { exceptionCountLabel, exceptionCountsByWeekday, nextCivilDateForWeekday, type ListedWorkingHourException } from '~/utils/working-hour-exception-entry'
 import { useTenant } from '~/composables/useTenant'
 import { useDatabaseQuery } from '~/composables/useDatabaseQuery'
 import { useTenantBranding } from '~/composables/useTenantBranding'
@@ -2652,6 +2658,8 @@ const showLocationsSheet = ref(false)
 const showWorktimeSheet = ref(false)
 const showExceptionSheet = ref(false)
 const exceptionInitialDate = ref('')
+const exceptionCountByWeekday = ref<Record<number, number>>({})
+const listedExceptions = ref<ListedWorkingHourException[]>([])
 const showVoucherCodesSheet = ref(false)
 const showExpensesSheet = ref(false)
 
@@ -4613,6 +4621,40 @@ function weeklyHoursLabel(dayOfWeek: number): string {
     .join(' / ')
 }
 
+function weekdayExceptionHint(dayOfWeek: number): string {
+  return exceptionCountLabel(exceptionCountByWeekday.value[dayOfWeek] || 0)
+}
+
+async function loadExceptionCounts() {
+  const staffId = props.currentUser?.id
+  if (!staffId) return
+  try {
+    const response = await $fetch<{
+      success: boolean
+      exceptions: ListedWorkingHourException[]
+    }>('/api/staff/working-hour-exceptions', {
+      method: 'POST',
+      body: {
+        action: 'list',
+        staffId,
+        startDate: '2000-01-01',
+        endDate: '2100-12-31',
+      },
+    })
+    const rows = response?.success ? (response.exceptions || []) : []
+    listedExceptions.value = rows
+    exceptionCountByWeekday.value = exceptionCountsByWeekday(rows)
+  } catch {
+    logger.warn('ℹ️ Working-hour exception counts failed to load')
+    listedExceptions.value = []
+    exceptionCountByWeekday.value = {}
+  }
+}
+
+watch(showWorktimeSheet, (open) => {
+  if (open) void loadExceptionCounts()
+})
+
 function openWeekdayExceptions(dayOfWeek: number) {
   if (!props.currentUser?.id) return
   exceptionInitialDate.value = nextCivilDateForWeekday(dayOfWeek)
@@ -4621,6 +4663,7 @@ function openWeekdayExceptions(dayOfWeek: number) {
 
 function onExceptionSaved() {
   showExceptionSheet.value = false
+  void loadExceptionCounts()
   emit('settings-updated')
 }
 
