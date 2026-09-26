@@ -7,8 +7,7 @@ import {
   expandProductsAsSeparateLines,
   groupProductSalesByAppointment,
 } from '~/server/utils/invoice-product-lines'
-import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
-import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
+import { presentStoredInvoiceLine } from '~/server/utils/invoice-line-snapshot'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -32,9 +31,10 @@ export default defineEventHandler(async (event) => {
   // invoice_id aus der Zahlung holen (ohne tenant_id Filter für Kompatibilität mit alten Zahlungen)
   const { data: payment } = await supabase
     .from('payments')
-    .select('invoice_id, user_id')
+    .select('invoice_id, user_id, tenant_id')
     .eq('id', payment_id)
-    .single()
+    .eq('tenant_id', staffUser.tenant_id)
+    .maybeSingle()
 
   if (!payment?.invoice_id) {
     throw createError({ statusCode: 404, statusMessage: 'Keine Rechnung für diese Zahlung gefunden' })
@@ -45,17 +45,19 @@ export default defineEventHandler(async (event) => {
     .from('invoices')
     .select(`
       id, invoice_number, invoice_date, due_date,
-      billing_contact_person, billing_company_name, billing_email,
+      billing_type, billing_contact_person, billing_company_name, billing_email,
       billing_street, billing_street_number, billing_zip, billing_city, billing_country,
       subtotal_rappen, vat_rate, vat_amount_rappen, discount_amount_rappen,
       total_amount_rappen, status, payment_status, paid_at, notes,
       invoice_items (
-        id, product_name, product_description,
+        id, product_name, product_description, product_id, event_type_code, user_id,
+        staff_id, staff_first_name, customer_first_name, customer_last_name,
         appointment_id, appointment_date, appointment_duration_minutes,
         quantity, unit_price_rappen, total_price_rappen
       )
     `)
     .eq('id', payment.invoice_id)
+    .eq('tenant_id', staffUser.tenant_id)
     .single()
 
   if (error || !invoice) {
@@ -69,29 +71,14 @@ export default defineEventHandler(async (event) => {
     .filter(Boolean)
 
   let appointmentStartTimes: Record<string, string> = {}
-  let appointmentEventTypes: Record<string, {
-    event_type_code: string | null
-    type: string | null
-    staffFirstName: string | null
-    status: string | null
-    cancellation_charge_percentage: number | null
-  }> = {}
   if (appointmentIds.length > 0) {
     const { data: appointments } = await supabase
       .from('appointments')
-      .select('id, start_time, event_type_code, type, status, cancellation_charge_percentage, staff:users!staff_id(first_name)')
+      .select('id, start_time')
       .in('id', appointmentIds)
+      .eq('tenant_id', staffUser.tenant_id)
     if (appointments) {
-      for (const apt of appointments) {
-        appointmentStartTimes[apt.id] = apt.start_time
-        appointmentEventTypes[apt.id] = {
-          event_type_code: apt.event_type_code,
-          type: apt.type,
-          staffFirstName: (apt.staff as any)?.first_name || null,
-          status: apt.status,
-          cancellation_charge_percentage: apt.cancellation_charge_percentage ?? null,
-        }
-      }
+      for (const apt of appointments) appointmentStartTimes[apt.id] = apt.start_time
     }
   }
 
@@ -110,6 +97,7 @@ export default defineEventHandler(async (event) => {
       .from('payments')
       .select('appointment_id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, voucher_discount_rappen, credit_used_rappen, amount_paid_rappen')
       .eq('invoice_id', payment.invoice_id)
+      .eq('tenant_id', staffUser.tenant_id)
       .in('appointment_id', appointmentIds)
     if (payments) {
       for (const p of payments) {
@@ -137,44 +125,27 @@ export default defineEventHandler(async (event) => {
     const { data: productSales } = await supabase
       .from('product_sales')
       .select('appointment_id, product_id, quantity, total_price_rappen, products(id, name)')
+      .eq('tenant_id', staffUser.tenant_id)
       .in('appointment_id', aptIdsWithProducts)
     if (productSales) {
       productsByAppointment = groupProductSalesByAppointment(productSales as any[])
     }
   }
 
-  const terms = await getTenantTerminology(supabase, staffUser.tenant_id)
-  const eventTypeMap = eventTypeLabelMap(terms)
-
-  // start_time, event type und payment breakdown in invoice_items einbetten
   const enrichedItems = (invoice.invoice_items as any[]).map((item: any) => {
-    if (item.product_id) {
-      return {
-        ...item,
-        appointment_start_time: null,
-        product_details: [],
-        products_price_rappen: 0,
-      }
-    }
-    const aptData = item.appointment_id ? appointmentEventTypes[item.appointment_id] : null
-    const eventTypeCode = aptData?.event_type_code
-    const eventLabel = eventTypeCode ? (eventTypeMap[eventTypeCode] || eventTypeCode) : null
-    const staffFirstName = aptData?.staffFirstName || null
     const breakdown = item.appointment_id ? (paymentBreakdown[item.appointment_id] || null) : null
+    const presented = presentStoredInvoiceLine({
+      productName: item.product_name,
+      productId: item.product_id,
+      eventTypeCode: item.event_type_code,
+      staffFirstName: item.staff_first_name,
+      customerFirstName: item.customer_first_name,
+      customerLastName: item.customer_last_name,
+    })
     return {
       ...item,
       appointment_start_time: item.appointment_id ? (appointmentStartTimes[item.appointment_id] || null) : null,
-      product_name: buildInvoiceServiceLineLabel({
-        eventLabel: eventLabel || item.product_name,
-        staffFirstName,
-        appointmentStatus: aptData?.status,
-        cancellationChargePercentage: aptData?.cancellation_charge_percentage,
-      }),
-      product_description: buildInvoiceServiceDescription({
-        categoryType: aptData?.type,
-        appointmentStatus: aptData?.status,
-        existingDescription: item.product_description,
-      }),
+      ...presented,
       ...(breakdown ? {
         lesson_price_rappen: breakdown.lesson_price_rappen,
         admin_fee_rappen: breakdown.admin_fee_rappen,

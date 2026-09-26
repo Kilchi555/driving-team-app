@@ -84,6 +84,10 @@ export interface InvoicePdfData {
   billingEmail?: string
   items: {
     product_name: string
+    /** Frozen event label for the price breakdown. Falls back to product_name. */
+    breakdown_label?: string | null
+    /** Secondary snapshot line, e.g. "Kunde: Max Muster". */
+    customer_line?: string | null
     appointment_date?: string | null
     appointment_duration_minutes?: number | null
     product_description?: string | null
@@ -125,7 +129,7 @@ export interface InvoicePdfData {
    * (used for Zahlungserinnerung / Mahnung so the letter is never cramped above the slip).
    */
   qrOnSeparatePage?: boolean
-  /** Breakdown label for lesson_price_rappen (default: Fahrstunde) */
+  /** @deprecated Prefer item.breakdown_label. Kept for callers that still pass one label. */
   appointmentLabel?: string
   dateLabel?: string
   dueLabel?: string
@@ -375,10 +379,11 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     const closingBlockH = totalBlockH + 14 + paymentBlockH + (data.footerText ? footerTextH + 10 : 0)
 
     const resolveItemMetaLines = (item: InvoicePdfData['items'][number]): string[] => {
+      const customerLine = String(item.customer_line || '').trim()
       const desc = (item.product_description || '').trim()
       const descLines = desc.split(/\n+/).map(l => l.trim()).filter(Boolean)
       const isSessionBlock = descLines.length > 1 || /^Teil\s+\d+/i.test(descLines[0] || '')
-      if (isSessionBlock) return descLines
+      if (isSessionBlock) return customerLine ? [customerLine, ...descLines] : descLines
 
       // Legacy: "Kurs · 08.08.2026, 15.08.2026, 22.08.2026"
       const legacy = desc.match(/^Kurs\s*·\s*(.+)$/i)
@@ -392,7 +397,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       const formattedDate = formatAppointmentDateTime((item as any).appointment_start_time || item.appointment_date)
       const durationStr = item.appointment_duration_minutes ? `${item.appointment_duration_minutes} Min.` : ''
       const line = [formattedDate, desc, durationStr].filter(Boolean).join(' · ')
-      return line ? [line] : []
+      return [customerLine, line].filter(Boolean)
     }
 
     const estimateItemRowHeight = (item: InvoicePdfData['items'][number]) => {
@@ -449,7 +454,10 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
       const breakdown: { label: string; amount: number }[] = []
       if ((item.lesson_price_rappen || 0) > 0)
-        breakdown.push({ label: data.appointmentLabel || 'Termin', amount: item.lesson_price_rappen! })
+        breakdown.push({
+          label: item.breakdown_label || item.product_name || data.appointmentLabel || 'Leistung',
+          amount: item.lesson_price_rappen!,
+        })
       if ((item.admin_fee_rappen || 0) > 0)
         breakdown.push({ label: 'Admin-Gebühr', amount: item.admin_fee_rappen! })
       if ((item.products_price_rappen || 0) > 0) {

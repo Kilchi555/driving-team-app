@@ -12,8 +12,7 @@ import {
   expandProductsAsSeparateLines,
   groupProductSalesByAppointment,
 } from '~/server/utils/invoice-product-lines'
-import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
-import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
+import { presentStoredInvoiceLine } from '~/server/utils/invoice-line-snapshot'
 import { invoicePersonNames, invoiceQrDebtorName, isPlaceholderBillingEmail, loadUserAddressForInvoice, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
 import { isQuoteDocument, quoteAcceptUrl, quoteDocumentLabels } from '~/server/utils/invoice-quote'
 export default defineEventHandler(async (event) => {
@@ -26,30 +25,25 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // Rechnung + Details laden
-    const { data: invoice, error: invoiceError } = await supabase
-      .from('invoices_with_details')
-      .select('*')
-      .eq('id', invoiceId)
-      .single()
-
-    if (invoiceError || !invoice) throw createError({ statusCode: 404, statusMessage: 'Invoice not found' })
-
-    // Bereits versendete Mahngebühren wieder herausrechnen — die gehören nur
-    // aufs Mahnschreiben, nicht auf die Original-Rechnung (siehe Item-Filter unten).
-    const invoiceSubtotalRappen = (invoice.subtotal_rappen || invoice.total_amount_rappen) - (invoice.dunning_fees_rappen || 0)
-    const invoiceTotalRappen = invoice.total_amount_rappen - (invoice.dunning_fees_rappen || 0)
-
-    // Sicherstellen dass nur Rechnungen des eigenen Tenants versendet werden
     const { data: staffUser } = await supabase
       .from('users')
       .select('tenant_id, first_name, last_name, email')
       .eq('auth_user_id', authUser.id)
       .single()
 
-    if (!staffUser || staffUser.tenant_id !== invoice.tenant_id) {
-      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-    }
+    if (!staffUser?.tenant_id) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('invoices_with_details')
+      .select('*')
+      .eq('id', invoiceId)
+      .eq('tenant_id', staffUser.tenant_id)
+      .maybeSingle()
+
+    if (invoiceError || !invoice) throw createError({ statusCode: 404, statusMessage: 'Invoice not found' })
+
+    const invoiceSubtotalRappen = (invoice.subtotal_rappen || invoice.total_amount_rappen) - (invoice.dunning_fees_rappen || 0)
+    const invoiceTotalRappen = invoice.total_amount_rappen - (invoice.dunning_fees_rappen || 0)
 
     // Tenant-Daten laden
     const { data: tenant } = await supabase
@@ -63,6 +57,7 @@ export default defineEventHandler(async (event) => {
       .from('invoice_items')
       .select('*')
       .eq('invoice_id', invoiceId)
+      .eq('tenant_id', invoice.tenant_id)
       .order('sort_order', { ascending: true })
 
     // Mahngebühren (angehängt beim Versand einer Zahlungserinnerung/Mahnung, siehe
@@ -76,42 +71,27 @@ export default defineEventHandler(async (event) => {
     if (appointmentIds.length > 0) {
       const { data: apts } = await supabase
         .from('appointments')
-        .select('id, start_time, event_type_code, type, duration_minutes, status, cancellation_charge_percentage, staff:users!staff_id(first_name)')
+        .select('id, start_time, duration_minutes')
         .in('id', appointmentIds)
+        .eq('tenant_id', invoice.tenant_id)
       if (apts) for (const apt of apts) appointmentMap[apt.id] = apt
     }
 
-    const terms = await getTenantTerminology(supabase, invoice.tenant_id)
-    const eventTypeMap = eventTypeLabelMap(terms)
-
     const items = (rawItems || []).map((item: any) => {
-      // Produktzeilen behalten ihren Produktnamen (nicht mit Event-Typ überschreiben)
-      if (item.product_id) {
-        return {
-          ...item,
-          appointment_start_time: null,
-          appointment_duration_minutes: null,
-        }
-      }
       const apt = item.appointment_id ? appointmentMap[item.appointment_id] : null
-      const eventLabel = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
-      const staffFirstName = (apt?.staff as any)?.first_name || null
-      const productName = buildInvoiceServiceLineLabel({
-        eventLabel: eventLabel || item.product_name,
-        staffFirstName,
-        appointmentStatus: apt?.status,
-        cancellationChargePercentage: apt?.cancellation_charge_percentage,
+      const presented = presentStoredInvoiceLine({
+        productName: item.product_name,
+        productId: item.product_id,
+        eventTypeCode: item.event_type_code,
+        staffFirstName: item.staff_first_name,
+        customerFirstName: item.customer_first_name,
+        customerLastName: item.customer_last_name,
       })
       return {
         ...item,
-        product_name: productName,
+        ...presented,
         appointment_start_time: apt?.start_time || null,
         appointment_duration_minutes: apt?.duration_minutes ?? item.appointment_duration_minutes ?? null,
-        product_description: buildInvoiceServiceDescription({
-          categoryType: apt?.type,
-          appointmentStatus: apt?.status,
-          existingDescription: item.product_description,
-        }),
       }
     })
 
@@ -122,6 +102,7 @@ export default defineEventHandler(async (event) => {
         .from('payments')
         .select('appointment_id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, voucher_discount_rappen, credit_used_rappen, amount_paid_rappen')
         .eq('invoice_id', invoiceId)
+        .eq('tenant_id', invoice.tenant_id)
         .in('appointment_id', appointmentIds)
       if (payments) for (const p of payments) {
         if (p.appointment_id) paymentBreakdown[p.appointment_id] = p
@@ -142,6 +123,7 @@ export default defineEventHandler(async (event) => {
       const { data: productSales } = await supabase
         .from('product_sales')
         .select('appointment_id, product_id, quantity, total_price_rappen, products(id, name)')
+        .eq('tenant_id', invoice.tenant_id)
         .in('appointment_id', aptIdsWithProducts)
       if (productSales) {
         productsByApt = groupProductSalesByAppointment(productSales as any[])
@@ -230,7 +212,6 @@ export default defineEventHandler(async (event) => {
       introText,
       paymentTerms,
       footerText,
-      appointmentLabel: terms.appointment || 'Termin',
     })
 
     // PDF als Anhang generieren
@@ -263,6 +244,8 @@ export default defineEventHandler(async (event) => {
         billingEmail,
         items: finalItems.map((i: any) => ({
           product_name: i.product_name,
+          breakdown_label: i.breakdown_label || i.product_name,
+          customer_line: i.customer_line || null,
           appointment_date: i.appointment_start_time || i.appointment_date,
           appointment_duration_minutes: i.appointment_duration_minutes ?? null,
           product_description: i.product_description || null,
@@ -293,7 +276,6 @@ export default defineEventHandler(async (event) => {
         introText,
         paymentTerms,
         footerText,
-        appointmentLabel: terms.appointment || 'Termin',
       })
       pdfAttachments = [{ filename: `${labels.filenamePrefix}_${invoice.invoice_number}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
     } catch (pdfErr: any) {
