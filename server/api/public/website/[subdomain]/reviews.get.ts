@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { fetchTenantGoogleReviews } from '~/server/utils/tenant-google-reviews'
 import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
 import { isDemoWebsiteTenant, isForeignGooglePlaceName } from '~/utils/website-google-reviews'
+import { loadAuthorizedPublicWebsite } from '~/server/utils/website-preview-access'
 
 /**
  * Server-memory cache for Google Places (rate-limit friendly).
@@ -30,7 +31,7 @@ const loadReviewsCached = defineCachedFunction(
       throw createError({ statusCode: 404, statusMessage: 'Website not found' })
     }
     if (!website.is_published && !preview) {
-      throw createError({ statusCode: 404, statusMessage: 'Website not published' })
+      throw createError({ statusCode: 404, statusMessage: 'Website not found' })
     }
 
     const { data: tenant } = await supabase
@@ -126,7 +127,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'subdomain required' })
   }
 
-  const preview = String(getQuery(event).preview || '') === '1'
+  const supabase = getSupabaseAdmin()
+  const { preview } = await loadAuthorizedPublicWebsite({
+    event,
+    supabase,
+    subdomain,
+    columns: 'id, tenant_id, subdomain, is_published',
+  })
   const limit = Math.min(Math.max(Number(getQuery(event).limit) || 8, 1), 16)
 
   setWebsitePublicCache(event, {

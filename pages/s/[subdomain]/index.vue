@@ -639,6 +639,7 @@ import { heroPreloadAttrs, offerPhotoSrc, offerPhotoSrcset, websiteImageProxyUrl
 import { websiteOverflowPages, websitePageCardHref, websitePageLinks, websiteStandardLinks } from '~/utils/website-nav'
 import { websiteFontCssVars, websiteFontHeadLinks } from '~/utils/website-fonts'
 import { isWebsitePickupMeetingPoint } from '~/utils/website-wizard-content'
+import { websitePreviewFetchQuery, websitePreviewQueryValue, websitePreviewSearch } from '~/utils/website-preview-query'
 
 definePageMeta({
   layout: 'site',
@@ -647,7 +648,8 @@ definePageMeta({
 
 const route = useRoute()
 const subdomain = computed(() => String(route.params.subdomain || '').toLowerCase())
-const preview = computed(() => route.query.preview === '1')
+const previewParam = computed(() => websitePreviewQueryValue(route.query.preview))
+const preview = computed(() => previewParam.value.length > 0)
 const mobileNavOpen = ref(false)
 const leadForm = ref({ first_name: '', email: '', phone: '', message: '', company: '' })
 const leadSending = ref(false)
@@ -664,13 +666,15 @@ const slotsSectionEl = ref<HTMLElement | null>(null)
 if (import.meta.server && preview.value) {
   const ev = useRequestEvent()
   ev?.node?.res?.setHeader?.('Cache-Control', 'private, no-store')
+  ev?.node?.res?.setHeader?.('CDN-Cache-Control', 'private, no-store')
+  ev?.node?.res?.setHeader?.('Vercel-CDN-Cache-Control', 'private, no-store')
 }
 
 const { data, pending, error } = await useAsyncData(
   () => `site-${subdomain.value}-${preview.value ? 'p' : 'l'}`,
   () =>
     $fetch(`/api/public/website/${encodeURIComponent(subdomain.value)}`, {
-      query: preview.value ? { preview: '1' } : undefined,
+      query: websitePreviewFetchQuery(previewParam.value),
     }),
   { watch: [subdomain, preview] },
 )
@@ -697,7 +701,7 @@ const { data: googleReviews } = await useAsyncData(
         }>
       }>(`/api/public/website/${encodeURIComponent(subdomain.value)}/reviews`, {
         query: {
-          ...(preview.value ? { preview: '1' } : {}),
+          ...websitePreviewFetchQuery(previewParam.value),
           limit: 8,
         },
       })
@@ -880,7 +884,7 @@ async function checkPickupPlz() {
       plz?: string
     }>(`/api/public/website/${encodeURIComponent(subdomain.value)}/pickup-check`, {
       method: 'POST',
-      query: preview.value ? { preview: '1' } : undefined,
+      query: websitePreviewFetchQuery(previewParam.value),
       body: { plz },
     })
     pickupResult.value = res
@@ -927,7 +931,7 @@ const stickyActions = computed(() => {
   return out
 })
 
-const previewQs = computed(() => (preview.value ? '?preview=1' : ''))
+const previewQs = computed(() => websitePreviewSearch(previewParam.value))
 
 const defaultLegalLinks = computed(() => [
   { label: 'Impressum', href: `/s/${subdomain.value}/impressum${previewQs.value}` },
@@ -1077,7 +1081,7 @@ async function refreshSlotsQuietly() {
       `/api/public/website/${encodeURIComponent(subdomain.value)}/next-slots`,
       {
         query: {
-          ...(preview.value ? { preview: '1' } : {}),
+          ...websitePreviewFetchQuery(previewParam.value),
           _t: Date.now(),
         },
       },
@@ -1097,8 +1101,8 @@ async function submitLead() {
       `/api/public/website/${encodeURIComponent(subdomain.value)}/lead`,
       {
         method: 'POST',
-        query: preview.value ? { preview: '1' } : undefined,
-        body: { ...leadForm.value, category: 'contact', ...(preview.value ? { preview: '1' } : {}) },
+        query: websitePreviewFetchQuery(previewParam.value),
+        body: { ...leadForm.value, category: 'contact' },
       },
     )
     leadOk.value = true
@@ -1162,7 +1166,7 @@ const ssrRequestOrigin = import.meta.server
 const ogImage = computed(() => {
   // Dedicated 1200×630 card (sharp) — absolute URL for crawlers
   if (subdomain.value) {
-    const path = `/api/public/website/${encodeURIComponent(subdomain.value)}/og.png`
+    const path = `/api/public/website/${encodeURIComponent(subdomain.value)}/og.png${websitePreviewSearch(previewParam.value)}`
     if (import.meta.server && ssrRequestOrigin) {
       return `${ssrRequestOrigin.proto}://${ssrRequestOrigin.host}${path}`
     }

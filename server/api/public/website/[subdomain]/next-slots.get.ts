@@ -3,6 +3,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { loadWebsiteTeaserSlots } from '~/server/utils/website-next-slots'
 import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
+import { loadAuthorizedPublicWebsite } from '~/server/utils/website-preview-access'
 
 function appBaseUrl(event: any) {
   const fromEnv = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL
@@ -18,18 +19,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'subdomain required' })
   }
 
-  const preview = String(getQuery(event).preview || '') === '1'
   const supabase = getSupabaseAdmin()
-
-  const { data: website } = await supabase
-    .from('website_tenants')
-    .select('id, tenant_id, subdomain, is_published')
-    .eq('subdomain', subdomain)
-    .maybeSingle()
-
-  if (!website || (!website.is_published && !preview)) {
-    throw createError({ statusCode: 404, statusMessage: 'Website not found' })
-  }
+  const { website, preview } = await loadAuthorizedPublicWebsite({
+    event,
+    supabase,
+    subdomain,
+    columns: 'id, tenant_id, subdomain, is_published',
+  })
 
   const { data: tenant } = await supabase
     .from('tenants')

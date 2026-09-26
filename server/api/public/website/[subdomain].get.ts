@@ -1,20 +1,15 @@
 // Public: published tenant landing page by subdomain
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
+import { loadAuthorizedPublicWebsite } from '~/server/utils/website-preview-access'
 
 export default defineEventHandler(async (event) => {
-  const subdomain = getRouterParam(event, 'subdomain')?.trim().toLowerCase()
-  if (!subdomain) {
-    throw createError({ statusCode: 400, statusMessage: 'subdomain required' })
-  }
-
-  const preview = String(getQuery(event).preview || '') === '1'
   const supabase = getSupabaseAdmin()
-
-  const { data: website, error } = await supabase
-    .from('website_tenants')
-    .select(
-      `
+  const { website, preview, subdomain } = await loadAuthorizedPublicWebsite({
+    event,
+    supabase,
+    subdomain: getRouterParam(event, 'subdomain') || '',
+    columns: `
       id,
       tenant_id,
       subdomain,
@@ -33,19 +28,7 @@ export default defineEventHandler(async (event) => {
       custom_domain_verified,
       last_published_at
     `,
-    )
-    .eq('subdomain', subdomain)
-    .maybeSingle()
-
-  if (error) {
-    throw createError({ statusCode: 500, statusMessage: error.message })
-  }
-  if (!website) {
-    throw createError({ statusCode: 404, statusMessage: 'Website not found' })
-  }
-  if (!website.is_published && !preview) {
-    throw createError({ statusCode: 404, statusMessage: 'Website not published' })
-  }
+  })
 
   let pageQuery = supabase
     .from('website_pages')

@@ -153,8 +153,15 @@ const authHeaders = async () => {
 
 const localPreview = computed(() => {
   const raw = String(prospect.value?.preview_url || '')
-  const m = raw.match(/\/s\/[^/?#]+/)
-  return m ? `http://127.0.0.1:3000${m[0]}?preview=1` : ''
+  try {
+    const u = new URL(raw, 'https://app.simy.ch')
+    if (!u.pathname.startsWith('/s/')) return ''
+    const token = String(u.searchParams.get('preview') || '')
+    const qs = token && token !== '1' ? `?preview=${encodeURIComponent(token)}` : ''
+    return `http://127.0.0.1:3000${u.pathname}${qs}`
+  } catch {
+    return ''
+  }
 })
 
 const architecture = computed(() => prospect.value?.analysis?.architecture || null)
@@ -162,8 +169,15 @@ const architecture = computed(() => prospect.value?.analysis?.architecture || nu
 const addonPreview = (slug?: string) => {
   if (!slug) return ''
   const raw = String(prospect.value?.preview_url || '')
-  const m = raw.match(/\/s\/[^/?#]+/)
-  return m ? `http://127.0.0.1:3000${m[0]}/${encodeURIComponent(slug)}?preview=1` : ''
+  try {
+    const u = new URL(raw, 'https://app.simy.ch')
+    if (!u.pathname.startsWith('/s/')) return ''
+    const token = String(u.searchParams.get('preview') || '')
+    const qs = token && token !== '1' ? `?preview=${encodeURIComponent(token)}` : ''
+    return `http://127.0.0.1:3000${u.pathname}/${encodeURIComponent(slug)}${qs}`
+  } catch {
+    return ''
+  }
 }
 
 const applyProspect = (row: any) => {

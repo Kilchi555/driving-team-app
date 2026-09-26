@@ -2,21 +2,20 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
+import { loadAuthorizedPublicWebsite } from '~/server/utils/website-preview-access'
 
 export default defineEventHandler(async (event) => {
-  const subdomain = getRouterParam(event, 'subdomain')?.trim().toLowerCase()
   const slug = getRouterParam(event, 'slug')?.trim().toLowerCase()
-  if (!subdomain || !slug) {
+  if (!slug) {
     throw createError({ statusCode: 400, statusMessage: 'subdomain and slug required' })
   }
 
-  const preview = String(getQuery(event).preview || '') === '1'
   const supabase = getSupabaseAdmin()
-
-  const { data: website, error } = await supabase
-    .from('website_tenants')
-    .select(
-      `
+  const { website, preview, subdomain } = await loadAuthorizedPublicWebsite({
+    event,
+    supabase,
+    subdomain: getRouterParam(event, 'subdomain') || '',
+    columns: `
       id,
       tenant_id,
       subdomain,
@@ -35,19 +34,7 @@ export default defineEventHandler(async (event) => {
       last_published_at,
       addon_pages_enabled
     `,
-    )
-    .eq('subdomain', subdomain)
-    .maybeSingle()
-
-  if (error) {
-    throw createError({ statusCode: 500, statusMessage: error.message })
-  }
-  if (!website) {
-    throw createError({ statusCode: 404, statusMessage: 'Website not found' })
-  }
-  if (!website.is_published && !preview) {
-    throw createError({ statusCode: 404, statusMessage: 'Website not published' })
-  }
+  })
 
   const { data: page, error: pageError } = await supabase
     .from('website_pages')
