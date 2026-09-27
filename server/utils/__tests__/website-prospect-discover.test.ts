@@ -255,7 +255,35 @@ describe('prospect discovery cron', () => {
     expect(route).toContain('emailsSent: 0')
     const handler = route.slice(route.indexOf('export default defineEventHandler'))
     expect(handler.indexOf('assertCronRequest(event)')).toBeGreaterThanOrEqual(0)
-    expect(handler.indexOf('assertCronRequest(event)')).toBeLessThan(handler.indexOf('runCronWebsiteProspectDiscovery()'))
+    expect(handler.indexOf('assertCronRequest(event)')).toBeLessThan(handler.indexOf('dispatchCronProspectDiscovery('))
+    expect(handler).not.toContain('runCronWebsiteProspectDiscovery')
+    const automation = readFileSync(resolve(process.cwd(), 'server/utils/prospect-discovery-automation.ts'), 'utf8')
+    const dispatch = automation.slice(automation.indexOf('export async function dispatchCronProspectDiscovery'))
+    expect(dispatch.indexOf('automation_disabled')).toBeGreaterThanOrEqual(0)
+    expect(dispatch.indexOf('automation_disabled')).toBeLessThan(dispatch.indexOf('startProspectDiscoveryRun('))
+    expect(automation).toContain('runCronWebsiteProspectDiscovery')
+  })
+
+  it('counts a scored row when generation fails after insert', async () => {
+    const { deps, saved } = harness({
+      searchPlaces: async () => [{ place_id: 'place-stuck', name: 'Fahrschule Stuck' }],
+      placeDetails: async () => ({
+        place_id: 'place-stuck',
+        name: 'Fahrschule Stuck',
+        website: null,
+        city: 'Bern',
+      }),
+      generateSite: async () => {
+        throw new Error('generate failed')
+      },
+    })
+    const summary = await runWebsiteProspectDiscovery(deps)
+    expect(saved).toHaveLength(1)
+    expect(saved[0].status).toBe('scored')
+    expect(summary.created).toBe(0)
+    expect(summary.scored).toBe(1)
+    expect(summary.errors).toBe(1)
+    expect(summary.emailsSent).toBe(0)
   })
 
   it('rejects a private website before any fetch and still stores a one-pager', async () => {

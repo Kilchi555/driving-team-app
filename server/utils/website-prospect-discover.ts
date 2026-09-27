@@ -226,6 +226,7 @@ export type DiscoverySummary = {
   unsafeUrls: number
   pagespeed: number
   errors: number
+  scored: number
   emailsSent: 0
   generated: Array<{ id: string; place_id: string; status: string }>
 }
@@ -294,6 +295,7 @@ export async function runWebsiteProspectDiscovery(deps: ProspectDiscoveryDeps): 
     unsafeUrls: 0,
     pagespeed: 0,
     errors: 0,
+    scored: 0,
     emailsSent: 0,
     generated: [],
   }
@@ -440,8 +442,16 @@ export async function runWebsiteProspectDiscovery(deps: ProspectDiscoveryDeps): 
       updated_at: now,
     }
 
+    let saved: { id: string }
     try {
-      const saved = await deps.saveProspect(row)
+      saved = await deps.saveProspect(row)
+    } catch (err) {
+      if (isDuplicateError(err)) summary.skippedDuplicate += 1
+      else summary.errors += 1
+      continue
+    }
+
+    try {
       const site = await deps.generateSite(saved.id)
       summary.created += 1
       summary.generated.push({
@@ -451,7 +461,10 @@ export async function runWebsiteProspectDiscovery(deps: ProspectDiscoveryDeps): 
       })
     } catch (err) {
       if (isDuplicateError(err)) summary.skippedDuplicate += 1
-      else summary.errors += 1
+      else {
+        summary.scored += 1
+        summary.errors += 1
+      }
     }
   }
 
