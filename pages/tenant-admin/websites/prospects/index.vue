@@ -80,7 +80,10 @@
               <td>
                 <div class="sa-tenant-name">{{ p.name }}</div>
                 <div class="sa-tenant-slug">
-                  {{ p.city || '—' }} · {{ p.hostname || p.existing_url || 'ohne URL' }}
+                  {{ p.city || '—' }} ·
+                  <template v-if="!p.existing_url && p.source === 'places_cron'">keine Homepage</template>
+                  <template v-else>{{ p.hostname || p.existing_url || 'ohne URL' }}</template>
+                  <span v-if="p.source === 'places_cron'"> · Cron</span>
                   <span v-if="p.analysis?.architecture?.mode === 'multi'"> · Multi</span>
                   <span v-else-if="p.analysis?.architecture?.mode === 'one'"> · One</span>
                 </div>
@@ -123,7 +126,7 @@ const activeTab = ref('all')
 
 const statusTabs = [
   { label: 'Alle', value: 'all' },
-  { label: 'Review', value: 'review' },
+  { label: 'In Prüfung', value: 'review' },
   { label: 'Analysiert', value: 'scored' },
   { label: 'Freigegeben', value: 'approved' },
   { label: 'Übersprungen', value: 'skipped' },
@@ -190,7 +193,7 @@ const statusLabel = (s: string) =>
     discovered: 'Neu',
     scored: 'Analysiert',
     generated: 'Generiert',
-    review: 'Review',
+    review: 'In Prüfung',
     approved: 'Freigegeben',
     sent: 'Gesendet',
     claimed: 'Claimed',

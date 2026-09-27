@@ -106,11 +106,15 @@ export type ProspectArchitecture = {
   intents: ProspectIntent[]
 }
 
+export type ProspectRedirect = { from: string; to: string }
+
 export type ProspectAnalysis = {
   findings: ProspectFinding[]
   summary: string
   recommend_generate: boolean
   architecture?: ProspectArchitecture
+  selection_reasons?: string[]
+  redirects?: ProspectRedirect[]
 }
 
 export type WebsiteProspectRow = {

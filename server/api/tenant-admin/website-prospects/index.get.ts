@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   let q = supabase
     .from('website_prospects')
     .select(
-      'id, name, business_type, existing_url, hostname, city, status, opportunity_score, seo_score, speed_score, freshness_score, preview_url, email, created_at, updated_at',
+      'id, name, business_type, existing_url, hostname, city, source, status, opportunity_score, seo_score, speed_score, freshness_score, preview_url, email, created_at, updated_at',
     )
     .order('opportunity_score', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })

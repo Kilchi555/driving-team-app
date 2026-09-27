@@ -137,6 +137,10 @@ export type LandingBuildInput = {
   meeting_points?: Array<{ id?: string; name: string; address?: string }>
   /** Tenant has pickup mode + at least one pickup-enabled location */
   pickup?: boolean
+  /** When true, industry default opening hours are omitted unless a template is stored. */
+  verified_hours_only?: boolean
+  /** When true, the services lead mentions prices only if a service has price_cents. */
+  verified_prices_only?: boolean
 }
 
 export type LandingBlock =
@@ -243,10 +247,32 @@ function serviceBookUrl(bookingUrl: string, category?: string | null) {
   return `${bookingUrl}${sep}category=${encodeURIComponent(cat)}`
 }
 
+function hasExplicitWorkingHours(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false
+  const row = value as { days?: unknown; start_time?: unknown; end_time?: unknown; schedule?: unknown }
+  return Array.isArray(row.days) && typeof row.start_time === 'string' && typeof row.end_time === 'string' && !!row.schedule
+}
+
+function hasSourcedPrice(services: Array<{ price_cents?: number | null }>): boolean {
+  return services.some((service) => service.price_cents != null && Number.isFinite(Number(service.price_cents)))
+}
+
+function servicesLead(formal: 'sie' | 'du', mentionPrices: boolean): string {
+  if (!mentionPrices) return formal === 'du' ? 'Wähle dein Angebot.' : 'Wählen Sie Ihr Angebot.'
+  return formal === 'du'
+    ? 'Wähle dein Angebot — Preise transparent, Buchung in wenigen Klicks.'
+    : 'Wählen Sie Ihr Angebot — Preise transparent, Buchung in wenigen Klicks.'
+}
+
 function fallbackServiceDescription(
   s: { name?: string | null; category?: string | null; duration_minutes?: number | null },
   t: { appointment: string },
+  opts: { verifiedPricesOnly?: boolean } = {},
 ) {
+  if (opts.verifiedPricesOnly) {
+    if (s.duration_minutes) return `${t.appointment} — ${s.duration_minutes} Min.`
+    return ''
+  }
   const mins = s.duration_minutes || 45
   const key = `${s.category || ''} ${s.name || ''}`.toLowerCase()
   if (/\bbe\b|anhänger/.test(key)) {
@@ -292,7 +318,7 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
   const services = input.services.slice(0, 12).map((s) => ({
     id: s.id,
     name: s.name,
-    description: s.description?.trim() || fallbackServiceDescription(s, t),
+    description: s.description?.trim() || fallbackServiceDescription(s, t, { verifiedPricesOnly: input.verified_prices_only }),
     duration_minutes: s.duration_minutes || null,
     price_label: moneyCHF(s.price_cents),
     price_cents: s.price_cents ?? null,
@@ -322,8 +348,10 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
     !!input.pickup,
   )
 
-  const hoursTpl = resolveWorkingTemplate(input.tenant)
-  const hoursRows: OpeningHoursRow[] = formatOpeningHours(hoursTpl)
+  const hoursTpl = input.verified_hours_only && !hasExplicitWorkingHours(input.tenant.working_days_template)
+    ? null
+    : resolveWorkingTemplate(input.tenant)
+  const hoursRows: OpeningHoursRow[] = hoursTpl ? formatOpeningHours(hoursTpl) : []
   const email = input.tenant.contact_email || input.tenant.email || null
   const phone = input.tenant.contact_phone || input.tenant.phone || null
   const wa = whatsappUrlForTenant(input.tenant)
@@ -376,10 +404,7 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
       content: {
         eyebrow: 'Angebot',
         title: city ? `${t.appointmentsPlural} ${city}` : `Unsere ${t.appointmentsPlural}`,
-        description:
-          formal === 'du'
-            ? `Wähle dein Angebot — Preise transparent, Buchung in wenigen Klicks.`
-            : `Wählen Sie Ihr Angebot — Preise transparent, Buchung in wenigen Klicks.`,
+        description: servicesLead(formal, input.verified_prices_only ? hasSourcedPrice(input.services) : true),
         services,
       },
     },
@@ -667,7 +692,7 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
           postalCode: input.tenant.postal_code || input.tenant.invoice_zip || undefined,
           addressCountry: 'CH',
         },
-        openingHoursSpecification: openingHoursToSchema(hoursTpl),
+        openingHoursSpecification: hoursTpl ? openingHoursToSchema(hoursTpl) : undefined,
         ...(geo ? { geo, hasMap: mapLink || undefined } : mapLink ? { hasMap: mapLink } : {}),
         ...(sameAs.length ? { sameAs } : {}),
         ...(input.tenant.uid_number ? { taxID: String(input.tenant.uid_number).trim() } : {}),

@@ -232,6 +232,10 @@
     {
       "path": "/api/cron/sync-auto-waitlists",
       "schedule": "20 * * * *"
+    },
+    {
+      "path": "/api/cron/discover-website-prospects",
+      "schedule": "30 4 * * *"
     }
   ],
   "rewrites": [

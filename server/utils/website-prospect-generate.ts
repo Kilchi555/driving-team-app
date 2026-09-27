@@ -94,6 +94,7 @@ export async function generateWebsiteProspectSite(prospectId: string) {
 
   const slug = await uniqueSlug(supabase, prospect.name || prospect.hostname || prospect.id)
   const tenantId = randomUUID()
+  const cronShell = prospect.source === 'places_cron'
   const trialEnds = new Date()
   trialEnds.setDate(trialEnds.getDate() + SAAS_TRIAL_DAYS)
 
@@ -122,9 +123,12 @@ export async function generateWebsiteProspectSite(prospectId: string) {
       website_status: 'pending_review',
       website_notes: `website_prospect:${prospect.id}`,
       is_active: true,
-      is_trial: true,
-      trial_ends_at: trialEnds.toISOString(),
-      subscription_plan: 'trial',
+      is_trial: cronShell ? false : true,
+      trial_ends_at: cronShell ? null : trialEnds.toISOString(),
+      subscription_plan: cronShell ? null : 'trial',
+      ...(cronShell
+        ? { website_hosting_plan: null, website_setup_paid_at: null }
+        : {}),
       timezone: 'Europe/Zurich',
       currency: 'CHF',
       language: 'de',
@@ -227,13 +231,14 @@ async function finishProspectSite(opts: {
   const baseUrl = getAppUrl().replace(/\/$/, '')
   const siteUrl = `${baseUrl}/s/${encodeURIComponent(website.subdomain)}`
   const previewUrl = siteUrl
+  const cronShell = prospect.source === 'places_cron'
   const services = (scrape.services || []).map((s: any, i: number) => ({
     id: `svc-${i + 1}`,
     name: String(s.name || '').trim(),
     description: '',
   })).filter((s: { name: string }) => s.name)
 
-  if (!services.length && prospect.business_type === 'driving_school') {
+  if (!cronShell && !services.length && prospect.business_type === 'driving_school') {
     services.push(
       { id: 'svc-b', name: 'Autofahren Kat. B', description: '' },
       { id: 'svc-a', name: 'Motorrad', description: '' },
@@ -267,8 +272,7 @@ async function finishProspectSite(opts: {
   const usps = [
     place.rating ? `${place.rating}★ auf Google` : '',
     prospect.city ? `Lokal in ${prospect.city}` : '',
-    'Transparente Preise',
-    'Persönliche Betreuung',
+    ...(cronShell ? [] : ['Transparente Preise', 'Persönliche Betreuung']),
   ].filter(Boolean)
 
   const landing = buildLandingPage({
@@ -307,6 +311,8 @@ async function finishProspectSite(opts: {
     siteUrl,
     hide_powered_by: true,
     booking_policy: null,
+    verified_hours_only: cronShell,
+    verified_prices_only: cronShell,
     usps,
     gallery: stock.gallery,
     contact_channels: { phone: !!prospect.phone, email: !!prospect.email, whatsapp: !!prospect.phone, form: true },
@@ -363,6 +369,7 @@ async function finishProspectSite(opts: {
       services: scrape.services,
       city: prospect.city,
       internalPaths: scrape.internal_paths,
+      strict: prospect.source === 'places_cron',
     })
   const addon = await applyProspectArchitecture({
     supabase,
