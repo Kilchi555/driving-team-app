@@ -344,6 +344,16 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused developer/ops notes verified against current source. Prefer these over stale root Markdown that claims `COMPLETE` / `FINAL`.
+
+| Doc | Topic |
+|-----|--------|
+| [RESEND_LAZY_INIT.md](./RESEND_LAZY_INIT.md) | Lazy Resend client init so Nuxt boots without `RESEND_API_KEY` (#295) |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
