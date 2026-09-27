@@ -6,6 +6,7 @@ import { lookup } from 'node:dns/promises'
 import http from 'node:http'
 import https from 'node:https'
 import { isIP } from 'node:net'
+import type { Readable } from 'node:stream'
 
 export const SSRF_MAX_URL_LENGTH = 2048
 export const SSRF_MAX_REDIRECTS = 3
@@ -198,6 +199,148 @@ export async function safeFetchPublic(
     const contentType = headerValue(response.headers, 'content-type').toLowerCase()
     const allowed = opts.allowedContentTypes || ['text/html', 'application/xhtml+xml', 'application/ld+json']
     if (!allowed.some((kind) => contentType.includes(kind))) throw new UnsafeUrlError('content-type')
+    return { finalUrl: url.toString(), contentType, body: response.body }
+  }
+  throw new UnsafeUrlError('too many redirects')
+}
+
+/** Hard cap for prospect website images. Matches the previous media fetcher. */
+export const PROSPECT_IMAGE_MAX_BYTES = 12 * 1024 * 1024
+
+const PROSPECT_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/heic',
+  'image/heif',
+  'image/avif',
+])
+
+export function isProspectImageContentType(contentType: string | null | undefined): boolean {
+  const mime = String(contentType || '').toLowerCase().split(';', 1)[0].trim()
+  return PROSPECT_IMAGE_TYPES.has(mime)
+}
+
+export type PinnedBytes = {
+  status: number
+  headers: Record<string, string | string[] | undefined>
+  body: Buffer
+}
+
+/**
+ * Read an image body only after Content-Type is accepted.
+ * A non-image response is rejected without consuming the stream.
+ */
+export async function takeImageBody(
+  contentType: string | null | undefined,
+  stream: Readable,
+  maxBytes: number,
+): Promise<Buffer> {
+  if (!isProspectImageContentType(contentType)) {
+    stream.destroy()
+    throw new UnsafeUrlError('content-type')
+  }
+  const chunks: Buffer[] = []
+  let size = 0
+  return await new Promise((resolve, reject) => {
+    let settled = false
+    const fail = (err: Error) => {
+      if (settled) return
+      settled = true
+      stream.destroy()
+      reject(err)
+    }
+    stream.on('data', (chunk: Buffer) => {
+      size += chunk.length
+      if (size > maxBytes) {
+        fail(new UnsafeUrlError('response too large'))
+        return
+      }
+      chunks.push(chunk)
+    })
+    stream.on('end', () => {
+      if (settled) return
+      settled = true
+      resolve(Buffer.concat(chunks))
+    })
+    stream.on('error', (err) => fail(err instanceof Error ? err : new Error('image read')))
+  })
+}
+
+async function defaultPinnedImageRequest(url: URL, ip: string, maxBytes: number): Promise<PinnedBytes> {
+  const lib = url.protocol === 'https:' ? https : http
+  return new Promise((resolve, reject) => {
+    const req = lib.request(
+      {
+        protocol: url.protocol,
+        host: ip,
+        servername: url.hostname,
+        port: url.port || (url.protocol === 'https:' ? 443 : 80),
+        method: 'GET',
+        path: `${url.pathname || '/'}${url.search}`,
+        headers: {
+          Host: url.host,
+          'User-Agent': 'SimyWebsiteFactory/1.0',
+          Accept: 'image/jpeg,image/png,image/webp,image/gif,image/avif,image/heic,image/heif',
+        },
+        timeout: SSRF_TIMEOUT_MS,
+        rejectUnauthorized: true,
+      },
+      (res) => {
+        const headers = res.headers as PinnedBytes['headers']
+        const status = res.statusCode || 0
+        const location = headerValue(headers, 'location')
+        if ([301, 302, 303, 307, 308].includes(status) && location) {
+          res.resume()
+          resolve({ status, headers, body: Buffer.alloc(0) })
+          return
+        }
+        takeImageBody(headerValue(headers, 'content-type'), res, maxBytes).then(
+          (body) => resolve({ status, headers, body }),
+          reject,
+        )
+      },
+    )
+    req.on('timeout', () => {
+      req.destroy()
+      reject(new UnsafeUrlError('timeout'))
+    })
+    req.on('error', (err) => reject(err))
+    req.end()
+  })
+}
+
+export async function safeFetchImage(
+  raw: string,
+  opts: {
+    lookup?: DnsLookup
+    request?: (url: URL, ip: string, maxBytes: number) => Promise<PinnedBytes>
+    maxRedirects?: number
+    maxBytes?: number
+  } = {},
+): Promise<{ finalUrl: string; contentType: string; body: Buffer }> {
+  const maxRedirects = opts.maxRedirects ?? SSRF_MAX_REDIRECTS
+  const maxBytes = opts.maxBytes ?? PROSPECT_IMAGE_MAX_BYTES
+  const request = opts.request || defaultPinnedImageRequest
+  let current = String(raw || '').trim()
+  for (let hop = 0; hop <= maxRedirects; hop++) {
+    const url = await assertPublicHttpUrl(current, opts)
+    const resolve = opts.lookup || defaultDnsLookup
+    const addresses = await resolve(url.hostname)
+    const ip = addresses.find((item) => !isBlockedAddress(item))
+    if (!ip) throw new UnsafeUrlError('address')
+    const response = await request(url, ip, maxBytes)
+    if (response.body.length > maxBytes) throw new UnsafeUrlError('response too large')
+    const location = headerValue(response.headers, 'location')
+    if ([301, 302, 303, 307, 308].includes(response.status) && location) {
+      if (hop === maxRedirects) throw new UnsafeUrlError('too many redirects')
+      current = new URL(location, url).toString()
+      continue
+    }
+    if (response.status < 200 || response.status >= 300) throw new UnsafeUrlError('status')
+    const contentType = headerValue(response.headers, 'content-type')
+    if (!isProspectImageContentType(contentType)) throw new UnsafeUrlError('content-type')
     return { finalUrl: url.toString(), contentType, body: response.body }
   }
   throw new UnsafeUrlError('too many redirects')

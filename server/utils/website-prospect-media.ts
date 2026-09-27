@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { normalizeWebsiteMedia, type WebsiteMediaSlot } from '~/server/utils/website-media-normalize'
+import { PROSPECT_IMAGE_MAX_BYTES, safeFetchImage } from '~/server/utils/ssrf-guard'
 import { fetchProspectPlaceDetails } from '~/server/utils/website-prospect-place'
-import { normalizeProspectUrl } from '~/server/utils/website-prospect-scrape'
 import type { ProspectPlace, ProspectScrape } from '~/server/utils/website-prospect-types'
 
 const IMAGE_BUCKET = 'tenant-logos'
+const IMAGE_MIN_BYTES = 2_000
 
 function mapsKey() {
   try {
@@ -16,20 +17,10 @@ function mapsKey() {
 }
 
 async function fetchBufferFromUrl(url: string): Promise<Buffer | null> {
-  const safe = normalizeProspectUrl(url)
-  if (!safe) return null
   try {
-    const res = await fetch(safe, {
-      redirect: 'follow',
-      signal: AbortSignal.timeout(12000),
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SimyWebsiteAudit/1.0; +https://www.simy.ch)' },
-    })
-    if (!res.ok) return null
-    const mime = String(res.headers.get('content-type') || '')
-    if (mime && !mime.startsWith('image/') && !mime.includes('octet-stream')) return null
-    const buf = Buffer.from(await res.arrayBuffer())
-    if (buf.length < 2_000 || buf.length > 12 * 1024 * 1024) return null
-    return buf
+    const fetched = await safeFetchImage(url)
+    if (fetched.body.length < IMAGE_MIN_BYTES || fetched.body.length > PROSPECT_IMAGE_MAX_BYTES) return null
+    return fetched.body
   } catch {
     return null
   }
@@ -89,25 +80,31 @@ export async function ingestProspectMedia(opts: {
   scrape: ProspectScrape | null
   place: ProspectPlace | null
   placeId?: string | null
+  /**
+   * Manual prospects may refill an empty photo list from Place Details.
+   * places_cron must pass false: an empty list means discovery kept no photos.
+   */
+  refetchPlacePhotos?: boolean
 }): Promise<ProspectMedia> {
   const supabase = getSupabaseAdmin()
   const scrape = opts.scrape
   let place = opts.place
-  if ((!place?.photos?.length) && opts.placeId) {
+  const allowGooglePhotos = opts.refetchPlacePhotos !== false
+  if (allowGooglePhotos && !place?.photos?.length && opts.placeId) {
     const fresh = await fetchProspectPlaceDetails(opts.placeId)
     if (fresh) place = fresh
   }
 
   const heroBuf =
     (scrape?.hero_image_url ? await fetchBufferFromUrl(scrape.hero_image_url) : null) ||
-    (place?.photos?.[0]?.ref ? await fetchPlacePhotoBuffer(place.photos[0].ref) : null)
+    (allowGooglePhotos && place?.photos?.[0]?.ref ? await fetchPlacePhotoBuffer(place.photos[0].ref) : null)
   const logoBuf = scrape?.logo_url ? await fetchBufferFromUrl(scrape.logo_url) : null
 
   const hero_url = heroBuf ? await uploadNormalized(supabase, opts.tenantId, 'hero', heroBuf) : null
   const logo_url = logoBuf ? await uploadNormalized(supabase, opts.tenantId, 'logo', logoBuf) : null
 
   const gallery: ProspectMedia['gallery'] = []
-  const placePhotos = (place?.photos || []).slice(heroBuf ? 1 : 0, 6)
+  const placePhotos = allowGooglePhotos ? (place?.photos || []).slice(heroBuf ? 1 : 0, 6) : []
   for (const photo of placePhotos) {
     const buf = await fetchPlacePhotoBuffer(photo.ref)
     if (!buf) continue

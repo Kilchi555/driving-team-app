@@ -210,6 +210,7 @@ async function finishProspectSite(opts: {
     scrape,
     place,
     placeId: prospect.place_id,
+    refetchPlacePhotos: prospect.source !== 'places_cron',
   })
 
   await supabase
