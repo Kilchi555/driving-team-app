@@ -884,7 +884,21 @@
               </div>
             </div>
 
+            <!-- Selected week has no bookable slots; other weeks may still have some -->
+            <div
+              v-if="currentWeekView === 'empty'"
+              class="border border-gray-200 rounded-lg bg-white px-6 py-10 text-center"
+              role="status"
+            >
+              <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <p class="mt-4 text-base font-semibold text-gray-900">{{ EMPTY_BOOKING_WEEK_MESSAGE }}</p>
+              <p class="mt-2 text-sm text-gray-600">{{ EMPTY_BOOKING_WEEK_HINT }}</p>
+            </div>
+
             <!-- Time Slots by Day for Selected Week -->
+            <template v-else>
             <div v-for="day in visibleGroupedTimeSlots" :key="day.dayKey" class="border border-gray-200 rounded-lg p-6">
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">
@@ -916,6 +930,7 @@
                 </button>
               </div>
             </div>
+            </template>
             
             <!-- Week Navigation Controls (Bottom) -->
             <div class="flex items-center justify-center mb-4 mt-8">
@@ -1892,6 +1907,13 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, defineAsync
 import GeneralInquiryForm from '~/components/GeneralInquiryForm.vue'
 import BookingProposalForm from '~/components/BookingProposalForm.vue'
 import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
+import {
+  EMPTY_BOOKING_WEEK_HINT,
+  EMPTY_BOOKING_WEEK_MESSAGE,
+  resolveBookingWeekView,
+  shouldFetchLastBookingPrefs,
+} from '~/utils/booking-week-view'
+import { useAuthStore } from '~/stores/auth'
 
 const LoginRegisterModal = defineAsyncComponent(() => import('~/components/booking/LoginRegisterModal.vue'))
 const DocumentUploadModal = defineAsyncComponent(() => import('~/components/booking/DocumentUploadModal.vue'))
@@ -2999,6 +3021,14 @@ const visibleGroupedTimeSlots = computed(() => {
     return hasWeek
   })
 })
+
+// Selected week only. week_number is assigned with the existing 28-day bucket.
+const currentWeekView = computed(() => resolveBookingWeekView({
+  loading: isLoadingTimeSlots.value,
+  error: error.value,
+  slots: availableTimeSlots.value,
+  week: currentWeek.value,
+}))
 
 const nextWeek = () => {
   if (currentWeek.value < maxWeek.value) currentWeek.value += 1
@@ -6503,12 +6533,19 @@ onMounted(async () => {
           try {
             const { data: sessionData } = await getSupabase().auth.getSession()
             if (sessionData.session) {
-              const history = await $fetch<{ success?: boolean; prefill?: BookingPrefill | null }>(
-                '/api/customer/last-booking-prefs',
-              )
-              if (history?.prefill?.category) {
-                isRestoringPrefs.value = true
-                restoredFromHistory = await applyAppointmentPrefill(history.prefill)
+              const authStore = useAuthStore()
+              if (!authStore.userRole && sessionData.session.user?.id) {
+                await authStore.fetchUserProfile(sessionData.session.user.id)
+              }
+              // Server still returns 403 for any non-client. Do not call in that case.
+              if (shouldFetchLastBookingPrefs(authStore.userRole)) {
+                const history = await $fetch<{ success?: boolean; prefill?: BookingPrefill | null }>(
+                  '/api/customer/last-booking-prefs',
+                )
+                if (history?.prefill?.category) {
+                  isRestoringPrefs.value = true
+                  restoredFromHistory = await applyAppointmentPrefill(history.prefill)
+                }
               }
             }
           } catch {
