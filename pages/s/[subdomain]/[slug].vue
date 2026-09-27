@@ -640,7 +640,8 @@ import '~/assets/css/website-landing-fonts.css'
 import WebsiteIcon from '~/components/website/WebsiteIcon.vue'
 import { isWebsiteIconKey, trustIconForLabel, type WebsiteIconKey } from '~/utils/website-icons'
 import { heroPreloadAttrs, offerPhotoSrc, offerPhotoSrcset, websiteImageProxyUrl } from '~/utils/website-responsive-image'
-import { websiteOverflowPages, websitePageCardHref, websitePageLinks, websiteStandardLinks } from '~/utils/website-nav'
+import { websiteOverflowPages, websitePageCardHref, websitePageLinks, websiteStandardLinks, type WebsiteNavPage, type WebsiteSectionLink } from '~/utils/website-nav'
+import { previewDataKey, previewQuerySuffix, readRoutePreviewToken, withPreviewToken } from '~/utils/website-preview-query'
 import { websiteFontCssVars, websiteFontHeadLinks } from '~/utils/website-fonts'
 import { isWebsitePickupMeetingPoint } from '~/utils/website-wizard-content'
 
@@ -652,7 +653,9 @@ definePageMeta({
 const route = useRoute()
 const subdomain = computed(() => String(route.params.subdomain || '').toLowerCase())
 const pageSlug = computed(() => String(route.params.slug || '').toLowerCase())
-const preview = computed(() => route.query.preview === '1')
+const previewToken = computed(() => readRoutePreviewToken(route.query as Record<string, unknown>))
+const preview = computed(() => previewToken.value.length > 0)
+const previewKey = computed(() => previewDataKey(previewToken.value))
 const mobileNavOpen = ref(false)
 const leadForm = ref({ first_name: '', email: '', phone: '', message: '', company: '' })
 const leadSending = ref(false)
@@ -671,29 +674,29 @@ if (import.meta.server && preview.value) {
 }
 
 if (pageSlug.value === 'index' || pageSlug.value === '') {
-  await navigateTo(`/s/${subdomain.value}${preview.value ? '?preview=1' : ''}`, { redirectCode: 301 })
+  await navigateTo(`/s/${subdomain.value}${previewQuerySuffix(previewToken.value)}`, { redirectCode: 301 })
 }
 
 const { data, pending, error } = await useAsyncData(
-  () => `site-${subdomain.value}-${pageSlug.value}-${preview.value ? 'p' : 'l'}`,
+  () => `site-${subdomain.value}-${pageSlug.value}-${previewKey.value}`,
   () =>
     $fetch(
       `/api/public/website/${encodeURIComponent(subdomain.value)}/${encodeURIComponent(pageSlug.value)}`,
       {
-        query: preview.value ? { preview: '1' } : undefined,
+        query: previewToken.value ? { preview_token: previewToken.value } : undefined,
       },
     ),
-  { watch: [subdomain, pageSlug, preview] },
+  { watch: [subdomain, pageSlug, previewToken] },
 )
 
 const websiteId = computed(() => data.value?.website?.id || null)
 const { trackPageview, trackCta } = useWebsitePublicAnalytics(websiteId, preview)
 
-const homeHref = computed(() => `/s/${subdomain.value}${preview.value ? '?preview=1' : ''}`)
+const homeHref = computed(() => `/s/${subdomain.value}${previewQuerySuffix(previewToken.value)}`)
 const pageTitle = computed(
   () => data.value?.page?.title || landing.value?.seo?.title || pageSlug.value,
 )
-const sectionLinks = computed(() =>
+const rawSectionLinks = computed(() =>
   websiteStandardLinks({
     blocks: landing.value?.blocks,
     pages: (data.value as any)?.nav || [],
@@ -702,16 +705,31 @@ const sectionLinks = computed(() =>
     slots: landing.value?.nav_slots || null,
   }),
 )
+const sectionLinks = computed(() => {
+  const token = previewToken.value
+  if (!token) return rawSectionLinks.value
+  return rawSectionLinks.value.map((link: WebsiteSectionLink) => ({
+    ...link,
+    href: withPreviewToken(link.href, token),
+    children: link.children?.map((child: { href: string; label: string }) => ({
+      ...child,
+      href: withPreviewToken(child.href, token),
+    })),
+  }))
+})
 const pageLinks = computed(() =>
   websiteOverflowPages(
     websitePageLinks((data.value as any)?.nav || [], pageSlug.value),
-    sectionLinks.value,
-  ),
+    rawSectionLinks.value,
+  ).map((page: WebsiteNavPage) => ({
+    ...page,
+    href: withPreviewToken(page.href, previewToken.value),
+  })),
 )
 const hasDrawer = computed(() => sectionLinks.value.length + pageLinks.value.length > 0)
 
 const { data: googleReviews } = await useAsyncData(
-  () => `site-reviews-${subdomain.value}-${preview.value ? 'p' : 'l'}`,
+  () => `site-reviews-${subdomain.value}-${previewKey.value}`,
   async () => {
     try {
       return await $fetch<{
@@ -729,7 +747,7 @@ const { data: googleReviews } = await useAsyncData(
         }>
       }>(`/api/public/website/${encodeURIComponent(subdomain.value)}/reviews`, {
         query: {
-          ...(preview.value ? { preview: '1' } : {}),
+          ...(previewToken.value ? { preview_token: previewToken.value } : {}),
           limit: 8,
         },
       })
@@ -737,7 +755,7 @@ const { data: googleReviews } = await useAsyncData(
       return null
     }
   },
-  { watch: [subdomain, preview] },
+  { watch: [subdomain, previewToken] },
 )
 
 const landing = computed(() => {
@@ -897,7 +915,7 @@ async function checkPickupPlz() {
       plz?: string
     }>(`/api/public/website/${encodeURIComponent(subdomain.value)}/pickup-check`, {
       method: 'POST',
-      query: preview.value ? { preview: '1' } : undefined,
+      query: previewToken.value ? { preview_token: previewToken.value } : undefined,
       body: { plz },
     })
     pickupResult.value = res
@@ -944,7 +962,7 @@ const stickyActions = computed(() => {
   return out
 })
 
-const previewQs = computed(() => (preview.value ? '?preview=1' : ''))
+const previewQs = computed(() => previewQuerySuffix(previewToken.value))
 
 const defaultLegalLinks = computed(() => [
   { label: 'Impressum', href: `/s/${subdomain.value}/impressum${previewQs.value}` },
@@ -1094,7 +1112,7 @@ async function refreshSlotsQuietly() {
       `/api/public/website/${encodeURIComponent(subdomain.value)}/next-slots`,
       {
         query: {
-          ...(preview.value ? { preview: '1' } : {}),
+          ...(previewToken.value ? { preview_token: previewToken.value } : {}),
           _t: Date.now(),
         },
       },
@@ -1114,8 +1132,8 @@ async function submitLead() {
       `/api/public/website/${encodeURIComponent(subdomain.value)}/lead`,
       {
         method: 'POST',
-        query: preview.value ? { preview: '1' } : undefined,
-        body: { ...leadForm.value, category: 'contact', ...(preview.value ? { preview: '1' } : {}) },
+        query: previewToken.value ? { preview_token: previewToken.value } : undefined,
+        body: { ...leadForm.value, category: 'contact' },
       },
     )
     leadOk.value = true
@@ -1158,7 +1176,7 @@ function pageTypeLabel(type: string) {
   return 'Seite'
 }
 function pageCardHref(p: { href?: string; url?: string; slug?: string; title?: string }) {
-  return websitePageCardHref(p, subdomain.value, (data.value as any)?.nav || [])
+  return withPreviewToken(websitePageCardHref(p, subdomain.value, (data.value as any)?.nav || []), previewToken.value)
 }
 function pageBlockItems(block: any) {
   return (block?.content?.items || []).filter((p: any) => pageCardHref(p))

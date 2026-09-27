@@ -4,6 +4,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { issueWebsitePreviewToken, previewUrlForPath } from '~/server/utils/website-preview-access'
 import {
   buildAddonPage,
   fallbackAddonCopy,
@@ -279,7 +280,11 @@ export default defineEventHandler(async (event) => {
   return {
     success: true,
     page,
-    preview_url: `${siteUrl}?preview=1`,
+    preview_url: await (async () => {
+      const path = `/s/${encodeURIComponent(website.subdomain)}/${encodeURIComponent(slug)}`
+      const issued = await issueWebsitePreviewToken(supabase, website.id)
+      return issued ? previewUrlForPath(base, path, issued.token) : `${base}${path}`
+    })(),
     editor_url: `/admin/website/editor?page=${encodeURIComponent(slug)}`,
     ai_used: !!aiCopy,
   }

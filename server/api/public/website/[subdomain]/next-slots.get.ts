@@ -3,6 +3,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { loadWebsiteTeaserSlots } from '~/server/utils/website-next-slots'
 import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
+import { authorizePublicWebsiteRead } from '~/server/utils/website-preview-access'
 
 function appBaseUrl(event: any) {
   const fromEnv = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL
@@ -18,7 +19,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'subdomain required' })
   }
 
-  const preview = String(getQuery(event).preview || '') === '1'
+  const query = getQuery(event) as Record<string, unknown>
   const supabase = getSupabaseAdmin()
 
   const { data: website } = await supabase
@@ -27,7 +28,13 @@ export default defineEventHandler(async (event) => {
     .eq('subdomain', subdomain)
     .maybeSingle()
 
-  if (!website || (!website.is_published && !preview)) {
+  if (!website) {
+    throw createError({ statusCode: 404, statusMessage: 'Website not found' })
+  }
+
+  const access = await authorizePublicWebsiteRead(supabase, website, query, true)
+  if (!access.ok) {
+    setWebsitePublicCache(event, { preview: true })
     throw createError({ statusCode: 404, statusMessage: 'Website not found' })
   }
 
@@ -52,7 +59,7 @@ export default defineEventHandler(async (event) => {
 
   // CDN/shared cache ~2 min; browsers should revalidate (soft-refresh teaser)
   setWebsitePublicCache(event, {
-    preview,
+    preview: access.privateCache,
     sMaxAge: 60,
     swr: 300,
     tag: `website-slots-${subdomain}`,

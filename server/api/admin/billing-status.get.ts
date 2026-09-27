@@ -89,7 +89,7 @@ export default defineEventHandler(async (event) => {
       const home = await loadWebsiteHomePage(supabase, row.id)
       website_homepage_ready = homepageHasContent(home?.blocks)
       const base = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
-      website_preview_url = `${base}/s/${encodeURIComponent(row.subdomain)}?preview=1`
+      website_preview_url = `${base}/s/${encodeURIComponent(row.subdomain)}`
       website_live_url = row.custom_domain_verified && row.custom_domain
         ? `https://${row.custom_domain}`
         : `${base}/s/${encodeURIComponent(row.subdomain)}`

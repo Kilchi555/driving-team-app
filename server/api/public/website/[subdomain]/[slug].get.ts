@@ -2,6 +2,12 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
+import { authorizePublicWebsiteRead } from '~/server/utils/website-preview-access'
+import {
+  asPublicTenantRow,
+  projectPublicWebsiteTenant,
+  PUBLIC_WEBSITE_TENANT_SELECT,
+} from '~/server/utils/website-public-tenant-select'
 
 export default defineEventHandler(async (event) => {
   const subdomain = getRouterParam(event, 'subdomain')?.trim().toLowerCase()
@@ -10,7 +16,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'subdomain and slug required' })
   }
 
-  const preview = String(getQuery(event).preview || '') === '1'
+  const query = getQuery(event) as Record<string, unknown>
   const supabase = getSupabaseAdmin()
 
   const { data: website, error } = await supabase
@@ -45,10 +51,6 @@ export default defineEventHandler(async (event) => {
   if (!website) {
     throw createError({ statusCode: 404, statusMessage: 'Website not found' })
   }
-  if (!website.is_published && !preview) {
-    throw createError({ statusCode: 404, statusMessage: 'Website not published' })
-  }
-
   const { data: page, error: pageError } = await supabase
     .from('website_pages')
     .select(
@@ -64,26 +66,36 @@ export default defineEventHandler(async (event) => {
   if (!page) {
     throw createError({ statusCode: 404, statusMessage: 'Page not found' })
   }
-  if (!page.is_published && !preview) {
-    throw createError({ statusCode: 404, statusMessage: 'Page not published' })
+
+  const access = await authorizePublicWebsiteRead(
+    supabase,
+    website,
+    query,
+    !!page.is_published,
+  )
+  if (!access.ok) {
+    setWebsitePublicCache(event, { preview: true })
+    throw createError({ statusCode: 404, statusMessage: 'Website not found' })
   }
-  if (page.page_type !== 'home' && !page.is_home && !website.addon_pages_enabled && !preview) {
+  if (page.page_type !== 'home' && !page.is_home && !website.addon_pages_enabled && !access.draft) {
     throw createError({ statusCode: 404, statusMessage: 'Page not found' })
   }
 
-  const { data: tenant } = await supabase
+  const { data: tenantRow } = await supabase
     .from('tenants')
-    .select('*')
+    .select(PUBLIC_WEBSITE_TENANT_SELECT)
     .eq('id', website.tenant_id)
     .maybeSingle()
 
-  // Sibling nav: published add-on pages (all pages in preview)
+  const tenantRecord = asPublicTenantRow(tenantRow)
+  const tenant = tenantRecord ? { ...tenantRecord, id: website.tenant_id } : null
+
   let navQuery = supabase
     .from('website_pages')
     .select('title, slug, page_type, is_home')
     .eq('website_id', website.id)
     .order('page_type', { ascending: true })
-  if (!preview) navQuery = navQuery.eq('is_published', true)
+  if (!access.draft) navQuery = navQuery.eq('is_published', true)
   const { data: navPages } = await navQuery
 
   const { applyLivePricesToLanding } = await import('~/server/utils/website-live-prices')
@@ -101,7 +113,7 @@ export default defineEventHandler(async (event) => {
   })
 
   setWebsitePublicCache(event, {
-    preview,
+    preview: access.privateCache,
     sMaxAge: 120,
     swr: 600,
     tag: `website-${subdomain}`,
@@ -110,7 +122,7 @@ export default defineEventHandler(async (event) => {
   return {
     website,
     page,
-    tenant: tenant || null,
+    tenant: projectPublicWebsiteTenant(tenantRecord),
     landing,
     nav: (navPages || []).map((p) => ({
       title: p.title,

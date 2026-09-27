@@ -18,9 +18,9 @@
         <span :class="['sa-badge', statusBadgeClass(tenant?.website_status)]">
           {{ statusLabel(tenant?.website_status) }}
         </span>
-        <a :href="`/s/${tenant?.slug}?preview=1`" target="_blank" class="sa-btn-ghost">
+        <button type="button" class="sa-btn-ghost" @click="openPreview()">
           👁 Vorschau öffnen
-        </a>
+        </button>
         <NuxtLink v-if="prospectReviewTo" :to="prospectReviewTo" class="sa-btn-ghost">
           Neu generieren
         </NuxtLink>
@@ -221,11 +221,7 @@
           <ul v-if="addonPages.length" class="mt-3 space-y-1">
             <li v-for="p in addonPages" :key="p.id" class="text-xs text-slate-400">
               {{ p.title }}
-              <a
-                :href="`/s/${tenant.slug}/${p.slug}?preview=1`"
-                target="_blank"
-                class="text-sky-400 ml-1"
-              >Preview</a>
+              <button type="button" class="text-sky-400 ml-1" @click="openPreview(p.slug)">Preview</button>
             </li>
           </ul>
         </div>
@@ -234,9 +230,9 @@
         <div class="sa-card p-5">
           <p class="cms-sidebar-title">Schnellzugriff</p>
           <div class="space-y-2 mt-3">
-            <a :href="`/s/${tenant.slug}?preview=1`" target="_blank" class="sa-quick-link">
+            <button type="button" class="sa-quick-link text-left w-full" @click="openPreview()">
               🌐 Website-Vorschau öffnen
-            </a>
+            </button>
             <NuxtLink v-if="prospectReviewTo" :to="prospectReviewTo" class="sa-quick-link">
               🔄 Website neu generieren
             </NuxtLink>
@@ -272,7 +268,7 @@
               <div class="sa-info-card">
                 <p class="text-sm text-slate-300"><strong>Kunde:</strong> {{ tenant?.name }}</p>
                 <p class="text-sm text-slate-300 mt-1"><strong>E-Mail:</strong> {{ tenant?.contact_email }}</p>
-                <p class="text-sm text-slate-300 mt-1"><strong>Website:</strong> /s/{{ tenant?.slug }}?preview=1</p>
+                <p class="text-sm text-slate-300 mt-1"><strong>Website:</strong> /s/{{ tenant?.slug }}</p>
               </div>
               <div>
                 <label class="sa-label">Persönliche Nachricht (optional)</label>
@@ -452,6 +448,19 @@ const save = async () => {
     showError('Fehler', err?.data?.statusMessage || err?.message || 'Speichern fehlgeschlagen')
   }
   saving.value = false
+}
+
+const openPreview = async (slug?: string) => {
+  try {
+    const res = await $fetch<{ preview_url?: string }>(`/api/tenant-admin/websites/${tenantId}/preview-link`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: slug ? { slug } : {},
+    })
+    if (res?.preview_url) window.open(res.preview_url, '_blank', 'noopener')
+  } catch (err: any) {
+    showError('Vorschau', err?.data?.statusMessage || 'Vorschau nicht verfügbar')
+  }
 }
 
 const setStatus = async (status: string) => {

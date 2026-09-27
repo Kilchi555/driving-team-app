@@ -1056,9 +1056,9 @@ async function load() {
     if (isAddonPage.value) seoFieldsOpen.value = true
     previewUrl.value =
       subdomain.value && isAddonPage.value
-        ? `/s/${encodeURIComponent(subdomain.value)}/${encodeURIComponent(currentSlug.value)}?preview=1`
+        ? `/s/${encodeURIComponent(subdomain.value)}/${encodeURIComponent(currentSlug.value)}`
         : subdomain.value
-          ? `/s/${encodeURIComponent(subdomain.value)}?preview=1`
+          ? `/s/${encodeURIComponent(subdomain.value)}`
           : ''
     hydrateForm(landing)
     if (!isAddonPage.value) await loadExtras()
@@ -1317,12 +1317,19 @@ function scheduleAutosave() {
 async function openPreviewAfterSave() {
   clearAutosaveTimer()
   if (dirty.value || saving.value) await save(false)
-  if (previewUrl.value) window.open(previewUrl.value, '_blank', 'noopener')
+  if (!subdomain.value) return
+  try {
+    const res = await $fetch<{ preview_url?: string }>('/api/website/preview-link', {
+      method: 'POST',
+      body: isAddonPage.value && currentSlug.value ? { slug: currentSlug.value } : {},
+    })
+    if (res?.preview_url) window.open(res.preview_url, '_blank', 'noopener')
+  } catch {
+    /* unpublished drafts stay closed without a token */
+  }
 }
 
 async function onPreviewClick(event: MouseEvent) {
-  if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
-  if (!dirty.value && !saving.value) return
   event.preventDefault()
   await openPreviewAfterSave()
 }

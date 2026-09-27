@@ -3,6 +3,7 @@
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { issueWebsitePreviewToken, previewUrlForPath } from '~/server/utils/website-preview-access'
 import { buildLandingPage, type LandingService, type LandingTestimonial } from '~/server/utils/website-landing-builder'
 import { loadWebsiteServices } from '~/server/utils/website-services'
 import {
@@ -352,7 +353,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const previewUrl = `${siteUrl}?preview=1`
+  const previewPath = `/s/${encodeURIComponent(website.subdomain)}`
+  const issued = await issueWebsitePreviewToken(supabase, website.id)
+  const previewUrl = issued
+    ? previewUrlForPath(appBaseUrl(event), previewPath, issued.token)
+    : `${appBaseUrl(event)}${previewPath}`
   const liveUrl =
     website.custom_domain_verified && website.custom_domain
       ? `https://${website.custom_domain}`
@@ -383,7 +388,7 @@ export default defineEventHandler(async (event) => {
       tenantSlug: tenant.slug || website.subdomain,
       subdomain: website.subdomain,
       liveUrl,
-      previewUrl,
+      previewUrl: liveUrl,
     })
   } else if (alreadyLive) {
     await supabase

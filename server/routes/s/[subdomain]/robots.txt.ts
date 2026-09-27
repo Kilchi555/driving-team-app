@@ -44,5 +44,5 @@ export default defineEventHandler(async (event) => {
     ? `https://${website.custom_domain}`
     : `${proto}://${String(host).split(',')[0]}/s/${encodeURIComponent(website.subdomain)}`
 
-  return `User-agent: *\nAllow: /\nDisallow: /*?preview=1\nSitemap: ${base.replace(/\/$/, '')}/sitemap.xml\n`
+  return `User-agent: *\nAllow: /\nDisallow: /*?preview=1\nDisallow: /*?preview_token=\nDisallow: /*?*preview_token=\nSitemap: ${base.replace(/\/$/, '')}/sitemap.xml\n`
 })
