@@ -139,6 +139,28 @@ describe('website factory extraction and profile', () => {
     expect(JSON.stringify(extracted)).not.toContain('team')
   })
 
+  it('decodes HTML entities once and strips tags only after that decode', () => {
+    const doubleEncoded = extractBusinessFromHtml(
+      '<title>&amp;amp;lt;script&amp;amp;gt;x&amp;amp;lt;/script&amp;amp;gt; &amp; Fahrschule</title>'
+      + '<meta name="description" content="&lt;b&gt;Atelier &amp; Co&lt;/b&gt;">',
+      'https://atelier.example/',
+    )
+    expect(doubleEncoded.title).toBe('&amp;lt;script&amp;gt;x&amp;lt;/script&amp;gt; & Fahrschule')
+    expect(doubleEncoded.title).not.toContain('<')
+    expect(doubleEncoded.description).toBe('Atelier & Co')
+
+    const once = extractBusinessFromHtml('<title><b>Real Tag</b> &amp;amp; Co</title>', 'https://atelier.example/')
+    expect(once.title).toBe('Real Tag &amp; Co')
+    expect(once.title).not.toContain('<')
+
+    const encodedTag = extractBusinessFromHtml(
+      '<title>&lt;script&gt;alert(1)&lt;/script&gt; Atelier</title>',
+      'https://atelier.example/',
+    )
+    expect(encodedTag.title).toBe('alert(1) Atelier')
+    expect(encodedTag.title).not.toContain('<')
+  })
+
   it('asks only for fields a partial page does not contain', () => {
     const extracted = extractBusinessFromHtml('<title>Atelier Nord</title><meta name="description" content="Atelier in Bern">', 'https://atelier.example/')
     const normalized = normalizeFactoryProfile({ website: extracted, suppliedWebsiteUrl: 'https://atelier.example/' })

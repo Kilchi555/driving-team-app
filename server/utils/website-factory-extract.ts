@@ -35,14 +35,26 @@ const CITY_HINTS = [
   'Schaffhausen', 'Freiburg', 'Fribourg', 'Neuenburg', 'Neuchâtel', 'Zug', 'Aarau',
 ]
 
+const HTML_ENTITIES: Record<string, string> = {
+  '&amp;': '&',
+  '&quot;': '"',
+  '&#39;': "'",
+  '&apos;': "'",
+  '&lt;': '<',
+  '&gt;': '>',
+}
+
+/** Decode each entity once. A second pass would turn `&amp;lt;` into a real tag. */
+function decodeHtmlEntitiesOnce(value: string): string {
+  return value.replace(
+    /&(?:amp|quot|#39|apos|lt|gt);/gi,
+    (entity) => HTML_ENTITIES[entity.toLowerCase()] ?? entity,
+  )
+}
+
 function clean(value: unknown, max: number): string | null {
-  const text = String(value || '')
+  const text = decodeHtmlEntitiesOnce(String(value || ''))
     .replace(/<[^>]*>/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
     .replace(/\s+/g, ' ')
     .trim()
   if (!text) return null
