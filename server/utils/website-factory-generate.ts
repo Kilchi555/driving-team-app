@@ -187,6 +187,7 @@ export async function generateFactoryPreview(opts: {
     hide_powered_by: true,
     booking_policy: null,
     verified_hours_only: true,
+    verified_prices_only: true,
     contact_channels: {
       phone: !!profile.phone,
       email: !!profile.email,

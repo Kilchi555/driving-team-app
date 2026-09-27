@@ -143,6 +143,12 @@ export type LandingBuildInput = {
    * Existing callers omit this and keep the previous default hours.
    */
   verified_hours_only?: boolean
+  /**
+   * When true, the services lead mentions prices only if a service has price_cents,
+   * and service cards do not invent a duration or a price phrase.
+   * Existing callers omit this and keep the previous copy.
+   */
+  verified_prices_only?: boolean
 }
 
 export type LandingBlock =
@@ -258,7 +264,12 @@ function serviceBookUrl(bookingUrl: string, category?: string | null) {
 function fallbackServiceDescription(
   s: { name?: string | null; category?: string | null; duration_minutes?: number | null },
   t: { appointment: string },
+  opts: { verifiedPricesOnly?: boolean } = {},
 ) {
+  if (opts.verifiedPricesOnly) {
+    if (s.duration_minutes) return `${t.appointment} — ${s.duration_minutes} Min.`
+    return ''
+  }
   const mins = s.duration_minutes || 45
   const key = `${s.category || ''} ${s.name || ''}`.toLowerCase()
   if (/\bbe\b|anhänger/.test(key)) {
@@ -274,6 +285,17 @@ function fallbackServiceDescription(
     return `Theorieunterricht — kompakt, prüfungsnah, ${mins} Min.`
   }
   return `${t.appointment} — ${mins} Min., transparent buchbar.`
+}
+
+function hasSourcedPrice(services: Array<{ price_cents?: number | null }>): boolean {
+  return services.some((service) => service.price_cents != null && Number.isFinite(Number(service.price_cents)))
+}
+
+function servicesLead(formal: 'sie' | 'du', mentionPrices: boolean): string {
+  if (!mentionPrices) return formal === 'du' ? 'Wähle dein Angebot.' : 'Wählen Sie Ihr Angebot.'
+  return formal === 'du'
+    ? 'Wähle dein Angebot — Preise transparent, Buchung in wenigen Klicks.'
+    : 'Wählen Sie Ihr Angebot — Preise transparent, Buchung in wenigen Klicks.'
 }
 
 export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
@@ -304,7 +326,7 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
   const services = input.services.slice(0, 12).map((s) => ({
     id: s.id,
     name: s.name,
-    description: s.description?.trim() || fallbackServiceDescription(s, t),
+    description: s.description?.trim() || fallbackServiceDescription(s, t, { verifiedPricesOnly: input.verified_prices_only }),
     duration_minutes: s.duration_minutes || null,
     price_label: moneyCHF(s.price_cents),
     price_cents: s.price_cents ?? null,
@@ -389,10 +411,7 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
       content: {
         eyebrow: 'Angebot',
         title: city ? `${t.appointmentsPlural} ${city}` : `Unsere ${t.appointmentsPlural}`,
-        description:
-          formal === 'du'
-            ? `Wähle dein Angebot — Preise transparent, Buchung in wenigen Klicks.`
-            : `Wählen Sie Ihr Angebot — Preise transparent, Buchung in wenigen Klicks.`,
+        description: servicesLead(formal, input.verified_prices_only ? hasSourcedPrice(input.services) : true),
         services,
       },
     },

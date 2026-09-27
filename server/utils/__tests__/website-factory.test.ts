@@ -4,6 +4,7 @@ import { extractBusinessFromHtml } from '../website-factory-extract'
 import { mapGooglePeriods, placeNameFromMapsUrl } from '../website-factory-google'
 import { normalizeFactoryProfile } from '../website-factory-profile'
 import { discoverWebsiteFactory, resetFactoryRateLimit } from '../website-factory-discover'
+import { buildLandingPage } from '../website-landing-builder'
 import { authorizePublicWebsiteRead, hashPreviewToken } from '../website-preview-access'
 
 const publicLookup = async () => ['93.184.216.34']
@@ -280,6 +281,43 @@ describe('website factory generation', () => {
     expect(db.tables.tenants[0].is_trial).toBe(false)
     const services = db.tables.website_pages[0].blocks.blocks.find((block: { type: string }) => block.type === 'services')
     expect(services.content.services[0].name).toBe('Keramik')
+    expect(services.content.description).toBe('Wählen Sie Ihr Angebot.')
+    expect(JSON.stringify(services)).not.toContain('Preise transparent')
+    expect(services.content.services[0].description).toBe('')
+  })
+
+  it('mentions prices only when a source supplied one', () => {
+    const tenant = { id: 't1', name: 'Atelier Nord', business_type: 'generic', city: 'Basel' }
+    const base = {
+      tenant,
+      formal_address: 'sie' as const,
+      testimonials: [],
+      bookingUrl: '#kontakt',
+      siteUrl: 'https://app.simy.ch/s/atelier-nord',
+    }
+    const unpriced = buildLandingPage({
+      ...base,
+      services: [{ id: 'svc-1', name: 'Keramik', description: '' }],
+      verified_prices_only: true,
+    })
+    const priced = buildLandingPage({
+      ...base,
+      services: [{ id: 'svc-1', name: 'Keramik', description: 'Tasse', price_cents: 4500 }],
+      verified_prices_only: true,
+    })
+    const existing = buildLandingPage({
+      ...base,
+      services: [{ id: 'svc-1', name: 'Keramik', description: '' }],
+    })
+    const unpricedLead = unpriced.blocks.find((block) => block.type === 'services')?.content.description
+    const pricedLead = priced.blocks.find((block) => block.type === 'services')?.content.description
+    const existingLead = existing.blocks.find((block) => block.type === 'services')?.content.description
+    const existingCard = existing.blocks.find((block) => block.type === 'services')?.content.services[0].description
+    expect(unpricedLead).toBe('Wählen Sie Ihr Angebot.')
+    expect(unpricedLead).not.toContain('Preise transparent')
+    expect(pricedLead).toContain('Preise transparent')
+    expect(existingLead).toContain('Preise transparent')
+    expect(existingCard).toContain('45 Min.')
   })
 
   it('rate limits repeated anonymous discovery', async () => {
