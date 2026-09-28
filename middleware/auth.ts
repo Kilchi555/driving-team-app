@@ -29,6 +29,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     '/payment',
     '/pause',
     '/unsubscribe',
+    '/website-factory',
   ]
   
   // Skip for dynamic routes that are public (like /[slug]/services, /[slug]/register)
