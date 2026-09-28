@@ -4,7 +4,7 @@
  */
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   fulfillCourseWalleePayment,
   isRetryableCourseFulfillment,
@@ -12,8 +12,22 @@ import {
 } from '../fulfill-course-wallee-payment'
 import {
   CAPTURED_IDENTITY_BLOCK_STATE,
+  IDENTITY_BLOCK_STATE_COLUMN,
+  cancelStalePendingWalleePaymentIds,
   partitionStalePendingWalleePayments,
 } from '../wallee-identity-block'
+import { cancelOrphanedSiblingCoursePayments } from '../wallee-failure-notify'
+
+const adminHolder = vi.hoisted(() => ({
+  client: null as PaymentAdmin | null,
+}))
+
+vi.mock('~/server/utils/supabase-admin', () => ({
+  getSupabaseAdmin: () => {
+    if (!adminHolder.client) throw new Error('supabase admin mock is not installed')
+    return adminHolder.client
+  },
+}))
 
 type Row = {
   id: string
@@ -230,10 +244,312 @@ describe('captured Wallee identity block', () => {
 
   it('does not refund and does not let sibling cleanup cancel a captured identity block', () => {
     const src = readFileSync(resolve(process.cwd(), 'server/utils/wallee-identity-block.ts'), 'utf8')
+    const persistAndClear = src.slice(src.indexOf('export async function persistCapturedIdentityBlock'))
     const notify = readFileSync(resolve(process.cwd(), 'server/utils/wallee-failure-notify.ts'), 'utf8')
-    expect(src).not.toContain("payment_status: 'cancelled'")
-    expect(src).not.toContain("payment_status: 'completed'")
+    expect(persistAndClear).not.toContain("payment_status: 'cancelled'")
+    expect(persistAndClear).not.toContain("payment_status: 'completed'")
     expect(src).not.toMatch(/\.refund\(|createRefund|refundPayment/)
     expect(notify).toContain('isCapturedIdentityBlockMetadata')
+    expect(notify).toContain('excludeCapturedIdentityBlock(')
+    const cron = readFileSync(resolve(process.cwd(), 'server/api/cron/recover-pending-wallee-payments.get.ts'), 'utf8')
+    expect(cron).toContain('cancelStalePendingWalleePaymentIds(')
+    expect(cron).not.toContain(".in('id', genuineFailureIds)")
+    expect(cron).not.toContain(".in('id', trueAbandonedIds)")
+  })
+})
+
+type PayRow = {
+  id: string
+  tenant_id: string
+  user_id: string | null
+  payment_status: string
+  metadata: Record<string, unknown> | null
+  course_registration_id: string | null
+  appointment_id: string | null
+}
+
+type QueryResult = {
+  data: PayRow[] | null
+  error: null
+  count: number | null
+}
+
+type PaymentQuery = PromiseLike<QueryResult> & {
+  select: (columns?: string) => PaymentQuery
+  eq: (column: string, value: unknown) => PaymentQuery
+  in: (column: string, values: readonly unknown[]) => PaymentQuery
+  neq: (column: string, value: unknown) => PaymentQuery
+  contains: (column: string, value: Record<string, unknown>) => PaymentQuery
+  isDistinct: (column: string, value: string) => PaymentQuery
+  limit: (count: number) => PaymentQuery
+}
+
+type PaymentAdmin = {
+  from: (table: string) => {
+    select: (columns?: string) => PaymentQuery
+    update: (payload: Record<string, unknown>) => PaymentQuery
+  }
+}
+
+function readPaymentColumn(row: PayRow, column: string): unknown {
+  if (column === IDENTITY_BLOCK_STATE_COLUMN) {
+    const state = row.metadata?.wallee_failure_state
+    return typeof state === 'string' ? state : null
+  }
+  switch (column) {
+    case 'id':
+      return row.id
+    case 'tenant_id':
+      return row.tenant_id
+    case 'user_id':
+      return row.user_id
+    case 'payment_status':
+      return row.payment_status
+    case 'metadata':
+      return row.metadata
+    case 'course_registration_id':
+      return row.course_registration_id
+    case 'appointment_id':
+      return row.appointment_id
+    default:
+      throw new Error(`unexpected column ${column}`)
+  }
+}
+
+function sqlNeq(current: unknown, value: unknown): boolean {
+  if (current === null || current === undefined || value === null || value === undefined) return false
+  return current !== value
+}
+
+function sqlIsDistinctFrom(current: unknown, value: unknown): boolean {
+  const currentMissing = current === null || current === undefined
+  const valueMissing = value === null || value === undefined
+  if (currentMissing || valueMissing) return currentMissing !== valueMissing
+  return current !== value
+}
+
+function clonePayRow(row: PayRow): PayRow {
+  return {
+    ...row,
+    metadata: row.metadata ? { ...row.metadata } : null,
+  }
+}
+
+function paymentAdmin(rows: PayRow[]) {
+  const hooks: { beforeUpdate: (() => void) | null } = { beforeUpdate: null }
+
+  function query(mode: 'select' | 'update', payload?: Record<string, unknown>): PaymentQuery {
+    const filters: Array<(row: PayRow) => boolean> = []
+    let limitCount = Number.POSITIVE_INFINITY
+    const api = {
+      select: () => api,
+      eq: (column: string, value: unknown) => {
+        filters.push((row) => readPaymentColumn(row, column) === value)
+        return api
+      },
+      in: (column: string, values: readonly unknown[]) => {
+        filters.push((row) => values.includes(readPaymentColumn(row, column)))
+        return api
+      },
+      neq: (column: string, value: unknown) => {
+        filters.push((row) => sqlNeq(readPaymentColumn(row, column), value))
+        return api
+      },
+      contains: (_column: string, value: Record<string, unknown>) => {
+        filters.push((row) => {
+          const metadata = row.metadata
+          if (!metadata) return false
+          return Object.entries(value).every(([key, expected]) => metadata[key] === expected)
+        })
+        return api
+      },
+      isDistinct: (column: string, value: string) => {
+        filters.push((row) => sqlIsDistinctFrom(readPaymentColumn(row, column), value))
+        return api
+      },
+      limit: (count: number) => {
+        limitCount = count
+        return api
+      },
+      then: (
+        onFulfilled: (value: QueryResult) => unknown,
+        onRejected?: (reason: unknown) => unknown,
+      ) => {
+        if (mode === 'update' && hooks.beforeUpdate) {
+          const hook = hooks.beforeUpdate
+          hooks.beforeUpdate = null
+          hook()
+        }
+        const matched = rows.filter((row) => filters.every((filter) => filter(row))).slice(0, limitCount)
+        if (mode === 'update' && payload) {
+          for (const row of matched) {
+            if (typeof payload.payment_status === 'string') row.payment_status = payload.payment_status
+            if (payload.metadata && typeof payload.metadata === 'object') {
+              row.metadata = { ...(payload.metadata as Record<string, unknown>) }
+            }
+          }
+          return Promise.resolve({ data: null, error: null, count: matched.length }).then(onFulfilled, onRejected)
+        }
+        return Promise.resolve({
+          data: matched.map(clonePayRow),
+          error: null,
+          count: null,
+        }).then(onFulfilled, onRejected)
+      },
+    }
+    return api
+  }
+
+  const client: PaymentAdmin = {
+    from: (table: string) => {
+      if (table !== 'payments') throw new Error(`unexpected table ${table}`)
+      return {
+        select: () => query('select'),
+        update: (payload: Record<string, unknown>) => query('update', payload),
+      }
+    },
+  }
+  return { client, rows, hooks }
+}
+
+function payRow(overrides: Partial<PayRow> & Pick<PayRow, 'id'>): PayRow {
+  return {
+    tenant_id: TENANT,
+    user_id: null,
+    payment_status: 'pending',
+    metadata: {},
+    course_registration_id: null,
+    appointment_id: null,
+    ...overrides,
+  }
+}
+
+describe('identity-block cancel race', () => {
+  it('A. recovery update leaves a payment blocked after the select pending', async () => {
+    const blocked = payRow({
+      id: 'pay-race',
+      metadata: { course_id: 'course-1' },
+    })
+    const db = paymentAdmin([blocked])
+    const selected = await db.client.from('payments').select('id, metadata').eq('payment_status', 'pending')
+    const split = partitionStalePendingWalleePayments(selected.data ?? [])
+    expect(split.abandoned.map((row) => row.id)).toEqual(['pay-race'])
+
+    blocked.metadata = {
+      ...(blocked.metadata ?? {}),
+      wallee_failure_state: CAPTURED_IDENTITY_BLOCK_STATE,
+    }
+    const result = await cancelStalePendingWalleePaymentIds(db.client, ['pay-race'], 'Checkout-Abbruch')
+    expect(result.error).toBeNull()
+    expect(result.count).toBe(0)
+    expect(blocked.payment_status).toBe('pending')
+    expect(blocked.metadata?.wallee_failure_state).toBe(CAPTURED_IDENTITY_BLOCK_STATE)
+  })
+
+  it('B. sibling cleanup does not cancel a payment blocked after the select', async () => {
+    const orphan = payRow({
+      id: 'orphan',
+      metadata: { course_id: 'course-1', email: 'ada@example.com' },
+    })
+    const db = paymentAdmin([orphan])
+    db.hooks.beforeUpdate = () => {
+      orphan.metadata = {
+        ...(orphan.metadata ?? {}),
+        wallee_failure_state: CAPTURED_IDENTITY_BLOCK_STATE,
+      }
+    }
+    adminHolder.client = db.client
+    await cancelOrphanedSiblingCoursePayments({
+      successfulPaymentId: 'paid-ok',
+      tenantId: TENANT,
+      courseId: 'course-1',
+      email: 'ada@example.com',
+    })
+    expect(orphan.payment_status).toBe('pending')
+    expect(orphan.metadata?.wallee_failure_state).toBe(CAPTURED_IDENTITY_BLOCK_STATE)
+    expect(orphan.metadata?.replaced_by_payment_id).toBeUndefined()
+  })
+
+  it('C. stale pending and FAILED rows without an identity block are still cancelled', async () => {
+    const abandoned = payRow({ id: 'abandoned', metadata: { course_id: 'course-9' } })
+    const declined = payRow({
+      id: 'declined',
+      metadata: { wallee_failure_state: 'FAILED' },
+    })
+    const completed = payRow({ id: 'completed', payment_status: 'completed', metadata: {} })
+    const db = paymentAdmin([abandoned, declined, completed])
+    const abandonedResult = await cancelStalePendingWalleePaymentIds(
+      db.client,
+      ['abandoned', 'completed'],
+      'Checkout-Abbruch',
+    )
+    const declinedResult = await cancelStalePendingWalleePaymentIds(
+      db.client,
+      ['declined'],
+      'Wallee fehlgeschlagen',
+    )
+    expect(abandonedResult.count).toBe(1)
+    expect(declinedResult.count).toBe(1)
+    expect(abandoned.payment_status).toBe('cancelled')
+    expect(declined.payment_status).toBe('cancelled')
+    expect(completed.payment_status).toBe('completed')
+  })
+
+  it('D. a FAILED sibling without an identity block is still cleaned up', async () => {
+    const failedSibling = payRow({
+      id: 'failed-sib',
+      payment_status: 'failed',
+      metadata: { course_id: 'course-1', email: 'ada@example.com', wallee_failure_state: 'FAILED' },
+    })
+    const pendingSibling = payRow({
+      id: 'pending-sib',
+      metadata: { course_id: 'course-1', email: 'ada@example.com' },
+    })
+    const completed = payRow({
+      id: 'paid-ok',
+      payment_status: 'completed',
+      metadata: { course_id: 'course-1', email: 'ada@example.com' },
+    })
+    const db = paymentAdmin([failedSibling, pendingSibling, completed])
+    adminHolder.client = db.client
+    const cancelled = await cancelOrphanedSiblingCoursePayments({
+      successfulPaymentId: 'paid-ok',
+      tenantId: TENANT,
+      courseId: 'course-1',
+      email: 'ada@example.com',
+    })
+    expect(cancelled).toBe(2)
+    expect(failedSibling.payment_status).toBe('cancelled')
+    expect(pendingSibling.payment_status).toBe('cancelled')
+    expect(completed.payment_status).toBe('completed')
+    expect(failedSibling.metadata?.wallee_failure_state).toBe('FAILED')
+  })
+
+  it('E. an identity block already visible at select is not cancelled', async () => {
+    const blocked = payRow({
+      id: 'blocked',
+      metadata: {
+        course_id: 'course-1',
+        email: 'ada@example.com',
+        wallee_failure_state: CAPTURED_IDENTITY_BLOCK_STATE,
+      },
+    })
+    const db = paymentAdmin([blocked])
+    adminHolder.client = db.client
+    const split = partitionStalePendingWalleePayments([blocked])
+    expect(split.identityBlocked.map((row) => row.id)).toEqual(['blocked'])
+    expect([...split.genuineFailure, ...split.abandoned]).toHaveLength(0)
+
+    const cancelled = await cancelOrphanedSiblingCoursePayments({
+      successfulPaymentId: 'paid-ok',
+      tenantId: TENANT,
+      courseId: 'course-1',
+      email: 'ada@example.com',
+    })
+    const recovery = await cancelStalePendingWalleePaymentIds(db.client, ['blocked'], 'Checkout-Abbruch')
+    expect(cancelled).toBe(0)
+    expect(recovery.count).toBe(0)
+    expect(blocked.payment_status).toBe('pending')
+    expect(blocked.metadata?.wallee_failure_state).toBe(CAPTURED_IDENTITY_BLOCK_STATE)
   })
 })

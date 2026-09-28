@@ -22,7 +22,10 @@
 import { logger } from '~/utils/logger'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { mergePaymentMetadata, normalizePaymentMetadata } from '~/server/utils/payment-metadata'
-import { isCapturedIdentityBlockMetadata } from '~/server/utils/wallee-identity-block'
+import {
+  excludeCapturedIdentityBlock,
+  isCapturedIdentityBlockMetadata,
+} from '~/server/utils/wallee-identity-block'
 
 type PaymentMeta = {
   course_id?: string
@@ -152,20 +155,24 @@ export async function cancelOrphanedSiblingCoursePayments(opts: {
   let cancelled = 0
   for (const orphanId of orphanIds) {
     const orphan = (candidates || []).find((p: any) => p.id === orphanId)
-    const { error: rowErr } = await supabase
-      .from('payments')
-      .update({
-        payment_status: 'cancelled',
-        notes: `Automatisch storniert: ersetzt durch erfolgreiche Zahlung ${successfulPaymentId}`,
-        updated_at: new Date().toISOString(),
-        metadata: {
-          ...(orphan?.metadata || {}),
-          replaced_by_payment_id: successfulPaymentId,
-          replaced_at: new Date().toISOString()
-        }
-      })
-      .eq('id', orphanId)
-      .in('payment_status', ['pending', 'failed', 'processing'])
+    // Re-check the stored row. identity_blocked set after the SELECT matches
+    // zero rows, so this statement cannot cancel it or replace its metadata.
+    const { error: rowErr } = await excludeCapturedIdentityBlock(
+      supabase
+        .from('payments')
+        .update({
+          payment_status: 'cancelled',
+          notes: `Automatisch storniert: ersetzt durch erfolgreiche Zahlung ${successfulPaymentId}`,
+          updated_at: new Date().toISOString(),
+          metadata: {
+            ...(orphan?.metadata || {}),
+            replaced_by_payment_id: successfulPaymentId,
+            replaced_at: new Date().toISOString()
+          }
+        })
+        .eq('id', orphanId)
+        .in('payment_status', ['pending', 'failed', 'processing'])
+    )
 
     if (!rowErr) cancelled++
     else logger.warn(`⚠️ Could not cancel orphan payment ${orphanId}:`, rowErr.message)

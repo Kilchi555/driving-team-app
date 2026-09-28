@@ -15,6 +15,60 @@ export function isCapturedIdentityBlockMetadata(metadata: unknown): boolean {
   return normalizePaymentMetadata(metadata).wallee_failure_state === CAPTURED_IDENTITY_BLOCK_STATE
 }
 
+/**
+ * PostgREST column for `metadata->>'wallee_failure_state'`.
+ * `IS DISTINCT FROM` keeps rows whose key is absent (SQL NULL) cancellable.
+ * `.neq()` does not: NULL <> 'identity_blocked' is unknown and drops the row.
+ */
+export const IDENTITY_BLOCK_STATE_COLUMN = 'metadata->>wallee_failure_state'
+
+type IdentityCancelGuard = {
+  isDistinct: (column: string, value: string) => IdentityCancelGuard
+}
+
+/**
+ * Atomic cancel guard. Must be applied on the UPDATE, not on a prior SELECT.
+ * A row that becomes identity_blocked between the snapshot and this statement
+ * matches zero rows and stays pending.
+ */
+export function excludeCapturedIdentityBlock<Q extends IdentityCancelGuard>(query: Q): Q {
+  return query.isDistinct(IDENTITY_BLOCK_STATE_COLUMN, CAPTURED_IDENTITY_BLOCK_STATE) as Q
+}
+
+/**
+ * Phase 4 cancel. Same ids as the snapshot, but the UPDATE itself re-checks
+ * that the row is still pending and not identity_blocked.
+ */
+export function cancelStalePendingWalleePaymentIds(
+  supabase: {
+    from: (table: string) => {
+      update: (values: {
+        payment_status: 'cancelled'
+        notes: string
+        updated_at: string
+      }) => {
+        in: (column: string, values: readonly string[]) => {
+          eq: (column: string, value: string) => IdentityCancelGuard
+        }
+      }
+    }
+  },
+  ids: readonly string[],
+  notes: string,
+) {
+  return excludeCapturedIdentityBlock(
+    supabase
+      .from('payments')
+      .update({
+        payment_status: 'cancelled',
+        notes,
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', ids)
+      .eq('payment_status', 'pending'),
+  )
+}
+
 export function partitionStalePendingWalleePayments<T extends { id: string, metadata?: unknown }>(
   payments: T[],
 ): { identityBlocked: T[], genuineFailure: T[], abandoned: T[] } {

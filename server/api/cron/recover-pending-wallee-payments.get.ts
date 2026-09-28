@@ -22,7 +22,10 @@ import {
   sendCourseFulfillmentConfirmation,
   shouldAtomicallyFulfillCoursePayment,
 } from '~/server/utils/fulfill-course-wallee-payment'
-import { partitionStalePendingWalleePayments } from '~/server/utils/wallee-identity-block'
+import {
+  cancelStalePendingWalleePaymentIds,
+  partitionStalePendingWalleePayments,
+} from '~/server/utils/wallee-identity-block'
 
 const STATUS_MAPPING: Record<string, string> = {
   'PENDING': 'pending',
@@ -763,15 +766,14 @@ export default defineEventHandler(async (event) => {
         const genuineFailureIds = genuineFailure.map(p => p.id)
         const trueAbandonedIds = abandonedCheckouts.map(p => p.id)
 
+        // The UPDATE re-checks pending + identity_blocked. A block written
+        // after this SELECT matches zero rows and is left pending.
         if (genuineFailureIds.length > 0) {
-          const { error: cancelFailedError } = await supabase
-            .from('payments')
-            .update({
-              payment_status: 'cancelled',
-              notes: 'Automatisch storniert: Zahlung bei Wallee fehlgeschlagen (Kunde hat es nicht erneut versucht, >3h)',
-              updated_at: new Date().toISOString()
-            })
-            .in('id', genuineFailureIds)
+          const { error: cancelFailedError } = await cancelStalePendingWalleePaymentIds(
+            supabase,
+            genuineFailureIds,
+            'Automatisch storniert: Zahlung bei Wallee fehlgeschlagen (Kunde hat es nicht erneut versucht, >3h)',
+          )
           if (!cancelFailedError) {
             abandoned += genuineFailureIds.length
           } else {
@@ -780,14 +782,11 @@ export default defineEventHandler(async (event) => {
         }
 
         if (trueAbandonedIds.length > 0) {
-          const { error: cancelError } = await supabase
-            .from('payments')
-            .update({
-              payment_status: 'cancelled',
-              notes: 'Automatisch storniert: Checkout-Abbruch (kein User nach 3h)',
-              updated_at: new Date().toISOString()
-            })
-            .in('id', trueAbandonedIds)
+          const { error: cancelError } = await cancelStalePendingWalleePaymentIds(
+            supabase,
+            trueAbandonedIds,
+            'Automatisch storniert: Checkout-Abbruch (kein User nach 3h)',
+          )
           if (!cancelError) {
             abandoned += trueAbandonedIds.length
           } else {
