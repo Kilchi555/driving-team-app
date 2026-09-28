@@ -2548,9 +2548,9 @@ onMounted(async () => {
     return
   }
 
-  // Always show this tenant's registration form. A phone often still has a
-  // session; the old redirect sent admins to /admin/dashboard (no such page)
-  // and everyone else to a dashboard, so the public link never reached the form.
+  // Always show this tenant's registration form, including when a session
+  // is already active. Phones keep that session; leaving the page here
+  // replaced the form with a redirect.
 
   // Restore form data from localStorage immediately (sync, no delay)
   if (process.client) {
