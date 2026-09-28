@@ -22,6 +22,7 @@
 import { logger } from '~/utils/logger'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { mergePaymentMetadata, normalizePaymentMetadata } from '~/server/utils/payment-metadata'
+import { isCapturedIdentityBlockMetadata } from '~/server/utils/wallee-identity-block'
 
 type PaymentMeta = {
   course_id?: string
@@ -134,6 +135,8 @@ export async function cancelOrphanedSiblingCoursePayments(opts: {
     .filter((p: any) => {
       if (p.appointment_id) return false
       if (p.course_registration_id) return false
+      // Captured but identity-blocked rows are not leftover checkouts.
+      if (isCapturedIdentityBlockMetadata(p.metadata)) return false
       const pMeta = p.metadata || {}
       if (pMeta.course_id !== courseId) return false
       if (userId && p.user_id && p.user_id === userId) return true

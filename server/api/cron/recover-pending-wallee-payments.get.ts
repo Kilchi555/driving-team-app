@@ -22,6 +22,7 @@ import {
   sendCourseFulfillmentConfirmation,
   shouldAtomicallyFulfillCoursePayment,
 } from '~/server/utils/fulfill-course-wallee-payment'
+import { partitionStalePendingWalleePayments } from '~/server/utils/wallee-identity-block'
 
 const STATUS_MAPPING: Record<string, string> = {
   'PENDING': 'pending',
@@ -729,6 +730,11 @@ export default defineEventHandler(async (event) => {
     // that genuinely FAILED at Wallee (card declined etc.) and the customer
     // never retried. Phase 1 tags the latter via `metadata.wallee_failure_state`
     // — use that to write an accurate note instead of always blaming "abandoned".
+    //
+    // `wallee_failure_state = identity_blocked` is different: Wallee already
+    // captured the money and fulfillment refused to invent a user. Those rows
+    // stay pending so the same payment can be fulfilled later. Do not cancel
+    // them and do not refund them.
     let abandoned = 0
     try {
       const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
@@ -744,12 +750,18 @@ export default defineEventHandler(async (event) => {
       logger.info(`🗑️ Phase 4: found ${abandonedPayments?.length ?? 0} abandoned checkout(s) (no user_id after 3h)`)
 
       if (!abandonedError && abandonedPayments && abandonedPayments.length > 0) {
-        const genuineFailureIds = abandonedPayments
-          .filter(p => !!p.metadata?.wallee_failure_state)
-          .map(p => p.id)
-        const trueAbandonedIds = abandonedPayments
-          .filter(p => !p.metadata?.wallee_failure_state)
-          .map(p => p.id)
+        const {
+          identityBlocked,
+          genuineFailure,
+          abandoned: abandonedCheckouts,
+        } = partitionStalePendingWalleePayments(abandonedPayments)
+        if (identityBlocked.length > 0) {
+          logger.warn('⏸️ Phase 4: captured identity-blocked course payment stays pending', {
+            paymentIds: identityBlocked.map(p => p.id),
+          })
+        }
+        const genuineFailureIds = genuineFailure.map(p => p.id)
+        const trueAbandonedIds = abandonedCheckouts.map(p => p.id)
 
         if (genuineFailureIds.length > 0) {
           const { error: cancelFailedError } = await supabase
