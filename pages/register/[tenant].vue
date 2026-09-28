@@ -1225,7 +1225,6 @@
 
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { navigateTo, useRoute, useRouter, useRuntimeConfig, useHead } from '#app'
-import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useTenant } from '~/composables/useTenant'
 import { getSupabase } from '~/utils/supabase'
@@ -2549,20 +2548,9 @@ onMounted(async () => {
     return
   }
 
-  // ✅ NEW: Redirect if already logged in
-  const authStore = useAuthStore()
-  if (authStore.isLoggedIn) {
-    logger.info('ℹ️ User already logged in, redirecting to dashboard')
-    // Redirect to appropriate dashboard based on role
-    if (authStore.isAdmin) {
-      await navigateTo('/admin/dashboard')
-    } else if (authStore.isStaff) {
-      await navigateTo('/dashboard')
-    } else {
-      await navigateTo('/customer-dashboard')
-    }
-    return
-  }
+  // Always show this tenant's registration form, including when a session
+  // is already active. Phones keep that session; leaving the page here
+  // replaced the form with a redirect.
 
   // Restore form data from localStorage immediately (sync, no delay)
   if (process.client) {
