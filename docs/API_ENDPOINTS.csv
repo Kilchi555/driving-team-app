@@ -123,4 +123,4 @@ Endpoint,Method,Purpose,Authentication,Input Parameters,Output,Related Tables,Mo
 /api/onboarding/categories,GET,"Get categories for onboarding","public","--","categories list","categories",Onboarding,Active
 /api/emails/send-booking-proposal,POST,"Send booking proposal email","staff, admin","proposal_id, email_data","success message","booking_proposals, reminder_templates",Messaging,Active
 /api/debug/check-wallee-payments,GET,"Debug Wallee payments (dev)","admin","--","debug info","payment_wallee_transactions",Debug,Active
-/api/debug/trigger-recalc-queue,POST,"Manually trigger recalculation (dev)","admin","staff_id, location_id, date_range","queue_id","availability_recalc_queue",Debug,Active
+/api/debug/trigger-recalc-queue,POST,"REMOVED (#304): was unauthenticated privileged mutator; use GET /api/cron/process-recalc-queue + assertCronRequest","--","--","--","--",Debug,Inactive
