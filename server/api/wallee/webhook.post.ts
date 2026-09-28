@@ -710,11 +710,13 @@ export default defineEventHandler(async (event) => {
           }
         }
         if (!isSuccessfulCourseFulfillment(result.status)) {
+          // identity_blocked is already stored on the payment. Do not 503:
+          // repeating the webhook cannot resolve the identity.
           if (webhookLogId) {
             try {
               await supabase.from('webhook_logs').update({
                 success: false,
-                error_message: `Course fulfillment ${result.status}`,
+                error_message: `Course fulfillment ${result.status}${result.error ? `: ${result.error}` : ''}`,
                 processing_duration_ms: Date.now() - startTime,
               }).eq('id', webhookLogId)
             } catch { /* non-fatal */ }

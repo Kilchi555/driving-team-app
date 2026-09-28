@@ -14,6 +14,10 @@
 import { logger } from '~/utils/logger'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { PublicCourseUserAbort, resolvePublicCourseUser } from '~/server/utils/public-course-user'
+import {
+  clearCapturedIdentityBlock,
+  persistCapturedIdentityBlock,
+} from '~/server/utils/wallee-identity-block'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { sha256Hex } from '~/server/utils/meta-capi'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
@@ -371,12 +375,15 @@ export async function fulfillCourseWalleePayment(opts: {
         paymentId: payment.id,
         reason: err.reason,
       })
+      // Captured funds stay on this pending row. Do not complete, cancel, or refund.
+      await persistCapturedIdentityBlock(supabase, payment, err.reason)
       return { status: 'identity_blocked', error: err.reason }
     }
     logger.error('❌ Course fulfillment user resolution failed:', err?.message)
     return { status: 'rpc_error', error: err?.message || 'user resolution failed' }
   }
   if (!userId) {
+    await persistCapturedIdentityBlock(supabase, payment, 'missing_user')
     return { status: 'identity_blocked', error: 'missing_user' }
   }
   const payload = buildCourseFulfillmentPayload(payment, userId, capturedAmountChf)
@@ -388,6 +395,7 @@ export async function fulfillCourseWalleePayment(opts: {
 
   const result = parseRpcResult(data, error)
   if (isSuccessfulCourseFulfillment(result.status) && result.registrationId) {
+    await clearCapturedIdentityBlock(supabase, payment)
     payment.user_id = userId || payment.user_id
     ;(payment as any).course_registration_id = result.registrationId
     payment.payment_status = 'completed'
