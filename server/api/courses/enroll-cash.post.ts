@@ -18,8 +18,7 @@ import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
-import { findExistingUserByContact, findStaffOrAdminByEmail, findStaffOrAdminByPhone } from '~/server/utils/user-matching'
-import { normalizePhoneNumber } from '~/server/utils/sms'
+import { PublicCourseUserAbort, resolvePublicCourseUser } from '~/server/utils/public-course-user'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { sha256Hex } from '~/server/utils/meta-capi'
 import { reportBindingCourseConversionSafely } from '~/server/utils/binding-booking-conversion'
@@ -259,32 +258,8 @@ const handler = defineEventHandler(async (event) => {
       }
     }
 
-    // 8. Identity: session principal if tenant-valid; else new guest only when
-    // contact is unused. Matching an existing customer is discovery, not attach.
-    logger.debug('🔍 Looking for existing user with email/phone:', { finalEmail, finalPhone })
-
-    // Staff/admin autofill must fail before we match any customer by phone.
-    if (finalEmail) {
-      const staffHit = await findStaffOrAdminByEmail(supabase, { email: finalEmail, tenantId })
-      if (staffHit) {
-        throw createError({
-          statusCode: 400,
-          statusMessage:
-            'Diese E-Mail gehört einem Mitarbeiterkonto. Bitte die E-Mail der Kursteilnehmerin / des Kursteilnehmers verwenden.',
-        })
-      }
-    }
-    if (finalPhone) {
-      const staffPhoneHit = await findStaffOrAdminByPhone(supabase, { phone: finalPhone, tenantId })
-      if (staffPhoneHit) {
-        throw createError({
-          statusCode: 400,
-          statusMessage:
-            'Diese Telefonnummer gehört einem Mitarbeiterkonto. Bitte die Telefonnummer der Kursteilnehmerin / des Kursteilnehmers verwenden.',
-        })
-      }
-    }
-
+    // 8. Public user. Tenant is the course tenant. Client user_id is ignored.
+    // Session identity is not an enrollment key: email resolves the business row.
     const sessionUser = await getAuthenticatedUserWithDbId(event)
     const sessionPrincipalId = publicCourseSessionPrincipalId(sessionUser, tenantId)
     if (sessionUser?.id && !sessionPrincipalId) {
@@ -295,68 +270,24 @@ const handler = defineEventHandler(async (event) => {
       })
     }
 
-    let guestUserId: string | null = sessionPrincipalId
-
-    if (!guestUserId) {
-      const existingUser = await findExistingUserByContact(supabase, {
+    let guestUserId: string
+    try {
+      const resolved = await resolvePublicCourseUser(supabase, {
+        tenantId,
         email: finalEmail,
         phone: finalPhone,
-        tenantId,
-        roles: ['client', 'student'],
+        firstName: customerData.firstname,
+        lastName: customerData.lastname,
       })
-
-      if (existingUser) {
-        logger.debug('ℹ️ Contact matches existing customer (discovery only; not attaching):', existingUser.id)
-        guestUserId = null
-      } else {
-        logger.debug('👤 Creating guest user...')
-
-        const { data: newUser, error: userError } = await supabase
-          .from('users')
-          .insert({
-            first_name: customerData.firstname,
-            last_name: customerData.lastname,
-            email: finalEmail,
-            phone: normalizePhoneNumber(finalPhone) || finalPhone,
-            tenant_id: tenantId,
-            role: 'student',
-            is_active: true,
-            auth_user_id: null // No auth account — guest user identified by null auth_user_id
-          })
-          .select('id')
-          .single()
-
-        if (userError || !newUser) {
-          logger.error('❌ Failed to create guest user:', userError)
-          if (userError?.code === '23505') {
-            // Unique contact collision: do not attach the existing row; continue unlinked.
-            guestUserId = null
-          } else {
-            const msg = userError?.message || ''
-            if (msg.includes('users_phone_tenant_unique') || msg.includes('phone')) {
-              throw createError({
-                statusCode: 400,
-                statusMessage:
-                  'Diese Telefonnummer ist bereits registriert. Bitte die Telefonnummer der Kursteilnehmerin / des Kursteilnehmers verwenden.',
-              })
-            }
-            if (msg.includes('users_email_tenant_unique') || msg.includes('email')) {
-              throw createError({
-                statusCode: 400,
-                statusMessage:
-                  'Diese E-Mail ist bereits registriert. Bitte eine andere E-Mail verwenden oder den bestehenden Kunden anmelden.',
-              })
-            }
-            throw createError({
-              statusCode: 500,
-              statusMessage: 'Guest user could not be created'
-            })
-          }
-        } else {
-          guestUserId = newUser.id
-          logger.info('✅ Guest user created:', guestUserId)
-        }
+      guestUserId = resolved.userId
+    } catch (userErr: any) {
+      if (userErr instanceof PublicCourseUserAbort) {
+        throw createError({
+          statusCode: userErr.statusCode,
+          statusMessage: userErr.message,
+        })
       }
+      throw userErr
     }
 
     // Partial / individual flags are needed for the registration insert even when

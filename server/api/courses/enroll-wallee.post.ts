@@ -17,7 +17,7 @@ import { SARIClient } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
-import { findExistingUserByContact, findStaffOrAdminByEmail, findStaffOrAdminByPhone } from '~/server/utils/user-matching'
+import { findStaffOrAdminByEmail, findStaffOrAdminByPhone } from '~/server/utils/user-matching'
 import { payableAfterSourceDiscount } from '~/server/utils/discount-amount'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { availableWalletRappen } from '~/server/utils/apply-student-credit'
@@ -454,11 +454,9 @@ const handler = defineEventHandler(async (event) => {
       }
     }
 
-    // 8. Identity: session principal (if any) is the only account authority.
-    // Contact lookup is discovery only — it must not attach or debit a matched user.
-    logger.debug('🔍 Looking for existing user with email/phone:', { finalEmail, finalPhone })
-
-    // Staff/admin autofill must fail before we match any customer by phone.
+    // 8. Staff contacts abort before payment. The public course user is
+    // resolved only after a successful payment, inside course fulfillment.
+    // This handler does not create public.users or attach a registration.
     if (finalEmail) {
       const staffHit = await findStaffOrAdminByEmail(supabase, { email: finalEmail, tenantId })
       if (staffHit) {
@@ -489,17 +487,6 @@ const handler = defineEventHandler(async (event) => {
         role: sessionUser.role,
       })
     }
-
-    const existingUser = await findExistingUserByContact(supabase, {
-      email: finalEmail,
-      phone: finalPhone,
-      tenantId,
-      roles: ['client', 'student'],
-    })
-    if (existingUser) {
-      logger.debug('ℹ️ Contact matches existing customer (discovery only; not attaching):', existingUser.id)
-    }
-    // Guest user is created after Wallee confirmation when the contact is unused.
 
     // ⚠️ REMOVED: Create pending enrollment
     // This was the source of race conditions and orphaned records!
