@@ -1225,7 +1225,6 @@
 
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { navigateTo, useRoute, useRouter, useRuntimeConfig, useHead } from '#app'
-import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useTenant } from '~/composables/useTenant'
 import { getSupabase } from '~/utils/supabase'
@@ -2549,20 +2548,9 @@ onMounted(async () => {
     return
   }
 
-  // Public registration links must still open the form when an admin
-  // session is active. Phones keep that session, and the old target
-  // `/admin/dashboard` is not a route (admin home is `/admin`), so the
-  // link 404'd on mobile. Staff and customers keep their dashboards.
-  const authStore = useAuthStore()
-  if (authStore.isLoggedIn && !authStore.isAdmin) {
-    logger.info('ℹ️ User already logged in, redirecting to dashboard')
-    if (authStore.isStaff) {
-      await navigateTo('/dashboard')
-    } else {
-      await navigateTo('/customer-dashboard')
-    }
-    return
-  }
+  // Always show this tenant's registration form. A phone often still has a
+  // session; the old redirect sent admins to /admin/dashboard (no such page)
+  // and everyone else to a dashboard, so the public link never reached the form.
 
   // Restore form data from localStorage immediately (sync, no delay)
   if (process.client) {
