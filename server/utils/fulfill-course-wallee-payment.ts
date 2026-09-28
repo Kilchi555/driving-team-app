@@ -12,8 +12,8 @@
  * Credit enroll uses enroll_course_with_credit.
  */
 import { logger } from '~/utils/logger'
-import { findExistingUserByContact } from '~/server/utils/user-matching'
-import { normalizePhoneNumber } from '~/server/utils/sms'
+import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
+import { PublicCourseUserAbort, resolvePublicCourseUser } from '~/server/utils/public-course-user'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { sha256Hex } from '~/server/utils/meta-capi'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
@@ -34,6 +34,7 @@ export const COURSE_FULFILLMENT_STATUSES = [
   'payment_conflict',
   'amount_mismatch',
   'invalid_args',
+  'identity_blocked',
   'rpc_error',
 ] as const
 
@@ -261,106 +262,77 @@ async function persistCoursePaymentGuestUserId(
   payment.user_id = userId
 }
 
+const PUBLIC_COURSE_CUSTOMER_ROLES = new Set(['client'])
+
 export async function ensureGuestUserForCoursePayment(
   supabase: any,
   payment: CoursePaymentLike,
   tenantId: string,
-): Promise<string | undefined> {
-  let paymentUserTenantOk = false
+): Promise<string> {
+  const enrollmentEmail = normalizeEnrollmentEmail(payment.metadata?.email)
   if (payment.user_id) {
     const { data: owned } = await supabase
       .from('users')
-      .select('id, tenant_id')
+      .select('id, tenant_id, role, email')
       .eq('id', payment.user_id)
       .maybeSingle()
-    if (owned?.id && owned.tenant_id === tenantId) return owned.id
+    const ownedEmail = normalizeEnrollmentEmail(owned?.email)
+    const sameTenantCustomer = Boolean(
+      owned?.id
+      && owned.tenant_id === tenantId
+      && PUBLIC_COURSE_CUSTOMER_ROLES.has(owned.role),
+    )
+    // Reuse only when this payment already points at the email's customer,
+    // or when the payment has no enrollment email (captured retry fixture).
+    // A different email must go through the resolver. Client user ids are not a key.
+    const emailAgrees = !enrollmentEmail || ownedEmail === enrollmentEmail
+    if (sameTenantCustomer && emailAgrees) {
+      return owned.id
+    }
     if (owned?.id) {
-      logger.warn('⚠️ Ignoring payment.user_id with tenant mismatch during course fulfillment', {
+      logger.warn('⚠️ Ignoring payment.user_id that is not the course-tenant email customer', {
         paymentId: payment.id,
         userId: payment.user_id,
         tenantId,
       })
-    } else {
-      paymentUserTenantOk = true
     }
   }
-  const email = payment.metadata?.email
-  if (!email) return undefined
 
-  const existingUser = await findExistingUserByContact(supabase, {
-    email,
-    phone: payment.metadata?.phone,
+  const resolved = await resolvePublicCourseUser(supabase, {
     tenantId,
+    email: payment.metadata?.email,
+    phone: payment.metadata?.phone,
+    firstName: payment.metadata?.firstname || payment.metadata?.first_name,
+    lastName: payment.metadata?.lastname || payment.metadata?.last_name,
+    referredByCode: payment.metadata?.referral_code,
   })
-  if (existingUser) {
-    if (paymentUserTenantOk && payment.user_id && existingUser.id === payment.user_id) {
-      return existingUser.id
-    }
-    logger.debug('ℹ️ Contact matches existing customer during fulfillment (discovery only; not attaching)', {
-      paymentId: payment.id,
-      matchedUserId: existingUser.id,
-    })
-    return undefined
-  }
+  const userId = resolved.userId
+  await persistCoursePaymentGuestUserId(supabase, payment, tenantId, userId)
 
-  const { data: newUser, error: createUserError } = await supabase
-    .from('users')
-    .insert({
-      first_name: payment.metadata?.firstname || 'Guest',
-      last_name: payment.metadata?.lastname || 'User',
-      email: String(email).trim().toLowerCase(),
-      phone: normalizePhoneNumber(payment.metadata?.phone || '') || payment.metadata?.phone,
-      tenant_id: tenantId,
-      role: 'client',
-      is_active: true,
-      auth_user_id: null,
-      ...(payment.metadata?.referral_code ? { referred_by_code: payment.metadata.referral_code } : {}),
-      onboarding_token: crypto.randomUUID ? crypto.randomUUID() : `token-${Date.now()}`,
-      onboarding_token_expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      onboarding_status: 'pending',
-    })
-    .select('id')
-    .single()
-
-  if (newUser?.id) {
-    const userId = newUser.id as string
-    await persistCoursePaymentGuestUserId(supabase, payment, tenantId, userId)
-    const refCode = payment.metadata?.referral_code
-    if (refCode) {
-      const { data: affCode } = await supabase
-        .from('affiliate_codes')
-        .select('id, user_id')
-        .eq('code', refCode)
-        .eq('is_active', true)
-        .maybeSingle()
-      if (affCode && affCode.user_id !== userId) {
-        const { error: refInsertError } = await supabase
-          .from('affiliate_referrals')
-          .insert({
-            tenant_id: tenantId,
-            affiliate_code_id: affCode.id,
-            affiliate_user_id: affCode.user_id,
-            referred_user_id: userId,
-            status: 'pending',
-          })
-        if (refInsertError) {
-          logger.error('❌ Failed to create affiliate_referrals row for guest user:', refInsertError.message)
-        }
+  const refCode = payment.metadata?.referral_code
+  if (resolved.created && refCode) {
+    const { data: affCode } = await supabase
+      .from('affiliate_codes')
+      .select('id, user_id')
+      .eq('code', refCode)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (affCode && affCode.user_id !== userId) {
+      const { error: refInsertError } = await supabase
+        .from('affiliate_referrals')
+        .insert({
+          tenant_id: tenantId,
+          affiliate_code_id: affCode.id,
+          affiliate_user_id: affCode.user_id,
+          referred_user_id: userId,
+          status: 'pending',
+        })
+      if (refInsertError) {
+        logger.error('❌ Failed to create affiliate_referrals row for guest user:', refInsertError.message)
       }
     }
-    return userId
   }
-
-  if (createUserError?.code === '23505') {
-    logger.info('ℹ️ Guest user insert collided on unique contact; fulfilling without account attach', {
-      paymentId: payment.id,
-    })
-    return undefined
-  }
-  if (createUserError) {
-    logger.error('❌ Failed to create guest user for course fulfillment:', createUserError.message)
-  }
-  return undefined
+  return userId
 }
 
 function parseRpcResult(data: unknown, error: { message?: string } | null): CourseFulfillmentResult {
@@ -390,7 +362,23 @@ export async function fulfillCourseWalleePayment(opts: {
   if (!payment?.id) return { status: 'invalid_args' }
   if (!paymentHasCourseId(payment)) return { status: 'not_course_payment' }
 
-  const userId = await ensureGuestUserForCoursePayment(supabase, payment, payment.tenant_id)
+  let userId: string
+  try {
+    userId = await ensureGuestUserForCoursePayment(supabase, payment, payment.tenant_id)
+  } catch (err: any) {
+    if (err instanceof PublicCourseUserAbort) {
+      logger.warn('⚠️ Course fulfillment stopped: public user was not resolved', {
+        paymentId: payment.id,
+        reason: err.reason,
+      })
+      return { status: 'identity_blocked', error: err.reason }
+    }
+    logger.error('❌ Course fulfillment user resolution failed:', err?.message)
+    return { status: 'rpc_error', error: err?.message || 'user resolution failed' }
+  }
+  if (!userId) {
+    return { status: 'identity_blocked', error: 'missing_user' }
+  }
   const payload = buildCourseFulfillmentPayload(payment, userId, capturedAmountChf)
 
   const { data, error } = await supabase.rpc('fulfill_course_wallee_payment', {

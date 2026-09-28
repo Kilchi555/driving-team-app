@@ -80,10 +80,12 @@ describe('public.users.role student write/read contract', () => {
 
   it('cash enrollment inserts a client and matches only clients', () => {
     const src = read('server/api/courses/enroll-cash.post.ts')
-    expect(src).toContain("role: 'client'")
-    expect(src).toContain("roles: ['client']")
+    const resolver = read('server/utils/public-course-user.ts')
+    expect(src).toContain('resolvePublicCourseUser')
     expect(src).not.toMatch(/role:\s*['"]student['"]/)
     expect(src).not.toContain("'student'")
+    expect(resolver).toContain("PUBLIC_COURSE_USER_ROLE = 'client'")
+    expect(resolver).not.toMatch(/role:\s*['"]student['"]/)
   })
 
   it('admin participant and create-user insert a client', () => {
