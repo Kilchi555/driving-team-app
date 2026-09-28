@@ -2549,14 +2549,14 @@ onMounted(async () => {
     return
   }
 
-  // ✅ NEW: Redirect if already logged in
+  // Public registration links must still open the form when an admin
+  // session is active. Phones keep that session, and the old target
+  // `/admin/dashboard` is not a route (admin home is `/admin`), so the
+  // link 404'd on mobile. Staff and customers keep their dashboards.
   const authStore = useAuthStore()
-  if (authStore.isLoggedIn) {
+  if (authStore.isLoggedIn && !authStore.isAdmin) {
     logger.info('ℹ️ User already logged in, redirecting to dashboard')
-    // Redirect to appropriate dashboard based on role
-    if (authStore.isAdmin) {
-      await navigateTo('/admin/dashboard')
-    } else if (authStore.isStaff) {
+    if (authStore.isStaff) {
       await navigateTo('/dashboard')
     } else {
       await navigateTo('/customer-dashboard')

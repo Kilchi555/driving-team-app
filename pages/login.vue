@@ -804,11 +804,11 @@ const handlePasskeyLogin = async () => {
       const role = result.user.role
       let redirectPath = '/'
       if (role === 'admin' || role === 'tenant_admin' || role === 'superadmin') {
-        redirectPath = '/admin/dashboard'
+        redirectPath = '/admin'
       } else if (role === 'accountant') {
         redirectPath = '/admin/accounting'
       } else if (role === 'staff') {
-        redirectPath = '/staff/dashboard'
+        redirectPath = '/dashboard'
       } else if (role === 'client') {
         redirectPath = '/customer-dashboard'
       }
@@ -841,11 +841,11 @@ const handleBackupCodeLogin = async () => {
       const role = result.user.role
       let redirectPath = '/'
       if (role === 'admin' || role === 'tenant_admin' || role === 'superadmin') {
-        redirectPath = '/admin/dashboard'
+        redirectPath = '/admin'
       } else if (role === 'accountant') {
         redirectPath = '/admin/accounting'
       } else if (role === 'staff') {
-        redirectPath = '/staff/dashboard'
+        redirectPath = '/dashboard'
       } else if (role === 'client') {
         redirectPath = '/customer-dashboard'
       }
