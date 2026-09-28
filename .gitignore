@@ -37,6 +37,9 @@ fastlane/.env.*
 supabase/functions/**/.env.local
 .vercel
 .env*.local
+# Central simy-test credentials belong in ~/.config/simy/simy-test.env, never in a worktree.
+simy-test.env
+.env.test
 *.keystore
 
 # Capacitor (generated per-client, do not commit)
