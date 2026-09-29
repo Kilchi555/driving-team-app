@@ -14,20 +14,110 @@ import { logger } from '~/utils/logger'
 export type InvoiceAction = 'later' | 'pdf' | 'email'
 type EnrollmentPaymentOption = 'cash' | 'invoice' | 'paid' | 'reserve' | 'online_link'
 
+/**
+ * Invoice header math. VAT is calculated on the net subtotal, then the
+ * discount is subtracted. That matches the invoices trigger
+ * `calculate_invoice_vat`: total = subtotal + vat(subtotal) - discount.
+ * Discount defaults to 0, so admin enrollments keep net + VAT.
+ */
+export function computeCourseInvoiceTotals(
+  netRappen: number,
+  discountRappen = 0,
+  vatRate = 0,
+): {
+  netRappen: number
+  discountRappen: number
+  vatRate: number
+  vatAmountRappen: number
+  totalAmountRappen: number
+} {
+  const net = Math.max(0, Math.round(Number(netRappen) || 0))
+  const discount = Math.min(net, Math.max(0, Math.round(Number(discountRappen) || 0)))
+  const vatAmountRappen = computeVatAmountRappen(net, vatRate)
+  return {
+    netRappen: net,
+    discountRappen: discount,
+    vatRate,
+    vatAmountRappen,
+    totalAmountRappen: net + vatAmountRappen - discount,
+  }
+}
+
+async function loadTenantCourseRegistration(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  tenantId: string,
+  enrollmentId: string,
+) {
+  const { data, error } = await supabase
+    .from('course_registrations')
+    .select('id, tenant_id, user_id, payment_id, invoice_id')
+    .eq('id', enrollmentId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+
+  if (error || !data) {
+    throw createError({ statusCode: 404, statusMessage: 'Anmeldung nicht gefunden' })
+  }
+  return data
+}
+
 export async function createEnrollmentPayment(opts: {
   tenantId: string
-  adminUserId: string
+  /** Null for a public enrollment. No synthetic staff user is created. */
+  adminUserId?: string | null
   userId: string
   enrollmentId: string
   courseId: string
   courseName: string
+  /** Net course price in rappen. Stored as lesson_price_rappen. */
   amountRappen: number
+  /**
+   * Amount the customer owes. Defaults to amountRappen so admin cash/invoice
+   * payments stay on the course net they already stored.
+   */
+  payableTotalRappen?: number
   paymentOption: EnrollmentPaymentOption
 }): Promise<{ paymentId: string } | null> {
   // online_link creates its own payment via process-public
   if (opts.paymentOption === 'online_link') return null
 
   const supabase = getSupabaseAdmin()
+  const registration = await loadTenantCourseRegistration(supabase, opts.tenantId, opts.enrollmentId)
+  if (registration.user_id && registration.user_id !== opts.userId) {
+    throw createError({ statusCode: 409, statusMessage: 'Anmeldung gehört zu einem anderen Kunden' })
+  }
+
+  if (registration.payment_id) {
+    const { data: linked } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('id', registration.payment_id)
+      .eq('tenant_id', opts.tenantId)
+      .eq('course_registration_id', opts.enrollmentId)
+      .maybeSingle()
+    if (linked) return { paymentId: linked.id }
+  }
+
+  const { data: existingPayment } = await supabase
+    .from('payments')
+    .select('id')
+    .eq('tenant_id', opts.tenantId)
+    .eq('course_registration_id', opts.enrollmentId)
+    .limit(1)
+    .maybeSingle()
+
+  if (existingPayment) {
+    if (!registration.payment_id) {
+      await supabase
+        .from('course_registrations')
+        .update({ payment_id: existingPayment.id })
+        .eq('id', opts.enrollmentId)
+        .eq('tenant_id', opts.tenantId)
+        .is('payment_id', null)
+    }
+    return { paymentId: existingPayment.id }
+  }
+
   const now = new Date().toISOString()
 
   let payment_method = 'invoice'
@@ -54,15 +144,18 @@ export async function createEnrollmentPayment(opts: {
       break
   }
 
+  const payableTotal = opts.payableTotalRappen ?? opts.amountRappen
+  const staffId = opts.adminUserId || null
+
   const { data: payment, error } = await supabase
     .from('payments')
     .insert({
       tenant_id: opts.tenantId,
       user_id: opts.userId,
-      staff_id: opts.adminUserId,
-      created_by: opts.adminUserId,
+      staff_id: staffId,
+      created_by: staffId,
       course_registration_id: opts.enrollmentId,
-      total_amount_rappen: opts.amountRappen,
+      total_amount_rappen: payableTotal,
       lesson_price_rappen: opts.amountRappen,
       payment_method,
       payment_status,
@@ -73,7 +166,7 @@ export async function createEnrollmentPayment(opts: {
         course_id: opts.courseId,
         course_name: opts.courseName,
         course_registration_id: opts.enrollmentId,
-        admin_enroll: true,
+        admin_enroll: !!opts.adminUserId,
         payment_option: opts.paymentOption,
       },
     })
@@ -88,22 +181,44 @@ export async function createEnrollmentPayment(opts: {
     })
   }
 
-  await supabase
+  const { data: claimed, error: claimError } = await supabase
     .from('course_registrations')
     .update({ payment_id: payment.id })
     .eq('id', opts.enrollmentId)
+    .eq('tenant_id', opts.tenantId)
+    .is('payment_id', null)
+    .select('id')
+
+  if (claimError || !claimed?.length) {
+    await supabase.from('payments').delete().eq('id', payment.id).eq('tenant_id', opts.tenantId)
+    const { data: winner } = await supabase
+      .from('course_registrations')
+      .select('payment_id')
+      .eq('id', opts.enrollmentId)
+      .eq('tenant_id', opts.tenantId)
+      .maybeSingle()
+    if (winner?.payment_id) return { paymentId: winner.payment_id }
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Payment konnte nicht mit der Anmeldung verknüpft werden',
+    })
+  }
 
   return { paymentId: payment.id }
 }
 
 export async function createIndividualCourseInvoice(opts: {
   tenantId: string
-  adminUserId: string
+  /** Null for a public enrollment. No synthetic staff user is created. */
+  adminUserId?: string | null
   userId: string
   enrollmentId: string
   paymentId: string
   courseName: string
+  /** Net course price in rappen, before discount and VAT. */
   amountRappen: number
+  /** Server-validated discount. Ignored when omitted (admin path stays 0). */
+  discountRappen?: number
   participant: {
     first_name?: string | null
     last_name?: string | null
@@ -114,15 +229,60 @@ export async function createIndividualCourseInvoice(opts: {
     city?: string | null
   }
   sendEmail: boolean
-}): Promise<{ invoiceId: string; invoiceNumber: string }> {
+}): Promise<{ invoiceId: string; invoiceNumber: string; totalAmountRappen: number; created: boolean }> {
   const supabase = getSupabaseAdmin()
+  const registration = await loadTenantCourseRegistration(supabase, opts.tenantId, opts.enrollmentId)
+  if (registration.user_id && registration.user_id !== opts.userId) {
+    throw createError({ statusCode: 409, statusMessage: 'Anmeldung gehört zu einem anderen Kunden' })
+  }
+
+  const returnExisting = async (invoiceId: string) => {
+    const { data: existing } = await supabase
+      .from('invoices')
+      .select('id, invoice_number, total_amount_rappen')
+      .eq('id', invoiceId)
+      .eq('tenant_id', opts.tenantId)
+      .maybeSingle()
+    if (!existing) {
+      throw createError({ statusCode: 500, statusMessage: 'Bestehende Rechnung konnte nicht geladen werden' })
+    }
+    if (!registration.invoice_id) {
+      await supabase
+        .from('course_registrations')
+        .update({ invoice_id: existing.id })
+        .eq('id', opts.enrollmentId)
+        .eq('tenant_id', opts.tenantId)
+        .is('invoice_id', null)
+    }
+    return {
+      invoiceId: existing.id as string,
+      invoiceNumber: existing.invoice_number as string,
+      totalAmountRappen: Number(existing.total_amount_rappen) || 0,
+      created: false,
+    }
+  }
+
+  if (registration.invoice_id) return returnExisting(registration.invoice_id)
+
+  const { data: payment } = await supabase
+    .from('payments')
+    .select('id, invoice_id')
+    .eq('id', opts.paymentId)
+    .eq('tenant_id', opts.tenantId)
+    .eq('course_registration_id', opts.enrollmentId)
+    .maybeSingle()
+
+  if (!payment) {
+    throw createError({ statusCode: 404, statusMessage: 'Zahlung für diese Anmeldung nicht gefunden' })
+  }
+  if (payment.invoice_id) return returnExisting(payment.invoice_id)
+
   const now = new Date().toISOString()
   const invoiceDate = now.slice(0, 10)
   const dueDays = await getTenantInvoiceDueDays(supabase, opts.tenantId)
   const dueDate = computeInvoiceDueDate(invoiceDate, dueDays)
   const vatRate = await getTenantDefaultVatRate(supabase, opts.tenantId)
-  const vatAmount = computeVatAmountRappen(opts.amountRappen, vatRate)
-  const total = opts.amountRappen + vatAmount
+  const totals = computeCourseInvoiceTotals(opts.amountRappen, opts.discountRappen ?? 0, vatRate)
 
   const { data: tenant } = await supabase
     .from('tenants')
@@ -133,13 +293,14 @@ export async function createIndividualCourseInvoice(opts: {
   const invoiceNumber = await allocateInvoiceNumber(supabase, opts.tenantId)
   const studentName = `${opts.participant.first_name || ''} ${opts.participant.last_name || ''}`.trim() || 'Teilnehmer'
   const billingStreet = [opts.participant.street, opts.participant.street_nr].filter(Boolean).join(' ')
+  const staffId = opts.adminUserId || null
 
   const { data: invoice, error: invErr } = await supabase
     .from('invoices')
     .insert({
       tenant_id: opts.tenantId,
       user_id: opts.userId,
-      staff_id: opts.adminUserId,
+      staff_id: staffId,
       invoice_number: invoiceNumber,
       invoice_date: invoiceDate,
       due_date: dueDate,
@@ -150,11 +311,11 @@ export async function createIndividualCourseInvoice(opts: {
       billing_zip: opts.participant.zip || null,
       billing_city: opts.participant.city || null,
       billing_country: 'CH',
-      subtotal_rappen: opts.amountRappen,
-      vat_rate: vatRate,
-      vat_amount_rappen: vatAmount,
-      discount_amount_rappen: 0,
-      total_amount_rappen: total,
+      subtotal_rappen: totals.netRappen,
+      vat_rate: totals.vatRate,
+      vat_amount_rappen: totals.vatAmountRappen,
+      discount_amount_rappen: totals.discountRappen,
+      total_amount_rappen: totals.totalAmountRappen,
       status: opts.sendEmail ? 'sent' : 'draft',
       payment_status: 'pending',
       paid_amount_rappen: 0,
@@ -163,7 +324,7 @@ export async function createIndividualCourseInvoice(opts: {
       payment_terms: (tenant as any)?.invoice_payment_terms || null,
       footer_text: (tenant as any)?.invoice_footer_text || null,
     })
-    .select('id, invoice_number')
+    .select('id, invoice_number, total_amount_rappen')
     .single()
 
   if (invErr || !invoice) {
@@ -173,21 +334,34 @@ export async function createIndividualCourseInvoice(opts: {
     })
   }
 
-  await supabase.from('invoice_items').insert({
+  const discardInvoice = async () => {
+    await supabase.from('invoice_items').delete().eq('invoice_id', invoice.id).eq('tenant_id', opts.tenantId)
+    await supabase.from('invoices').delete().eq('id', invoice.id).eq('tenant_id', opts.tenantId)
+  }
+
+  const { error: itemError } = await supabase.from('invoice_items').insert({
     invoice_id: invoice.id,
     tenant_id: opts.tenantId,
     payment_id: opts.paymentId,
     product_name: opts.courseName,
     product_description: `Kursanmeldung ${studentName}`,
     quantity: 1,
-    unit_price_rappen: opts.amountRappen,
-    total_price_rappen: opts.amountRappen,
-    vat_rate: vatRate,
-    vat_amount_rappen: vatAmount,
+    unit_price_rappen: totals.netRappen,
+    total_price_rappen: totals.netRappen,
+    vat_rate: totals.vatRate,
+    vat_amount_rappen: totals.vatAmountRappen,
     sort_order: 0,
   })
 
-  await supabase
+  if (itemError) {
+    await discardInvoice()
+    throw createError({
+      statusCode: 500,
+      statusMessage: `Rechnungsposition konnte nicht erstellt werden: ${itemError.message}`,
+    })
+  }
+
+  const { error: paymentLinkError } = await supabase
     .from('payments')
     .update({
       invoice_id: invoice.id,
@@ -196,11 +370,42 @@ export async function createIndividualCourseInvoice(opts: {
       updated_at: now,
     })
     .eq('id', opts.paymentId)
+    .eq('tenant_id', opts.tenantId)
+    .eq('course_registration_id', opts.enrollmentId)
 
-  await supabase
+  if (paymentLinkError) {
+    await discardInvoice()
+    throw createError({
+      statusCode: 500,
+      statusMessage: `Zahlung konnte nicht mit der Rechnung verknüpft werden: ${paymentLinkError.message}`,
+    })
+  }
+
+  const { data: claimed, error: claimError } = await supabase
     .from('course_registrations')
     .update({ invoice_id: invoice.id })
     .eq('id', opts.enrollmentId)
+    .eq('tenant_id', opts.tenantId)
+    .is('invoice_id', null)
+    .select('id')
+
+  if (claimError || !claimed?.length) {
+    await discardInvoice()
+    const { data: winner } = await supabase
+      .from('course_registrations')
+      .select('invoice_id')
+      .eq('id', opts.enrollmentId)
+      .eq('tenant_id', opts.tenantId)
+      .maybeSingle()
+    if (winner?.invoice_id) return returnExisting(winner.invoice_id)
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Rechnung konnte nicht mit der Anmeldung verknüpft werden',
+    })
+  }
+
+  const storedTotal = Number(invoice.total_amount_rappen)
+  const totalAmountRappen = Number.isFinite(storedTotal) ? storedTotal : totals.totalAmountRappen
 
   if (opts.sendEmail && opts.participant.email) {
     try {
@@ -219,11 +424,11 @@ export async function createIndividualCourseInvoice(opts: {
           product_name: opts.courseName,
           product_description: `Kursanmeldung ${studentName}`,
           quantity: 1,
-          unit_price_rappen: opts.amountRappen,
-          total_price_rappen: opts.amountRappen,
+          unit_price_rappen: totals.netRappen,
+          total_price_rappen: totals.netRappen,
         }],
-        subtotalRappen: opts.amountRappen,
-        totalRappen: total,
+        subtotalRappen: totals.netRappen,
+        totalRappen: totalAmountRappen,
         staffName: tenant?.name || 'Unternehmen',
       })
     } catch (mailErr: any) {
@@ -231,7 +436,12 @@ export async function createIndividualCourseInvoice(opts: {
     }
   }
 
-  return { invoiceId: invoice.id, invoiceNumber }
+  return {
+    invoiceId: invoice.id,
+    invoiceNumber,
+    totalAmountRappen,
+    created: true,
+  }
 }
 
 export async function createCompanyCourseInvoice(opts: {

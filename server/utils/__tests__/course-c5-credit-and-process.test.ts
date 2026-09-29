@@ -290,6 +290,14 @@ describe('Identity: contact match is discovery, not authorization', () => {
     expect(cash).toContain("userError?.code === '23505'")
     expect(cash).toContain('findStaffOrAdminByEmail')
     expect(cash).toContain('resolveNonWalleeEnrollmentMethod')
+    expect(cash).toContain("role: 'client'")
+    expect(cash).not.toContain("role: 'student'")
+    expect(cash).toContain('auth_user_id: null')
+    expect(cash).not.toContain('signUp(')
+    expect(cash).not.toContain('admin.createUser')
+    expect(cash).not.toContain('issue_course_invoice')
+    expect(cash).toContain('statusCode: 409')
+    expect(cash).toContain('Die Anmeldung wurde nicht verknüpft.')
   })
 
   it('process-public public path ignores body userId; enrollmentId path keeps it', () => {

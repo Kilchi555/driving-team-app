@@ -29,6 +29,19 @@ describe('source-aware discount wiring', () => {
     expect(pay).not.toMatch(/discount_type === 'fixed'[\s\S]{0,120}Number\(discountRow\.discount_value/)
   })
 
+  it('enroll-cash recomputes a tenant-scoped discount and ignores the client amount', () => {
+    const cash = src('api/courses/enroll-cash.post.ts')
+    expect(cash).toContain('payableAfterSourceDiscount')
+    expect(cash).toContain("unitSource = 'discount'")
+    expect(cash).toContain("voucherData ? 'voucher_code'")
+    expect(cash).toContain("unitSource = 'gift_card'")
+    expect(cash).toContain("eq('tenant_id', tenantId)")
+    expect(cash).toContain('discountAmountRappen')
+    expect(cash).not.toMatch(/validatedDiscountAmount\s*=\s*discountAmountRappen/)
+    expect(cash).not.toMatch(/discountRappen\s*=\s*_discountAmountRappen/)
+    expect(cash).not.toMatch(/discountRappen\s*=\s*discountAmountRappen/)
+  })
+
   it('shop tags discounts vs voucher_codes before converting', () => {
     const shop = src('api/shop/create-payment.post.ts')
     expect(shop).toContain('discountKindForSource')
