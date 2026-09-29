@@ -32,6 +32,9 @@ export function decideProspectArchitecture(input: {
   services?: Array<{ name?: string } | string> | null
   city?: string | null
   internalPaths?: string[] | null
+  /** Cron path: no invented driving-school pages, prices page only with evidence. */
+  strict?: boolean
+  hasPrice?: boolean
 }): ProspectArchitecture {
   const names = (input.services || [])
     .map((s) => (typeof s === 'string' ? s : String(s?.name || '')).trim())
@@ -46,7 +49,8 @@ export function decideProspectArchitecture(input: {
   ).length
   const theyWereMulti = theirPages >= 3
   const enoughIntents = unique.length >= 2
-  const drivingFallback = input.businessType === 'driving_school' && theyWereMulti && unique.length < 2
+  const hasPricePath = (input.internalPaths || []).some((p) => /preis|tarif/i.test(p))
+  const drivingFallback = !input.strict && input.businessType === 'driving_school' && theyWereMulti && unique.length < 2
 
   const topics = drivingFallback ? DEFAULT_DRIVING_INTENTS : unique.slice(0, 4)
   const intents: ProspectIntent[] = topics.map((title) => {
@@ -54,9 +58,11 @@ export function decideProspectArchitecture(input: {
     return { type, title, slug: slugForProspectIntent({ type, title }, input.city) }
   })
 
-  if (enoughIntents || theyWereMulti) {
-    const prices = { type: 'prices' as const, title: 'Preise' }
-    intents.push({ ...prices, slug: slugForProspectIntent(prices, input.city) })
+  if (intents.length > 0 && (enoughIntents || theyWereMulti)) {
+    if (!input.strict || hasPricePath || input.hasPrice) {
+      const prices = { type: 'prices' as const, title: 'Preise' }
+      intents.push({ ...prices, slug: slugForProspectIntent(prices, input.city) })
+    }
     return {
       mode: 'multi',
       reason: theyWereMulti

@@ -8,6 +8,86 @@
       </div>
     </div>
 
+    <section class="sa-card auto-card">
+      <div class="auto-head">
+        <div>
+          <h2>Prospect Automation</h2>
+          <p>Die automatische Suche bleibt aus, bis du sie einschaltest. Ein manueller Lauf nutzt denselben Job.</p>
+        </div>
+        <span :class="['sa-badge', savedEnabled ? 'sa-badge-green' : 'sa-badge-neutral']">
+          {{ savedEnabled ? 'Aktiv' : 'Deaktiviert' }}
+        </span>
+      </div>
+
+      <p v-if="!automationPersistent" class="auto-note">Die gespeicherte Konfiguration ist nicht verfügbar. Die Automation bleibt aus.</p>
+
+      <div class="auto-grid">
+        <label class="sa-check">
+          <input v-model="automation.enabled" type="checkbox" :disabled="savingAutomation || !automationPersistent" />
+          Automatische Ausführung
+          <strong>{{ automation.enabled ? 'ON' : 'OFF' }}</strong>
+        </label>
+        <label class="sa-field">
+          <span>Frequenz</span>
+          <select v-model="automation.frequency" class="sa-input" :disabled="!automationPersistent">
+            <option value="daily">Täglich</option>
+          </select>
+        </label>
+        <label class="sa-field">
+          <span>Uhrzeit</span>
+          <input v-model="automation.time" type="time" step="60" class="sa-input" :disabled="!automationPersistent" />
+        </label>
+        <label class="sa-field">
+          <span>Zeitzone</span>
+          <select v-model="automation.timezone" class="sa-input" :disabled="!automationPersistent">
+            <option v-if="extraZone" :value="extraZone">{{ extraZone }}</option>
+            <option value="Europe/Zurich">Europe/Zurich</option>
+            <option value="Europe/Berlin">Europe/Berlin</option>
+            <option value="Europe/Paris">Europe/Paris</option>
+            <option value="Europe/Vienna">Europe/Vienna</option>
+            <option value="UTC">UTC</option>
+          </select>
+        </label>
+      </div>
+      <p class="auto-note">Der stündliche Takt prüft, ob die gespeicherte Uhrzeit in der gewählten Zeitzone erreicht ist. Sommer- und Winterzeit folgen dieser Zeitzone.</p>
+      <div class="sa-form-actions">
+        <button type="button" class="sa-btn-primary" :disabled="savingAutomation || !automationPersistent" @click="saveAutomation">
+          {{ savingAutomation ? 'Speichert…' : 'Einstellungen speichern' }}
+        </button>
+        <p v-if="lastDispatchLabel" class="auto-note">Letzter Scheduler-Check: {{ lastDispatchLabel }}</p>
+      </div>
+
+      <div class="auto-run">
+        <div>
+          <h3>Prospect Discovery</h3>
+          <p v-if="showRunning">Prospect Discovery läuft …</p>
+          <p v-else>Startet die Suche für die Stadt des heutigen UTC-Tages. Die Städte-Reihenfolge verschiebt sich dadurch nicht.</p>
+        </div>
+        <button type="button" class="sa-btn-primary" :disabled="runBlocked" @click="runNow">
+          {{ showRunning ? 'Läuft…' : 'Jetzt ausführen' }}
+        </button>
+      </div>
+      <p v-if="showRunning" class="sa-badge sa-badge-amber">Running</p>
+      <p v-if="automationError" class="sa-error">{{ automationError }}</p>
+      <p v-if="automationMessage" class="auto-ok">{{ automationMessage }}</p>
+
+      <div v-if="lastRun" class="auto-last">
+        <h3>Letzter Lauf</h3>
+        <dl>
+          <div><dt>Zeit</dt><dd>{{ formatWhen(lastRun.finishedAt || lastRun.startedAt) }}</dd></div>
+          <div><dt>Trigger</dt><dd>{{ lastRun.trigger === 'manual' ? 'Manuell' : 'Automatisch' }}</dd></div>
+          <div><dt>Status</dt><dd>{{ runStatusLabel(lastRun.status) }}</dd></div>
+          <div><dt>Stadt</dt><dd>{{ lastRun.city || '—' }}</dd></div>
+          <div><dt>Prospects erstellt</dt><dd>{{ lastRun.created }}</dd></div>
+          <div><dt>Review</dt><dd>{{ lastRun.review }}</dd></div>
+          <div><dt>Scored</dt><dd>{{ lastRun.scored }}</dd></div>
+          <div><dt>Errors</dt><dd>{{ lastRun.errors }}</dd></div>
+        </dl>
+        <p v-if="lastRun.trigger === 'manual' && lastRun.triggeredBy" class="auto-note">Ausgelöst von Super Admin {{ lastRun.triggeredBy }}</p>
+        <p v-if="lastRun.status === 'failed' && lastRun.errorSummary" class="sa-error">{{ lastRun.errorSummary }}</p>
+      </div>
+    </section>
+
     <form class="sa-card sa-form" @submit.prevent="analyze">
       <div class="sa-form-grid">
         <label class="sa-field sa-span-2">
@@ -80,7 +160,10 @@
               <td>
                 <div class="sa-tenant-name">{{ p.name }}</div>
                 <div class="sa-tenant-slug">
-                  {{ p.city || '—' }} · {{ p.hostname || p.existing_url || 'ohne URL' }}
+                  {{ p.city || '—' }} ·
+                  <template v-if="!p.existing_url && p.source === 'places_cron'">keine Homepage</template>
+                  <template v-else>{{ p.hostname || p.existing_url || 'ohne URL' }}</template>
+                  <span v-if="p.source === 'places_cron'"> · Cron</span>
                   <span v-if="p.analysis?.architecture?.mode === 'multi'"> · Multi</span>
                   <span v-else-if="p.analysis?.architecture?.mode === 'one'"> · One</span>
                 </div>
@@ -120,16 +203,47 @@ const loading = ref(true)
 const error = ref('')
 const prospects = ref<any[]>([])
 const activeTab = ref('all')
+const knownZones = ['Europe/Zurich', 'Europe/Berlin', 'Europe/Paris', 'Europe/Vienna', 'UTC']
+const automation = reactive({
+  enabled: false,
+  frequency: 'daily',
+  time: '04:30',
+  timezone: 'Europe/Zurich',
+})
+const automationPersistent = ref(true)
+const savedEnabled = ref(false)
+const activeRun = ref<any>(null)
+const lastRun = ref<any>(null)
+const lastDispatch = ref<{ at?: string | null; result?: string | null } | null>(null)
+const runningNow = ref(false)
+const savingAutomation = ref(false)
+const automationError = ref('')
+const automationMessage = ref('')
+let automationPoll: ReturnType<typeof setInterval> | undefined
 
 const statusTabs = [
   { label: 'Alle', value: 'all' },
-  { label: 'Review', value: 'review' },
+  { label: 'In Prüfung', value: 'review' },
   { label: 'Analysiert', value: 'scored' },
   { label: 'Freigegeben', value: 'approved' },
   { label: 'Übersprungen', value: 'skipped' },
 ]
 
 const canSubmit = computed(() => !!form.url.trim() || !!form.name.trim())
+const extraZone = computed(() => knownZones.includes(automation.timezone) ? '' : automation.timezone)
+const showRunning = computed(() => runningNow.value || !!activeRun.value)
+const runBlocked = computed(() => showRunning.value || savingAutomation.value)
+const lastDispatchLabel = computed(() => {
+  const at = lastDispatch.value?.at
+  if (!at) return ''
+  const reason = ({
+    disabled: 'Automation aus',
+    not_due: 'noch nicht fällig',
+    started: 'Lauf gestartet',
+    already_running: 'bereits ein Lauf aktiv',
+  } as Record<string, string>)[lastDispatch.value?.result || ''] || 'geprüft'
+  return `${formatWhen(at)} · ${reason}`
+})
 const filtered = computed(() => {
   if (activeTab.value === 'all') return prospects.value
   return prospects.value.filter((p) => p.status === activeTab.value)
@@ -139,6 +253,127 @@ const authHeaders = async () => {
   const sb = getSupabase()
   const { data: { session } } = await sb.auth.getSession()
   return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+}
+
+const formatWhen = (iso?: string | null) => {
+  if (!iso) return '—'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return '—'
+  return new Intl.DateTimeFormat('de-CH', {
+    timeZone: 'Europe/Zurich',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
+const runStatusLabel = (status: string) => ({
+  running: 'Running',
+  completed: 'Completed',
+  failed: 'Fehlgeschlagen',
+  skipped: 'Übersprungen',
+}[status] || status)
+
+const stopAutomationPoll = () => {
+  if (!automationPoll) return
+  clearInterval(automationPoll)
+  automationPoll = undefined
+}
+
+const loadAutomation = async () => {
+  try {
+    const res = await $fetch<{
+      settings: { enabled: boolean; frequency: string; time: string; timezone: string }
+      activeRun: any
+      lastRun: any
+      lastDispatch: { at: string | null; result: string | null }
+      persistent: boolean
+    }>('/api/tenant-admin/website-prospects/automation', { headers: await authHeaders() })
+    savedEnabled.value = !!res.settings?.enabled
+    automation.enabled = savedEnabled.value
+    automation.frequency = res.settings?.frequency || 'daily'
+    automation.time = res.settings?.time || '04:30'
+    automation.timezone = res.settings?.timezone || 'Europe/Zurich'
+    automationPersistent.value = res.persistent !== false
+    activeRun.value = res.activeRun || null
+    lastRun.value = res.lastRun || null
+    lastDispatch.value = res.lastDispatch || null
+  } catch {
+    savedEnabled.value = false
+    automation.enabled = false
+    automationPersistent.value = false
+    activeRun.value = null
+  }
+}
+
+const ensureAutomationPoll = () => {
+  if (automationPoll || (!activeRun.value && !runningNow.value)) return
+  automationPoll = setInterval(() => { loadAutomation() }, 4000)
+}
+
+const saveAutomation = async () => {
+  automationError.value = ''
+  automationMessage.value = ''
+  savingAutomation.value = true
+  try {
+    await $fetch('/api/tenant-admin/website-prospects/automation', {
+      method: 'PUT',
+      headers: await authHeaders(),
+      body: {
+        enabled: automation.enabled,
+        frequency: 'daily',
+        time: automation.time,
+        timezone: automation.timezone,
+      },
+    })
+    automationMessage.value = automation.enabled ? 'Automatische Ausführung ist aktiv.' : 'Automatische Ausführung ist aus.'
+    await loadAutomation()
+  } catch {
+    automationError.value = 'Die Automation konnte nicht gespeichert werden.'
+  } finally {
+    savingAutomation.value = false
+  }
+}
+
+const runNow = async () => {
+  if (runBlocked.value) return
+  automationError.value = ''
+  automationMessage.value = ''
+  runningNow.value = true
+  ensureAutomationPoll()
+  try {
+    const res = await $fetch<{
+      status?: string
+      runId?: string | null
+      created?: number
+      errors?: number
+      errorSummary?: string | null
+    }>('/api/tenant-admin/website-prospects/automation/run', {
+      method: 'POST',
+      headers: await authHeaders(),
+      timeout: 90_000,
+    })
+    await loadAutomation()
+    if (res.status === 'failed') {
+      automationError.value = res.errorSummary
+        ? `Der Prospect-Discovery-Lauf ist fehlgeschlagen. ${res.errorSummary}`
+        : 'Der Prospect-Discovery-Lauf ist fehlgeschlagen.'
+    } else {
+      automationMessage.value = 'Prospect Discovery abgeschlossen.'
+    }
+    try { await load() } catch { /* the run result stays visible if the list refresh fails */ }
+  } catch (e: any) {
+    const status = e?.statusCode || e?.status || e?.response?.status
+    automationError.value = status === 409
+      ? 'Ein Prospect-Discovery-Lauf läuft bereits.'
+      : 'Der Prospect-Discovery-Lauf konnte nicht gestartet werden.'
+    await loadAutomation()
+  } finally {
+    runningNow.value = false
+    if (!activeRun.value) stopAutomationPoll()
+  }
 }
 
 const load = async () => {
@@ -190,7 +425,7 @@ const statusLabel = (s: string) =>
     discovered: 'Neu',
     scored: 'Analysiert',
     generated: 'Generiert',
-    review: 'Review',
+    review: 'In Prüfung',
     approved: 'Freigegeben',
     sent: 'Gesendet',
     claimed: 'Claimed',
@@ -215,7 +450,16 @@ const scoreTone = (n?: number | null) => {
   return 'cold'
 }
 
-onMounted(load)
+watch([activeRun, runningNow], () => {
+  if (activeRun.value || runningNow.value) ensureAutomationPoll()
+  else stopAutomationPoll()
+})
+
+onMounted(() => {
+  load()
+  loadAutomation()
+})
+onBeforeUnmount(stopAutomationPoll)
 </script>
 
 <style scoped>
@@ -258,8 +502,21 @@ onMounted(load)
 .sa-btn-primary { padding:0.55rem 1rem; background:linear-gradient(135deg,#4f46e5,#7c3aed); border:none; border-radius:8px; font-size:0.82rem; font-weight:700; color:white; cursor:pointer; }
 .sa-btn-primary:disabled { opacity:0.55; cursor:wait; }
 .sa-empty { padding:3rem 1.5rem; text-align:center; color:#475569; }
+.auto-card { padding:1.25rem; margin-bottom:1.5rem; }
+.auto-head, .auto-run { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
+.auto-head h2, .auto-run h3, .auto-last h3 { margin:0; color:#f1f5f9; font-size:1rem; }
+.auto-head p, .auto-run p { margin:0.35rem 0 0; color:#94a3b8; font-size:0.8rem; max-width:40rem; }
+.auto-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0.75rem; margin-top:1rem; }
+.auto-note { margin:0.75rem 0 0; color:#64748b; font-size:0.75rem; }
+.auto-ok { color:#34d399; font-size:0.8rem; margin:0.75rem 0 0; }
+.auto-run { margin-top:1.25rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.06); }
+.auto-last { margin-top:1rem; }
+.auto-last dl { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0.75rem 1rem; margin:0.75rem 0 0; }
+.auto-last dt { font-size:0.68rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:#64748b; }
+.auto-last dd { margin:0.2rem 0 0; color:#e2e8f0; font-size:0.85rem; }
 @media (max-width: 720px) {
-  .sa-form-grid { grid-template-columns:1fr; }
+  .sa-form-grid, .auto-grid, .auto-last dl { grid-template-columns:1fr; }
   .sa-span-2 { grid-column:span 1; }
+  .auto-head, .auto-run { flex-direction:column; }
 }
 </style>

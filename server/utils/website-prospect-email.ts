@@ -15,7 +15,7 @@ export function buildProspectEmailDraft(input: {
   const range = `${formatChf(input.revenue.monthly_low_chf)}–${formatChf(input.revenue.monthly_high_chf)}`
   const findingLines = input.findings.slice(0, 4).map((f) => `• ${f.title}`)
   const preview = input.previewUrl || 'folgt nach interner Prüfung'
-  const theirSite = input.existingUrl || 'Ihre aktuelle Homepage'
+  const theirSite = input.existingUrl || 'keine Homepage'
 
   const text = [
     `Guten Tag`,
@@ -25,8 +25,9 @@ export function buildProspectEmailDraft(input: {
     `Kurz der Befund:`,
     ...(findingLines.length ? findingLines : ['• Die Seite ist schwach für lokale Suche und Anfragen.']),
     ``,
-    `Deshalb haben wir eine neue, SEO-starke Version gebaut — noch nicht öffentlich, nur als Vorschau:`,
+    `Deshalb haben wir eine neue Version gebaut — noch nicht öffentlich, nur als interne Vorschau:`,
     preview,
+    `Dieser Entwurf wurde noch nicht an den Kunden gesendet.`,
     ``,
     `Sie können Texte und Bilder vor dem Kauf anpassen. Live geht die Seite erst nach der Zahlung.`,
     ``,
@@ -55,6 +56,7 @@ export function buildProspectEmailDraft(input: {
 ${findingsHtml}
 <p>Deshalb haben wir eine neue Version gebaut — noch nicht öffentlich:</p>
 <p><a href="${escapeHtml(preview)}">${escapeHtml(preview)}</a></p>
+<p>Dieser Entwurf wurde noch nicht an den Kunden gesendet.</p>
 <p>Texte und Bilder können Sie vor dem Kauf anpassen. Live erst nach Zahlung.</p>
 <p><strong>Website:</strong> einmalig ${formatChf(WEBSITE_SETUP_CHF)}, danach ${formatChf(WEBSITE_HOSTING_META.host.chf)} / Monat Hosting inkl. Login. Kontakt und Anfrage sind enthalten. <strong>Online-Terminbuchung</strong> (Kalender) nur mit Simy Starter ab ${formatChf(SIMY_STARTER_CHF)} / Monat — optional.</p>
 <p>Konservative Schätzung zusätzlicher Deckungsbeitrag: <strong>${range} / Monat</strong>. Das ist eine Range mit Annahmen, keine Garantie.</p>
