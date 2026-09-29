@@ -40,6 +40,6 @@ export default defineEventHandler(async (event) => {
   })
 
   setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
-  setHeader(event, 'Cache-Control', 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400')
+  setHeader(event, 'Cache-Control', 'private, no-store')
   return buildTenantOgHtml(tags)
 })
