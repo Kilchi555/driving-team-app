@@ -85,6 +85,8 @@ export async function ingestProspectMedia(opts: {
    * places_cron must pass false: an empty list means discovery kept no photos.
    */
   refetchPlacePhotos?: boolean
+  /** Keep an existing website logo: do not download or store a replacement. */
+  skipLogo?: boolean
 }): Promise<ProspectMedia> {
   const supabase = getSupabaseAdmin()
   const scrape = opts.scrape
@@ -98,7 +100,8 @@ export async function ingestProspectMedia(opts: {
   const heroBuf =
     (scrape?.hero_image_url ? await fetchBufferFromUrl(scrape.hero_image_url) : null) ||
     (allowGooglePhotos && place?.photos?.[0]?.ref ? await fetchPlacePhotoBuffer(place.photos[0].ref) : null)
-  const logoBuf = scrape?.logo_url ? await fetchBufferFromUrl(scrape.logo_url) : null
+  const logoBuf =
+    opts.skipLogo || !scrape?.logo_url ? null : await fetchBufferFromUrl(scrape.logo_url)
 
   const hero_url = heroBuf ? await uploadNormalized(supabase, opts.tenantId, 'hero', heroBuf) : null
   const logo_url = logoBuf ? await uploadNormalized(supabase, opts.tenantId, 'logo', logoBuf) : null
