@@ -66,6 +66,20 @@
           <p v-if="/Stockfotos:/i.test(prospect.analysis?.summary || '')" class="sa-hint">
             Fehlende Section-Bilder wurden mit passenden Unsplash-Stockfotos gefüllt. Eigene Fotos bleiben.
           </p>
+          <div v-if="prospect.analysis?.selection_reasons?.length" class="sa-arch">
+            <p class="sa-kpi-l">Warum ausgewählt</p>
+            <ul class="sa-arch-pages">
+              <li v-for="reason in prospect.analysis.selection_reasons" :key="reason">{{ reason }}</li>
+            </ul>
+          </div>
+          <div v-if="prospect.analysis?.redirects?.length" class="sa-arch">
+            <p class="sa-kpi-l">Redirects für den späteren Domain-Umzug</p>
+            <ul class="sa-arch-pages">
+              <li v-for="redir in prospect.analysis.redirects" :key="redir.from">
+                {{ redir.from }} → {{ redir.to }}
+              </li>
+            </ul>
+          </div>
         </div>
       </section>
 
@@ -264,7 +278,7 @@ const statusLabel = (s: string) =>
     discovered: 'Neu',
     scored: 'Analysiert',
     generated: 'Generiert',
-    review: 'Review',
+    review: 'In Prüfung',
     approved: 'Freigegeben',
     sent: 'Gesendet',
     claimed: 'Claimed',
