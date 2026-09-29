@@ -517,10 +517,10 @@
             </button>
           </div>
           <p v-if="selectedOutcomeType === 'potential_customer'" class="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-            Erinnerung in 30 Tagen: Simy erinnert den zuständigen Mitarbeiter, sich wieder zu melden.
+            Erinnerung in 30 Tagen: Simy erinnert den zuständigen Mitarbeiter einmalig, auch wenn die Anfrage danach nicht mehr unter den offenen Anfragen steht.
           </p>
           <p v-if="selectedOutcomeType === 'no_show'" class="mt-1.5 text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-1">
-            Tägliche Erinnerung: Simy erinnert täglich, bis ein anderer Status gesetzt wird.
+            Tägliche Erinnerung: Simy erinnert täglich, solange das Ergebnis «Nicht erreichbar» bleibt und eine Erinnerung geplant ist. Als erledigt markieren nimmt die Anfrage aus der offenen Liste, stoppt diese Erinnerung aber nicht.
           </p>
         </div>
 
@@ -900,7 +900,9 @@ const loadBookingProposals = async () => {
 
   try {
     proposalActionError.value = ''
-    const response = await $fetch('/api/admin/get-booking-proposals') as any
+    const response = await $fetch('/api/admin/get-booking-proposals', {
+      query: props.highlightProposalId ? { highlight: props.highlightProposalId } : undefined,
+    }) as any
     bookingProposals.value = response?.data || []
   } catch (err: any) {
     logger.warn('⚠️ Failed to load booking proposals:', err?.message || err)

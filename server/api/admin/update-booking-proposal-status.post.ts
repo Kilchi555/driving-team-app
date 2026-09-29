@@ -1,9 +1,9 @@
 import { defineEventHandler, createError, readBody } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { buildBookingProposalUpdate, type ProposalStatus } from '~/server/utils/proposal-followup'
 import { logger } from '~/utils/logger'
 
-type AllowedProposalStatus = 'pending' | 'contacted' | 'accepted' | 'rejected' | 'expired'
 type OutcomeType = 'booking_confirmed' | 'consultation_only' | 'potential_customer' | 'not_interested' | 'no_show'
 
 const ALLOWED_OUTCOMES: OutcomeType[] = [
@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
 
     const body = await readBody(event)
     const proposalId = body?.proposalId as string | undefined
-    const status = body?.status as AllowedProposalStatus | undefined
+    const status = body?.status as ProposalStatus | undefined
     const outcomeType = body?.outcomeType as OutcomeType | undefined
 
     if (!proposalId || !status) {
@@ -73,28 +73,19 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: 'Proposal not found' })
     }
 
-    // Determine follow-up schedule based on outcome
-    // potential_customer → one-time reminder in 30 days
-    // no_show → daily reminder until another outcome is chosen
-    const followUpAt =
-      outcomeType === 'potential_customer' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      : outcomeType === 'no_show' ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-      : null
-
+    // potential_customer → one reminder in 30 days, including after status=accepted.
+    // no_show → daily reminder until a different outcome replaces it.
+    // accepted without a follow-up outcome clears any previously planned reminder.
     const { data: updatedProposal, error: updateError } = await supabase
       .from('booking_proposals')
-      .update({
+      .update(buildBookingProposalUpdate({
         status,
-        admin_notes: body?.adminNotes ?? null,
-        ...(outcomeType ? { outcome_type: outcomeType } : {}),
-        ...(outcomeType === 'potential_customer' || outcomeType === 'no_show'
-          ? { follow_up_at: followUpAt, follow_up_sent_at: null }
-          : outcomeType ? { follow_up_at: null, follow_up_sent_at: null }
-          : {}),
-      })
+        outcomeType: outcomeType ?? null,
+        adminNotes: body?.adminNotes ?? null,
+      }))
       .eq('id', proposalId)
       .eq('tenant_id', tenantId)
-      .select('id, status, outcome_type, follow_up_at, updated_at')
+      .select('id, status, outcome_type, follow_up_at, follow_up_sent_at, updated_at')
       .single()
 
     if (updateError) {
