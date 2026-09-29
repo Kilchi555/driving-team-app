@@ -15,6 +15,7 @@ import { sendTenantEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { getTenantsWithMultipleStaff } from '~/server/utils/tenant-staff-notify'
 import { assertCronRequest } from '~/server/utils/cron-auth'
+import { loadPendingProposalIds, retainPendingProposals, type FollowUpSupabase } from '~/server/utils/proposal-followup'
 
 export default defineEventHandler(async (event) => {
   assertCronRequest(event)
@@ -157,7 +158,13 @@ export default defineEventHandler(async (event) => {
 </body>
 </html>`
 
+  const onlyStillPending = async <T extends { id: string }>(rows: T[]) => {
+    const stillPending = await loadPendingProposalIds(supabase as unknown as FollowUpSupabase, rows.map((row) => row.id))
+    return retainPendingProposals(rows, stillPending)
+  }
+
   // ── 1. ADMIN DIGEST – all proposals per tenant ───────────────────────────
+  // Re-read status immediately before send. Outcome is not a digest filter.
   for (const [tenantId, { tenant, proposals: tenantProposals }] of byTenant) {
     const adminEmail = tenant?.contact_email
     if (!adminEmail) {
@@ -166,7 +173,20 @@ export default defineEventHandler(async (event) => {
       continue
     }
 
-    const count = tenantProposals.length
+    let freshProposals: typeof tenantProposals
+    try {
+      freshProposals = await onlyStillPending(tenantProposals)
+    } catch (reloadError) {
+      logger.error(`❌ Failed to re-check pending proposals for tenant ${tenantId}:`, reloadError)
+      skipped++
+      continue
+    }
+    if (freshProposals.length === 0) {
+      skipped++
+      continue
+    }
+
+    const count = freshProposals.length
     const primaryColor = tenant?.primary_color || '#111827'
 
     const html = buildEmailHtml({
@@ -175,7 +195,7 @@ export default defineEventHandler(async (event) => {
       subtitle: 'Tägliche Erinnerung – Offene Anfragen (Admin-Übersicht)',
       intro: 'Bitte diese zeitnah bearbeiten, damit Interessenten nicht auf eine Antwort warten müssen.',
       count,
-      rows: buildProposalRows(tenantProposals)
+      rows: buildProposalRows(freshProposals)
     })
 
     try {
@@ -218,7 +238,20 @@ export default defineEventHandler(async (event) => {
       continue
     }
 
-    const count = staffProposals.length
+    let freshStaffProposals: typeof staffProposals
+    try {
+      freshStaffProposals = await onlyStillPending(staffProposals)
+    } catch (reloadError) {
+      logger.error(`❌ Failed to re-check pending proposals for staff ${staffId}:`, reloadError)
+      skipped++
+      continue
+    }
+    if (freshStaffProposals.length === 0) {
+      skipped++
+      continue
+    }
+
+    const count = freshStaffProposals.length
     const primaryColor = (tenant as any)?.primary_color || '#111827'
 
     const html = buildEmailHtml({
@@ -227,7 +260,7 @@ export default defineEventHandler(async (event) => {
       subtitle: 'Tägliche Erinnerung – Deine offenen Anfragen',
       intro: 'Die folgenden Interessenten warten auf deine Rückmeldung. Bitte melde dich zeitnah bei ihnen.',
       count,
-      rows: buildProposalRows(staffProposals)
+      rows: buildProposalRows(freshStaffProposals)
     })
 
     try {
