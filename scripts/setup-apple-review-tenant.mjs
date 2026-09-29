@@ -37,16 +37,62 @@
  */
 
 import { readFileSync, existsSync } from 'fs'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import { join, dirname, resolve } from 'path'
+import { fileURLToPath, pathToFileURL } from 'url'
 import { createClient } from '@supabase/supabase-js'
+import { loadSimyTestEnv, PRODUCTION_SUPABASE_PROJECT_REF } from './load-simy-test-env.mjs'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const root = join(__dirname, '..')
+export const SIMY_TEST_SUPABASE_PROJECT_REF = 'kssqalisscxkhvorqwgy'
 
-// ─── Load .env if present ────────────────────────────────────────────────────
-const envPath = join(root, '.env')
-if (existsSync(envPath)) {
+export function assertSimyTestSetupUrl(value) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    return { ok: false, reason: 'missing-url' }
+  }
+  let url
+  try {
+    url = new URL(value)
+  } catch {
+    return { ok: false, reason: 'invalid-url' }
+  }
+  if (url.protocol !== 'https:' || url.username || url.password) {
+    return { ok: false, reason: 'invalid-url' }
+  }
+  const host = url.hostname.toLowerCase()
+  const suffix = '.supabase.co'
+  if (!host.endsWith(suffix)) return { ok: false, reason: 'wrong-project' }
+  const ref = host.slice(0, -suffix.length)
+  if (!ref || ref.includes('.')) return { ok: false, reason: 'wrong-project' }
+  if (ref === PRODUCTION_SUPABASE_PROJECT_REF) return { ok: false, reason: 'production-url' }
+  if (ref !== SIMY_TEST_SUPABASE_PROJECT_REF) return { ok: false, reason: 'wrong-project' }
+  return { ok: true, reason: 'ok' }
+}
+
+export function createGuardedSetupClient(env, createClientImpl = createClient) {
+  const verdict = assertSimyTestSetupUrl(env && env.SUPABASE_URL)
+  if (!verdict.ok) return { ok: false, reason: verdict.reason, client: null }
+  const key = env.SUPABASE_SERVICE_ROLE_KEY
+  if (typeof key !== 'string' || key.length === 0) {
+    return { ok: false, reason: 'missing-service-role', client: null }
+  }
+  return {
+    ok: true,
+    reason: 'ok',
+    client: createClientImpl(env.SUPABASE_URL, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    }),
+  }
+}
+
+function isDirectRun() {
+  const arg = process.argv[1]
+  if (!arg) return false
+  return pathToFileURL(resolve(arg)).href === import.meta.url
+}
+
+function loadRepoDotenv() {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+  const envPath = join(root, '.env')
+  if (!existsSync(envPath)) return
   for (const line of readFileSync(envPath, 'utf-8').split('\n')) {
     const trimmed = line.trim()
     if (!trimmed || trimmed.startsWith('#')) continue
@@ -60,25 +106,6 @@ if (existsSync(envPath)) {
   }
 }
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!SERVICE_ROLE_KEY) {
-  console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY (env or .env)')
-  process.exit(1)
-}
-
-const DEMO_PASSWORD = process.env.DEMO_PASSWORD
-if (!DEMO_PASSWORD) {
-  console.error('❌ Missing DEMO_PASSWORD env var.')
-  console.error('   The default password was removed to keep credentials out of git history.')
-  console.error('   Re-run with:  DEMO_PASSWORD="YourSecurePass" npm run demo:apple-review:setup')
-  process.exit(1)
-}
-if (DEMO_PASSWORD.length < 12) {
-  console.error('❌ DEMO_PASSWORD must be at least 12 characters long.')
-  process.exit(1)
-}
 const DEMO_CUSTOMER_EMAIL = 'apple-review@simy.ch'
 const DEMO_INSTRUCTOR_EMAIL = 'demo-instructor@simy.ch'
 const DEMO_ADMIN_EMAIL = 'demo-admin@simy.ch'
@@ -86,9 +113,48 @@ const DEMO_ADMIN_EMAIL = 'demo-admin@simy.ch'
 const TENANT_SLUG = 'apple-review'
 const TENANT_NAME = 'Apple Review Fahrschule'
 
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false }
-})
+let supabase
+let DEMO_PASSWORD = ''
+
+if (isDirectRun()) {
+  const loaded = loadSimyTestEnv({ profile: 'nuxt-dev' })
+  if (loaded.fatal) {
+    for (const warning of loaded.warnings) console.error(warning)
+    console.error(`Refusing setup before createClient (${loaded.skipped})`)
+    process.exit(1)
+  }
+  loadRepoDotenv()
+  const urlVerdict = assertSimyTestSetupUrl(process.env.SUPABASE_URL)
+  if (!urlVerdict.ok) {
+    console.error(`Refusing setup before createClient (${urlVerdict.reason})`)
+    process.exit(1)
+  }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY (env or .env)')
+    process.exit(1)
+  }
+  DEMO_PASSWORD = process.env.DEMO_PASSWORD
+  if (!DEMO_PASSWORD) {
+    console.error('❌ Missing DEMO_PASSWORD env var.')
+    console.error('   The default password was removed to keep credentials out of git history.')
+    console.error('   Re-run with:  DEMO_PASSWORD="YourSecurePass" npm run demo:apple-review:setup')
+    process.exit(1)
+  }
+  if (DEMO_PASSWORD.length < 12) {
+    console.error('❌ DEMO_PASSWORD must be at least 12 characters long.')
+    process.exit(1)
+  }
+  const opened = createGuardedSetupClient(process.env)
+  if (!opened.ok) {
+    console.error(`Refusing setup before createClient (${opened.reason})`)
+    process.exit(1)
+  }
+  supabase = opened.client
+  main().catch(err => {
+    console.error('\n❌ Setup failed:', err)
+    process.exit(1)
+  })
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -720,8 +786,3 @@ async function main() {
   console.log('───────────────────────────────────────────\n')
   console.log('  Paste these into App Store Connect → "App Review Information".\n')
 }
-
-main().catch(err => {
-  console.error('\n❌ Setup failed:', err)
-  process.exit(1)
-})

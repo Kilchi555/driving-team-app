@@ -2,12 +2,22 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   defaultSimyTestEnvPath,
   loadSimyTestEnv,
   PRODUCTION_SUPABASE_PROJECT_REF,
 } from '../../scripts/load-simy-test-env.mjs'
+import {
+  assertSimyTestSetupUrl as assertIsolationUrl,
+  createGuardedSetupClient as createIsolationClient,
+  SIMY_TEST_SUPABASE_PROJECT_REF as isolationProjectRef,
+} from '../../scripts/setup-e2e-isolation-tenant.mjs'
+import {
+  assertSimyTestSetupUrl as assertAppleUrl,
+  createGuardedSetupClient as createAppleClient,
+  SIMY_TEST_SUPABASE_PROJECT_REF as appleProjectRef,
+} from '../../scripts/setup-apple-review-tenant.mjs'
 
 const SECRET = 'fixture-secret-value'
 const ANON = 'fixture-anon-value'
@@ -232,5 +242,109 @@ describe('simy-test env loader', () => {
     const gitignore = fs.readFileSync('.gitignore', 'utf8')
     expect(gitignore).toContain('simy-test.env')
     expect(gitignore).toContain('.env.test')
+  })
+})
+
+const CORRECT_TEST_URL = 'https://kssqalisscxkhvorqwgy.supabase.co'
+const WRONG_PROJECT_URL = 'https://kssqalisskhvorqwgy.supabase.co'
+const PRODUCTION_URL = `https://${PRODUCTION_SUPABASE_PROJECT_REF}.supabase.co`
+
+describe('simy-test setup production guard', () => {
+  const setups = [
+    {
+      name: 'setup-e2e-isolation-tenant.mjs',
+      file: 'scripts/setup-e2e-isolation-tenant.mjs',
+      assertUrl: assertIsolationUrl,
+      createClient: createIsolationClient,
+      projectRef: isolationProjectRef,
+    },
+    {
+      name: 'setup-apple-review-tenant.mjs',
+      file: 'scripts/setup-apple-review-tenant.mjs',
+      assertUrl: assertAppleUrl,
+      createClient: createAppleClient,
+      projectRef: appleProjectRef,
+    },
+  ]
+
+  it('does not keep a production supabase fallback in either setup script', () => {
+    for (const setup of setups) {
+      const source = fs.readFileSync(setup.file, 'utf8')
+      expect(source).not.toContain(PRODUCTION_SUPABASE_PROJECT_REF)
+      expect(source).not.toContain("|| 'https://")
+      expect(source).toContain('loadSimyTestEnv')
+      expect(source).toContain('kssqalisscxkhvorqwgy')
+      const loaderAt = source.indexOf('loadSimyTestEnv(')
+      const clientAt = source.indexOf('createGuardedSetupClient(process.env)')
+      expect(loaderAt).toBeGreaterThan(-1)
+      expect(clientAt).toBeGreaterThan(loaderAt)
+    }
+  })
+
+  it.each(setups.map((setup) => [setup.name, setup]))(
+    '%s stops before createClient when SUPABASE_URL is missing, production, or a foreign project',
+    (_name, setup) => {
+      const spy = vi.fn(() => ({ mocked: true }))
+      const missing = setup.createClient({ SUPABASE_SERVICE_ROLE_KEY: 'fixture-service-role' }, spy)
+      expect(missing.ok).toBe(false)
+      expect(missing.reason).toBe('missing-url')
+      expect(missing.client).toBeNull()
+      expect(setup.assertUrl(undefined).ok).toBe(false)
+      expect(setup.assertUrl('').reason).toBe('missing-url')
+
+      const production = setup.createClient({
+        SUPABASE_URL: PRODUCTION_URL,
+        SUPABASE_SERVICE_ROLE_KEY: 'fixture-service-role',
+      }, spy)
+      expect(production.ok).toBe(false)
+      expect(production.reason).toBe('production-url')
+      expect(production.client).toBeNull()
+
+      const wrong = setup.createClient({
+        SUPABASE_URL: WRONG_PROJECT_URL,
+        SUPABASE_SERVICE_ROLE_KEY: 'fixture-service-role',
+      }, spy)
+      expect(wrong.ok).toBe(false)
+      expect(wrong.reason).toBe('wrong-project')
+      expect(wrong.client).toBeNull()
+      expect(WRONG_PROJECT_URL).not.toContain('kssqalisscxkhvorqwgy')
+      expect(spy).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(setups.map((setup) => [setup.name, setup]))(
+    '%s reaches createClient only for the simy-test project',
+    (_name, setup) => {
+      expect(setup.projectRef).toBe('kssqalisscxkhvorqwgy')
+      const spy = vi.fn(() => ({ mocked: true }))
+      const opened = setup.createClient({
+        SUPABASE_URL: CORRECT_TEST_URL,
+        SUPABASE_SERVICE_ROLE_KEY: 'fixture-service-role',
+      }, spy)
+      expect(opened.ok).toBe(true)
+      expect(opened.reason).toBe('ok')
+      expect(spy).toHaveBeenCalledOnce()
+      expect(spy.mock.calls[0]?.[0]).toBe(CORRECT_TEST_URL)
+      expect(spy.mock.calls[0]?.[1]).toBe('fixture-service-role')
+      expect(opened.client).toEqual({ mocked: true })
+    },
+  )
+
+  it('still refuses an already-set production URL that the loader will not overwrite', () => {
+    const file = writeEnv(validEnv())
+    const env: Record<string, string> = {
+      SUPABASE_URL: PRODUCTION_URL,
+      SUPABASE_SERVICE_ROLE_KEY: 'already-set',
+    }
+    const loaded = loadSimyTestEnv({ force: true, profile: 'nuxt-dev', file, env })
+    expect(loaded.fatal).toBe(false)
+    expect(loaded.applied).toEqual([])
+    expect(env.SUPABASE_URL).toBe(PRODUCTION_URL)
+    const spy = vi.fn(() => ({ mocked: true }))
+    const isolation = createIsolationClient(env, spy)
+    const apple = createAppleClient(env, spy)
+    expect(isolation.reason).toBe('production-url')
+    expect(apple.reason).toBe('production-url')
+    expect(spy).not.toHaveBeenCalled()
   })
 })
