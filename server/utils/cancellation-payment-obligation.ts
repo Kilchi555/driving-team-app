@@ -133,6 +133,41 @@ function storedCharge(payments: ObligationPayment[], ledger: ObligationLedgerEnt
   return null
 }
 
+function rememberedCharge(
+  metadata: Record<string, unknown>,
+  currentCharge: number | null,
+  restored: number | null,
+): number {
+  const existingPrev = Number(metadata[PREV_CHARGE_KEY])
+  if (Number.isInteger(existingPrev) && existingPrev > 0 && existingPrev <= 100) return existingPrev
+  if (currentCharge != null && currentCharge > 0) return currentCharge
+  return restored ?? 100
+}
+
+/**
+ * Persists the charge that was in force before a waiver, without touching
+ * payment status. The appointment column is overwritten next; a crash after
+ * that still needs this value to restore a partial fee.
+ * Returns null when the payment already remembers that charge.
+ */
+export function stampableObligationMemory(
+  payment: Pick<ObligationPayment, 'metadata' | 'payment_status' | 'credit_used_rappen'>,
+  previousCharge: number,
+): Record<string, unknown> | null {
+  if (!Number.isInteger(previousCharge) || previousCharge <= 0 || previousCharge > 100) return null
+  const metadata = asMetadata(payment.metadata)
+  const existing = Number(metadata[PREV_CHARGE_KEY])
+  if (Number.isInteger(existing) && existing === previousCharge) return null
+  metadata[PREV_CHARGE_KEY] = previousCharge
+  if (metadata[PREV_STATUS_KEY] == null || metadata[PREV_STATUS_KEY] === '') {
+    metadata[PREV_STATUS_KEY] = (payment.payment_status || 'pending').toLowerCase()
+  }
+  if (metadata[PREV_CREDIT_KEY] == null) {
+    metadata[PREV_CREDIT_KEY] = nonnegInt(payment.credit_used_rappen)
+  }
+  return metadata
+}
+
 function nextStatusFor(payment: ObligationPayment, nextCharge: number, gross: number): string {
   const status = (payment.payment_status || '').toLowerCase()
   if (nextCharge === 0) {
@@ -186,22 +221,6 @@ export function planCancellationObligationChange(input: {
     (!input.mustPay && creditDeltaRappen > 0) ||
     (input.mustPay && creditDeltaRappen < 0)
   )
-  if (statusAlreadyMatches && !walletNeedsRepair) {
-    return {
-      ok: true,
-      noop: true,
-      currentlyMustPay,
-      nextMustPay: currentlyMustPay,
-      previousChargePercentage: currentCharge,
-      nextChargePercentage: currentCharge ?? 0,
-      creditDeltaRappen: 0,
-      paymentUpdates: [],
-      ledgerNote: null,
-      summary: currentlyMustPay
-        ? 'Der Termin ist bereits zahlpflichtig.'
-        : 'Für diesen Termin ist bereits keine Zahlung fällig.',
-    }
-  }
 
   const paymentUpdates: PlannedPaymentUpdate[] = []
   const summaryParts: string[] = []
@@ -214,9 +233,13 @@ export function planCancellationObligationChange(input: {
     let creditUsedUpdate: number | undefined
 
     if (nextCharge === 0) {
-      metadata[PREV_CHARGE_KEY] = currentCharge ?? 100
-      metadata[PREV_STATUS_KEY] = status || 'pending'
-      metadata[PREV_CREDIT_KEY] = nonnegInt(payment.credit_used_rappen)
+      metadata[PREV_CHARGE_KEY] = rememberedCharge(metadata, currentCharge, restored)
+      if (metadata[PREV_STATUS_KEY] == null || metadata[PREV_STATUS_KEY] === '') {
+        metadata[PREV_STATUS_KEY] = status || 'pending'
+      }
+      if (metadata[PREV_CREDIT_KEY] == null) {
+        metadata[PREV_CREDIT_KEY] = nonnegInt(payment.credit_used_rappen)
+      }
       if ((OPEN.has(status) || status === 'partial') && nonnegInt(payment.credit_used_rappen) > 0) {
         creditUsedUpdate = 0
       }
@@ -258,6 +281,50 @@ export function planCancellationObligationChange(input: {
     }
   }
 
+  const materialUpdates = paymentUpdates.filter((update) => {
+    const payment = payments.find((row) => row.id === update.id)
+    if (!payment) return true
+    const status = (payment.payment_status || '').toLowerCase()
+    if (update.payment_status !== status) return true
+    if (update.credit_used_rappen !== undefined && update.credit_used_rappen !== nonnegInt(payment.credit_used_rappen)) {
+      return true
+    }
+    return false
+  })
+
+  // Charge and wallet already match, but the payment row was not finished
+  // (crash after the wallet write). Retry finalizes the payment only.
+  if (statusAlreadyMatches && !walletNeedsRepair) {
+    if (materialUpdates.length === 0) {
+      return {
+        ok: true,
+        noop: true,
+        currentlyMustPay,
+        nextMustPay: currentlyMustPay,
+        previousChargePercentage: currentCharge,
+        nextChargePercentage: currentCharge ?? 0,
+        creditDeltaRappen: 0,
+        paymentUpdates: [],
+        ledgerNote: null,
+        summary: currentlyMustPay
+          ? 'Der Termin ist bereits zahlpflichtig.'
+          : 'Für diesen Termin ist bereits keine Zahlung fällig.',
+      }
+    }
+    return {
+      ok: true,
+      noop: false,
+      currentlyMustPay,
+      nextMustPay: nextCharge > 0,
+      previousChargePercentage: currentCharge,
+      nextChargePercentage: nextCharge,
+      creditDeltaRappen: 0,
+      paymentUpdates: materialUpdates,
+      ledgerNote: null,
+      summary: summaryParts.join(' ') || 'Die Zahlung wird auf den bereits gebuchten Guthabenstand gesetzt.',
+    }
+  }
+
   if (creditDeltaRappen > 0) {
     summaryParts.unshift(`${formatObligationChf(creditDeltaRappen)} werden dem Guthaben gutgeschrieben.`)
   } else if (creditDeltaRappen < 0) {
@@ -269,7 +336,7 @@ export function planCancellationObligationChange(input: {
       : `Der Termin ist wieder zahlpflichtig (${nextCharge}%).`)
   }
 
-  const prevForNote = currentCharge ?? restored ?? 100
+  const prevForNote = currentCharge != null && currentCharge > 0 ? currentCharge : (restored ?? 100)
   const ledgerNote = creditDeltaRappen !== 0
     ? `prev_charge=${prevForNote}; ${note || (nextCharge === 0 ? 'Zahlpflicht erlassen' : 'Zahlpflicht wiederhergestellt')}`
     : null

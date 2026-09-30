@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { applyStudentCreditDelta, StudentCreditConflict } from '../student-credit-ledger'
 
-function creditClient(options: { failUpdates?: number } = {}) {
-  let balance = 0
+function creditClient(options: { failUpdates?: number; initialBalance?: number } = {}) {
+  let balance = options.initialBalance ?? 0
   let failed = 0
   const transactions: Array<Record<string, unknown>> = []
 
@@ -90,5 +90,20 @@ describe('applyStudentCreditDelta', () => {
     const client = creditClient({ failUpdates: 1 })
     await expect(applyStudentCreditDelta(client, { ...base, maxAttempts: 1 })).rejects.toBeInstanceOf(StudentCreditConflict)
     expect(client.transactions).toHaveLength(0)
+  })
+
+  it('lets a clawback larger than the balance become a negative open amount', async () => {
+    const client = creditClient({ initialBalance: 100 })
+    const result = await applyStudentCreditDelta(client, {
+      ...base,
+      deltaRappen: -500,
+      transactionType: 'cancellation_charge_reinstate',
+      paymentMethod: 'adjustment',
+      notes: 'Zahlpflicht wiederhergestellt',
+    })
+    expect(result).toMatchObject({ balanceBeforeRappen: 100, balanceAfterRappen: -400 })
+    expect(client.balance).toBe(-400)
+    expect(client.transactions).toHaveLength(1)
+    expect(client.transactions[0].amount_rappen).toBe(-500)
   })
 })

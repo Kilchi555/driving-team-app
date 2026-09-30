@@ -262,10 +262,11 @@
                 <dd class="mt-1 flex flex-wrap items-center gap-2">
                   <span
                     class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
-                    :class="studentCreditRappen > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'"
+                    :class="studentCreditRappen > 0 ? 'bg-green-100 text-green-800' : studentCreditRappen < 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'"
                   >
                     CHF {{ ((studentCreditRappen ?? 0) / 100).toFixed(2) }}
                   </span>
+                  <span v-if="studentCreditRappen < 0" class="text-xs font-medium text-red-700">Offener Betrag</span>
                   <button
                     v-if="userDetails && canManageUser(userDetails as any)"
                     type="button"

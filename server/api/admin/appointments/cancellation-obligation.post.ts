@@ -1,7 +1,7 @@
 import { createError, defineEventHandler, readBody } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { planCancellationObligationChange, type ObligationPlan } from '~/server/utils/cancellation-payment-obligation'
+import { planCancellationObligationChange, stampableObligationMemory, type ObligationPlan } from '~/server/utils/cancellation-payment-obligation'
 import { applyStudentCreditDelta, StudentCreditConflict } from '~/server/utils/student-credit-ledger'
 import { logAudit } from '~/server/utils/audit'
 import { logger } from '~/utils/logger'
@@ -104,6 +104,25 @@ export default defineEventHandler(async (event) => {
   }
 
   const previousCharge = appointment.cancellation_charge_percentage
+  // The charge column is the lock. Remember the outgoing percentage on the
+  // payment first, so a crash after the wallet write can still restore a
+  // partial fee and can still finish the payment status without a second credit.
+  if (plan.nextChargePercentage === 0 && typeof previousCharge === 'number' && previousCharge > 0) {
+    for (const payment of payments || []) {
+      const metadata = stampableObligationMemory(payment, previousCharge)
+      if (!metadata) continue
+      const { error: memoryError } = await supabase
+        .from('payments')
+        .update({ metadata, updated_at: new Date().toISOString() })
+        .eq('id', payment.id)
+        .eq('tenant_id', profile.tenant_id)
+        .eq('user_id', appointment.user_id)
+      if (memoryError) {
+        throw createError({ statusCode: 500, statusMessage: 'Die bisherige Gebühr konnte nicht gesichert werden.' })
+      }
+    }
+  }
+
   const claimed = await setCharge(supabase, appointment.id, profile.tenant_id, previousCharge, plan.nextChargePercentage)
   if (!claimed) {
     throw createError({

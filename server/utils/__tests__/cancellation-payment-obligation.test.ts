@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   planCancellationObligationChange,
+  stampableObligationMemory,
   type ObligationLedgerEntry,
   type ObligationPayment,
 } from '../cancellation-payment-obligation'
@@ -246,6 +247,146 @@ describe('planCancellationObligationChange', () => {
     })
     expect(waive.ok && waive.noop).toBe(true)
     expect(keep.ok && keep.noop).toBe(true)
+  })
+
+  it('finalizes a paid waiver whose wallet was credited and whose payment was not', () => {
+    const crashed = planCancellationObligationChange({
+      appointmentStatus: 'cancelled',
+      chargePercentage: 0,
+      mustPay: false,
+      note: 'Kulanz',
+      payments: [paid({
+        payment_status: 'completed',
+        metadata: { obligation_prev_charge_percentage: 100, obligation_prev_payment_status: 'completed' },
+      })],
+      ledger: [ledger(9500, 'cancellation_charge_waiver', { notes: 'prev_charge=100; Kulanz' })],
+      nowIso: NOW,
+    })
+    expect(crashed.ok).toBe(true)
+    if (!crashed.ok) return
+    expect(crashed.noop).toBe(false)
+    expect(crashed.creditDeltaRappen).toBe(0)
+    expect(crashed.ledgerNote).toBeNull()
+    expect(crashed.paymentUpdates).toHaveLength(1)
+    expect(crashed.paymentUpdates[0]).toMatchObject({ payment_status: 'refunded', refunded_at: NOW })
+    expect(crashed.paymentUpdates[0].metadata.obligation_prev_charge_percentage).toBe(100)
+
+    const retried = planCancellationObligationChange({
+      appointmentStatus: 'cancelled',
+      chargePercentage: 0,
+      mustPay: false,
+      payments: [paid({
+        payment_status: 'refunded',
+        metadata: crashed.paymentUpdates[0].metadata,
+      })],
+      ledger: [ledger(9500, 'cancellation_charge_waiver', { notes: 'prev_charge=100; Kulanz' })],
+      nowIso: NOW,
+    })
+    expect(retried.ok && retried.noop).toBe(true)
+    if (!retried.ok) return
+    expect(retried.creditDeltaRappen).toBe(0)
+    expect(retried.paymentUpdates).toHaveLength(0)
+  })
+
+  it('finalizes a restore whose clawback is already posted and does not debit again', () => {
+    const crashed = planCancellationObligationChange({
+      appointmentStatus: 'cancelled',
+      chargePercentage: 100,
+      mustPay: true,
+      note: 'Doch verrechnen',
+      payments: [paid({
+        payment_status: 'refunded',
+        metadata: { obligation_prev_charge_percentage: 100 },
+      })],
+      ledger: [
+        ledger(9500, 'cancellation_charge_waiver', { notes: 'prev_charge=100' }),
+        ledger(-9500, 'cancellation_charge_reinstate'),
+      ],
+      nowIso: NOW,
+    })
+    expect(crashed.ok).toBe(true)
+    if (!crashed.ok) return
+    expect(crashed.noop).toBe(false)
+    expect(crashed.creditDeltaRappen).toBe(0)
+    expect(crashed.ledgerNote).toBeNull()
+    expect(crashed.paymentUpdates[0]).toMatchObject({ payment_status: 'completed', refunded_at: null })
+
+    const retried = planCancellationObligationChange({
+      appointmentStatus: 'cancelled',
+      chargePercentage: 100,
+      mustPay: true,
+      payments: [paid({ payment_status: 'completed' })],
+      ledger: [
+        ledger(9500, 'cancellation_charge_waiver', { notes: 'prev_charge=100' }),
+        ledger(-9500, 'cancellation_charge_reinstate'),
+      ],
+      nowIso: NOW,
+    })
+    expect(retried.ok && retried.noop).toBe(true)
+    if (!retried.ok) return
+    expect(retried.creditDeltaRappen).toBe(0)
+  })
+
+  it('keeps a partial fee when recovering a waiver that crashed before the payment update', () => {
+    const crashed = planCancellationObligationChange({
+      appointmentStatus: 'cancelled',
+      chargePercentage: 0,
+      mustPay: false,
+      payments: [paid()],
+      ledger: [
+        ledger(4750, 'cancellation'),
+        ledger(4750, 'cancellation_charge_waiver', { notes: 'prev_charge=50; Kulanz' }),
+      ],
+      nowIso: NOW,
+    })
+    expect(crashed.ok).toBe(true)
+    if (!crashed.ok) return
+    expect(crashed.creditDeltaRappen).toBe(0)
+    expect(crashed.paymentUpdates[0].metadata.obligation_prev_charge_percentage).toBe(50)
+
+    const restored = planCancellationObligationChange({
+      appointmentStatus: 'cancelled',
+      chargePercentage: 0,
+      mustPay: true,
+      payments: [paid({
+        payment_status: 'refunded',
+        metadata: crashed.paymentUpdates[0].metadata,
+      })],
+      ledger: [
+        ledger(4750, 'cancellation'),
+        ledger(4750, 'cancellation_charge_waiver', { notes: 'prev_charge=50; Kulanz' }),
+      ],
+      nowIso: NOW,
+    })
+    expect(restored.ok).toBe(true)
+    if (!restored.ok) return
+    expect(restored.nextChargePercentage).toBe(50)
+    expect(restored.creditDeltaRappen).toBe(-4750)
+    expect(restored.paymentUpdates[0].payment_status).toBe('refunded')
+  })
+
+  it('remembers a partial unpaid charge before the appointment column is cleared', () => {
+    const payment = paid({ payment_status: 'pending', total_amount_rappen: 9500 })
+    const first = stampableObligationMemory(payment, 50)
+    expect(first?.obligation_prev_charge_percentage).toBe(50)
+    expect(stampableObligationMemory({ ...payment, metadata: first }, 50)).toBeNull()
+
+    const recovered = planCancellationObligationChange({
+      appointmentStatus: 'cancelled',
+      chargePercentage: 0,
+      mustPay: false,
+      payments: [paid({
+        payment_status: 'pending',
+        metadata: first || {},
+      })],
+      ledger: [],
+      nowIso: NOW,
+    })
+    expect(recovered.ok).toBe(true)
+    if (!recovered.ok) return
+    expect(recovered.creditDeltaRappen).toBe(0)
+    expect(recovered.paymentUpdates[0]).toMatchObject({ payment_status: 'cancelled' })
+    expect(recovered.paymentUpdates[0].metadata.obligation_prev_charge_percentage).toBe(50)
   })
 
   it('rejects appointments that are not cancelled', () => {
