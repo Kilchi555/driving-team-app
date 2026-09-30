@@ -253,7 +253,18 @@ BEGIN
     RETURN;
   END IF;
 
-  v_balance := public.increment_balance(p_user_id, p_tenant_id, p_delta_rappen);
+  -- increment_balance returns TABLE(balance_rappen, pending_withdrawal_rappen).
+  -- Take balance_rappen from that row. The function already updated the wallet.
+  -- pending_withdrawal_rappen is unchanged for an existing wallet and is not
+  -- written again here.
+  SELECT ib.balance_rappen
+    INTO v_balance
+  FROM public.increment_balance(p_user_id, p_tenant_id, p_delta_rappen) AS ib;
+
+  IF v_balance IS NULL THEN
+    RAISE EXCEPTION 'wallet_increment_failed' USING ERRCODE = 'P0001';
+  END IF;
+
   v_before := v_balance - p_delta_rappen;
 
   UPDATE public.credit_transactions

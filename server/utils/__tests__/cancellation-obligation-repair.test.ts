@@ -279,7 +279,10 @@ describe('cancellation obligation repair migration', () => {
     expect(sql).toContain('obligation_repair_basis_id IS NOT NULL')
     expect(sql).toContain('DO NOTHING')
     expect(sql).toContain('FOR UPDATE')
-    expect(sql.split('increment_balance').length - 1).toBe(1)
+    expect(sql).toContain('SELECT ib.balance_rappen')
+    expect(sql).toContain('FROM public.increment_balance(p_user_id, p_tenant_id, p_delta_rappen) AS ib')
+    expect(sql).not.toMatch(/v_balance\s*:=\s*public\.increment_balance/)
+    expect(sql.match(/public\.increment_balance\s*\(/g)).toHaveLength(1)
 
     const staleAt = sql.indexOf('stale := true')
     const insertAt = sql.indexOf('INSERT INTO public.credit_transactions')
