@@ -4,14 +4,15 @@
  *
  *   npm run demo:e2e-isolation:setup
  *
- * Generates DEMO_PASSWORD unless you pass one. Store the printed value as
- * GitHub secret E2E_ISOLATION_PASSWORD (Apple Review keeps E2E_DEMO_PASSWORD).
+ * Requires SIMY_ENV_TARGET=simy-test, the approved simy-test SUPABASE_URL,
+ * SUPABASE_SERVICE_ROLE_KEY, and E2E_ISOLATION_PASSWORD.
+ * DEMO_PASSWORD is rejected. The script never generates or prints a password.
  */
 import { readFileSync, existsSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { randomBytes } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
+import { planSetupAction, resolveAuthUserId, safeErrorText, setAuthPassword } from './simy-e2e-safety.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const envPath = join(root, '.env')
@@ -30,58 +31,37 @@ if (existsSync(envPath)) {
   }
 }
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-const generatedPassword = !process.env.DEMO_PASSWORD
-const DEMO_PASSWORD = process.env.DEMO_PASSWORD || `${randomBytes(18).toString('base64url')}!aA1`
-
-if (!SERVICE_ROLE_KEY) {
-  console.error('Missing SUPABASE_SERVICE_ROLE_KEY')
-  process.exit(1)
-}
-if (DEMO_PASSWORD.length < 12) {
-  console.error('DEMO_PASSWORD must be at least 12 characters.')
-  process.exit(1)
+const setupPlan = planSetupAction(process.env, process.argv, {
+  secretName: 'E2E_ISOLATION_PASSWORD',
+  allowReseed: false,
+})
+if (!setupPlan.ok) {
+  console.error(setupPlan.message)
+  process.exit(setupPlan.exitCode)
 }
 
-if (generatedPassword) {
-  console.log(`Neues Passwort: ${DEMO_PASSWORD}`)
-}
-
+const tenantPassword = setupPlan.password
 const TENANT_SLUG = 'e2e-isolation'
 const ADMIN_EMAIL = 'e2e-isolation@simy.ch'
 const STAFF_EMAIL = 'e2e-isolation-staff@simy.ch'
 const CLIENT_EMAIL = 'e2e-isolation-client@simy.ch'
 
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+const supabase = createClient(setupPlan.supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 })
 
-async function findAuthUserId(email) {
-  const { data } = await supabase.from('users').select('auth_user_id').eq('email', email).maybeSingle()
-  if (data?.auth_user_id) return data.auth_user_id
-
-  const { data: link, error } = await supabase.auth.admin.generateLink({ type: 'magiclink', email })
-  if (!error && link?.user?.id) return link.user.id
-  return null
-}
-
 async function ensureAuthUser(email) {
-  const existingId = await findAuthUserId(email)
+  const existingId = await resolveAuthUserId(supabase, email)
   if (existingId) {
-    const { error } = await supabase.auth.admin.updateUserById(existingId, {
-      password: DEMO_PASSWORD,
-      email_confirm: true,
-    })
-    if (error) throw error
+    await setAuthPassword(supabase.auth.admin, existingId, tenantPassword)
     return existingId
   }
   const { data, error } = await supabase.auth.admin.createUser({
     email,
-    password: DEMO_PASSWORD,
+    password: tenantPassword,
     email_confirm: true,
   })
-  if (error) throw error
+  if (error || !data?.user?.id) throw new Error('Auth user creation failed.')
   return data.user.id
 }
 
@@ -231,43 +211,45 @@ async function ensureAppointment({ tenantId, customerId, staffId, locationId }) 
   return data.id
 }
 
-const tenantId = await ensureTenant()
-const adminAuthId = await ensureAuthUser(ADMIN_EMAIL)
-const staffAuthId = await ensureAuthUser(STAFF_EMAIL)
-const clientAuthId = await ensureAuthUser(CLIENT_EMAIL)
-await ensureUserRow({
-  authUserId: adminAuthId,
-  email: ADMIN_EMAIL,
-  role: 'admin',
-  firstName: 'E2E',
-  lastName: 'Admin',
-  tenantId,
-})
-const staffId = await ensureUserRow({
-  authUserId: staffAuthId,
-  email: STAFF_EMAIL,
-  role: 'staff',
-  firstName: 'E2E',
-  lastName: 'Staff',
-  tenantId,
-})
-const clientId = await ensureUserRow({
-  authUserId: clientAuthId,
-  email: CLIENT_EMAIL,
-  role: 'client',
-  firstName: 'E2E',
-  lastName: 'Client',
-  tenantId,
-})
-const locationId = await ensureLocation(tenantId)
-await ensureEventType(tenantId)
-const appointmentId = await ensureAppointment({ tenantId, customerId: clientId, staffId, locationId })
+try {
+  const tenantId = await ensureTenant()
+  const adminAuthId = await ensureAuthUser(ADMIN_EMAIL)
+  const staffAuthId = await ensureAuthUser(STAFF_EMAIL)
+  const clientAuthId = await ensureAuthUser(CLIENT_EMAIL)
+  await ensureUserRow({
+    authUserId: adminAuthId,
+    email: ADMIN_EMAIL,
+    role: 'admin',
+    firstName: 'E2E',
+    lastName: 'Admin',
+    tenantId,
+  })
+  const staffId = await ensureUserRow({
+    authUserId: staffAuthId,
+    email: STAFF_EMAIL,
+    role: 'staff',
+    firstName: 'E2E',
+    lastName: 'Staff',
+    tenantId,
+  })
+  const clientId = await ensureUserRow({
+    authUserId: clientAuthId,
+    email: CLIENT_EMAIL,
+    role: 'client',
+    firstName: 'E2E',
+    lastName: 'Client',
+    tenantId,
+  })
+  const locationId = await ensureLocation(tenantId)
+  await ensureEventType(tenantId)
+  const appointmentId = await ensureAppointment({ tenantId, customerId: clientId, staffId, locationId })
 
-console.log('e2e-isolation tenant ready')
-console.log(`  slug:         ${TENANT_SLUG}`)
-console.log(`  admin:        ${ADMIN_EMAIL}`)
-console.log(`  appointment:  ${appointmentId}`)
-console.log('GitHub → Settings → Secrets → E2E_ISOLATION_PASSWORD = the password printed above.')
-if (generatedPassword) {
-  console.log(`Neues Passwort: ${DEMO_PASSWORD}`)
+  console.log('e2e-isolation tenant ready')
+  console.log(`  slug:         ${TENANT_SLUG}`)
+  console.log(`  admin:        ${ADMIN_EMAIL}`)
+  console.log(`  appointment:  ${appointmentId}`)
+  console.log('  Password source: E2E_ISOLATION_PASSWORD (value not printed)')
+} catch (error) {
+  console.error(safeErrorText(error))
+  process.exit(1)
 }

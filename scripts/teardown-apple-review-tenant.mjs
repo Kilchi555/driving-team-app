@@ -6,13 +6,19 @@
  * Use with care – this is destructive.
  *
  * Usage:
+ *   SIMY_ENV_TARGET=simy-test \
+ *   SUPABASE_URL=https://kssqalisskhvorqwgy.supabase.co \
+ *   SUPABASE_SERVICE_ROLE_KEY=... \
  *   node scripts/teardown-apple-review-tenant.mjs --confirm
+ *
+ * Refuses to run without --confirm. There is no production URL fallback.
  */
 
 import { readFileSync, existsSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { createClient } from '@supabase/supabase-js'
+import { planTeardownAction, resolveAuthUserId, safeErrorText } from './simy-e2e-safety.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
@@ -32,23 +38,16 @@ if (existsSync(envPath)) {
   }
 }
 
-if (!process.argv.includes('--confirm')) {
-  console.error('❌ Refusing to delete without --confirm flag.')
-  console.error('   Usage: node scripts/teardown-apple-review-tenant.mjs --confirm')
-  process.exit(1)
-}
-
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-if (!SERVICE_ROLE_KEY) {
-  console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY')
-  process.exit(1)
+const teardownPlan = planTeardownAction(process.env, process.argv)
+if (!teardownPlan.ok) {
+  console.error(teardownPlan.message)
+  process.exit(teardownPlan.exitCode)
 }
 
 const TENANT_SLUG = 'apple-review'
 const DEMO_EMAILS = ['apple-review@simy.ch', 'demo-instructor@simy.ch', 'demo-admin@simy.ch']
 
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+const supabase = createClient(teardownPlan.supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }
 })
 
@@ -102,16 +101,14 @@ async function main() {
     else console.log('   ✓ Deleted tenant')
   }
 
-  // Delete Auth users
-  const { data: list } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 })
   for (const email of DEMO_EMAILS) {
-    const user = list?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
-    if (!user) {
+    const userId = await resolveAuthUserId(supabase, email)
+    if (!userId) {
       console.log(`   ✓ No auth user for ${email}`)
       continue
     }
-    const { error } = await supabase.auth.admin.deleteUser(user.id)
-    if (error) console.warn(`   ⚠️  auth ${email}:`, error.message)
+    const { error } = await supabase.auth.admin.deleteUser(userId)
+    if (error) console.warn(`   ⚠️  auth ${email}:`, safeErrorText(error))
     else console.log(`   ✓ Deleted auth user ${email}`)
   }
 
@@ -119,6 +116,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('❌ Teardown failed:', err)
+  console.error(safeErrorText(err))
   process.exit(1)
 })

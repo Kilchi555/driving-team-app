@@ -18,28 +18,30 @@
  *   9. Seeds 4 mock payments (3 paid, 1 open)
  *
  * Usage:
- *   DEMO_PASSWORD='YourSecurePassword' \
- *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
- *   node scripts/setup-apple-review-tenant.mjs [--reseed]
+ *   SIMY_ENV_TARGET=simy-test \
+ *   SUPABASE_URL=https://kssqalisskhvorqwgy.supabase.co \
+ *   SUPABASE_SERVICE_ROLE_KEY=... \
+ *   E2E_DEMO_PASSWORD=... \
+ *   node scripts/setup-apple-review-tenant.mjs
+ *
+ * The script reads E2E_DEMO_PASSWORD only. DEMO_PASSWORD is rejected.
+ * It never prints the password and never falls back to another Supabase host.
  *
  * Flags:
- *   --reseed   Wipes the existing appointments + payments of the demo
- *              customer and seeds a fresh set. Use this to refresh the
- *              dates so the upcoming lessons stay in the future.
+ *   --reseed --confirm
+ *     After the simy-test gate, wipes appointments and payments of the
+ *     demo customer and seeds a fresh set. Both flags are required.
+ *     The npm setup script does not pass either flag.
  *
- * DEMO_PASSWORD is REQUIRED — the script refuses to run without it so
- * that we never commit a default password to the repository.
- *
- * Where to store the password:
- *   - 1Password / Bitwarden under "Simy → Apple Review demo accounts"
- *   - Paste it into App Store Connect → App Review Information → Notes
- *     so the reviewer sees it without us having to commit it anywhere.
+ * Store the password in the secret store and in the password manager.
+ * Paste it into App Store Connect by hand. Do not commit it.
  */
 
 import { readFileSync, existsSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { createClient } from '@supabase/supabase-js'
+import { planSetupAction, resolveAuthUserId, safeErrorText, setAuthPassword } from './simy-e2e-safety.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
@@ -60,25 +62,16 @@ if (existsSync(envPath)) {
   }
 }
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!SERVICE_ROLE_KEY) {
-  console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY (env or .env)')
-  process.exit(1)
+const setupPlan = planSetupAction(process.env, process.argv, {
+  secretName: 'E2E_DEMO_PASSWORD',
+  allowReseed: true,
+})
+if (!setupPlan.ok) {
+  console.error(setupPlan.message)
+  process.exit(setupPlan.exitCode)
 }
 
-const DEMO_PASSWORD = process.env.DEMO_PASSWORD
-if (!DEMO_PASSWORD) {
-  console.error('❌ Missing DEMO_PASSWORD env var.')
-  console.error('   The default password was removed to keep credentials out of git history.')
-  console.error('   Re-run with:  DEMO_PASSWORD="YourSecurePass" npm run demo:apple-review:setup')
-  process.exit(1)
-}
-if (DEMO_PASSWORD.length < 12) {
-  console.error('❌ DEMO_PASSWORD must be at least 12 characters long.')
-  process.exit(1)
-}
+const tenantPassword = setupPlan.password
 const DEMO_CUSTOMER_EMAIL = 'apple-review@simy.ch'
 const DEMO_INSTRUCTOR_EMAIL = 'demo-instructor@simy.ch'
 const DEMO_ADMIN_EMAIL = 'demo-admin@simy.ch'
@@ -86,7 +79,7 @@ const DEMO_ADMIN_EMAIL = 'demo-admin@simy.ch'
 const TENANT_SLUG = 'apple-review'
 const TENANT_NAME = 'Apple Review Fahrschule'
 
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+const supabase = createClient(setupPlan.supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }
 })
 
@@ -323,21 +316,12 @@ async function ensureAvailabilitySettings(staffId) {
   console.log(`   ✓ Availability settings seeded`)
 }
 
-async function findExistingAuthUser(email) {
-  // Supabase admin API has no direct "find by email", so we list and filter.
-  // Tenant has small number of users — pagination unnecessary for demo data.
-  const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 })
-  if (error) throw error
-  return data.users.find(u => u.email?.toLowerCase() === email.toLowerCase()) || null
-}
-
 async function ensureAuthUser(email, password, metadata) {
-  const existing = await findExistingAuthUser(email)
-  if (existing) {
-    console.log(`   ✓ Auth user exists: ${email} (${existing.id})`)
-    // Refresh password so the demo creds always work
-    await supabase.auth.admin.updateUserById(existing.id, { password, email_confirm: true })
-    return existing.id
+  const existingId = await resolveAuthUserId(supabase, email)
+  if (existingId) {
+    console.log(`   ✓ Auth user exists: ${email}`)
+    await setAuthPassword(supabase.auth.admin, existingId, password)
+    return existingId
   }
 
   const { data, error } = await supabase.auth.admin.createUser({
@@ -346,8 +330,8 @@ async function ensureAuthUser(email, password, metadata) {
     email_confirm: true,
     user_metadata: metadata
   })
-  if (error) throw error
-  console.log(`   ✓ Auth user created: ${email} (${data.user.id})`)
+  if (error || !data?.user?.id) throw new Error('Auth user creation failed.')
+  console.log(`   ✓ Auth user created: ${email}`)
   return data.user.id
 }
 
@@ -645,7 +629,7 @@ async function main() {
   await ensureEventTypes(tenantId)
 
   console.log('\n👤 Demo Admin')
-  const adminAuthId = await ensureAuthUser(DEMO_ADMIN_EMAIL, DEMO_PASSWORD, {
+  const adminAuthId = await ensureAuthUser(DEMO_ADMIN_EMAIL, tenantPassword, {
     first_name: 'Demo', last_name: 'Admin'
   })
   await ensureUserRow({
@@ -660,7 +644,7 @@ async function main() {
   })
 
   console.log('\n🧑‍🏫 Demo Instructor')
-  const instructorAuthId = await ensureAuthUser(DEMO_INSTRUCTOR_EMAIL, DEMO_PASSWORD, {
+  const instructorAuthId = await ensureAuthUser(DEMO_INSTRUCTOR_EMAIL, tenantPassword, {
     first_name: 'Marco', last_name: 'Bianchi'
   })
   const staffId = await ensureUserRow({
@@ -680,7 +664,7 @@ async function main() {
   await ensureAvailabilitySettings(staffId)
 
   console.log('\n🎓 Demo Customer (Apple Review Account)')
-  const customerAuthId = await ensureAuthUser(DEMO_CUSTOMER_EMAIL, DEMO_PASSWORD, {
+  const customerAuthId = await ensureAuthUser(DEMO_CUSTOMER_EMAIL, tenantPassword, {
     first_name: 'Apple', last_name: 'Reviewer'
   })
   const customerId = await ensureUserRow({
@@ -704,8 +688,8 @@ async function main() {
     }
   })
 
-  const reseed = process.argv.includes('--reseed')
-  if (reseed) console.log('\n♻️  --reseed flag detected: wiping appointments + payments first')
+  const reseed = setupPlan.reseed
+  if (reseed) console.log('\n♻️  --reseed --confirm: wiping appointments + payments first')
 
   await seedAppointments({ tenantId, customerId, staffId, locationIds, reseed })
   await seedPayments({ tenantId, customerId, staffId, reseed })
@@ -713,15 +697,16 @@ async function main() {
   await ensureCourses(tenantId, staffId)
 
   console.log('\n✅ Setup complete!\n')
-  console.log('────── Apple App Review Credentials ──────')
-  console.log(`  Tenant Login URL: https://app.simy.ch/${TENANT_SLUG}`)
-  console.log(`  Email:            ${DEMO_CUSTOMER_EMAIL}`)
-  console.log(`  Password:         ${DEMO_PASSWORD}`)
-  console.log('───────────────────────────────────────────\n')
-  console.log('  Paste these into App Store Connect → "App Review Information".\n')
+  console.log('────── Apple App Review tenant ──────')
+  console.log(`  Tenant slug:      ${TENANT_SLUG}`)
+  console.log(`  Customer email:   ${DEMO_CUSTOMER_EMAIL}`)
+  console.log(`  Instructor email: ${DEMO_INSTRUCTOR_EMAIL}`)
+  console.log(`  Admin email:      ${DEMO_ADMIN_EMAIL}`)
+  console.log('  Password source:  E2E_DEMO_PASSWORD (value not printed)')
+  console.log('──────────────────────────────────────\n')
 }
 
 main().catch(err => {
-  console.error('\n❌ Setup failed:', err)
+  console.error(safeErrorText(err))
   process.exit(1)
 })
