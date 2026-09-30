@@ -6,7 +6,7 @@
  * Usage: DEMO_PASSWORD=... node scripts/capture-real-play-screenshots-devices.mjs
  *
  * DEMO_PASSWORD is required. Never put a fallback in this file — the repo is public.
- * Rotate demo accounts with: DEMO_PASSWORD='…' npm run demo:apple-review:setup
+ * Rotate demo accounts with: E2E_DEMO_PASSWORD='…' npm run demo:apple-review:setup
  */
 import puppeteer from 'puppeteer'
 import { mkdirSync } from 'fs'

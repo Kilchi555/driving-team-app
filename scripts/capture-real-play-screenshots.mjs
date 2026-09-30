@@ -186,13 +186,13 @@ try {
       `Viewport: ${W}x${H} @${SCALE}x`,
       '',
       'NOTE: Demo account passwords were rotated for this capture.',
-      'Re-seed with: DEMO_PASSWORD=... npm run demo:apple-review:setup',
+      'Re-seed with: E2E_DEMO_PASSWORD=... npm run demo:apple-review:setup',
       '',
     ].join('\n'),
   )
 
   console.log('\n⚠️  Demo-Passwörter wurden für den Screenshot-Lauf rotiert.')
-  console.log('   Für Apple/Play Review neu setzen: DEMO_PASSWORD=... npm run demo:apple-review:setup')
+  console.log('   Für Apple/Play Review neu setzen: E2E_DEMO_PASSWORD=... npm run demo:apple-review:setup')
 } catch (e) {
   console.error('❌', e)
   await page.screenshot({ path: join(outDir, 'error.png'), type: 'png' }).catch(() => {})
