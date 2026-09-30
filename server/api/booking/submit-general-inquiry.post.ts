@@ -22,6 +22,11 @@ import {
   isPreferredContactMethod,
   upsertPreferredContactNote,
 } from '~/utils/preferred-contact-method'
+import {
+  insertInquiryProposal,
+  parseSubmissionId,
+  type InquiryProposalAdmin,
+} from '~/server/utils/inquiry-submission'
 interface MarketingAttributionPayload {
   gclid?: string | null
   gbraid?: string | null
@@ -524,51 +529,71 @@ export default defineEventHandler(async (event) => {
     // Admin client: anon has INSERT but no SELECT on booking_proposals, so
     // insert().select() fails RLS; also needed once created_by_user_id is set.
     const supabaseAdmin = getSupabaseAdmin()
-    const { data: proposal, error: proposalError } = await supabaseAdmin
-      .from('booking_proposals')
-      .insert({
-        tenant_id,
-        category_code: category_code || null,
-        duration_minutes: duration_minutes || null,
-        location_id: location_id || null,
-        staff_id: staff_id || null,
-        preferred_time_slots: hasPreferredSlots ? preferred_time_slots : [],
-        first_name: fieldValues.first_name || null,
-        last_name: fieldValues.last_name || null,
-        email: fieldValues.email || null,
-        phone: fieldValues.phone || null,
-        street: fieldValues.street || null,
-        house_number: fieldValues.street_nr || null,
-        postal_code: fieldValues.zip || null,
-        city: fieldValues.city || null,
-        notes: storedNotes,
-        created_by_user_id: resolvedUserId,
-        status: 'pending',
-        marketing_session_id: marketing_session_id || null,
-        utm_source: resolvedAttribution?.utm_source ?? null,
-        utm_medium: resolvedAttribution?.utm_medium ?? null,
-        utm_campaign: resolvedAttribution?.utm_campaign ?? null,
-        utm_content: resolvedAttribution?.utm_content ?? null,
-        utm_term: resolvedAttribution?.utm_term ?? null,
-        fbclid: resolvedAttribution?.fbclid ?? null,
-        fbc: resolvedAttribution?.fbc ?? null,
-        fbp: resolvedAttribution?.fbp ?? null,
-        gclid: resolvedAttribution?.gclid ?? null,
-        gbraid: resolvedAttribution?.gbraid ?? null,
-        wbraid: resolvedAttribution?.wbraid ?? null,
-      })
-      .select()
-      .single()
+    const submissionId = parseSubmissionId(body.submission_id)
+    const proposalRow: Record<string, unknown> = {
+      tenant_id,
+      category_code: category_code || null,
+      duration_minutes: duration_minutes || null,
+      location_id: location_id || null,
+      staff_id: staff_id || null,
+      preferred_time_slots: hasPreferredSlots ? preferred_time_slots : [],
+      first_name: fieldValues.first_name || null,
+      last_name: fieldValues.last_name || null,
+      email: fieldValues.email || null,
+      phone: fieldValues.phone || null,
+      street: fieldValues.street || null,
+      house_number: fieldValues.street_nr || null,
+      postal_code: fieldValues.zip || null,
+      city: fieldValues.city || null,
+      notes: storedNotes,
+      created_by_user_id: resolvedUserId,
+      status: 'pending',
+      marketing_session_id: marketing_session_id || null,
+      utm_source: resolvedAttribution?.utm_source ?? null,
+      utm_medium: resolvedAttribution?.utm_medium ?? null,
+      utm_campaign: resolvedAttribution?.utm_campaign ?? null,
+      utm_content: resolvedAttribution?.utm_content ?? null,
+      utm_term: resolvedAttribution?.utm_term ?? null,
+      fbclid: resolvedAttribution?.fbclid ?? null,
+      fbc: resolvedAttribution?.fbc ?? null,
+      fbp: resolvedAttribution?.fbp ?? null,
+      gclid: resolvedAttribution?.gclid ?? null,
+      gbraid: resolvedAttribution?.gbraid ?? null,
+      wbraid: resolvedAttribution?.wbraid ?? null,
+    }
+    if (submissionId) proposalRow.submission_id = submissionId
 
-    if (proposalError) {
+    let proposalResult: { id: string; created: boolean }
+    try {
+      proposalResult = await insertInquiryProposal(supabaseAdmin as unknown as InquiryProposalAdmin, {
+        ...proposalRow,
+        tenant_id,
+      })
+    } catch (proposalError: any) {
       console.error('❌ Error creating inquiry:', proposalError)
       throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to create inquiry'
+        statusCode: proposalError?.statusCode || 500,
+        statusMessage: proposalError?.statusMessage || 'Failed to create inquiry'
       })
     }
 
-    console.log('✅ General inquiry created:', proposal.id)
+    const terms = await getTenantTerminology(getSupabaseAdmin(), tenant_id)
+    const appointmentLabel = terms.appointment || 'Termin'
+    const successMessage = category_code
+      ? `${appointmentLabel}-Anfrage eingereicht. Wir melden uns bald bei dir.`
+      : 'Danke für deine Anfrage. Wir melden uns in Kürze.'
+
+    if (!proposalResult.created) {
+      console.log('↩️ Inquiry submission replay:', proposalResult.id)
+      return {
+        success: true,
+        proposal_id: proposalResult.id,
+        idempotent_replay: true,
+        message: successMessage,
+      }
+    }
+
+    console.log('✅ General inquiry created:', proposalResult.id)
 
     if (resolvedAttribution?.gclid || resolvedAttribution?.gbraid || resolvedAttribution?.wbraid) {
       try {
@@ -579,7 +604,7 @@ export default defineEventHandler(async (event) => {
 
         // Must await — Vercel freezes the isolate after the response.
         await recordAndUploadInquiryConversion({
-          proposal_id: proposal.id,
+          proposal_id: proposalResult.id,
           tenant_id,
           gclid: resolvedAttribution!.gclid ?? null,
           gbraid: resolvedAttribution!.gbraid ?? null,
@@ -605,7 +630,7 @@ export default defineEventHandler(async (event) => {
             'X-Internal-Api-Secret': internalApiSecret
           },
           body: JSON.stringify({
-            proposalId: proposal.id,
+            proposalId: proposalResult.id,
             tenant_id: tenant_id,
             skipCustomerEmail: !!body.skip_customer_email,
           })
@@ -628,15 +653,10 @@ export default defineEventHandler(async (event) => {
       sourceLabel: 'Buchungsanfrage',
     })
 
-    const terms = await getTenantTerminology(getSupabaseAdmin(), tenant_id)
-    const appointmentLabel = terms.appointment || 'Termin'
-
     return {
       success: true,
-      proposal_id: proposal.id,
-      message: category_code
-        ? `${appointmentLabel}-Anfrage eingereicht. Wir melden uns bald bei dir.`
-        : 'Danke für deine Anfrage. Wir melden uns in Kürze.'
+      proposal_id: proposalResult.id,
+      message: successMessage,
     }
   } catch (err: any) {
     console.error('❌ Error in submit-general-inquiry:', err)

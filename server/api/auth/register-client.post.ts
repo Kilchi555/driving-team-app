@@ -27,6 +27,11 @@ import { randomUUID } from 'crypto'
 import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisition'
 import { saveAcquisitionSelfReport } from '~/server/utils/save-acquisition-self-report'
 import { resolvePublicRegistrationRole } from '~/server/utils/public-registration-role'
+import {
+  pendingUserNotificationPlan,
+  upsertPendingRegistrationUser,
+  type PendingUserAdmin,
+} from '~/server/utils/pending-registration-user'
 
 const CONTACT_FIELD_LABELS: Record<string, string> = {
   first_name: 'Vorname',
@@ -201,29 +206,6 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      // Reuse pending by email/phone or create new
-      let pendingUserId: string | null = null
-      if (emailNormalized) {
-        const { data } = await serviceSupabase
-          .from('users')
-          .select('id')
-          .eq('email', emailNormalized)
-          .eq('tenant_id', tenantId)
-          .eq('onboarding_status', 'pending')
-          .maybeSingle()
-        if (data?.id) pendingUserId = data.id
-      }
-      if (!pendingUserId && sanitizedPhone) {
-        const { data } = await serviceSupabase
-          .from('users')
-          .select('id')
-          .eq('phone', sanitizedPhone)
-          .eq('tenant_id', tenantId)
-          .eq('onboarding_status', 'pending')
-          .maybeSingle()
-        if (data?.id) pendingUserId = data.id
-      }
-
       const onboardingToken = randomUUID()
       const tokenExpiry = new Date()
       tokenExpiry.setDate(tokenExpiry.getDate() + 30)
@@ -248,42 +230,50 @@ export default defineEventHandler(async (event) => {
         onboarding_token_expires: tokenExpiry.toISOString(),
       }
 
-      if (pendingUserId) {
-        const { error: updErr } = await serviceSupabase
-          .from('users')
-          .update(profilePayload)
-          .eq('id', pendingUserId)
-        if (updErr) {
-          logger.error('Register', 'Pending user update failed:', updErr)
-          throw createError({ statusCode: 500, statusMessage: 'Kontakt konnte nicht gespeichert werden' })
-        }
-      } else {
-        pendingUserId = randomUUID()
-        const { error: insErr } = await serviceSupabase
-          .from('users')
-          .insert({ id: pendingUserId, ...profilePayload })
-        if (insErr) {
-          logger.error('Register', 'Pending user insert failed:', insErr)
-          throw createError({ statusCode: 500, statusMessage: 'Kontakt konnte nicht gespeichert werden' })
-        }
-      }
-
+      // created is true only when this request's INSERT landed. A matching
+      // pending row, or a unique-index race, is an update and stays silent.
+      let pendingWrite
       try {
-        await notifyTenantAdminsNewClient({
+        pendingWrite = await upsertPendingRegistrationUser(serviceSupabase as unknown as PendingUserAdmin, {
           tenantId,
-          clientUserId: pendingUserId!,
-          firstName: sanitizedFirstName,
-          lastName: sanitizedLastName,
-          email: emailNormalized || '',
+          email: emailNormalized,
           phone: sanitizedPhone,
-          categories: categoryArray,
-          source: 'register',
+          profile: profilePayload,
+          newUserId: randomUUID(),
         })
-      } catch (e: any) {
-        logger.warn('Register', 'Admin notify failed (pending):', e?.message)
+      } catch (writeErr: any) {
+        logger.error('Register', 'Pending user write failed:', writeErr)
+        throw createError({ statusCode: 500, statusMessage: 'Kontakt konnte nicht gespeichert werden' })
+      }
+      if (!pendingWrite.ok) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: pendingWrite.conflict === 'phone'
+            ? 'Diese Telefonnummer ist bereits registriert. Bitte melde dich an.'
+            : 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich an.',
+        })
+      }
+      const pendingUserId = pendingWrite.userId
+      const pendingNotifications = pendingUserNotificationPlan(pendingWrite.created)
+
+      if (pendingNotifications.notifyAdminNewUser) {
+        try {
+          await notifyTenantAdminsNewClient({
+            tenantId,
+            clientUserId: pendingUserId,
+            firstName: sanitizedFirstName,
+            lastName: sanitizedLastName,
+            email: emailNormalized || '',
+            phone: sanitizedPhone,
+            categories: categoryArray,
+            source: 'register',
+          })
+        } catch (e: any) {
+          logger.warn('Register', 'Admin notify failed (pending):', e?.message)
+        }
       }
 
-      if (emailNormalized) {
+      if (pendingNotifications.sendCustomerRegistrationReceipt && emailNormalized) {
         try {
           await sendPendingRegistrationConfirmationEmail({
             to: emailNormalized,
@@ -295,7 +285,7 @@ export default defineEventHandler(async (event) => {
         } catch (emailErr: any) {
           logger.warn('Register', 'Pending confirmation email failed (non-critical):', emailErr?.message)
         }
-      } else {
+      } else if (!emailNormalized) {
         logger.debug('Register', '⏭️ No email on pending registration — skipping customer confirmation')
       }
 

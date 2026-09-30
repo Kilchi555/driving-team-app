@@ -1234,6 +1234,12 @@ import { useTenantBranding } from '~/composables/useTenantBranding'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { mergeTerminology, isDrivingSchoolBusinessType, resolveEventTypeLabel } from '~/composables/useTerminology'
 import { sanitizeTenantHtml } from '~/utils/sanitize-tenant-html'
+import {
+  REGISTER_FORM_STORAGE_KEY,
+  consumeCompletedRegisterSubmission,
+  finishRegisterSubmission,
+  rememberSubmissionId,
+} from '~/utils/register-form-submission'
 
 const { primaryColor, accentColor } = useTenantBranding()
 
@@ -1479,7 +1485,8 @@ const fileInput = ref<HTMLInputElement>()
 const categoryFileInputs = ref<Record<string, HTMLInputElement>>({})
 
 // LocalStorage key for form data
-const FORM_DATA_KEY = 'register_form_data'
+const FORM_DATA_KEY = REGISTER_FORM_STORAGE_KEY
+const persistRegisterForm = ref(true)
 
 // Form data
 const formData = ref({
@@ -2216,9 +2223,11 @@ const clearImage = () => {
 }
 
 const submitRegistration = async () => {
+  if (isSubmitting.value) return
   if (!canSubmit.value) return
-  
+
   isSubmitting.value = true
+  const submissionId = rememberSubmissionId(sessionStorage)
 
   const pendingOnly = !showAccountStep.value
   const willCreateProposal =
@@ -2328,6 +2337,7 @@ const submitRegistration = async () => {
               created_by_user_id: data.userId,
               location_intake_mode: 'callback',
               skip_customer_email: pendingOnly,
+              submission_id: submissionId,
             },
           })
           logger.debug('✅ Booking proposal created from registration')
@@ -2398,6 +2408,8 @@ const submitRegistration = async () => {
     // Success - Show confirmation screen
     registeredEmail.value = formData.value.email
     registeredTenantSlug.value = tenantSlug.value
+    persistRegisterForm.value = false
+    finishRegisterSubmission(sessionStorage, localStorage)
     registrationComplete.value = true
     logger.debug('✅ Registration complete, showing confirmation screen')
     
@@ -2552,8 +2564,9 @@ onMounted(async () => {
   // is already active. Phones keep that session; leaving the page here
   // replaced the form with a redirect.
 
-  // Restore form data from localStorage immediately (sync, no delay)
-  if (process.client) {
+  // Restore form data from localStorage immediately (sync, no delay).
+  // A finished submission must not come back ready to send.
+  if (process.client && !consumeCompletedRegisterSubmission(sessionStorage, localStorage)) {
     const savedData = localStorage.getItem(FORM_DATA_KEY)
     if (savedData) {
       try {
@@ -2636,7 +2649,7 @@ watch(
 
 // Auto-save form data to localStorage
 watch(formData, (newData) => {
-  if (process.client) {
+  if (process.client && persistRegisterForm.value) {
     try {
       // Save without password for security
       const dataToSave = {
