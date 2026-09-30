@@ -2,8 +2,14 @@ export const MANUAL_TOPUP_MAX_RAPPEN = 1_000_000
 export const MANUAL_TOPUP_NOTE_MIN = 3
 export const MANUAL_TOPUP_NOTE_MAX = 500
 
+const IDEMPOTENCY_KEY_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export type ManualTopupParse =
   | { ok: true; amountRappen: number; note: string }
+  | { ok: false; error: string }
+
+export type ManualTopupKeyParse =
+  | { ok: true; key: string }
   | { ok: false; error: string }
 
 export function parseManualCreditTopup(input: {
@@ -33,4 +39,15 @@ export function parseManualCreditTopup(input: {
   }
 
   return { ok: true, amountRappen: amount, note }
+}
+
+export function parseManualTopupIdempotencyKey(value: unknown): ManualTopupKeyParse {
+  if (typeof value !== 'string' || value.trim() === '') {
+    return { ok: false, error: 'Idempotenz-Schlüssel ist erforderlich.' }
+  }
+  const key = value.trim()
+  if (!IDEMPOTENCY_KEY_RE.test(key)) {
+    return { ok: false, error: 'Idempotenz-Schlüssel muss eine UUID sein.' }
+  }
+  return { ok: true, key: key.toLowerCase() }
 }

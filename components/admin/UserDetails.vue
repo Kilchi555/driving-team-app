@@ -2019,6 +2019,19 @@ const creditAmountChf = ref('')
 const creditNote = ref('')
 const creditError = ref<string | null>(null)
 const isSavingCredit = ref(false)
+const creditIdempotencyKey = ref('')
+
+const createManualTopupKey = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
 
 const showObligationModal = ref(false)
 const obligationAppt = ref<any | null>(null)
@@ -2046,6 +2059,7 @@ const openCreditModal = () => {
   creditAmountChf.value = ''
   creditNote.value = ''
   creditError.value = null
+  creditIdempotencyKey.value = createManualTopupKey()
   showCreditModal.value = true
 }
 
@@ -2060,16 +2074,23 @@ const saveCreditTopup = async () => {
     creditError.value = 'Vermerk muss mindestens 3 Zeichen haben.'
     return
   }
+  if (!creditIdempotencyKey.value) creditIdempotencyKey.value = createManualTopupKey()
   isSavingCredit.value = true
   creditError.value = null
   try {
     const res = await $fetch<any>('/api/admin/credit/manual-topup', {
       method: 'POST',
-      body: { user_id: userId, amount_rappen: amountRappen, note: creditNote.value.trim() },
+      body: {
+        user_id: userId,
+        amount_rappen: amountRappen,
+        note: creditNote.value.trim(),
+        idempotency_key: creditIdempotencyKey.value,
+      },
     })
-    studentCreditRappen.value = res?.balance_rappen ?? ((studentCreditRappen.value || 0) + amountRappen)
+    const creditedRappen = Number.isInteger(res?.credited_rappen) ? res.credited_rappen : amountRappen
+    studentCreditRappen.value = res?.balance_rappen ?? ((studentCreditRappen.value || 0) + creditedRappen)
     showCreditModal.value = false
-    successMessage.value = `Guthaben um CHF ${(amountRappen / 100).toFixed(2)} aufgeladen.`
+    successMessage.value = `Guthaben um CHF ${(creditedRappen / 100).toFixed(2)} aufgeladen.`
     setTimeout(() => { successMessage.value = null }, 5000)
   } catch (err: any) {
     creditError.value = err?.data?.statusMessage || err?.message || 'Guthaben konnte nicht aufgeladen werden.'

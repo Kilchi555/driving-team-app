@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseManualCreditTopup } from '../manual-credit-topup'
+import { parseManualCreditTopup, parseManualTopupIdempotencyKey } from '../manual-credit-topup'
 
 describe('parseManualCreditTopup', () => {
   it('accepts a positive rappen amount and a note', () => {
@@ -23,6 +23,21 @@ describe('parseManualCreditTopup', () => {
       amountRappen: 1_000_000,
       note: 'Bar erhalten',
     })
+  })
+
+  it('rejects CHF 10000.01', () => {
+    expect(parseManualCreditTopup({ amountRappen: 1_000_001, note: 'Bar erhalten' }).ok).toBe(false)
+  })
+
+  it('accepts a UUID idempotency key and rejects an empty or invented key', () => {
+    expect(parseManualTopupIdempotencyKey('AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE')).toEqual({
+      ok: true,
+      key: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    })
+    expect(parseManualTopupIdempotencyKey('').ok).toBe(false)
+    expect(parseManualTopupIdempotencyKey('   ').ok).toBe(false)
+    expect(parseManualTopupIdempotencyKey(null).ok).toBe(false)
+    expect(parseManualTopupIdempotencyKey('amount:100:user').ok).toBe(false)
   })
 
   it('requires a vermerk', () => {

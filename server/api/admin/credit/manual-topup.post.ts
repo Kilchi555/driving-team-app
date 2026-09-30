@@ -1,8 +1,8 @@
-import { createError, defineEventHandler, readBody } from 'h3'
+import { createError, defineEventHandler, isError, readBody } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { parseManualCreditTopup } from '~/server/utils/manual-credit-topup'
-import { applyStudentCreditDelta } from '~/server/utils/student-credit-ledger'
+import { parseManualCreditTopup, parseManualTopupIdempotencyKey } from '~/server/utils/manual-credit-topup'
+import { applyManualCreditTopup, ManualTopupRejected } from '~/server/utils/apply-manual-credit-topup'
 import { logAudit } from '~/server/utils/audit'
 import { logger } from '~/utils/logger'
 
@@ -17,6 +17,10 @@ export default defineEventHandler(async (event) => {
   })
   if (!parsed.ok) {
     throw createError({ statusCode: 400, statusMessage: parsed.error })
+  }
+  const idempotency = parseManualTopupIdempotencyKey(body?.idempotency_key)
+  if (!idempotency.ok) {
+    throw createError({ statusCode: 400, statusMessage: idempotency.error })
   }
 
   const userId = body?.user_id
@@ -42,17 +46,13 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const result = await applyStudentCreditDelta(supabase, {
+    const result = await applyManualCreditTopup(supabase, {
       userId: target.id,
       tenantId: profile.tenant_id,
-      deltaRappen: parsed.amountRappen,
-      transactionType: 'deposit',
-      notes: parsed.note,
-      description: `Manuelle Guthaben-Aufladung: ${parsed.note}`,
-      referenceType: 'manual',
-      referenceId: null,
+      idempotencyKey: idempotency.key,
+      amountRappen: parsed.amountRappen,
+      note: parsed.note,
       createdBy: profile.id,
-      paymentMethod: 'manual',
     })
 
     await logAudit({
@@ -64,21 +64,28 @@ export default defineEventHandler(async (event) => {
       status: 'success',
       tenant_id: profile.tenant_id,
       details: {
-        amount_rappen: parsed.amountRappen,
+        amount_rappen: result.creditedRappen,
         note: parsed.note,
-        balance_before_rappen: result.balanceBeforeRappen,
-        balance_after_rappen: result.balanceAfterRappen,
+        balance_rappen: result.balanceRappen,
         transaction_id: result.transactionId,
+        idempotency_key: idempotency.key,
+        replayed: result.replayed,
       },
     }, event)
 
     return {
       success: true,
-      balance_rappen: result.balanceAfterRappen,
-      credited_rappen: parsed.amountRappen,
+      balance_rappen: result.balanceRappen,
+      credited_rappen: result.creditedRappen,
+      replayed: result.replayed,
     }
-  } catch (error: any) {
-    logger.error('❌ Manual credit top-up failed', { userId, error: error?.message })
+  } catch (error: unknown) {
+    if (isError(error)) throw error
+    if (error instanceof ManualTopupRejected && error.statusCode < 500) {
+      throw createError({ statusCode: error.statusCode, statusMessage: error.message })
+    }
+    const message = error instanceof Error ? error.message : 'failed'
+    logger.error('❌ Manual credit top-up failed', { userId, error: message })
     await logAudit({
       user_id: profile.id,
       auth_user_id: profile.auth_user_id,
@@ -87,10 +94,10 @@ export default defineEventHandler(async (event) => {
       resource_id: userId,
       status: 'error',
       tenant_id: profile.tenant_id,
-      error_message: error?.message || 'failed',
+      error_message: message,
     }, event)
     throw createError({
-      statusCode: 500,
+      statusCode: error instanceof ManualTopupRejected ? error.statusCode : 500,
       statusMessage: 'Guthaben konnte nicht aufgeladen werden.',
     })
   }
