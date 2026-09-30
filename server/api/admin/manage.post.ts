@@ -1,12 +1,19 @@
 // api/admin/manage.post.ts
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function requireServiceSupabase(): SupabaseClient {
+  const supabaseUrl = process.env.SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Supabase-Dienst ist nicht konfiguriert',
+    })
+  }
+  return createClient(supabaseUrl, serviceRoleKey)
+}
 
 interface AdminRequest {
   action: string
@@ -25,36 +32,50 @@ export default defineEventHandler(async (event) => {
     const body = await readBody<AdminRequest>(event)
     const { action } = body
 
-    // EVALUATION SYSTEM
-    if (action === 'get-evaluation-categories') {
-      return await getEvaluationCategories(body, userId)
-    }
-    if (action === 'get-evaluation-criteria') {
-      return await getEvaluationCriteria(body, userId)
-    }
-    if (action === 'get-evaluation-scale') {
-      return await getEvaluationScale(body, userId)
-    }
-    if (action === 'create-evaluation-category') {
-      return await createEvaluationCategory(body, userId)
-    }
-    if (action === 'update-evaluation-category') {
-      return await updateEvaluationCategory(body, userId)
-    }
-    if (action === 'delete-evaluation-category') {
-      return await deleteEvaluationCategory(body, userId)
-    }
-    if (action === 'create-evaluation-criterion') {
-      return await createEvaluationCriterion(body, userId)
-    }
-    if (action === 'update-evaluation-criterion') {
-      return await updateEvaluationCriterion(body, userId)
-    }
-    if (action === 'delete-evaluation-criterion') {
-      return await deleteEvaluationCriterion(body, userId)
+    if (
+      action !== 'get-evaluation-categories' &&
+      action !== 'get-evaluation-criteria' &&
+      action !== 'get-evaluation-scale' &&
+      action !== 'create-evaluation-category' &&
+      action !== 'update-evaluation-category' &&
+      action !== 'delete-evaluation-category' &&
+      action !== 'create-evaluation-criterion' &&
+      action !== 'update-evaluation-criterion' &&
+      action !== 'delete-evaluation-criterion'
+    ) {
+      throw new Error('Invalid action')
     }
 
-    throw new Error('Invalid action')
+    const supabase = requireServiceSupabase()
+
+    // EVALUATION SYSTEM
+    if (action === 'get-evaluation-categories') {
+      return await getEvaluationCategories(supabase, body, userId)
+    }
+    if (action === 'get-evaluation-criteria') {
+      return await getEvaluationCriteria(supabase, body, userId)
+    }
+    if (action === 'get-evaluation-scale') {
+      return await getEvaluationScale(supabase, body, userId)
+    }
+    if (action === 'create-evaluation-category') {
+      return await createEvaluationCategory(supabase, body, userId)
+    }
+    if (action === 'update-evaluation-category') {
+      return await updateEvaluationCategory(supabase, body, userId)
+    }
+    if (action === 'delete-evaluation-category') {
+      return await deleteEvaluationCategory(supabase, body, userId)
+    }
+    if (action === 'create-evaluation-criterion') {
+      return await createEvaluationCriterion(supabase, body, userId)
+    }
+    if (action === 'update-evaluation-criterion') {
+      return await updateEvaluationCriterion(supabase, body, userId)
+    }
+    if (action === 'delete-evaluation-criterion') {
+      return await deleteEvaluationCriterion(supabase, body, userId)
+    }
   } catch (err: any) {
     console.error('Admin manage error:', err)
     return {
@@ -65,7 +86,7 @@ export default defineEventHandler(async (event) => {
 })
 
 // EVALUATION SYSTEM HANDLERS
-async function getEvaluationCategories(body: AdminRequest, userId: string) {
+async function getEvaluationCategories(supabase: SupabaseClient, body: AdminRequest, userId: string) {
   const { tenant_id, driving_category_code } = body
 
   // Verify user is admin of this tenant
@@ -104,7 +125,7 @@ async function getEvaluationCategories(body: AdminRequest, userId: string) {
   }
 }
 
-async function getEvaluationCriteria(body: AdminRequest, userId: string) {
+async function getEvaluationCriteria(supabase: SupabaseClient, body: AdminRequest, userId: string) {
   const { tenant_id, category_id, is_theory } = body
 
   // Verify user is admin of this tenant
@@ -156,7 +177,7 @@ async function getEvaluationCriteria(body: AdminRequest, userId: string) {
   }
 }
 
-async function getEvaluationScale(body: AdminRequest, userId: string) {
+async function getEvaluationScale(supabase: SupabaseClient, body: AdminRequest, userId: string) {
   const { tenant_id } = body
 
   // Verify user is admin
@@ -189,7 +210,7 @@ async function getEvaluationScale(body: AdminRequest, userId: string) {
   }
 }
 
-async function createEvaluationCategory(body: AdminRequest, userId: string) {
+async function createEvaluationCategory(supabase: SupabaseClient, body: AdminRequest, userId: string) {
   const { tenant_id, name, description, color, display_order, is_theory, driving_category_code } = body
 
   // Verify admin
@@ -226,7 +247,7 @@ async function createEvaluationCategory(body: AdminRequest, userId: string) {
   }
 }
 
-async function updateEvaluationCategory(body: AdminRequest, userId: string) {
+async function updateEvaluationCategory(supabase: SupabaseClient, body: AdminRequest, userId: string) {
   const { tenant_id, id, name, description, color, display_order, is_theory } = body
 
   // Verify admin
@@ -262,7 +283,7 @@ async function updateEvaluationCategory(body: AdminRequest, userId: string) {
   }
 }
 
-async function deleteEvaluationCategory(body: AdminRequest, userId: string) {
+async function deleteEvaluationCategory(supabase: SupabaseClient, body: AdminRequest, userId: string) {
   const { tenant_id, id } = body
 
   // Verify admin
@@ -289,7 +310,7 @@ async function deleteEvaluationCategory(body: AdminRequest, userId: string) {
   }
 }
 
-async function createEvaluationCriterion(body: AdminRequest, userId: string) {
+async function createEvaluationCriterion(supabase: SupabaseClient, body: AdminRequest, userId: string) {
   const { tenant_id, name, description, category_id, driving_categories } = body
 
   // Verify admin
@@ -324,7 +345,7 @@ async function createEvaluationCriterion(body: AdminRequest, userId: string) {
   }
 }
 
-async function updateEvaluationCriterion(body: AdminRequest, userId: string) {
+async function updateEvaluationCriterion(supabase: SupabaseClient, body: AdminRequest, userId: string) {
   const { tenant_id, id, name, description, driving_categories } = body
 
   // Verify admin
@@ -357,7 +378,7 @@ async function updateEvaluationCriterion(body: AdminRequest, userId: string) {
   }
 }
 
-async function deleteEvaluationCriterion(body: AdminRequest, userId: string) {
+async function deleteEvaluationCriterion(supabase: SupabaseClient, body: AdminRequest, userId: string) {
   const { tenant_id, id } = body
 
   // Verify admin

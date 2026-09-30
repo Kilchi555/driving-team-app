@@ -1,13 +1,19 @@
 // api/documents/upload.post.ts
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 
-// Create Supabase admin client
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function requireServiceSupabase(): SupabaseClient {
+  const supabaseUrl = process.env.SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Supabase-Dienst ist nicht konfiguriert',
+    })
+  }
+  return createClient(supabaseUrl, serviceRoleKey)
+}
 
 interface UploadRequest {
   action: string
@@ -29,7 +35,7 @@ export default defineEventHandler(async (event) => {
     const { action } = body
 
     if (action === 'upload-document') {
-      return await uploadDocument(body, session.user.id)
+      return await uploadDocument(requireServiceSupabase(), body, session.user.id)
     } else if (action === 'get-upload-url') {
       return await getUploadUrl(body, session.user.id)
     }
@@ -44,7 +50,7 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-async function uploadDocument(body: UploadRequest, userId: string) {
+async function uploadDocument(supabase: SupabaseClient, body: UploadRequest, userId: string) {
   const { document_type, side, file_data, file_name } = body
 
   if (!document_type || !side || !file_data || !file_name) {
