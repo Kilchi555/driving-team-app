@@ -1,13 +1,14 @@
 import { createError, defineEventHandler, readBody } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { planCancellationObligationChange, stampableObligationMemory, type ObligationPlan } from '~/server/utils/cancellation-payment-obligation'
-import { applyStudentCreditDelta, StudentCreditConflict } from '~/server/utils/student-credit-ledger'
+import { obligationRepairBasisId, planCancellationObligationChange, stampableObligationMemory, type ObligationPlan } from '~/server/utils/cancellation-payment-obligation'
+import { applyCancellationObligationRepair } from '~/server/utils/apply-cancellation-obligation-repair'
 import { logAudit } from '~/server/utils/audit'
 import { logger } from '~/utils/logger'
 
 const ADMIN_ROLES = ['admin', 'tenant_admin', 'super_admin', 'superadmin']
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const LEDGER_SELECT = 'id, transaction_type, amount_rappen, payment_method, balance_before_rappen, balance_after_rappen, notes, reference_id, reference_type, tenant_id'
 
 function appendNote(existing: string | null | undefined, suffix: string): string {
   const base = (existing || '').trim()
@@ -60,7 +61,7 @@ export default defineEventHandler(async (event) => {
   const referenceIds = [appointment.id, ...paymentIds]
   const { data: ledgerRows, error: ledgerError } = await supabase
     .from('credit_transactions')
-    .select('transaction_type, amount_rappen, payment_method, balance_before_rappen, balance_after_rappen, notes, reference_id, tenant_id')
+    .select(LEDGER_SELECT)
     .eq('user_id', appointment.user_id)
     .in('reference_id', referenceIds)
 
@@ -104,9 +105,12 @@ export default defineEventHandler(async (event) => {
   }
 
   const previousCharge = appointment.cancellation_charge_percentage
-  // The charge column is the lock. Remember the outgoing percentage on the
-  // payment first, so a crash after the wallet write can still restore a
-  // partial fee and can still finish the payment status without a second credit.
+  // A real percentage change is claimed by compare-and-swap below. When the
+  // percentage is already at the target, that update matches for every caller,
+  // so the wallet repair itself is claimed in apply_cancellation_obligation_repair.
+  // Remember the outgoing percentage on the payment first, so a crash after the
+  // wallet write can still restore a partial fee and can still finish the
+  // payment status without a second credit.
   if (plan.nextChargePercentage === 0 && typeof previousCharge === 'number' && previousCharge > 0) {
     for (const payment of payments || []) {
       const metadata = stampableObligationMemory(payment, previousCharge)
@@ -133,34 +137,41 @@ export default defineEventHandler(async (event) => {
 
   let credited = false
   let appliedDelta = 0
+  let repairBasisAfter: string | null = null
   try {
     let balanceRappen: number | null = null
+    let basisId = obligationRepairBasisId(ledger, profile.tenant_id, appointment.id)
     for (let attempt = 0; attempt < 3; attempt++) {
-      const currentPlan: ObligationPlan = attempt === 0
-        ? plan
-        : await readObligationPlan(supabase, appointment, profile.tenant_id, mustPay, note)
-      if (currentPlan.creditDeltaRappen === 0 || !currentPlan.ledgerNote) break
-      try {
-        const credit = await applyStudentCreditDelta(supabase, {
-          userId: appointment.user_id,
-          tenantId: profile.tenant_id,
-          deltaRappen: currentPlan.creditDeltaRappen,
-          transactionType: currentPlan.creditDeltaRappen > 0 ? 'cancellation_charge_waiver' : 'cancellation_charge_reinstate',
-          notes: currentPlan.ledgerNote,
-          description: currentPlan.summary,
-          referenceType: 'appointment',
-          referenceId: appointment.id,
-          createdBy: profile.id,
-          paymentMethod: currentPlan.creditDeltaRappen > 0 ? 'refund' : 'adjustment',
-          maxAttempts: 1,
-        })
-        appliedDelta = currentPlan.creditDeltaRappen
-        credited = true
-        balanceRappen = credit.balanceAfterRappen
-        break
-      } catch (creditError) {
-        if (!(creditError instanceof StudentCreditConflict) || attempt === 2) throw creditError
+      let currentPlan: ObligationPlan = plan
+      if (attempt > 0) {
+        const fresh = await readObligationPlan(supabase, appointment, profile.tenant_id, mustPay, note)
+        currentPlan = fresh.plan
+        basisId = fresh.basisId
       }
+      if (currentPlan.creditDeltaRappen === 0 || !currentPlan.ledgerNote) break
+      const repair = await applyCancellationObligationRepair(supabase, {
+        appointmentId: appointment.id,
+        userId: appointment.user_id,
+        tenantId: profile.tenant_id,
+        deltaRappen: currentPlan.creditDeltaRappen,
+        transactionType: currentPlan.creditDeltaRappen > 0 ? 'cancellation_charge_waiver' : 'cancellation_charge_reinstate',
+        expectedBasisId: basisId,
+        note: currentPlan.ledgerNote,
+        description: currentPlan.summary,
+        paymentMethod: currentPlan.creditDeltaRappen > 0 ? 'refund' : 'adjustment',
+        createdBy: profile.id,
+      })
+      if (repair.stale) {
+        if (attempt === 2) throw new Error('obligation_repair_stale')
+        continue
+      }
+      balanceRappen = repair.balanceRappen
+      if (repair.applied) {
+        appliedDelta = repair.amountRappen
+        credited = true
+        repairBasisAfter = repair.basisAfter
+      }
+      break
     }
 
     for (const update of plan.paymentUpdates) {
@@ -203,7 +214,7 @@ export default defineEventHandler(async (event) => {
         must_pay: mustPay,
         previous_charge_percentage: previousCharge,
         next_charge_percentage: plan.nextChargePercentage,
-        credit_delta_rappen: credited ? appliedDelta : plan.creditDeltaRappen,
+        credit_delta_rappen: credited ? appliedDelta : 0,
         note,
       },
     }, event)
@@ -211,7 +222,7 @@ export default defineEventHandler(async (event) => {
     return {
       ...preview,
       dry_run: false,
-      credit_delta_rappen: credited ? appliedDelta : plan.creditDeltaRappen,
+      credit_delta_rappen: credited ? appliedDelta : 0,
       balance_rappen: balanceRappen,
     }
   } catch (error: any) {
@@ -219,19 +230,20 @@ export default defineEventHandler(async (event) => {
       appointmentId: appointment.id,
       error: error?.message,
     })
-    if (credited) {
+    if (credited && repairBasisAfter) {
+      const rollbackDelta = -appliedDelta
       try {
-        await applyStudentCreditDelta(supabase, {
+        await applyCancellationObligationRepair(supabase, {
+          appointmentId: appointment.id,
           userId: appointment.user_id,
           tenantId: profile.tenant_id,
-          deltaRappen: -appliedDelta,
-          transactionType: 'cancellation_charge_reinstate',
-          notes: `Rollback: ${note}`,
+          deltaRappen: rollbackDelta,
+          transactionType: rollbackDelta > 0 ? 'cancellation_charge_waiver' : 'cancellation_charge_reinstate',
+          expectedBasisId: repairBasisAfter,
+          note: `Rollback: ${note}`.slice(0, 2000),
           description: 'Rollback der Zahlpflicht-Änderung',
-          referenceType: 'appointment',
-          referenceId: appointment.id,
+          paymentMethod: rollbackDelta > 0 ? 'refund' : 'adjustment',
           createdBy: profile.id,
-          paymentMethod: 'adjustment',
         })
       } catch (rollbackError: any) {
         logger.error('❌ Credit rollback after failed obligation change failed', {
@@ -264,7 +276,7 @@ async function readObligationPlan(
   tenantId: string,
   mustPay: boolean,
   note: string
-): Promise<ObligationPlan> {
+): Promise<{ plan: ObligationPlan; basisId: string }> {
   const { data: payments, error: paymentError } = await supabase
     .from('payments')
     .select('id, payment_status, total_amount_rappen, credit_used_rappen, amount_paid_rappen, refunded_amount_rappen, notes, metadata, user_id, tenant_id')
@@ -276,7 +288,7 @@ async function readObligationPlan(
   const referenceIds = [appointment.id, ...(payments || []).map((payment: { id: string }) => payment.id)]
   const { data: ledgerRows, error: ledgerError } = await supabase
     .from('credit_transactions')
-    .select('transaction_type, amount_rappen, payment_method, balance_before_rappen, balance_after_rappen, notes, reference_id, tenant_id')
+    .select(LEDGER_SELECT)
     .eq('user_id', appointment.user_id)
     .in('reference_id', referenceIds)
   if (ledgerError) throw new Error(ledgerError.message)
@@ -300,7 +312,10 @@ async function readObligationPlan(
     nowIso: new Date().toISOString(),
   })
   if (!plan.ok) throw new Error(plan.error)
-  return plan
+  return {
+    plan,
+    basisId: obligationRepairBasisId(ledger, tenantId, appointment.id),
+  }
 }
 
 async function setCharge(

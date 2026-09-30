@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 /**
  * Admin toggle for whether a cancelled appointment must still be paid.
  *
@@ -13,6 +15,13 @@
 export const PREV_CHARGE_KEY = 'obligation_prev_charge_percentage'
 export const PREV_CREDIT_KEY = 'obligation_credit_used_rappen'
 export const PREV_STATUS_KEY = 'obligation_prev_payment_status'
+
+/**
+ * Basis used when an appointment has no eligible wallet row yet.
+ * Must stay identical to the SQL fallback in
+ * public.cancellation_obligation_repair_basis.
+ */
+export const OBLIGATION_REPAIR_BASIS_NONE = '00000000-0000-0000-0000-000000000000'
 
 const SETTLED = new Set(['completed', 'paid', 'refunded'])
 const OPEN = new Set(['pending', 'authorized', 'processing', 'open', 'authorized_pending', ''])
@@ -36,12 +45,16 @@ export type ObligationPayment = {
 }
 
 export type ObligationLedgerEntry = {
+  id?: string | null
   transaction_type: string
   amount_rappen?: number | null
   payment_method?: string | null
   balance_before_rappen?: number | null
   balance_after_rappen?: number | null
   notes?: string | null
+  reference_id?: string | null
+  reference_type?: string | null
+  tenant_id?: string | null
 }
 
 export type PlannedPaymentUpdate = {
@@ -114,6 +127,39 @@ export function walletRefundPostedRappen(entries: ObligationLedgerEntry[]): numb
     if (entry.balance_before_rappen == null && entry.balance_after_rappen == null) return sum
     return sum + Math.round(Number(entry.amount_rappen) || 0)
   }, 0)
+}
+
+function obligationRepairUuid(payload: string): string {
+  const hex = createHash('md5').update(payload).digest('hex')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
+/**
+ * Identity of the wallet snapshot a repair is correcting.
+ * Same snapshot => same id, including two concurrent retries.
+ * A later legitimate change includes the newly posted row, so its id differs.
+ * The SQL function public.cancellation_obligation_repair_basis uses the same
+ * md5(sorted eligible ids) formatting.
+ */
+export function obligationRepairBasisId(
+  entries: ObligationLedgerEntry[],
+  tenantId: string,
+  appointmentId: string,
+): string {
+  const ids = entries
+    .filter((entry) => {
+      if (entry.reference_type !== 'appointment') return false
+      if (entry.reference_id !== appointmentId) return false
+      if (entry.tenant_id !== tenantId) return false
+      if (!WALLET_REFUND_TYPES.has(entry.transaction_type)) return false
+      if (entry.payment_method === 'wallee_refund') return false
+      if (entry.balance_before_rappen == null && entry.balance_after_rappen == null) return false
+      return typeof entry.id === 'string' && entry.id.length > 0
+    })
+    .map((entry) => entry.id as string)
+    .sort()
+  if (ids.length === 0) return OBLIGATION_REPAIR_BASIS_NONE
+  return obligationRepairUuid(ids.join(','))
 }
 
 function storedCharge(payments: ObligationPayment[], ledger: ObligationLedgerEntry[]): number | null {
