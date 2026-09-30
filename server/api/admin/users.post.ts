@@ -294,7 +294,7 @@ export default defineEventHandler(async (event) => {
     if (action === 'get-user-appointments') {
       const { data, error } = await supabase
         .from('appointments')
-        .select('id, start_time, end_time, status, duration_minutes, type, notes, staff:users!appointments_staff_id_fkey(first_name, last_name)')
+        .select('id, start_time, end_time, status, duration_minutes, type, notes, cancellation_charge_percentage, staff:users!appointments_staff_id_fkey(first_name, last_name)')
         .eq('user_id', user_id)
         .order('start_time', { ascending: false })
         .limit(200)
