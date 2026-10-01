@@ -3,11 +3,13 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 
-// Create Supabase admin client
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function createServiceRoleClient() {
+  const supabaseUrl = process.env.SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  return createClient(supabaseUrl!, serviceRoleKey!)
+}
+
+type ServiceRoleClient = ReturnType<typeof createServiceRoleClient>
 
 interface UploadRequest {
   action: string
@@ -27,9 +29,10 @@ export default defineEventHandler(async (event) => {
 
     const body = await readBody<UploadRequest>(event)
     const { action } = body
+    const supabase = createServiceRoleClient()
 
     if (action === 'upload-document') {
-      return await uploadDocument(body, session.user.id)
+      return await uploadDocument(body, session.user.id, supabase)
     } else if (action === 'get-upload-url') {
       return await getUploadUrl(body, session.user.id)
     }
@@ -44,7 +47,7 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-async function uploadDocument(body: UploadRequest, userId: string) {
+async function uploadDocument(body: UploadRequest, userId: string, supabase: ServiceRoleClient) {
   const { document_type, side, file_data, file_name } = body
 
   if (!document_type || !side || !file_data || !file_name) {
