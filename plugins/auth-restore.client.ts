@@ -66,9 +66,9 @@ export default defineNuxtPlugin(async (nuxtApp) => {
           // Non-fatal: dashboard will catch API 401s and handle accordingly
           logger.debug('⚠️ Cookie sync failed (non-fatal):', syncErr?.message)
         }
-        
-        logger.debug('✅ Auth restore complete (from Supabase storage)')
-        return
+
+        // A valid Supabase session used to return here, which skipped the
+        // server trial refresh below and left cached is_trial in place.
       } else {
         logger.debug('⚠️ Supabase session exists but getUser failed:', userError?.message)
       }
@@ -93,9 +93,9 @@ export default defineNuxtPlugin(async (nuxtApp) => {
           authStore.user = response.user
           authStore.userProfile = response.profile
           authStore.userRole = response.profile.role || ''
-          // Sync trial info — prefer server-provided, fallback to dedicated endpoint
-          if (response.profile.tenant) {
-            authStore.tenantTrialInfo = response.profile.tenant
+          // Live server row only. A cached trialInfo value is never copied here.
+          if (response.profile.tenant && typeof response.profile.tenant.is_trial === 'boolean') {
+            authStore.applyServerTenantTrial(response.profile.tenant)
           } else if (response.profile.tenant_id) {
             await authStore.loadTenantTrialInfo()
           }

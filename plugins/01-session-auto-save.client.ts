@@ -4,7 +4,7 @@ import { defineNuxtPlugin } from '#app'
 import { watch } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
-import { SESSION_STORAGE_KEY, type PersistentSession } from '~/utils/session-persistence'
+import { buildPersistentSession, clearAppSessionCache, SESSION_STORAGE_KEY } from '~/utils/session-persistence'
 
 export default defineNuxtPlugin((nuxtApp) => {
   // Only run in browser
@@ -19,13 +19,10 @@ export default defineNuxtPlugin((nuxtApp) => {
     () => authStore.user,
     (newUser) => {
       if (newUser && authStore.userProfile && authStore.isInitialized) {
-        const session: PersistentSession = {
+        const session = buildPersistentSession({
           user: newUser,
           profile: authStore.userProfile,
-          trialInfo: authStore.tenantTrialInfo ?? undefined,
-          timestamp: Date.now(),
-          expiresIn: 24 * 60 * 60 * 1000 // 24 hours
-        }
+        })
         try {
           localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
           logger.debug('💾 Session auto-saved to localStorage')
@@ -34,7 +31,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         }
       } else if (!newUser) {
         // Clear localStorage when user logs out
-        localStorage.removeItem(SESSION_STORAGE_KEY)
+        clearAppSessionCache(localStorage)
         logger.debug('🗑️ Session cleared from localStorage (logout)')
       }
     }
