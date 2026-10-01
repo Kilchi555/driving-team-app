@@ -6,25 +6,26 @@
 // - Erstellt einen neuen Link (14 Tage gültig)
 // - Versendet die Erinnerung per Email ODER SMS (je nachdem was verfügbar ist)
 
+import { createError, defineEventHandler, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { v4 as uuidv4 } from 'uuid'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { buildOnboardingEmailHtml } from '~/server/utils/onboarding-email'
+import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
 
 export default defineEventHandler(async (event) => {
   try {
     logger.debug('📧 Onboarding reminder API called')
-    
+
+    const auth = await requireStaffOrInternal(event)
+
     const body = await readBody(event)
-    const { email, firstName, lastName, userId, tenantId, phone } = body
+    const { userId, tenantId } = body || {}
 
-    logger.debug('📧 Onboarding reminder request received:', { 
-      email, firstName, lastName, userId, tenantId, phone 
-    })
+    logger.debug('📧 Onboarding reminder request received:', { userId, tenantId })
 
-    // ✅ WICHTIG: Entweder Email ODER Phone muss vorhanden sein
     if (!userId || !tenantId) {
       console.error('❌ Missing required fields:', { 
         userId: !!userId, tenantId: !!tenantId 
@@ -35,6 +36,40 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    if (
+      auth.mode === 'staff' &&
+      auth.profile?.role !== 'super_admin' &&
+      auth.profile?.tenant_id !== tenantId
+    ) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden – tenant mismatch'
+      })
+    }
+
+    logger.debug('🔄 About to initialize Supabase admin...')
+    const supabase = getSupabaseAdmin()
+    logger.debug('✅ Supabase admin initialized')
+
+    const { data: targetUser, error: targetUserError } = await supabase
+      .from('users')
+      .select('id, tenant_id, email, phone, first_name, last_name, onboarding_status')
+      .eq('id', userId)
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (targetUserError || !targetUser) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'User not found'
+      })
+    }
+
+    // Client email/phone/name are ignored. Recipients come from this row.
+    const email = (targetUser.email as string | null) || null
+    const phone = (targetUser.phone as string | null) || null
+    const firstName = (targetUser.first_name as string | null) || ''
+
     if (!email && !phone) {
       console.error('❌ Missing contact info:', { email: !!email, phone: !!phone })
       throw createError({
@@ -44,10 +79,6 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('✅ Request validation passed')
-    
-    logger.debug('🔄 About to initialize Supabase admin...')
-    const supabase = getSupabaseAdmin()
-    logger.debug('✅ Supabase admin initialized')
 
     // ============================================
     // Step 1: Generate new token (14 Tage gültig)
@@ -83,6 +114,7 @@ export default defineEventHandler(async (event) => {
         onboarding_token_expires: expiresAt.toISOString()
       })
       .eq('id', userId)
+      .eq('tenant_id', tenantId)
       .eq('onboarding_status', 'pending')
     
     logger.debug('🔄 Update query executed')
@@ -219,6 +251,9 @@ export default defineEventHandler(async (event) => {
       smsSent
     }
   } catch (error: any) {
+    if (error?.statusCode === 401 || error?.statusCode === 403 || error?.statusCode === 404) {
+      throw error
+    }
     console.error('❌ Error sending onboarding reminder:', error)
     console.error('❌ Error message:', error.message)
     console.error('❌ Error stack:', error.stack)
