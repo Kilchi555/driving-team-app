@@ -615,6 +615,7 @@ function getCreditTransactionLabel(tx: any): string {
     withdrawal_pending: 'Auszahlung (ausstehend)',
     withdrawal_completed: 'Auszahlung abgeschlossen',
     affiliate_reward: 'Weiterempfehlungs-Gutschrift',
+    credit_product_purchase: 'Produktgutschrift',
   }
   return typeMap[tx.transaction_type] || tx.transaction_type || 'Transaktion'
 }

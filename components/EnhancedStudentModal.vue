@@ -892,7 +892,7 @@
 
                       <!-- Line 1: Service type + category -->
                       <div :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-800'" class="text-sm font-medium leading-snug truncate">
-                        {{ payment.appointment.event_type_label || payment.appointment.event_types?.name || payment.appointment.event_type_code || 'Termin' }}<span v-if="payment.appointment?.type"> · Kat. {{ payment.appointment.type }}</span>
+                        {{ staffProductSaleTitle(payment) }}
                       </div>
 
                       <!-- Line 2: Date + instructor (smaller, lighter) -->
@@ -1957,6 +1957,7 @@
 
 import { ref, computed, toRefs, watch, onUnmounted, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
+import { staffProductSaleTitle } from '~/utils/staff-product-sale-display'
 import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { openPdf } from '~/utils/openPdf'
 import { getSupabase } from '~/utils/supabase'
@@ -4073,6 +4074,7 @@ function getCreditTransactionLabel(tx: any): string {
     withdrawal_completed: 'Auszahlung abgeschlossen',
     affiliate_reward: 'Weiterempfehlung',
     adjustment: 'Guthabenkorrektur',
+    credit_product_purchase: 'Produktgutschrift',
   }
   return typeMap[tx.transaction_type] || tx.transaction_type || 'Transaktion'
 }
