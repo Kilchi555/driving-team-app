@@ -27,6 +27,7 @@ import { randomUUID } from 'crypto'
 import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisition'
 import { saveAcquisitionSelfReport } from '~/server/utils/save-acquisition-self-report'
 import { resolvePublicRegistrationRole } from '~/server/utils/public-registration-role'
+import { createRegistrationUploadGrant } from '~/server/utils/registration-upload-grant'
 import {
   pendingUserNotificationPlan,
   upsertPendingRegistrationUser,
@@ -44,6 +45,28 @@ const CONTACT_FIELD_LABELS: Record<string, string> = {
   zip: 'PLZ',
   city: 'Ort',
   profession: 'Beruf',
+}
+
+async function registrationUploadGrantForStoredUser(
+  supabase: {
+    from: (table: string) => {
+      select: (columns: string) => {
+        eq: (column: string, value: string) => {
+          maybeSingle: () => Promise<{ data: { id?: string; tenant_id?: string | null } | null; error: { message?: string } | null }>
+        }
+      }
+    }
+  },
+  userId: string | null | undefined,
+): Promise<string | undefined> {
+  if (!userId) return undefined
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, tenant_id')
+    .eq('id', userId)
+    .maybeSingle()
+  if (error || !data?.id || !data.tenant_id) return undefined
+  return createRegistrationUploadGrant({ userId: data.id, tenantId: data.tenant_id }) ?? undefined
 }
 
 export default defineEventHandler(async (event) => {
@@ -327,11 +350,18 @@ export default defineEventHandler(async (event) => {
         }
       }
 
+      const uploadGrant = await registrationUploadGrantForStoredUser(serviceSupabase, pendingUserId)
+        .catch((err: any) => {
+          logger.warn('Register', 'Upload grant skipped (pending):', err?.message)
+          return undefined
+        })
+
       return {
         success: true,
         userId: pendingUserId,
         pendingOnly: true,
         message: 'Anfrage gespeichert',
+        ...(uploadGrant ? { uploadGrant } : {}),
       }
     }
 
@@ -872,10 +902,17 @@ export default defineEventHandler(async (event) => {
       logger.warn('Register', 'Self-report failed:', err?.message)
     }
 
+    const uploadGrant = await registrationUploadGrantForStoredUser(serviceSupabase, userProfile.id)
+      .catch((err: any) => {
+        logger.warn('Register', 'Upload grant skipped:', err?.message)
+        return undefined
+      })
+
     return {
       success: true,
       userId: userProfile.id,
-      message: 'Registrierung erfolgreich. Bitte überprüfen Sie Ihre E-Mail.'
+      message: 'Registrierung erfolgreich. Bitte überprüfen Sie Ihre E-Mail.',
+      ...(uploadGrant ? { uploadGrant } : {}),
     }
 
   } catch (error: any) {

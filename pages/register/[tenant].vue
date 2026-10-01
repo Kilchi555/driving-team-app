@@ -2368,7 +2368,8 @@ const submitRegistration = async () => {
             method: 'POST',
             body: {
               userId: data.userId,
-              tenantId: activeTenantId.value,
+              tenantId: activeTenantId,
+              ...(typeof data.uploadGrant === 'string' ? { uploadGrant: data.uploadGrant } : {}),
               fileData: docInfo.data,
               fileName: fileName,
               bucket: 'user-documents',
