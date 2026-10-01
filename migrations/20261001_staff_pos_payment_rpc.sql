@@ -10,7 +10,17 @@
 -- This file adds one SECURITY DEFINER function and grants.
 -- It does not add columns, indexes, or constraints.
 -- It does not replace book_payment_to_accounting.
+-- It does not replace calculate_invoice_vat.
 -- It does not write product_sales.
+--
+-- VAT: tenants.default_vat_rate of the actor tenant, percent (8.10 = 8.10%).
+-- The sale stores one integer net N such that
+--   N + ROUND(N * vat_rate / 100) = cart gross
+-- using the same numeric ROUND the invoice trigger uses.
+-- The trigger remains the only writer of invoice VAT and total.
+-- The snapshot (vat_rate, gross_rappen, net_rappen) is merged into
+-- payments.metadata. A replay returns that snapshot and does not read
+-- the tenant rate again.
 --
 -- Completed cash payments (and later completed online payments) are still
 -- booked by the existing payments_book_accounting trigger. With no
@@ -51,11 +61,20 @@ DECLARE
   v_payment_id uuid;
   v_invoice_id uuid;
   v_invoice_number text;
-  v_vat_rate numeric := 0;
-  v_vat bigint := 0;
-  v_net bigint := 0;
+  v_invoice_total integer;
+  v_vat_rate numeric;
+  v_net bigint;
+  v_candidate bigint;
+  v_match_count integer := 0;
+  v_floor_net bigint;
+  v_bases bigint[];
+  v_line_grosses bigint[];
+  v_alloc_sum bigint;
+  v_leftover bigint;
+  v_room bigint;
+  v_take bigint;
+  v_line_net bigint;
   v_line_vat integer;
-  v_vat_left bigint;
   v_replayed boolean := false;
   v_before integer := 0;
   v_after integer := 0;
@@ -207,6 +226,28 @@ BEGIN
       v_replayed := true;
       v_payment_id := v_payment.id;
     ELSE
+      SELECT default_vat_rate INTO v_vat_rate
+      FROM public.tenants
+      WHERE id = v_tenant;
+      IF v_vat_rate IS NULL OR v_vat_rate < 0 OR v_vat_rate > 100 THEN
+        RAISE EXCEPTION 'invalid_vat_rate';
+      END IF;
+
+      v_floor_net := floor((v_gross::numeric * 100) / (100 + v_vat_rate))::bigint;
+      v_net := NULL;
+      v_match_count := 0;
+      FOR v_candidate IN v_floor_net - 1 .. v_floor_net + 1 LOOP
+        IF v_candidate >= 0
+          AND (v_candidate + ROUND((v_candidate::numeric * v_vat_rate / 100)::numeric)) = v_gross
+        THEN
+          v_net := v_candidate;
+          v_match_count := v_match_count + 1;
+        END IF;
+      END LOOP;
+      IF v_match_count <> 1 OR v_net IS NULL THEN
+        RAISE EXCEPTION 'no_exact_net';
+      END IF;
+
       BEGIN
         INSERT INTO public.payments (
           user_id,
@@ -250,6 +291,10 @@ BEGIN
             'idempotency_key', p_idempotency_key,
             'fulfillment', p_method,
             'products', v_products
+          ) || jsonb_build_object(
+            'vat_rate', v_vat_rate,
+            'gross_rappen', v_gross,
+            'net_rappen', v_net
           )
         )
         RETURNING id INTO v_payment_id;
@@ -293,7 +338,10 @@ BEGIN
         'products', COALESCE(v_payment.metadata->'products', '[]'::jsonb),
         'customer_email', v_reply_email,
         'customer_name', v_reply_name,
-        'wallee_transaction_id', v_payment.wallee_transaction_id
+        'wallee_transaction_id', v_payment.wallee_transaction_id,
+        'vat_rate', v_payment.metadata->'vat_rate',
+        'gross_rappen', v_payment.metadata->'gross_rappen',
+        'net_rappen', v_payment.metadata->'net_rappen'
       );
     END IF;
 
@@ -328,20 +376,6 @@ BEGIN
     END IF;
 
     IF p_method IN ('invoice', 'invoice_send') THEN
-      SELECT COALESCE(default_vat_rate, 0) INTO v_vat_rate
-      FROM public.tenants
-      WHERE id = v_tenant;
-      IF v_vat_rate IS NULL OR v_vat_rate < 0 THEN
-        v_vat_rate := 0;
-      END IF;
-      IF v_vat_rate > 0 THEN
-        v_vat := round(v_gross * v_vat_rate / (100 + v_vat_rate));
-      END IF;
-      IF v_vat < 0 OR v_vat > v_gross THEN
-        RAISE EXCEPTION 'overflow';
-      END IF;
-      v_net := v_gross - v_vat;
-
       v_invoice_number := public.allocate_invoice_number(v_tenant);
       IF v_invoice_number IS NULL OR v_invoice_number = '' THEN
         RAISE EXCEPTION 'invoice_number_failed';
@@ -393,7 +427,7 @@ BEGIN
         'CH',
         v_net::integer,
         v_vat_rate,
-        v_vat::integer,
+        (v_gross - v_net)::integer,
         0,
         v_gross::integer,
         'pdf_created',
@@ -404,26 +438,48 @@ BEGIN
         NULL,
         'Produktverkauf'
       )
-      RETURNING id INTO v_invoice_id;
+      RETURNING id, total_amount_rappen INTO v_invoice_id, v_invoice_total;
 
-      v_vat_left := v_vat;
+      IF v_invoice_total IS DISTINCT FROM v_gross::integer THEN
+        RAISE EXCEPTION 'invoice_total_mismatch';
+      END IF;
+
+      v_bases := '{}'::bigint[];
+      v_line_grosses := '{}'::bigint[];
+      v_alloc_sum := 0;
+      FOR v_item IN SELECT value FROM jsonb_array_elements(v_products) AS t(value)
+      LOOP
+        v_line := (v_item->>'price_rappen')::bigint * (v_item->>'quantity')::bigint;
+        v_line_net := (v_net * v_line) / v_gross;
+        v_bases := v_bases || v_line_net;
+        v_line_grosses := v_line_grosses || v_line;
+        v_alloc_sum := v_alloc_sum + v_line_net;
+      END LOOP;
+      v_leftover := v_net - v_alloc_sum;
+      v_idx := v_line_count;
+      WHILE v_leftover > 0 AND v_idx >= 1 LOOP
+        v_room := v_line_grosses[v_idx] - v_bases[v_idx];
+        IF v_room > 0 THEN
+          v_take := LEAST(v_room, v_leftover);
+          v_bases[v_idx] := v_bases[v_idx] + v_take;
+          v_leftover := v_leftover - v_take;
+        END IF;
+        v_idx := v_idx - 1;
+      END LOOP;
+      IF v_leftover <> 0 THEN
+        RAISE EXCEPTION 'vat_allocation_failed';
+      END IF;
+
       v_idx := 0;
       FOR v_item IN SELECT value FROM jsonb_array_elements(v_products) AS t(value)
       LOOP
         v_idx := v_idx + 1;
-        v_line := (v_item->>'price_rappen')::bigint * (v_item->>'quantity')::bigint;
-        IF v_idx = v_line_count OR v_vat_rate <= 0 THEN
-          v_line_vat := CASE WHEN v_vat_rate <= 0 THEN 0 ELSE v_vat_left::integer END;
-        ELSE
-          v_line_vat := LEAST(
-            round(v_line * v_vat_rate / (100 + v_vat_rate))::bigint,
-            v_vat_left
-          )::integer;
+        v_line := v_line_grosses[v_idx];
+        v_line_net := v_bases[v_idx];
+        v_line_vat := (v_line - v_line_net)::integer;
+        IF v_line_vat < 0 OR v_line_net < 0 OR v_line_net > v_line THEN
+          RAISE EXCEPTION 'vat_allocation_failed';
         END IF;
-        IF v_line_vat < 0 OR v_line_vat > v_line THEN
-          RAISE EXCEPTION 'overflow';
-        END IF;
-        v_vat_left := v_vat_left - v_line_vat;
 
         INSERT INTO public.invoice_items (
           invoice_id,
@@ -444,8 +500,8 @@ BEGIN
           (v_item->>'product_id')::uuid,
           v_item->>'name',
           (v_item->>'quantity')::numeric,
-          (v_item->>'price_rappen')::integer,
-          v_line::integer,
+          (v_line_net / (v_item->>'quantity')::integer)::integer,
+          v_line_net::integer,
           v_vat_rate,
           v_line_vat,
           v_idx - 1,
@@ -502,7 +558,10 @@ BEGIN
       'products', v_products,
       'customer_email', v_customer.email,
       'customer_name', trim(both ' ' FROM concat_ws(' ', v_customer.first_name, v_customer.last_name)),
-      'wallee_transaction_id', NULL
+      'wallee_transaction_id', NULL,
+      'vat_rate', v_vat_rate,
+      'gross_rappen', v_gross,
+      'net_rappen', v_net
     );
   END IF;
 

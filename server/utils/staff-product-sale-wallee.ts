@@ -1,5 +1,5 @@
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { staffPosWalleeLineItems } from '~/server/utils/staff-product-sale'
 import { Wallee } from 'wallee'
 import { logger } from '~/utils/logger'
 
@@ -14,6 +14,7 @@ export async function startStaffPosWallee(input: {
   products: Array<{ name?: string; quantity?: number; price_rappen?: number }>
   customerEmail: string
   customerName: string
+  vatRatePercent: number
 }): Promise<{ transactionId: string | null; paymentUrl: string | null; warning?: string }> {
   const walleeConfig = await getWalleeConfigForTenant(input.tenantId)
   const spaceId = walleeConfig.spaceId
@@ -22,17 +23,17 @@ export async function startStaffPosWallee(input: {
   const paymentPageService = new Wallee.api.TransactionPaymentPageService(sdkConfig)
   const baseUrl = (process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch').replace(/\/$/, '')
 
-  const lineItems = (input.products.length ? input.products : [{
+  const sourceLines = input.products.length ? input.products : [{
     name: 'Produkt',
     quantity: 1,
     price_rappen: input.totalRappen,
-  }]).map((item, index) => ({
+  }]
+  const lineItems = staffPosWalleeLineItems(sourceLines.map((item) => ({
+    ...item,
     name: toAscii(item.name || 'Produkt').substring(0, 100) || 'Produkt',
-    quantity: item.quantity || 1,
-    amountIncludingTax: ((item.price_rappen || 0) * (item.quantity || 1)) / 100,
+  })), input.vatRatePercent).map((item) => ({
+    ...item,
     type: Wallee.model.LineItemType.PRODUCT,
-    uniqueId: `item-${index + 1}`,
-    taxRate: 0,
   }))
 
   const transactionCreate: Wallee.model.TransactionCreate = {

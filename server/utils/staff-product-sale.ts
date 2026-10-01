@@ -2,7 +2,12 @@
  * Staff POS product sale rules.
  * Money, credit, and eligibility are decided here and again inside
  * public.staff_pos_sale. Client prices and credit amounts are rejected.
+ * Invoice VAT amounts are not written here. The RPC finds the integer
+ * net and calculate_invoice_vat writes the invoice total.
  */
+import { computeVatAmountRappen } from '~/server/utils/invoice-vat'
+import { mergePaymentMetadata, normalizePaymentMetadata } from '~/server/utils/payment-metadata'
+import { buildWalleeTaxedLineItem } from '~/server/utils/wallee-line-item'
 
 export const STAFF_PRODUCT_SALE_SOURCE = 'staff_product_sale'
 export const STAFF_POS_METHODS = ['cash', 'deferred', 'invoice', 'invoice_send', 'wallee'] as const
@@ -181,15 +186,117 @@ export function sumGrossRappen(lines: { price_rappen: number; quantity: number }
   return total
 }
 
-/** Catalog price is gross. VAT is extracted, never added on top. */
-export function vatFromGrossRappen(grossRappen: number, vatRatePercent: number): { net: number; vat: number } {
-  const rate = Number(vatRatePercent)
-  if (!Number.isFinite(rate) || rate <= 0 || grossRappen <= 0) {
-    return { net: grossRappen, vat: 0 }
+/**
+ * Integer search for the cart net the invoice trigger can reproduce.
+ * Not an invoice-total writer. staff_pos_sale evaluates the same
+ * ROUND(numeric) expression, and calculate_invoice_vat remains the
+ * only amount authority.
+ *
+ * vatRateHundredths: 810 means 8.10%. Ties round away from zero.
+ */
+export function findExactCartNet(
+  grossRappen: number,
+  vatRateHundredths: number,
+): { net: number; vat: number } | null {
+  if (!Number.isInteger(grossRappen) || grossRappen < 0) return null
+  if (!Number.isInteger(vatRateHundredths) || vatRateHundredths < 0 || vatRateHundredths > 10000) {
+    return null
   }
-  const vat = Math.round((grossRappen * rate) / (100 + rate))
-  const bounded = Math.max(0, Math.min(grossRappen, vat))
-  return { vat: bounded, net: grossRappen - bounded }
+  const gross = BigInt(grossRappen)
+  const rate = BigInt(vatRateHundredths)
+  const floorNet = (gross * 10000n) / (10000n + rate)
+  let found: bigint | null = null
+  for (const candidate of [floorNet - 1n, floorNet, floorNet + 1n]) {
+    if (candidate < 0n) continue
+    const vat = roundHalfAwayFromZero(candidate * rate, 10000n)
+    if (candidate + vat === gross) {
+      if (found !== null) return null
+      found = candidate
+    }
+  }
+  if (found === null) return null
+  const vat = roundHalfAwayFromZero(found * rate, 10000n)
+  return { net: Number(found), vat: Number(vat) }
+}
+
+/** Percent text such as "8.10" or "0". Rejects null, negative, and values above 100. */
+export function parseVatRateHundredths(rate: string): number | null {
+  const match = /^(\d{1,3})(?:\.(\d{1,2}))?$/.exec(rate.trim())
+  if (!match) return null
+  const whole = Number(match[1])
+  const fraction = (match[2] ?? '').padEnd(2, '0')
+  if (!Number.isInteger(whole) || !/^\d{2}$/.test(fraction)) return null
+  const hundredths = whole * 100 + Number(fraction)
+  if (hundredths < 0 || hundredths > 10000) return null
+  return hundredths
+}
+
+/** Application-boundary check. Does not coerce invalid rates to 0. */
+export function requirePosVatRateHundredths(raw: unknown): number {
+  if (typeof raw === 'number') {
+    if (!Number.isFinite(raw)) {
+      throw new StaffProductSaleError('invalid_vat_rate', 400, 'MwSt-Satz ist ungültig')
+    }
+    raw = raw.toFixed(2)
+  }
+  if (typeof raw !== 'string') {
+    throw new StaffProductSaleError('invalid_vat_rate', 400, 'MwSt-Satz ist ungültig')
+  }
+  const hundredths = parseVatRateHundredths(raw)
+  if (hundredths == null) {
+    throw new StaffProductSaleError('invalid_vat_rate', 400, 'MwSt-Satz ist ungültig')
+  }
+  return hundredths
+}
+
+/**
+ * Split one header net across line grosses. The last lines receive the
+ * leftover rappen, never more than their own gross. This is not a
+ * per-line VAT inversion.
+ */
+export function allocatePositionNets(
+  lines: Array<{ price_rappen: number; quantity: number }>,
+  netRappen: number,
+): number[] {
+  if (!Number.isInteger(netRappen) || netRappen < 0) {
+    throw new StaffProductSaleError('no_exact_net', 400, 'Für diesen Preis gibt es keinen passenden Nettobetrag')
+  }
+  const grosses = lines.map((line) => {
+    if (!Number.isInteger(line.price_rappen) || !Number.isInteger(line.quantity) || line.quantity < 1) {
+      throw new StaffProductSaleError('invalid_total', 400, 'Ungültiger Betrag')
+    }
+    const gross = line.price_rappen * line.quantity
+    if (!Number.isSafeInteger(gross) || gross <= 0) {
+      throw new StaffProductSaleError('invalid_total', 400, 'Ungültiger Betrag')
+    }
+    return BigInt(gross)
+  })
+  const cart = grosses.reduce((sum, gross) => sum + gross, 0n)
+  const net = BigInt(netRappen)
+  if (net > cart) {
+    throw new StaffProductSaleError('vat_allocation_failed', 400, 'MwSt-Aufteilung ist ungültig')
+  }
+  const bases = grosses.map((gross) => (net * gross) / cart)
+  let leftover = net - bases.reduce((sum, base) => sum + base, 0n)
+  for (let index = bases.length - 1; index >= 0 && leftover > 0n; index -= 1) {
+    const room = grosses[index] - bases[index]
+    if (room > 0n) {
+      const take = room < leftover ? room : leftover
+      bases[index] += take
+      leftover -= take
+    }
+  }
+  if (leftover !== 0n) {
+    throw new StaffProductSaleError('vat_allocation_failed', 400, 'MwSt-Aufteilung ist ungültig')
+  }
+  return bases.map((base) => Number(base))
+}
+
+function roundHalfAwayFromZero(numerator: bigint, denominator: bigint): bigint {
+  const quotient = numerator / denominator
+  const remainder = numerator % denominator
+  if (remainder * 2n >= denominator) return quotient + 1n
+  return quotient
 }
 
 export function creditRappenForProduct(product: {
@@ -237,6 +344,195 @@ export function buildSaleMetadata(input: {
       credit_amount_rappen: product.credit_amount_rappen,
     })),
   }
+}
+
+export function mergeStaffPosVatSnapshot(
+  metadata: unknown,
+  snapshot: { vatRate: number; grossRappen: number; netRappen: number },
+): Record<string, unknown> {
+  return mergePaymentMetadata(metadata, {
+    vat_rate: snapshot.vatRate,
+    gross_rappen: snapshot.grossRappen,
+    net_rappen: snapshot.netRappen,
+  })
+}
+
+export type StaffPosVatSnapshot = {
+  vatRate: number
+  grossRappen: number
+  netRappen: number
+  vatRappen: number
+}
+
+/** Stored sale snapshot. Incomplete metadata is not a rate of 0. */
+export function readStaffPosVatSnapshot(metadata: unknown): StaffPosVatSnapshot | null {
+  const meta = normalizePaymentMetadata(metadata)
+  if (meta.source !== STAFF_PRODUCT_SALE_SOURCE) return null
+  const vatRate = Number(meta.vat_rate)
+  const grossRappen = Number(meta.gross_rappen)
+  const netRappen = Number(meta.net_rappen)
+  if (!Number.isFinite(vatRate) || vatRate < 0 || vatRate > 100) return null
+  if (!Number.isInteger(grossRappen) || !Number.isInteger(netRappen)) return null
+  if (grossRappen < 0 || netRappen < 0 || netRappen > grossRappen) return null
+  return { vatRate, grossRappen, netRappen, vatRappen: grossRappen - netRappen }
+}
+
+export type AutoDraftMoney = {
+  subtotal_rappen: number
+  vat_rate: number
+  vat_amount_rappen: number
+  discount_amount_rappen: number
+  total_amount_rappen: number
+}
+
+type AutoDraftPayment = {
+  metadata?: unknown
+  total_amount_rappen?: number | null
+  discount_amount_rappen?: number | null
+  voucher_discount_rappen?: number | null
+  credit_used_rappen?: number | null
+  amount_paid_rappen?: number | null
+}
+
+/**
+ * Appointment drafts keep the existing tenant-rate calculation.
+ * A staff product sale with a stored snapshot contributes that gross
+ * price once. VAT is not added on top of it.
+ */
+export function autoDraftAmountsFromPayments(
+  payments: AutoDraftPayment[],
+  tenantVatRate: number,
+): AutoDraftMoney {
+  const snapshotted: Array<{ payment: AutoDraftPayment; snapshot: StaffPosVatSnapshot }> = []
+  const rest: AutoDraftPayment[] = []
+  for (const payment of payments) {
+    const snapshot = readStaffPosVatSnapshot(payment.metadata)
+    if (snapshot) snapshotted.push({ payment, snapshot })
+    else rest.push(payment)
+  }
+
+  const normal = legacyAutoDraftAmounts(rest, tenantVatRate)
+  if (snapshotted.length === 0) return normal
+
+  let posNet = 0
+  let posVat = 0
+  let posGross = 0
+  let posDiscount = 0
+  const rates = new Set<number>()
+  for (const row of snapshotted) {
+    posNet += row.snapshot.netRappen
+    posVat += row.snapshot.vatRappen
+    posGross += row.snapshot.grossRappen
+    posDiscount += Number(row.payment.discount_amount_rappen || 0)
+      + Number(row.payment.voucher_discount_rappen || 0)
+      + Number(row.payment.credit_used_rappen || 0)
+      + Math.max(0, Number(row.payment.amount_paid_rappen) || 0)
+    rates.add(row.snapshot.vatRate)
+  }
+  const uniqueRate = rates.size === 1 ? [...rates][0] : null
+  return {
+    subtotal_rappen: normal.subtotal_rappen + posNet,
+    vat_rate: rest.length === 0 && uniqueRate != null ? uniqueRate : normal.vat_rate,
+    vat_amount_rappen: normal.vat_amount_rappen + posVat,
+    discount_amount_rappen: normal.discount_amount_rappen + posDiscount,
+    total_amount_rappen: normal.total_amount_rappen + posGross - posDiscount,
+  }
+}
+
+function legacyAutoDraftAmounts(payments: AutoDraftPayment[], tenantVatRate: number): AutoDraftMoney {
+  const grossOf = (payment: AutoDraftPayment) =>
+    Number(payment.total_amount_rappen || 0)
+    + Number(payment.discount_amount_rappen || 0)
+    + Number(payment.voucher_discount_rappen || 0)
+  const subtotal = payments.reduce((sum, payment) => sum + grossOf(payment), 0)
+  const totalDiscounts = payments.reduce(
+    (sum, payment) => sum + Number(payment.discount_amount_rappen || 0) + Number(payment.voucher_discount_rappen || 0),
+    0,
+  )
+  const totalCredits = payments.reduce((sum, payment) => sum + Number(payment.credit_used_rappen || 0), 0)
+  const totalAlreadyPaid = payments.reduce(
+    (sum, payment) => sum + Math.max(0, Number(payment.amount_paid_rappen) || 0),
+    0,
+  )
+  const netAfter = subtotal - totalDiscounts - totalCredits - totalAlreadyPaid
+  const vatAmount = computeVatAmountRappen(Math.max(0, netAfter), tenantVatRate)
+  return {
+    subtotal_rappen: subtotal,
+    vat_rate: tenantVatRate,
+    vat_amount_rappen: vatAmount,
+    discount_amount_rappen: totalDiscounts + totalCredits + totalAlreadyPaid,
+    total_amount_rappen: netAfter + vatAmount,
+  }
+}
+
+export type StaffPosAllocatedLine = {
+  product_id: string | null
+  name: string
+  quantity: number
+  grossRappen: number
+  netRappen: number
+  vatRappen: number
+  vatRate: number
+}
+
+/** Invoice lines for a stored POS snapshot. Null when this is not that payment. */
+export function staffPosAllocatedLines(metadata: unknown): StaffPosAllocatedLine[] | null {
+  const snapshot = readStaffPosVatSnapshot(metadata)
+  if (!snapshot) return null
+  const meta = normalizePaymentMetadata(metadata)
+  const rawProducts = Array.isArray(meta.products) ? meta.products : []
+  let lines = rawProducts.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return []
+    const row = entry as Record<string, unknown>
+    const price = Number(row.price_rappen)
+    const quantity = Number(row.quantity)
+    if (!Number.isInteger(price) || !Number.isInteger(quantity) || price <= 0 || quantity < 1) return []
+    return [{
+      product_id: typeof row.product_id === 'string' ? row.product_id : null,
+      name: typeof row.name === 'string' && row.name ? row.name : 'Produkt',
+      price_rappen: price,
+      quantity,
+    }]
+  })
+  const productGross = lines.reduce((sum, line) => sum + line.price_rappen * line.quantity, 0)
+  if (productGross !== snapshot.grossRappen) {
+    lines = [{
+      product_id: null,
+      name: 'Produkt',
+      price_rappen: snapshot.grossRappen,
+      quantity: 1,
+    }]
+  }
+  const nets = allocatePositionNets(lines, snapshot.netRappen)
+  return lines.map((line, index) => {
+    const grossRappen = line.price_rappen * line.quantity
+    return {
+      product_id: line.product_id,
+      name: line.name,
+      quantity: line.quantity,
+      grossRappen,
+      netRappen: nets[index],
+      vatRappen: grossRappen - nets[index],
+      vatRate: snapshot.vatRate,
+    }
+  })
+}
+
+/** Wallee line amounts stay gross CHF. taxRate is the stored percent, not a fraction. */
+export function staffPosWalleeLineItems(
+  products: Array<{ name?: string; quantity?: number; price_rappen?: number }>,
+  vatRatePercent: number,
+) {
+  const lines = products.length
+    ? products
+    : [{ name: 'Produkt', quantity: 1, price_rappen: 0 }]
+  return lines.map((item, index) => buildWalleeTaxedLineItem({
+    name: item.name || 'Produkt',
+    quantity: item.quantity || 1,
+    amountIncludingTaxChf: ((item.price_rappen || 0) * (item.quantity || 1)) / 100,
+    vatRatePercent,
+    uniqueId: `item-${index + 1}`,
+  }))
 }
 
 export function snapshotProduct(product: CatalogProduct, quantity: number): StaffPosProductSnapshot {

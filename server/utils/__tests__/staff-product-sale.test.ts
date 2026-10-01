@@ -17,9 +17,16 @@ import {
   partitionWebhookPayments,
   paymentStatusFor,
   planInvoiceSend,
+  allocatePositionNets,
+  autoDraftAmountsFromPayments,
+  findExactCartNet,
+  mergeStaffPosVatSnapshot,
+  parseVatRateHundredths,
+  requirePosVatRateHundredths,
   snapshotProduct,
+  staffPosAllocatedLines,
+  staffPosWalleeLineItems,
   sumGrossRappen,
-  vatFromGrossRappen,
   webhookMayCredit,
 } from '../staff-product-sale'
 import { executeStaffProductSale } from '../staff-product-sale-orchestrator'
@@ -147,9 +154,23 @@ describe('payment and credit matrix', () => {
     expect(paymentStatusFor('wallee')).toBe('pending')
   })
 
-  it('extracts VAT from the gross catalog price', () => {
-    expect(vatFromGrossRappen(10810, 8.1)).toEqual({ net: 10000, vat: 810 })
-    expect(vatFromGrossRappen(85000, 0)).toEqual({ net: 85000, vat: 0 })
+  it('stores the VAT snapshot without dropping the sale fields', () => {
+    const metadata = mergeStaffPosVatSnapshot(buildSaleMetadata({
+      idempotencyKey: key,
+      method: 'cash',
+      products: [snapshotProduct(catalog(), 1)],
+    }), { vatRate: 8.1, grossRappen: 10810, netRappen: 10000 })
+    expect(metadata).toMatchObject({
+      source: 'staff_product_sale',
+      idempotency_key: key,
+      fulfillment: 'cash',
+      vat_rate: 8.1,
+      gross_rappen: 10810,
+      net_rappen: 10000,
+    })
+    expect(metadata.products).toEqual([
+      expect.objectContaining({ product_id: productId, price_rappen: 85000 }),
+    ])
   })
 
   it('stores the server snapshot and idempotency key', () => {
@@ -352,8 +373,10 @@ describe('orchestrator', () => {
   })
 
   it('starts online payment without credit', async () => {
-    const startWallee = vi.fn(async (input: { paymentId: string }) => {
+    const startWallee = vi.fn(async (input: { paymentId: string; vatRatePercent: number; totalRappen: number }) => {
       expect(input.paymentId).toBe('pay-6')
+      expect(input.vatRatePercent).toBe(8.1)
+      expect(input.totalRappen).toBe(5000)
       return { transactionId: 'tx-9', paymentUrl: 'https://pay.example/9' }
     })
     const actions: string[] = []
@@ -366,6 +389,9 @@ describe('orchestrator', () => {
           payment_status: 'pending',
           credit_applied: false,
           total_rappen: 5000,
+          vat_rate: 8.1,
+          gross_rappen: 5000,
+          net_rappen: 4625,
           products: [{ name: 'Abo', quantity: 2, price_rappen: 2500 }],
           customer_email: 'a@example.com',
           customer_name: 'Ada',
@@ -487,6 +513,14 @@ describe('migration and legacy guards', () => {
     expect(migration2).toContain('credit_to_wallet')
     expect(migration2).toContain('false')
     expect(migration2).toContain('unique_violation')
+    expect(migration2).toContain("RAISE EXCEPTION 'invalid_vat_rate'")
+    expect(migration2).toContain("RAISE EXCEPTION 'no_exact_net'")
+    expect(migration2).toContain("RAISE EXCEPTION 'invoice_total_mismatch'")
+    expect(migration2).toContain('ROUND((v_candidate::numeric * v_vat_rate / 100)::numeric)')
+    expect(migration2.match(/SELECT default_vat_rate/g)).toHaveLength(1)
+    expect(migration2).toContain("'vat_rate', v_payment.metadata->'vat_rate'")
+    expect(migration2).not.toContain('COALESCE(default_vat_rate')
+    expect(migration2).not.toContain('v_gross * v_vat_rate / (100 + v_vat_rate)')
     expect(migration2).toContain('pg_advisory_xact_lock')
     expect(migration2).toContain("'credit_product_purchase'")
     expect(migration2).toContain("'payment'")
@@ -514,5 +548,220 @@ describe('migration and legacy guards', () => {
 describe('method alias', () => {
   it('maps the email link to wallee', () => {
     expect(parseStaffPosMethod('online')).toBe('wallee')
+  })
+})
+
+describe('VAT integer net', () => {
+  const rate = (text: string) => {
+    const hundredths = parseVatRateHundredths(text)
+    expect(hundredths).not.toBeNull()
+    return hundredths as number
+  }
+
+  it('keeps a 0% cart unchanged', () => {
+    expect(findExactCartNet(85000, rate('0'))).toEqual({ net: 85000, vat: 0 })
+  })
+
+  it('matches 8.10% on 108.10 CHF', () => {
+    expect(findExactCartNet(10810, rate('8.10'))).toEqual({ net: 10000, vat: 810 })
+  })
+
+  it('matches 7.70% on 100 rappen', () => {
+    expect(findExactCartNet(100, rate('7.70'))).toEqual({ net: 93, vat: 7 })
+  })
+
+  it('matches 8.10% on 101 rappen', () => {
+    expect(findExactCartNet(101, rate('8.10'))).toEqual({ net: 93, vat: 8 })
+  })
+
+  it('aborts 100 rappen at 8.10%', () => {
+    expect(findExactCartNet(100, rate('8.10'))).toBeNull()
+  })
+
+  it('aborts 7 rappen at 8.10%', () => {
+    expect(findExactCartNet(7, rate('8.10'))).toBeNull()
+  })
+
+  it('aborts 7 rappen at 7.70%', () => {
+    expect(findExactCartNet(7, rate('7.70'))).toBeNull()
+  })
+
+  it('solves quantity from the line gross', () => {
+    expect(findExactCartNet(100, rate('8.10'))).toBeNull()
+    expect(findExactCartNet(200, rate('8.10'))).toEqual({ net: 185, vat: 15 })
+    expect(allocatePositionNets([{ price_rappen: 100, quantity: 2 }], 185)).toEqual([185])
+  })
+
+  it('solves eight 1-rappen units from the header gross once', () => {
+    const perUnit = findExactCartNet(1, rate('8.10'))
+    expect(perUnit).toEqual({ net: 1, vat: 0 })
+    expect(findExactCartNet(8, rate('8.10'))).toEqual({ net: 7, vat: 1 })
+    expect((perUnit?.net || 0) * 8).not.toBe(7)
+    expect(allocatePositionNets(
+      Array.from({ length: 8 }, () => ({ price_rappen: 1, quantity: 1 })),
+      7,
+    ).reduce((sum, net) => sum + net, 0)).toBe(7)
+  })
+
+  it('allocates 2 + 6 from one header net', () => {
+    const header = findExactCartNet(8, rate('8.10'))
+    expect(header).toEqual({ net: 7, vat: 1 })
+    const nets = allocatePositionNets([
+      { price_rappen: 2, quantity: 1 },
+      { price_rappen: 6, quantity: 1 },
+    ], header!.net)
+    expect(nets.reduce((sum, net) => sum + net, 0)).toBe(header!.net)
+    expect(findExactCartNet(2, rate('8.10'))!.net + findExactCartNet(6, rate('8.10'))!.net).not.toBe(header!.net)
+  })
+
+  it('rejects NULL, negative, and rates above 100 before any insert', () => {
+    expect(() => requirePosVatRateHundredths(null)).toThrow(StaffProductSaleError)
+    expect(() => requirePosVatRateHundredths(undefined)).toThrow(StaffProductSaleError)
+    expect(() => requirePosVatRateHundredths(Number.NaN)).toThrow(StaffProductSaleError)
+    expect(() => requirePosVatRateHundredths(-1)).toThrow(StaffProductSaleError)
+    expect(() => requirePosVatRateHundredths('-0.01')).toThrow(StaffProductSaleError)
+    expect(() => requirePosVatRateHundredths(100.01)).toThrow(StaffProductSaleError)
+    expect(() => requirePosVatRateHundredths('101')).toThrow(StaffProductSaleError)
+    expect(requirePosVatRateHundredths(0)).toBe(0)
+    expect(requirePosVatRateHundredths('8.10')).toBe(810)
+    expect(requirePosVatRateHundredths('100')).toBe(10000)
+  })
+
+  it('keeps a changed tenant rate off an existing snapshot', () => {
+    const stored = mergeStaffPosVatSnapshot({
+      source: 'staff_product_sale',
+      idempotency_key: key,
+      fulfillment: 'wallee',
+      products: [{ product_id: productId, name: 'Abo', quantity: 1, price_rappen: 10810 }],
+    }, { vatRate: 8.1, grossRappen: 10810, netRappen: 10000 })
+    const currentTenantRate = 0
+    const draft = autoDraftAmountsFromPayments([{
+      metadata: stored,
+      total_amount_rappen: 10810,
+      discount_amount_rappen: 0,
+      amount_paid_rappen: 0,
+    }], currentTenantRate)
+    expect(draft).toMatchObject({
+      subtotal_rappen: 10000,
+      vat_rate: 8.1,
+      vat_amount_rappen: 810,
+      total_amount_rappen: 10810,
+    })
+    const lines = staffPosAllocatedLines(stored)
+    expect(lines?.reduce((sum, line) => sum + line.netRappen, 0)).toBe(10000)
+    expect(lines?.[0].vatRate).toBe(8.1)
+  })
+
+  it('still adds tenant VAT for a non-POS payment', () => {
+    expect(autoDraftAmountsFromPayments([{
+      total_amount_rappen: 10000,
+      discount_amount_rappen: 0,
+      amount_paid_rappen: 0,
+    }], 8.1)).toMatchObject({
+      subtotal_rappen: 10000,
+      vat_rate: 8.1,
+      vat_amount_rappen: 810,
+      total_amount_rappen: 10810,
+    })
+  })
+
+  it('passes the stored percent to Wallee and keeps the gross CHF amount', () => {
+    const taxed = staffPosWalleeLineItems(
+      [{ name: 'Abo', quantity: 1, price_rappen: 10810 }],
+      8.1,
+    )
+    expect(taxed[0].taxRate).toBe(8.1)
+    expect(taxed[0].amountIncludingTax).toBe(108.1)
+    const exempt = staffPosWalleeLineItems(
+      [{ name: 'Abo', quantity: 1, price_rappen: 85000 }],
+      0,
+    )
+    expect(exempt[0].taxRate).toBe(0)
+    expect(exempt[0].amountIncludingTax).toBe(850)
+  })
+})
+
+describe('VAT replay and Wallee gate', () => {
+  const body = {
+    customer_id: customer,
+    idempotency_key: key,
+    items: [{ product_id: productId, quantity: 1 }],
+    payment_method: 'online',
+  }
+
+  it('starts Wallee with the stored snapshot after replay', async () => {
+    const startWallee = vi.fn(async (input: { vatRatePercent: number }) => {
+      expect(input.vatRatePercent).toBe(8.1)
+      return { transactionId: 'tx-2', paymentUrl: 'https://pay.example/2' }
+    })
+    await executeStaffProductSale({
+      rpc: async (args) => {
+        if (args.p_action === 'create') {
+          return {
+            ok: true,
+            replayed: true,
+            payment_id: 'pay-9',
+            payment_status: 'pending',
+            total_rappen: 10810,
+            vat_rate: 8.1,
+            gross_rappen: 10810,
+            net_rappen: 10000,
+            products: [{ name: 'Abo', quantity: 1, price_rappen: 10810 }],
+            customer_email: 'a@example.com',
+            customer_name: 'Ada',
+          }
+        }
+        if (args.p_action === 'claim_wallee') {
+          return { ok: true, claimed: true, claim_token: 'w-2', payment_id: 'pay-9' }
+        }
+        return { ok: true, payment_id: 'pay-9' }
+      },
+      actor,
+      body,
+      startWallee,
+    })
+    expect(startWallee).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not start Wallee when the sale has no exact net', async () => {
+    const startWallee = vi.fn()
+    await expect(executeStaffProductSale({
+      rpc: async () => {
+        throw new Error('no_exact_net')
+      },
+      actor,
+      body,
+      startWallee,
+    })).rejects.toMatchObject({ code: 'no_exact_net' })
+    expect(startWallee).not.toHaveBeenCalled()
+  })
+
+  it('does not start Wallee when the stored rate is missing', async () => {
+    const startWallee = vi.fn()
+    const result = await executeStaffProductSale({
+      rpc: async (args) => {
+        if (args.p_action === 'create') {
+          return {
+            ok: true,
+            payment_id: 'pay-10',
+            payment_status: 'pending',
+            total_rappen: 10810,
+            customer_email: 'a@example.com',
+            customer_name: 'Ada',
+            products: [],
+          }
+        }
+        if (args.p_action === 'claim_wallee') {
+          return { ok: true, claimed: true, claim_token: 'w-3', payment_id: 'pay-10' }
+        }
+        return { ok: true, released: true, payment_id: 'pay-10' }
+      },
+      actor,
+      body,
+      startWallee,
+    })
+    expect(startWallee).not.toHaveBeenCalled()
+    expect(result.payment_url).toBeNull()
+    expect(result.warning).toBe('MwSt-Satz des Verkaufs fehlt')
   })
 })

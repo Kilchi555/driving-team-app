@@ -35,6 +35,9 @@ export interface StaffPosRpcResult {
   customer_email?: string | null
   customer_name?: string | null
   wallee_transaction_id?: string | null
+  vat_rate?: number | string | null
+  gross_rappen?: number | string | null
+  net_rappen?: number | string | null
   payment_url?: string | null
   claimed?: boolean
   already_sent?: boolean
@@ -77,6 +80,10 @@ function mapRpcError(error: any): StaffProductSaleError {
     ['invoice_not_sent', 409, 'Rechnung wurde noch nicht versendet'],
     ['payment_not_completed', 409, 'Zahlung ist noch nicht bestätigt'],
     ['invalid_payment', 404, 'Zahlung nicht gefunden'],
+    ['invalid_vat_rate', 400, 'MwSt-Satz ist ungültig'],
+    ['no_exact_net', 400, 'Für diesen Preis gibt es keinen passenden Nettobetrag'],
+    ['invoice_total_mismatch', 409, 'Rechnungsbetrag stimmt nicht mit dem Katalogpreis überein'],
+    ['vat_allocation_failed', 409, 'MwSt-Aufteilung ist ungültig'],
   ]
   for (const [code, status, message] of known) {
     if (text.includes(code)) return new StaffProductSaleError(code, status, message)
@@ -120,6 +127,7 @@ export async function executeStaffProductSale(opts: {
     products: any[]
     customerEmail: string
     customerName: string
+    vatRatePercent: number
   }) => Promise<{ transactionId: string | null; paymentUrl: string | null; warning?: string }>
   sendPaymentLink?: (input: { to: string; paymentUrl: string; customerName: string; totalRappen: number }) => Promise<void>
 }): Promise<StaffPosSaleResult> {
@@ -293,6 +301,12 @@ async function finishWallee(
     return { ...pending, retry_same_key: true, warning: 'E-Mail-Adresse fehlt für den Zahlungslink' }
   }
 
+  const vatRate = storedVatPercent(created.vat_rate)
+  if (vatRate == null) {
+    await releaseWallee(opts, result.payment_id, claim.claim_token, method, customerId, items, idempotencyKey)
+    return { ...pending, retry_same_key: true, warning: 'MwSt-Satz des Verkaufs fehlt' }
+  }
+
   try {
     const started = await opts.startWallee?.({
       paymentId: result.payment_id,
@@ -300,6 +314,7 @@ async function finishWallee(
       products: created.products || [],
       customerEmail: email,
       customerName: created.customer_name || 'Kunde',
+      vatRatePercent: vatRate,
     })
     if (!started?.transactionId) {
       await releaseWallee(opts, result.payment_id, claim.claim_token, method, customerId, items, idempotencyKey)
@@ -337,6 +352,13 @@ async function finishWallee(
     await releaseWallee(opts, result.payment_id, claim.claim_token, method, customerId, items, idempotencyKey)
     return { ...pending, retry_same_key: true, warning: 'Online-Zahlung konnte nicht gestartet werden' }
   }
+}
+
+function storedVatPercent(raw: unknown): number | null {
+  if (raw == null || raw === '') return null
+  const rate = Number(raw)
+  if (!Number.isFinite(rate) || rate < 0 || rate > 100) return null
+  return rate
 }
 
 async function releaseWallee(
