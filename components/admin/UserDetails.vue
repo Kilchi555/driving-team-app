@@ -259,13 +259,20 @@
               </div>
               <div v-if="userDetails?.role === 'client' && studentCreditRappen !== null">
                 <dt class="text-sm font-medium text-gray-500">Guthaben</dt>
-                <dd class="mt-1">
+                <dd class="mt-1 flex flex-wrap items-center gap-2">
                   <span
                     class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
-                    :class="studentCreditRappen > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'"
+                    :class="studentCreditRappen > 0 ? 'bg-green-100 text-green-800' : studentCreditRappen < 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'"
                   >
                     CHF {{ ((studentCreditRappen ?? 0) / 100).toFixed(2) }}
                   </span>
+                  <span v-if="studentCreditRappen < 0" class="text-xs font-medium text-red-700">Offener Betrag</span>
+                  <button
+                    v-if="userDetails && canManageUser(userDetails as any)"
+                    type="button"
+                    class="text-xs font-medium text-blue-600 hover:text-blue-800"
+                    @click="openCreditModal"
+                  >Aufladen</button>
                 </dd>
               </div>
               <div v-if="userDetails?.role === 'client' || userDetails?.role === 'staff'" class="md:col-span-3">
@@ -492,6 +499,15 @@
                   </button>
                 </div>
               </div>
+              <div v-if="appt.status === 'cancelled'" class="mt-2 flex items-center justify-between gap-2">
+                <span class="text-xs font-medium" :class="appointmentMustPay(appt) ? 'text-red-600' : 'text-emerald-700'">{{ appointmentPaymentLabel(appt) }}</span>
+                <button
+                  v-if="userDetails && canManageUser(userDetails as any)"
+                  type="button"
+                  class="text-xs font-medium text-blue-600 hover:text-blue-800"
+                  @click="openObligationModal(appt)"
+                >Zahlpflicht ändern</button>
+              </div>
               <!-- Inline Edit Panel -->
               <div v-if="editingApptId === appt.id" class="mt-3 pt-3 border-t border-gray-100">
                 <div class="grid grid-cols-3 gap-3">
@@ -564,6 +580,15 @@
                         </svg>
                       </button>
                     </div>
+                  </div>
+                  <div v-if="appt.status === 'cancelled'" class="mt-2 flex items-center justify-between gap-2">
+                    <span class="text-xs font-medium" :class="appointmentMustPay(appt) ? 'text-red-600' : 'text-emerald-700'">{{ appointmentPaymentLabel(appt) }}</span>
+                    <button
+                      v-if="userDetails && canManageUser(userDetails as any)"
+                      type="button"
+                      class="text-xs font-medium text-blue-600 hover:text-blue-800"
+                      @click="openObligationModal(appt)"
+                    >Zahlpflicht ändern</button>
                   </div>
                   <!-- Inline Edit Panel -->
                   <div v-if="editingApptId === appt.id" class="mt-3 pt-3 border-t border-gray-100">
@@ -1082,6 +1107,57 @@
         </div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <div v-if="showCreditModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="showCreditModal = false">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showCreditModal = false"/>
+        <form class="relative bg-white w-full sm:max-w-md sm:rounded-2xl shadow-2xl p-5" @submit.prevent="saveCreditTopup">
+          <h3 class="text-base font-semibold text-gray-900">Guthaben aufladen</h3>
+          <p class="mt-1 text-sm text-gray-500">Der Betrag wird dem Guthaben von {{ userDetails?.first_name }} {{ userDetails?.last_name }} gutgeschrieben.</p>
+          <label class="block mt-4 text-xs font-medium text-gray-500">Betrag (CHF)</label>
+          <input v-model="creditAmountChf" type="number" min="0.05" max="10000" step="0.05" required class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00">
+          <label class="block mt-3 text-xs font-medium text-gray-500">Vermerk</label>
+          <textarea v-model="creditNote" rows="3" required maxlength="500" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Grund für die Aufladung"></textarea>
+          <p v-if="creditError" class="mt-2 text-xs text-red-600">{{ creditError }}</p>
+          <div class="mt-4 flex justify-end gap-2">
+            <button type="button" class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200" @click="showCreditModal = false">Abbrechen</button>
+            <button type="submit" :disabled="isSavingCredit" class="px-3 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50" style="background: #1e40af">{{ isSavingCredit ? 'Speichert…' : 'Aufladen' }}</button>
+          </div>
+        </form>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div v-if="showObligationModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="showObligationModal = false">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showObligationModal = false"/>
+        <form class="relative bg-white w-full sm:max-w-md sm:rounded-2xl shadow-2xl p-5" @submit.prevent="saveObligation">
+          <h3 class="text-base font-semibold text-gray-900">Zahlpflicht ändern</h3>
+          <p v-if="obligationAppt" class="mt-1 text-sm text-gray-500">
+            {{ obligationAppt.type || t.appointment }}
+            <span v-if="obligationAppt.start_time"> · {{ formatDateShort(obligationAppt.start_time) }}</span>
+          </p>
+          <div class="mt-4 space-y-2">
+            <label class="flex items-start gap-2 text-sm text-gray-800">
+              <input :checked="obligationMustPay === true" type="radio" class="mt-1" @change="setObligationMustPay(true)">
+              <span>Kunde muss für diesen stornierten Termin bezahlen.</span>
+            </label>
+            <label class="flex items-start gap-2 text-sm text-gray-800">
+              <input :checked="obligationMustPay === false" type="radio" class="mt-1" @change="setObligationMustPay(false)">
+              <span>Kunde muss nicht bezahlen. Ein bereits bezahlter Betrag wird dem Guthaben gutgeschrieben.</span>
+            </label>
+          </div>
+          <p v-if="obligationLoading" class="mt-3 text-xs text-gray-400">Wird berechnet…</p>
+          <p v-else-if="obligationPreview" class="mt-3 text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2">{{ obligationPreview }}</p>
+          <label class="block mt-3 text-xs font-medium text-gray-500">Vermerk</label>
+          <textarea v-model="obligationNote" rows="3" maxlength="500" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Grund für die Änderung"></textarea>
+          <p v-if="obligationError" class="mt-2 text-xs text-red-600">{{ obligationError }}</p>
+          <div class="mt-4 flex justify-end gap-2">
+            <button type="button" class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200" @click="showObligationModal = false">Abbrechen</button>
+            <button type="submit" :disabled="isSavingObligation || obligationLoading || obligationNoop" class="px-3 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50" style="background: #1e40af">{{ isSavingObligation ? 'Speichert…' : 'Speichern' }}</button>
+          </div>
+        </form>
+      </div>
+    </Teleport>
 
 
   </div>
@@ -1935,6 +2011,168 @@ const saveApptEdit = async (appt: any) => {
     apptEditError.value = err?.data?.statusMessage || err?.message || 'Fehler beim Speichern'
   } finally {
     isSavingAppt.value = false
+  }
+}
+
+const showCreditModal = ref(false)
+const creditAmountChf = ref('')
+const creditNote = ref('')
+const creditError = ref<string | null>(null)
+const isSavingCredit = ref(false)
+const creditIdempotencyKey = ref('')
+
+const createManualTopupKey = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
+const showObligationModal = ref(false)
+const obligationAppt = ref<any | null>(null)
+const obligationMustPay = ref(false)
+const obligationNote = ref('')
+const obligationPreview = ref<string | null>(null)
+const obligationError = ref<string | null>(null)
+const obligationLoading = ref(false)
+const obligationNoop = ref(false)
+const isSavingObligation = ref(false)
+
+const appointmentMustPay = (appt: any) => {
+  const charge = appt?.cancellation_charge_percentage
+  return charge != null && Number(charge) > 0
+}
+
+const appointmentPaymentLabel = (appt: any) => {
+  const charge = appt?.cancellation_charge_percentage
+  if (charge == null) return 'Zahlpflicht nicht gesetzt'
+  if (Number(charge) <= 0) return 'Keine Zahlung'
+  return `Zahlpflichtig ${Number(charge)}%`
+}
+
+const openCreditModal = () => {
+  creditAmountChf.value = ''
+  creditNote.value = ''
+  creditError.value = null
+  creditIdempotencyKey.value = createManualTopupKey()
+  showCreditModal.value = true
+}
+
+const saveCreditTopup = async () => {
+  if (isSavingCredit.value || !userId) return
+  const amountRappen = Math.round(Number(creditAmountChf.value) * 100)
+  if (!Number.isInteger(amountRappen) || amountRappen <= 0) {
+    creditError.value = 'Bitte einen Betrag grösser als 0 eingeben.'
+    return
+  }
+  if (creditNote.value.trim().length < 3) {
+    creditError.value = 'Vermerk muss mindestens 3 Zeichen haben.'
+    return
+  }
+  if (!creditIdempotencyKey.value) creditIdempotencyKey.value = createManualTopupKey()
+  isSavingCredit.value = true
+  creditError.value = null
+  try {
+    const res = await $fetch<any>('/api/admin/credit/manual-topup', {
+      method: 'POST',
+      body: {
+        user_id: userId,
+        amount_rappen: amountRappen,
+        note: creditNote.value.trim(),
+        idempotency_key: creditIdempotencyKey.value,
+      },
+    })
+    const creditedRappen = Number.isInteger(res?.credited_rappen) ? res.credited_rappen : amountRappen
+    studentCreditRappen.value = res?.balance_rappen ?? ((studentCreditRappen.value || 0) + creditedRappen)
+    showCreditModal.value = false
+    successMessage.value = `Guthaben um CHF ${(creditedRappen / 100).toFixed(2)} aufgeladen.`
+    setTimeout(() => { successMessage.value = null }, 5000)
+  } catch (err: any) {
+    creditError.value = err?.data?.statusMessage || err?.message || 'Guthaben konnte nicht aufgeladen werden.'
+  } finally {
+    isSavingCredit.value = false
+  }
+}
+
+const setObligationMustPay = async (mustPay: boolean) => {
+  obligationMustPay.value = mustPay
+  await refreshObligationPreview()
+}
+
+const openObligationModal = async (appt: any) => {
+  obligationAppt.value = appt
+  obligationMustPay.value = !appointmentMustPay(appt)
+  obligationNote.value = ''
+  obligationError.value = null
+  obligationPreview.value = null
+  showObligationModal.value = true
+  await refreshObligationPreview()
+}
+
+const refreshObligationPreview = async () => {
+  if (!obligationAppt.value) return
+  obligationLoading.value = true
+  obligationError.value = null
+  try {
+    const res = await $fetch<any>('/api/admin/appointments/cancellation-obligation', {
+      method: 'POST',
+      body: {
+        appointment_id: obligationAppt.value.id,
+        must_pay: obligationMustPay.value,
+        dry_run: true,
+      },
+    })
+    obligationPreview.value = res?.summary || null
+    obligationNoop.value = !!res?.noop
+  } catch (err: any) {
+    obligationPreview.value = null
+    obligationNoop.value = true
+    obligationError.value = err?.data?.statusMessage || err?.message || 'Vorschau fehlgeschlagen.'
+  } finally {
+    obligationLoading.value = false
+  }
+}
+
+const saveObligation = async () => {
+  if (isSavingObligation.value || !obligationAppt.value || obligationNoop.value) return
+  if (obligationNote.value.trim().length < 3) {
+    obligationError.value = 'Vermerk muss mindestens 3 Zeichen haben.'
+    return
+  }
+  isSavingObligation.value = true
+  obligationError.value = null
+  try {
+    const res = await $fetch<any>('/api/admin/appointments/cancellation-obligation', {
+      method: 'POST',
+      body: {
+        appointment_id: obligationAppt.value.id,
+        must_pay: obligationMustPay.value,
+        note: obligationNote.value.trim(),
+        dry_run: false,
+      },
+    })
+    const idx = userAppointments.value.findIndex(a => a.id === obligationAppt.value.id)
+    if (idx !== -1) {
+      userAppointments.value[idx] = {
+        ...userAppointments.value[idx],
+        cancellation_charge_percentage: res?.next_charge_percentage,
+      }
+    }
+    if (typeof res?.balance_rappen === 'number') studentCreditRappen.value = res.balance_rappen
+    else await loadStudentCredit()
+    await loadUserPayments()
+    showObligationModal.value = false
+    successMessage.value = res?.summary || 'Zahlpflicht gespeichert.'
+    setTimeout(() => { successMessage.value = null }, 6000)
+  } catch (err: any) {
+    obligationError.value = err?.data?.statusMessage || err?.message || 'Zahlpflicht konnte nicht geändert werden.'
+  } finally {
+    isSavingObligation.value = false
   }
 }
 
