@@ -5,7 +5,7 @@ import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { getAuthenticatedUser } from '~/server/utils/auth'
-import { STAFF_ADMIN_ROLES } from '~/server/utils/require-staff-or-internal'
+import { authorizeRegistrationDocumentUpload } from '~/server/utils/registration-upload-authz'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -32,6 +32,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     userId = body.userId
     tenantId = body.tenantId
+    const uploadGrant = typeof body.uploadGrant === 'string' ? body.uploadGrant : null
     const { fileData, fileName, path } = body
     const bucket = 'user-documents'
 
@@ -72,43 +73,33 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Enforce tenant isolation: user must belong to the specified tenant
-    if (tenantId && user.tenant_id !== tenantId) {
-      logger.warn('❌ Tenant mismatch for document upload:', { userId, userTenant: user.tenant_id, providedTenant: tenantId })
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'Zugriff verweigert: Tenant-Isolation verletzt'
-      })
-    }
-
-    // Authz: staff/admin in tenant, owner, OR freshly registered user (≤30min, onboarding not done)
+    // Session is resolved for the staff/owner path. A registration upload grant
+    // is a separate authorization and does not adopt the session tenant.
     const authUser = await getAuthenticatedUser(event).catch(() => null)
-    const role = authUser?.role || ''
-    const isPrivileged = (STAFF_ADMIN_ROLES as readonly string[]).includes(role)
-    const isOwner =
-      !!authUser?.db_user_id && authUser.db_user_id === userId
-
-    let allowRegistrationWindow = false
-    if (!authUser) {
-      const createdAt = user.created_at ? new Date(user.created_at).getTime() : 0
-      const ageMs = Date.now() - createdAt
-      const onboardingOpen = !user.onboarding_status || ['pending', 'pending_documents', 'incomplete'].includes(user.onboarding_status)
-      allowRegistrationWindow = ageMs >= 0 && ageMs <= 30 * 60 * 1000 && onboardingOpen
-    }
-
-    if (isPrivileged) {
-      if (role !== 'super_admin' && authUser?.tenant_id && authUser.tenant_id !== user.tenant_id) {
-        throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
+    const decision = authorizeRegistrationDocumentUpload({
+      documentOwner: user,
+      requestTenantId: tenantId,
+      uploadGrant,
+      session: authUser
+        ? {
+            role: authUser.role,
+            tenantId: authUser.tenant_id,
+            dbUserId: authUser.db_user_id,
+          }
+        : null,
+    })
+    if (!decision.allow) {
+      if (decision.statusMessage === 'Zugriff verweigert: Tenant-Isolation verletzt') {
+        logger.warn('❌ Tenant mismatch for document upload:', { userId, userTenant: user.tenant_id, providedTenant: tenantId })
       }
-    } else if (!isOwner && !allowRegistrationWindow) {
       throw createError({
-        statusCode: 401,
-        statusMessage: 'Authentication required'
+        statusCode: decision.statusCode,
+        statusMessage: decision.statusMessage,
       })
     }
 
-    // Use the validated tenant_id from the database
-    tenantId = user.tenant_id
+    // Use the validated tenant_id from the database, never the session tenant.
+    tenantId = decision.documentTenantId ?? undefined
 
     // ✅ LAYER 3: File Type Validation
     const fileExtension = fileName.split('.').pop()?.toLowerCase()
