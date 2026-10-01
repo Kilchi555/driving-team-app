@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { demoPassword, newE2EContext, signIn } from './auth'
 
-const isolationPassword = process.env.E2E_ISOLATION_PASSWORD || demoPassword
+const isolationPassword = process.env.E2E_ISOLATION_PASSWORD
 
 /**
  * Tenant A = apple-review (App Store / Play demo).
@@ -12,7 +12,7 @@ test.beforeAll(() => {
     throw new Error('E2E_DEMO_PASSWORD is not set. Add it as a GitHub Actions secret.')
   }
   if (process.env.CI && !isolationPassword) {
-    throw new Error('E2E_ISOLATION_PASSWORD is not set. Run npm run demo:e2e-isolation:setup and store the printed password as that secret.')
+    throw new Error('E2E_ISOLATION_PASSWORD is not set. Add it as a GitHub Actions secret.')
   }
 })
 

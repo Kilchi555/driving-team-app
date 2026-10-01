@@ -117,12 +117,12 @@ Apple fragt in App Store Connect für jede Datenkategorie:
 > wurde durch GitGuardian als public gemeldet und ist rotiert. Das neue
 > Passwort wird ausschließlich in App Store Connect → "App Review
 > Information → Notes" eingetragen und im Passwort-Manager gespeichert.
-> Setup-Script verlangt jetzt zwingend `DEMO_PASSWORD` env var.
+> Setup-Script verlangt jetzt zwingend `E2E_DEMO_PASSWORD`. `DEMO_PASSWORD` wird abgelehnt.
 
 #### Reviewer Notes (Vorlage – DE/EN bilingual)
 
-Beim Eintragen in App Store Connect **`<DEMO_PASSWORD>`** durch das aktuelle
-Demo-Passwort aus dem Passwort-Manager ersetzen.
+Beim Eintragen in App Store Connect **`<password>`** durch das aktuelle
+Demo-Passwort aus dem Passwort-Manager ersetzen. Das Setup-Skript gibt es nicht aus.
 
 ```
 Hello App Review Team,
@@ -145,7 +145,7 @@ the demo credentials below.
 
 Demo accounts (all share the same password)
 ============================================
-Password for all 3 accounts: <DEMO_PASSWORD>
+Password for all 3 accounts: <password>
 
 • Student / Customer (primary login to review):
      apple-review@simy.ch
@@ -204,13 +204,15 @@ auf Cash.
    - Seedet 5 Appointments (3 completed, 2 booked) + 3 Payments
    - Idempotent – kann gefahrlos mehrfach ausgeführt werden
    - Resettet Demo-Passwort bei jedem Lauf
-✅ Cleanup-Script: `npm run demo:apple-review:teardown`
+✅ Cleanup-Script: `npm run demo:apple-review:teardown -- --confirm`
    - Entfernt sämtliche Demo-Daten + Auth-User
+   - Läuft nur nach simy-test-Gate und explizitem `--confirm`
 
 Demo-Tenant initial einrichten / Passwort rotieren:
 ```bash
-# Passwort ist Pflicht — kein Default mehr im Code
-DEMO_PASSWORD='YourStrongPassword' npm run demo:apple-review:setup
+# E2E_DEMO_PASSWORD ist Pflicht. DEMO_PASSWORD wird abgelehnt.
+# SIMY_ENV_TARGET=simy-test und die simy-test SUPABASE_URL sind Pflicht.
+E2E_DEMO_PASSWORD='YourStrongPassword' npm run demo:apple-review:setup
 ```
 Danach das Passwort in App Store Connect → "App Review Information → Notes"
 einfügen und in 1Password unter "Simy → Apple Review demo accounts" ablegen.

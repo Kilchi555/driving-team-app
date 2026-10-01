@@ -238,7 +238,7 @@ IARC-Fragebogen in der Console ausfüllen (keine Gewalt/Gambling → niedrige Ra
 Demo-Tenant existiert bereits für Apple Review — wiederverwenden:
 
 ```bash
-DEMO_PASSWORD='YourStrongPassword' npm run demo:apple-review:setup
+E2E_DEMO_PASSWORD='YourStrongPassword' npm run demo:apple-review:setup
 ```
 
 | Feld | Wert |
@@ -265,7 +265,7 @@ branding, append ?tenant=apple-review by using the deep link:
   https://app.simy.ch/login?tenant=apple-review
 
 Demo accounts (same password for all):
-Password: <DEMO_PASSWORD>
+Password: <password>
 
 • Student:    apple-review@simy.ch
 • Instructor: demo-instructor@simy.ch
