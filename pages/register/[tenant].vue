@@ -167,8 +167,8 @@
           <!-- Action Buttons -->
           <div class="space-y-3 pt-4 sm:pt-6">
             <button
-              v-if="showAccountStep"
-              @click="navigateTo(registeredTenantSlug || tenantSlug ? `/${registeredTenantSlug || tenantSlug}` : '/login')"
+              v-if="registrationAccountMode !== 'hidden'"
+              @click="openRegistrationSuccess()"
               class="w-full text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
               :style="{ background: primaryColor }"
             >
@@ -176,11 +176,11 @@
             </button>
             <button
               v-else
-              @click="navigateTo(tenantSlug ? `/${tenantSlug}` : '/')"
+              @click="openRegistrationSuccess()"
               class="w-full text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
               :style="{ background: primaryColor }"
             >
-              Zurück zur Startseite
+              {{ registrationSuccessAction.label }}
             </button>
           </div>
         </div>
@@ -1240,6 +1240,7 @@ import {
   finishRegisterSubmission,
   rememberSubmissionId,
 } from '~/utils/register-form-submission'
+import { resolveRegistrationSuccessAction } from '~/utils/registration-success-target'
 
 const { primaryColor, accentColor } = useTenantBranding()
 
@@ -1479,6 +1480,21 @@ const sanitizedRegulationContent = computed(() => sanitizeTenantHtml(currentRegu
 const registrationComplete = ref(false)
 const registeredEmail = ref<string>('')
 const registeredTenantSlug = ref<string>('')
+const registrationSuccessAction = computed(() => resolveRegistrationSuccessAction({
+  accountMode: registrationAccountMode.value,
+  routeSlug: tenantSlug.value,
+  loadedTenantSlug: currentTenant.value?.slug ?? null,
+  websiteUrl: currentTenant.value?.website_url,
+  registeredSlug: registeredTenantSlug.value,
+}))
+
+function openRegistrationSuccess() {
+  const action = registrationSuccessAction.value
+  if (action.external) {
+    return navigateTo(action.href, { external: true })
+  }
+  return navigateTo(action.href)
+}
 
 // Refs
 const fileInput = ref<HTMLInputElement>()

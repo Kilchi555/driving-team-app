@@ -17,6 +17,7 @@ interface Tenant {
   contact_email?: string
   contact_phone?: string
   address?: string
+  website_url?: string | null
   timezone: string
   currency: string
   language: string
