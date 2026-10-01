@@ -1,9 +1,29 @@
+import { createError, defineEventHandler, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendWelcomeEmail } from '~/server/utils/send-welcome-email'
+import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
+import { verifyRegistrationToken } from '~/server/utils/registration-token'
 
 export default defineEventHandler(async (event) => {
-  const { tenantId } = await readBody(event)
+  const body = await readBody(event)
+  const tenantId = body?.tenantId as string | undefined
   if (!tenantId) throw createError({ statusCode: 400, statusMessage: 'Missing tenantId' })
+
+  // Fresh tenant signup presents the HMAC issued by POST /api/tenants/register.
+  // That token is bound to this tenantId. It is not a substitute for staff auth
+  // on any other tenant.
+  const registrationAuthorized = verifyRegistrationToken(body?.registration_token, tenantId)
+
+  if (!registrationAuthorized) {
+    const auth = await requireStaffOrInternal(event)
+    if (
+      auth.mode === 'staff' &&
+      auth.profile?.role !== 'super_admin' &&
+      auth.profile?.tenant_id !== tenantId
+    ) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
+    }
+  }
 
   const supabase = getSupabaseAdmin()
   const { data: tenant, error } = await supabase
