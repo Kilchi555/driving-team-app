@@ -7,7 +7,7 @@
  *
  * Usage:
  *   SIMY_ENV_TARGET=simy-test \
- *   SUPABASE_URL=https://kssqalisskhvorqwgy.supabase.co \
+ *   SUPABASE_URL=https://kssqalisscxkhvorqwgy.supabase.co \
  *   SUPABASE_SERVICE_ROLE_KEY=... \
  *   node scripts/teardown-apple-review-tenant.mjs --confirm
  *

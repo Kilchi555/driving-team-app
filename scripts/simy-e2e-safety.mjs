@@ -4,7 +4,7 @@
  */
 
 export const SIMY_TEST_TARGET = 'simy-test'
-export const SIMY_TEST_SUPABASE_HOST = 'kssqalisskhvorqwgy.supabase.co'
+export const SIMY_TEST_SUPABASE_HOST = 'kssqalisscxkhvorqwgy.supabase.co'
 export const SETUP_SECRET_NAMES = Object.freeze([
   'E2E_DEMO_PASSWORD',
   'E2E_ISOLATION_PASSWORD',
