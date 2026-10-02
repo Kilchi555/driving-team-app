@@ -2,6 +2,7 @@ import { createError, getRouterParam, setHeader, defineEventHandler } from 'h3'
 import { requireSuperAdmin } from '~/server/utils/require-super-admin'
 import { findSalesProspect, profileForProspect } from '~/server/utils/sales-intelligence'
 import { loadContactLogs, loadSalesProfiles, loadSalesProspects, manualIndex, SalesStoreUnavailable } from '~/server/utils/sales-workspace'
+import { loadSalesWeiterbildungSignal } from '~/server/utils/sales-weiterbildung-signal'
 
 export default defineEventHandler(async (event) => {
   await requireSuperAdmin(event)
@@ -23,6 +24,7 @@ export default defineEventHandler(async (event) => {
       if (!(error instanceof SalesStoreUnavailable)) throw error
     }
   }
+  const weiterbildung = await loadSalesWeiterbildungSignal(prospect)
   return {
     success: true,
     sends: 0,
@@ -30,5 +32,6 @@ export default defineEventHandler(async (event) => {
     prospect,
     profile,
     logs,
+    weiterbildung,
   }
 })
