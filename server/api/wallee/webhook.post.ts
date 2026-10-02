@@ -26,7 +26,6 @@ import { mergePaymentMetadata, normalizePaymentMetadata } from '~/server/utils/p
 import { applyCapturedWalleeTopupCredits } from '~/server/utils/topup-credit'
 import { isCourseCapacityExceeded } from '~/server/utils/course-capacity'
 import {
-  ensureGuestUserForCoursePayment,
   fulfillCourseWalleePayment,
   isRetryableCourseFulfillment,
   isSuccessfulCourseFulfillment,
@@ -711,11 +710,13 @@ export default defineEventHandler(async (event) => {
           }
         }
         if (!isSuccessfulCourseFulfillment(result.status)) {
+          // identity_blocked is already stored on the payment. Do not 503:
+          // repeating the webhook cannot resolve the identity.
           if (webhookLogId) {
             try {
               await supabase.from('webhook_logs').update({
                 success: false,
-                error_message: `Course fulfillment ${result.status}`,
+                error_message: `Course fulfillment ${result.status}${result.error ? `: ${result.error}` : ''}`,
                 processing_duration_ms: Date.now() - startTime,
               }).eq('id', webhookLogId)
             } catch { /* non-fatal */ }
@@ -936,224 +937,13 @@ export default defineEventHandler(async (event) => {
             const hasRegistration = updatedRegistrations.some(r => r.payment_id === payment.id)
             
             if (!hasRegistration && payment.metadata?.course_id) {
-              // Completed course payments are created inside fulfill_course_wallee_payment.
-              // Do not insert here — that was the paid-without-seat window.
+              // Completed seats are inserted by fulfill_course_wallee_payment.
+              // Authorized is not a successful payment: do not create public.users
+              // and do not insert a course_registrations row with user_id null.
               if (paymentStatus === 'completed') {
                 logger.debug('⏭️ completed course payment already fulfilled atomically:', payment.id)
-                continue
-              }
-              // ✅ NEW: Create registration from payment metadata
-              logger.info(`📝 Creating course registration for payment: ${payment.id}`)
-              
-              // Get course details — must belong to the payment's tenant.
-              const { data: course } = await supabase
-                .from('courses')
-                .select('id, name, tenant_id, is_public')
-                .eq('id', payment.metadata.course_id)
-                .eq('tenant_id', payment.tenant_id)
-                .maybeSingle()
-              
-              if (course && course.tenant_id === payment.tenant_id) {
-                const userId = await ensureGuestUserForCoursePayment(
-                  supabase,
-                  payment,
-                  course.tenant_id,
-                )
-                
-                // Create or merge registration — even without a userId (email on registration)
-                if (userId || payment.metadata?.email) {
-                  let sanitizedWebhookCustomSessions = payment.metadata?.custom_sessions || null
-                  try {
-                    const validated = await assertCustomSessionsForTenant({
-                      supabase,
-                      tenantId: course.tenant_id,
-                      customSessions: payment.metadata?.custom_sessions,
-                      requirePublic: course.is_public === true,
-                      enrollmentCourseId: course.id,
-                    })
-                    sanitizedWebhookCustomSessions = validated.sanitized
-                  } catch (customErr: any) {
-                    logger.warn('⚠️ Ignoring untrusted custom_sessions on webhook registration create:', customErr?.statusMessage || customErr?.message)
-                    sanitizedWebhookCustomSessions = null
-                  }
-
-                  const regPayload: any = {
-                    course_id: course.id,
-                    tenant_id: course.tenant_id,
-                    user_id: userId || null,
-                    payment_id: payment.id,
-                    first_name: payment.metadata?.firstname || '',
-                    last_name: payment.metadata?.lastname || '',
-                    email: payment.metadata?.email,
-                    phone: payment.metadata?.phone,
-                    sari_faberid: payment.metadata?.sari_faberid || null,
-                    street: payment.metadata?.street || null,
-                    street_nr: payment.metadata?.street_nr || null,
-                    zip: payment.metadata?.zip || null,
-                    city: payment.metadata?.city || null,
-                    birthdate: payment.metadata?.birthdate || payment.metadata?.sari_birthdate || null,
-                    license_number: payment.metadata?.license_number || null,
-                    status: registrationStatus,
-                    payment_status: paymentStatusUpdate,
-                    payment_method: 'wallee',
-                    amount_paid_rappen: payment.total_amount_rappen || 0,
-                    discount_applied_rappen: payment.metadata?.discount_amount_rappen || 0,
-                    registration_date: new Date().toISOString(),
-                    registered_at: new Date().toISOString(),
-                    custom_sessions: sanitizedWebhookCustomSessions,
-                    is_partial_enrollment: payment.metadata?.is_partial_enrollment === true
-                      || String(payment.metadata?.is_partial_enrollment || '') === 'true',
-                    partial_start_session: payment.metadata?.partial_start_session != null
-                      && payment.metadata?.partial_start_session !== ''
-                      ? Number(payment.metadata.partial_start_session)
-                      : null,
-                    individual_session_number: payment.metadata?.individual_session_number != null
-                      && payment.metadata?.individual_session_number !== ''
-                      ? Number(payment.metadata.individual_session_number)
-                      : null,
-                    sari_synced: false,
-                    sari_synced_at: null,
-                    vehicle_id: payment.metadata?.vehicle_id || null,
-                    updated_at: new Date().toISOString()
-                  }
-
-                  // Race with SARI sync: if a row already exists for this course+faberid/email
-                  // (often Auto-imported without contact), MERGE payment + contact into it.
-                  let existingReg: any = null
-                  const faberidNorm = normalizeFaberid(payment.metadata?.sari_faberid)
-                  if (faberidNorm) {
-                    const { data: byFaber } = await supabase
-                      .from('course_registrations')
-                      .select('id, course_id, payment_id, email, user_id, notes')
-                      .eq('course_id', course.id)
-                      .eq('sari_faberid', faberidNorm)
-                      .in('status', ['confirmed', 'enrolled', 'pending'])
-                      .is('deleted_at', null)
-                      .maybeSingle()
-                    existingReg = byFaber
-                    // Also try padded faberid variants SARI sometimes returns
-                    if (!existingReg && payment.metadata?.sari_faberid) {
-                      const { data: byFaberRaw } = await supabase
-                        .from('course_registrations')
-                        .select('id, course_id, payment_id, email, user_id, notes')
-                        .eq('course_id', course.id)
-                        .eq('sari_faberid', String(payment.metadata.sari_faberid).trim())
-                        .in('status', ['confirmed', 'enrolled', 'pending'])
-                        .is('deleted_at', null)
-                        .maybeSingle()
-                      existingReg = byFaberRaw
-                    }
-                  }
-                  if (!existingReg && payment.metadata?.email) {
-                    const { data: byEmail } = await supabase
-                      .from('course_registrations')
-                      .select('id, course_id, payment_id, email, user_id, notes')
-                      .eq('course_id', course.id)
-                      .ilike('email', String(payment.metadata.email).trim())
-                      .in('status', ['confirmed', 'enrolled', 'pending'])
-                      .is('deleted_at', null)
-                      .maybeSingle()
-                    existingReg = byEmail
-                  }
-
-                  if (existingReg?.id) {
-                    logger.info(`🔀 Merging Wallee payment into existing course registration ${existingReg.id} (SARI/email race)`)
-                    const mergeUpdate: any = {
-                      user_id: userId || existingReg.user_id || null,
-                      payment_id: payment.id,
-                      first_name: regPayload.first_name || undefined,
-                      last_name: regPayload.last_name || undefined,
-                      email: regPayload.email || existingReg.email || null,
-                      phone: regPayload.phone || null,
-                      street: regPayload.street,
-                      street_nr: regPayload.street_nr,
-                      zip: regPayload.zip,
-                      city: regPayload.city,
-                      birthdate: regPayload.birthdate,
-                      license_number: regPayload.license_number,
-                      status: registrationStatus,
-                      payment_status: paymentStatusUpdate,
-                      payment_method: 'wallee',
-                      amount_paid_rappen: regPayload.amount_paid_rappen,
-                      discount_applied_rappen: regPayload.discount_applied_rappen,
-                      custom_sessions: regPayload.custom_sessions,
-                      is_partial_enrollment: payment.metadata?.is_partial_enrollment === true
-                        || String(payment.metadata?.is_partial_enrollment || '') === 'true',
-                      partial_start_session: payment.metadata?.partial_start_session != null
-                        && payment.metadata?.partial_start_session !== ''
-                        ? Number(payment.metadata.partial_start_session)
-                        : null,
-                      individual_session_number: payment.metadata?.individual_session_number != null
-                        && payment.metadata?.individual_session_number !== ''
-                        ? Number(payment.metadata.individual_session_number)
-                        : null,
-                      vehicle_id: regPayload.vehicle_id,
-                      sari_synced: false,
-                      sari_synced_at: null,
-                      webhook_processed_at: new Date().toISOString(),
-                      updated_at: new Date().toISOString(),
-                    }
-                    // Keep SARI audit note, append paid marker
-                    if (existingReg.notes && String(existingReg.notes).includes('Auto-imported from SARI')) {
-                      mergeUpdate.notes = `${existingReg.notes} | Linked Wallee payment ${payment.id} on ${new Date().toISOString()}`
-                    }
-
-                    const { data: merged, error: mergeErr } = await supabase
-                      .from('course_registrations')
-                      .update(mergeUpdate)
-                      .eq('id', existingReg.id)
-                      .select('id, course_id, user_id, payment_id')
-                      .single()
-
-                    if (mergeErr) {
-                      logger.error('❌ Failed to merge into existing registration:', mergeErr.message)
-                      // Fall through to insert attempt (may still fail on unique) so error is recorded
-                      registrationsToCreate.push({ ...regPayload, created_at: new Date().toISOString() })
-                    } else {
-                      updatedRegistrations = [...updatedRegistrations, merged]
-                      payment.course_registration_id = merged.id
-                      payment.user_id = merged.user_id
-                      await supabase
-                        .from('payments')
-                        .update({
-                          user_id: merged.user_id,
-                          course_registration_id: merged.id,
-                          updated_at: new Date().toISOString(),
-                          metadata: mergePaymentMetadata(payment.metadata, {
-                            webhook_merged_existing_registration: true,
-                            webhook_merged_registration_id: merged.id,
-                            webhook_registration_error: null,
-                          })
-                        })
-                        .eq('id', payment.id)
-
-                      if (regPayload.email && regPayload.tenant_id) {
-                        upsertMarketingLeadSafe({
-                          tenantId: regPayload.tenant_id,
-                          email: regPayload.email,
-                          firstName: regPayload.first_name,
-                          lastName: regPayload.last_name,
-                          phone: regPayload.phone,
-                          categories: categoriesFromCourse({
-                            name: payment.metadata?.course_name,
-                          }),
-                          tags: ['client', 'course'],
-                          source: 'course_enroll',
-                          sourceLabel: 'Kursanmeldung (Wallee merge)',
-                        })
-                      }
-                      logger.info(`✅ Merged payment ${payment.id} → registration ${merged.id}`)
-                    }
-                  } else {
-                    logger.debug(`📋 Building registration object with userId: ${userId || 'none (guest without account)'}`)
-                    registrationsToCreate.push({ ...regPayload, created_at: new Date().toISOString() })
-                    logger.debug(`✅ Registration object added to array. Total registrations to create: ${registrationsToCreate.length}`)
-                  }
-                } else {
-                  logger.error('❌ No email in payment metadata, skipping registration creation')
-                }
               } else {
-                logger.error(`❌ Course not found for course_id: ${payment.metadata.course_id}`)
+                logger.info('⏭️ Skipping pre-completion course registration; public user is created on fulfillment:', payment.id)
               }
             }
           }
