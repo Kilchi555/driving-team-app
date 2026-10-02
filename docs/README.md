@@ -333,6 +333,22 @@ Dokumentation wichtiger Datenflüsse und Geschäftsprozesse der Anwendung.
 
 ---
 
+## Engineering Runbooks
+
+Concise, code-verified ops/dev notes. Prefer updating these over inventing parallel pages.
+
+| Doc | Topic |
+|-----|-------|
+| [WELCOME_ONBOARDING_AUTHZ.md](./WELCOME_ONBOARDING_AUTHZ.md) | Welcome email + onboarding reminder authz (#338) |
+| [REGISTRATION_UPLOAD_GRANT.md](./REGISTRATION_UPLOAD_GRANT.md) | Short-lived HMAC grant for public registration uploads (#334) |
+| [ADMIN_MANUAL_CREDIT_OBLIGATION.md](./ADMIN_MANUAL_CREDIT_OBLIGATION.md) | Admin wallet top-up + cancellation must-pay repair (#324) |
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Passkey recovery flows |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Session persistence |
+| [ACCESS_AND_SECRETS_POLICY.md](./ACCESS_AND_SECRETS_POLICY.md) | Access and secrets policy |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Wallee payment recovery |
+
+---
+
 ## 📝 Wartung dieser Dokumentation
 
 Bei Änderungen am System:
