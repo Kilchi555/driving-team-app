@@ -112,11 +112,11 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 403, message: 'Cannot add location for deleted user' })
     }
 
-    // ✅ 4. SANITY CHECK: Allow students, staff, and clients (customers) to have pickup locations
+    // ✅ 4. SANITY CHECK: Allow staff, clients, and legacy customer rows to have pickup locations
     console.log('🔍 Checking user role:', { targetUserId, role: targetUser.role })
-    if (!['student', 'staff', 'client', 'customer'].includes(targetUser.role)) {
+    if (!['staff', 'client', 'customer'].includes(targetUser.role)) {
       console.error('❌ Invalid role for pickup location:', { targetUserId, role: targetUser.role })
-      throw createError({ statusCode: 400, message: `Invalid role for pickup location: ${targetUser.role}. Only students, staff, clients and customers can have pickup locations` })
+      throw createError({ statusCode: 400, message: `Invalid role for pickup location: ${targetUser.role}. Only staff, clients and customers can have pickup locations` })
     }
 
     // ✅ 5. INPUT SANITIZATION

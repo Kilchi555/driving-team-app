@@ -4,6 +4,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { sanitizeRoleChange, staffCreatePayload } from '~/server/utils/assignable-user-roles'
 
 // Allowed columns per update action to prevent mass assignment
 // NOTE: `role` is intentionally excluded from tenant-admin whitelists — see sanitizeRoleChange()
@@ -14,28 +15,10 @@ const USER_UPDATE_WHITELIST = [
   'birthdate', 'street', 'street_nr', 'zip', 'city', 'profession', 'faberid'
 ] as const
 
-const TENANT_ASSIGNABLE_ROLES = new Set(['admin', 'staff', 'client', 'customer'])
-
 function pickFields<T extends object>(data: T, allowed: readonly string[]): Partial<T> {
   return Object.fromEntries(
     Object.entries(data).filter(([k]) => allowed.includes(k))
   ) as Partial<T>
-}
-
-/** Only super_admin may assign super_admin; tenant admins may only set tenant-local roles. */
-function sanitizeRoleChange(callerRole: string, requestedRole: unknown): string | undefined {
-  if (requestedRole === undefined || requestedRole === null || requestedRole === '') return undefined
-  const role = String(requestedRole)
-  if (role === 'super_admin') {
-    if (callerRole !== 'super_admin') {
-      throw createError({ statusCode: 403, statusMessage: 'Forbidden: cannot assign super_admin' })
-    }
-    return role
-  }
-  if (callerRole !== 'super_admin' && !TENANT_ASSIGNABLE_ROLES.has(role)) {
-    throw createError({ statusCode: 403, statusMessage: `Forbidden: cannot assign role ${role}` })
-  }
-  return role
 }
 
 export default defineEventHandler(async (event) => {
@@ -162,10 +145,11 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'create-staff') {
-      // Create new staff user
+      // Staff users only. A caller-supplied role, including `student`, is ignored.
+      const insertData = staffCreatePayload(user_data)
       const { data, error } = await supabase
         .from('users')
-        .insert([user_data])
+        .insert([insertData])
         .select()
         .single()
 

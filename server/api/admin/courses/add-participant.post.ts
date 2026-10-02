@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
         street_nr: participant.street_nr || null,
         zip: participant.zip || null,
         city: participant.city || null,
-        role: 'student',
+        role: 'client',
         tenant_id: profile.tenant_id,
         is_active: true,
         created_by: profile.id,

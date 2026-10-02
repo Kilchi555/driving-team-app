@@ -494,7 +494,7 @@ const handler = defineEventHandler(async (event) => {
       email: finalEmail,
       phone: finalPhone,
       tenantId,
-      roles: ['client', 'student'],
+      roles: ['client'],
     })
     if (existingUser) {
       logger.debug('ℹ️ Contact matches existing customer (discovery only; not attaching):', existingUser.id)

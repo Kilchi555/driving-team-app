@@ -329,11 +329,11 @@ describe('publicCourseSessionPrincipalId', () => {
     )).toBe(USER)
   })
 
-  it('B) authenticated student same tenant is bound', () => {
+  it('B) authenticated student role is not a course-session principal', () => {
     expect(publicCourseSessionPrincipalId(
       { id: USER, tenant_id: TENANT, role: 'student' },
       TENANT,
-    )).toBe(USER)
+    )).toBeNull()
   })
 
   it('C) authenticated staff same tenant is not bound', () => {
@@ -450,7 +450,7 @@ describe('ensureGuestUserForCoursePayment identity', () => {
     let inserted = false
     const id = await ensureGuestUserForCoursePayment(
       usersClient({
-        contact: { id: VICTIM, role: 'student' },
+        contact: { id: VICTIM, role: 'client' },
         onInsert: () => { inserted = true },
       }),
       { id: 'pay-1', tenant_id: TENANT, metadata: { email: 'victim@example.com', phone: '+41790000000' } },
@@ -469,9 +469,9 @@ describe('ensureGuestUserForCoursePayment identity', () => {
     expect(id).toBeUndefined()
   })
 
-  it('J) payment.user_id null + existing student contact does not attach', async () => {
+  it('J) payment.user_id null + existing client contact does not attach', async () => {
     const id = await ensureGuestUserForCoursePayment(
-      usersClient({ contact: { id: VICTIM, role: 'student' } }),
+      usersClient({ contact: { id: VICTIM, role: 'client' } }),
       { id: 'pay-1s', tenant_id: TENANT, metadata: { email: 'victim@example.com' } },
       TENANT,
     )
@@ -501,7 +501,7 @@ describe('ensureGuestUserForCoursePayment identity', () => {
     const cross = await ensureGuestUserForCoursePayment(
       usersClient({
         owned: { id: SESSION, tenant_id: 'other-tenant' },
-        contact: { id: VICTIM, role: 'student' },
+        contact: { id: VICTIM, role: 'client' },
       }),
       { id: 'pay-3', user_id: SESSION, tenant_id: TENANT, metadata: { email: 'victim@example.com' } },
       TENANT,

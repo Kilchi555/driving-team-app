@@ -134,7 +134,7 @@ export default defineEventHandler(async (event) => {
 
     // ============ LAYER 6: ROLE CHECK - Only customers can use this endpoint ============
     // Staff/Admin should use cancel-staff.post.ts instead
-    if (!['client', 'student'].includes(userProfile.role)) {
+    if (userProfile.role !== 'client') {
       await logAudit({
         user_id: userProfile.id,
         auth_user_id: authenticatedUserId,

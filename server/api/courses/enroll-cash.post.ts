@@ -302,7 +302,7 @@ const handler = defineEventHandler(async (event) => {
         email: finalEmail,
         phone: finalPhone,
         tenantId,
-        roles: ['client', 'student'],
+        roles: ['client'],
       })
 
       if (existingUser) {
@@ -319,7 +319,7 @@ const handler = defineEventHandler(async (event) => {
             email: finalEmail,
             phone: normalizePhoneNumber(finalPhone) || finalPhone,
             tenant_id: tenantId,
-            role: 'student',
+            role: 'client',
             is_active: true,
             auth_user_id: null // No auth account — guest user identified by null auth_user_id
           })

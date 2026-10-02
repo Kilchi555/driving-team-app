@@ -220,7 +220,7 @@ export function buildCourseFulfillmentPayload(
   return payload
 }
 
-const PUBLIC_COURSE_SESSION_ROLES = new Set(['client', 'student'])
+const PUBLIC_COURSE_SESSION_ROLES = new Set(['client'])
 
 /**
  * Public course enroll binds a session only for same-tenant customers.
