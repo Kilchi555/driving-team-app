@@ -12,6 +12,7 @@ import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-t
 import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
 import { resolveStudentBillingAddress } from '~/server/utils/billing-from-company'
 import { billingPersonNameParts } from '~/utils/billing-address-map'
+import { autoDraftAmountsFromPayments, staffPosAllocatedLines } from '~/server/utils/staff-product-sale'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -53,6 +54,7 @@ export default defineEventHandler(async (event) => {
     appointment_id,
     payment_method,
     payment_status,
+    metadata,
     appointments (
       id,
       title,
@@ -167,17 +169,16 @@ export default defineEventHandler(async (event) => {
     (p.discount_amount_rappen || 0) +
     ((p as any).voucher_discount_rappen || 0)
 
-  const subtotal = openPayments.reduce((sum, p) => sum + getGrossAmount(p), 0)  // Brutto
-  const totalDiscounts = openPayments.reduce((sum, p) => sum + (p.discount_amount_rappen || 0) + ((p as any).voucher_discount_rappen || 0), 0)
-  const totalCredits = openPayments.reduce((sum, p) => sum + (p.credit_used_rappen || 0), 0)
-  const totalAlreadyPaid = openPayments.reduce((sum, p) => sum + alreadyPaidRappen(p), 0)
   const vatRatePercent = Number.isFinite(Number((tenant as any)?.default_vat_rate))
     ? Number((tenant as any).default_vat_rate)
     : await getTenantDefaultVatRate(supabase, staffUser.tenant_id)
-  // Netto nach Rabatt/Guthaben/bereits bezahlter Teilzahlung, darauf MwSt gemäss Tenant-Einstellung
-  const netAfterDiscounts = subtotal - totalDiscounts - totalCredits - totalAlreadyPaid
-  const vatAmount = computeVatAmountRappen(Math.max(0, netAfterDiscounts), vatRatePercent)
-  const total = netAfterDiscounts + vatAmount
+  // Staff POS payments already store a gross price and a VAT snapshot.
+  // Other payments keep the previous tenant-rate draft.
+  const draftAmounts = autoDraftAmountsFromPayments(openPayments, vatRatePercent)
+  const subtotal = draftAmounts.subtotal_rappen
+  const vatAmount = draftAmounts.vat_amount_rappen
+  const total = draftAmounts.total_amount_rappen
+  const totalCredits = openPayments.reduce((sum, p) => sum + (p.credit_used_rappen || 0), 0)
 
   const billingPerson = billingPersonNameParts(
     savedBilling?.contact_person,
@@ -205,9 +206,9 @@ export default defineEventHandler(async (event) => {
 
     // Beträge
     subtotal_rappen: subtotal,
-    vat_rate: vatRatePercent,
+    vat_rate: draftAmounts.vat_rate,
     vat_amount_rappen: vatAmount,
-    discount_amount_rappen: totalDiscounts + totalCredits + totalAlreadyPaid, // Kombiniert für DB-Trigger: total = subtotal - discount
+    discount_amount_rappen: draftAmounts.discount_amount_rappen,
     credit_used_rappen: totalCredits,
     total_amount_rappen: total,
 
@@ -272,6 +273,35 @@ export default defineEventHandler(async (event) => {
 
   let sortOrder = 0
   draft.items = openPayments.flatMap((p) => {
+    const posLines = staffPosAllocatedLines((p as any).metadata)
+    if (posLines) {
+      return posLines.map((line) => ({
+        payment_id: p.id,
+        appointment_id: p.appointment_id,
+        product_id: line.product_id,
+        product_name: line.name,
+        product_description: null as string | null,
+        appointment_title: null as string | null,
+        appointment_date: null as string | null,
+        appointment_start_time: null as string | null,
+        appointment_duration_minutes: null as number | null,
+        quantity: line.quantity,
+        unit_price_rappen: Math.floor(line.netRappen / line.quantity),
+        total_price_rappen: line.netRappen,
+        vat_rate: line.vatRate,
+        vat_amount_rappen: line.vatRappen,
+        sort_order: sortOrder++,
+        lesson_price_rappen: 0,
+        admin_fee_rappen: 0,
+        products_price_rappen: 0,
+        discount_amount_rappen: 0,
+        credit_used_rappen: 0,
+        amount_paid_rappen: 0,
+        voucher_discount_rappen: 0,
+        product_details: [] as { name: string; price_rappen: number }[],
+      }))
+    }
+
     const apt = p.appointments as any
     const label = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
     const staffFirstName = apt?.staff?.first_name || null

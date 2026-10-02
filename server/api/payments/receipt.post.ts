@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { staffProductLines } from '~/utils/staff-product-sale-display'
 
 let puppeteer: any
 async function getPuppeteer() {
@@ -72,6 +73,7 @@ interface PaymentContext {
   paymentDate: string
   paymentMethod: string
   isTopup: boolean
+  isProductSale: boolean
   appointmentInfo: AppointmentInfo
   appointmentTitle: string
   appointmentTimestamp: number | null
@@ -364,6 +366,25 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
     }
   }
 
+  const isProductSale = !payment.appointment_id && !course && payment.metadata?.source === 'staff_product_sale'
+  if (isProductSale) {
+    const lines = staffProductLines(payment.metadata)
+    products = lines.map((line) => ({
+      name: line.name,
+      description: '',
+      quantity: line.quantity,
+      totalCHF: (line.price_rappen * line.quantity) / 100,
+    }))
+    if (products.length === 0 && (payment.total_amount_rappen || 0) > 0) {
+      products = [{
+        name: 'Produktverkauf',
+        description: '',
+        quantity: 1,
+        totalCHF: (payment.total_amount_rappen || 0) / 100,
+      }]
+    }
+  }
+
   // Load vouchers directly linked to payment
   try {
     logger.debug('🎫 Loading vouchers for payment:', payment.id)
@@ -489,6 +510,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
     wallee: 'Online',
     credit: 'Guthaben',
     invoice: 'Rechnung',
+    deferred: 'Später verrechnen',
     bank_transfer: 'Banküberweisung',
     card: 'Karte',
     topup: 'Guthaben-Aufladung',
@@ -497,7 +519,12 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
 
   const isCourse = !!course && !appointment
   const eventTypeKey = appointment?.event_type_code || appointment?.type || (isCourse ? 'course' : 'lesson')
-  const eventTypeTranslated = isCourse ? (course?.name || translateFn('eventType.course')) : translateFn(`eventType.${eventTypeKey}`)
+  const productLabel = products.map((item) => `${item.quantity}× ${item.name}`).join(', ')
+  const eventTypeTranslated = isProductSale
+    ? (productLabel || 'Produktverkauf')
+    : isCourse
+      ? (course?.name || translateFn('eventType.course'))
+      : translateFn(`eventType.${eventTypeKey}`)
   const statusKey = appointment?.status || payment.payment_status || 'pending'
   const statusTranslated = translateFn(`status.${statusKey}`)
   const isCancelled = appointment && (appointment.status === 'cancelled' || appointment.deleted_at)
@@ -536,6 +563,7 @@ async function loadPaymentContext(payment: any, supabase: any, translateFn: any)
     })(),
     paymentMethod,
     isTopup,
+    isProductSale,
     appointmentInfo: {
       eventTypeLabel: eventTypeTranslated,
       statusLabel: statusTranslated,
@@ -599,7 +627,7 @@ function renderHeader(customer: CustomerInfo, dateLabelKey: string, dateValue: s
 }
 
 function renderSingleReceipt(context: PaymentContext, tenant: any, assets: TenantAssets, translateFn: any) {
-  const { products, customer, paymentDate, paymentMethod, isTopup, appointmentInfo, amounts, creditInfo } = context
+  const { products, customer, paymentDate, paymentMethod, isTopup, isProductSale, appointmentInfo, amounts, creditInfo } = context
 
   const serviceSection = isTopup ? `
     <div class="section">
@@ -612,12 +640,12 @@ function renderSingleReceipt(context: PaymentContext, tenant: any, assets: Tenan
   ` : `
     <div class="section">
       <div class="section-title">${appointmentInfo.isCourse ? translateFn('receipt.courseDetails') : translateFn('receipt.serviceDetails')}</div>
-      <div class="row">
+      ${isProductSale ? '' : `<div class="row">
         <div class="label">
           ${appointmentInfo.eventTypeLabel}${appointmentInfo.date ? ` - ${appointmentInfo.date}` : ''}${appointmentInfo.time ? ` ${appointmentInfo.time}` : ''}${appointmentInfo.duration ? ` - ${appointmentInfo.duration} ${translateFn('receipt.minutes')}` : ''}
         </div>
         <div class="value">CHF ${amounts.lesson.toFixed(2)}</div>
-      </div>
+      </div>`}
       ${appointmentInfo.courseLocation ? `<div class="row" style="font-size:12px; color:#6b7280;"><div class="label">Ort</div><div class="value">${appointmentInfo.courseLocation}</div></div>` : ''}
       ${appointmentInfo.staffFirstName && !appointmentInfo.isCourse ? `<div class="row" style="font-size:12px; color:#6b7280;"><div class="label">Instruktor</div><div class="value">${appointmentInfo.staffFirstName}</div></div>` : ''}
       ${appointmentInfo.isCancelled ? `
