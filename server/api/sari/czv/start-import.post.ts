@@ -74,6 +74,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const { data: ownedCourse, error: ownedCourseError } = await supabaseAdmin
+      .from('courses')
+      .select('id')
+      .eq('id', courseId)
+      .eq('tenant_id', userProfile.tenant_id)
+      .maybeSingle()
+
+    if (ownedCourseError || !ownedCourse) {
+      throw createError({ statusCode: 404, statusMessage: 'Kurs nicht gefunden' })
+    }
+
     // 6-Wochen-Regel prüfen
     const timingCheck = validateImportTiming(courseData.date)
     if (!timingCheck.valid) {
