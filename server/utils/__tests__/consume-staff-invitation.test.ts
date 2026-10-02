@@ -131,6 +131,7 @@ describe('consumePendingStaffInvitation source contract', () => {
     expect(src).toContain(".eq('status', 'pending')")
     expect(src).toContain(".gt('expires_at', claimedAt)")
     expect(src).toContain('.maybeSingle()')
+    expect(src).toContain('accepted_at, role')
     expect(src).not.toMatch(/\.like\s*\(/)
     expect(src).not.toMatch(/\.ilike\s*\(/)
   })

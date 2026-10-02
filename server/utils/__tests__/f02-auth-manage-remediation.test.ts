@@ -98,7 +98,10 @@ describe('F-02 hardened login & staff/reset authorization still present', () => 
     const src = readFileSync(staffRegisterApi, 'utf8')
     expect(src).toContain('invitationToken')
     expect(src).toContain('staff_invitations')
-    expect(src).toContain("role: 'staff'")
+    expect(src).toContain('roleFromInvitation')
+    expect(src).toContain('role: registeredRole')
+    expect(src).toContain('is_primary_admin: false')
+    expect(src).not.toMatch(/role:\s*body\.role/)
     expect(src).toContain('invitation.tenant_id')
   })
 

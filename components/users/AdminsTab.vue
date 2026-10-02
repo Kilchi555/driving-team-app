@@ -9,7 +9,7 @@
           @click="addNewAdmin"
           class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
         >
-          + Neuer Admin
+          + Administrator einladen
         </button>
       </div>
     </div>
@@ -48,7 +48,7 @@
             @click="addNewAdmin"
             class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
           >
-            Ersten Administrator hinzufügen
+            Ersten Administrator einladen
           </button>
         </div>
       </div>
@@ -85,7 +85,7 @@
                     ? 'bg-purple-100 text-purple-700' 
                     : 'bg-blue-100 text-blue-700'
                 ]">
-                  {{ admin.role === 'admin' ? 'Admin' : 'Sub-Admin' }}
+                  {{ admin.is_primary_admin ? 'Hauptadministrator' : 'Administrator' }}
                 </span>
                 
                 <!-- Status Badge -->
@@ -122,6 +122,13 @@
               >
                 ✏️ Bearbeiten
               </button>
+              <button
+                v-if="callerIsPrimary && !admin.is_primary_admin && admin.is_active !== false"
+                @click="transferPrimary(admin)"
+                class="text-sm text-purple-700 hover:text-purple-900 font-medium"
+              >
+                Zum Hauptadmin machen
+              </button>
               <button 
                 @click="toggleAdminStatus(admin)"
                 :class="[
@@ -152,7 +159,8 @@
       
       <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Neuen Administrator hinzufügen</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-1">Administrator einladen</h3>
+          <p class="text-sm text-gray-600 mb-4">Die Person erhält eine Einladung und legt selbst ein Login an. Es wird kein Konto ohne Zugang erzeugt.</p>
           
           <form @submit.prevent="createAdmin">
             <div class="space-y-4">
@@ -186,19 +194,6 @@
                 >
               </div>
 
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Rolle</label>
-                <select 
-                  v-model="newAdmin.role"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="admin">Administrator</option>
-                  <option value="sub_admin">Sub-Administrator</option>
-                </select>
-                <p class="text-xs text-gray-500 mt-1">
-                  Sub-Admins haben eingeschränkte Berechtigungen
-                </p>
-              </div>
             </div>
             
             <div class="flex gap-3 mt-6">
@@ -214,7 +209,7 @@
                 :disabled="isCreatingAdmin"
                 class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400"
               >
-                {{ isCreatingAdmin ? 'Erstelle...' : 'Erstellen' }}
+                {{ isCreatingAdmin ? 'Sende...' : 'Einladung senden' }}
               </button>
             </div>
           </form>
@@ -264,27 +259,6 @@
                 >
               </div>
 
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Rolle</label>
-                <select 
-                  v-model="editingAdmin.role"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="admin">Administrator</option>
-                  <option value="sub_admin">Sub-Administrator</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    v-model="editingAdmin.is_active"
-                    class="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                  >
-                  <span class="text-sm text-gray-700">Aktiv</span>
-                </label>
-              </div>
             </div>
             
             <div class="flex gap-3 mt-6">
@@ -312,7 +286,7 @@
 
 <script setup lang="ts">
 
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 // import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
 import LoadingLogo from '~/components/LoadingLogo.vue'
@@ -343,9 +317,12 @@ const editingAdmin = ref<any>(null)
 const newAdmin = ref({
   first_name: '',
   last_name: '',
-  email: '',
-  role: 'admin'
+  email: ''
 })
+
+const callerIsPrimary = computed(() =>
+  props.currentUser?.role === 'admin' && props.currentUser?.is_primary_admin === true
+)
 
 // Methods
 const loadAdmins = async () => {
@@ -385,11 +362,13 @@ const addNewAdmin = () => {
   newAdmin.value = {
     first_name: '',
     last_name: '',
-    email: '',
-    role: 'admin'
+    email: ''
   }
   showAddAdminModal.value = true
 }
+
+const apiErrorMessage = (err: any, fallback: string) =>
+  err?.data?.statusMessage || err?.data?.message || err?.statusMessage || err?.message || fallback
 
 const createAdmin = async () => {
   if (!props.currentUser) return
@@ -401,19 +380,13 @@ const createAdmin = async () => {
     
     // (Removed direct Supabase auth calls - now using currentUser prop)
 
-    const createResponse = await $fetch('/api/admin/users', {
+    const createResponse = await $fetch('/api/staff/invite', {
       method: 'POST',
       body: {
-        action: 'create-admin',
-        tenant_id: props.currentUser.tenant_id,
-        user_data: {
-          first_name: newAdmin.value.first_name,
-          last_name: newAdmin.value.last_name,
-          email: newAdmin.value.email,
-          role: newAdmin.value.role,
-          tenant_id: props.currentUser.tenant_id,
-          is_active: true
-        }
+        first_name: newAdmin.value.first_name,
+        last_name: newAdmin.value.last_name,
+        email: newAdmin.value.email,
+        role: 'admin'
       }
     }) as any
 
@@ -421,8 +394,8 @@ const createAdmin = async () => {
 
     uiStore.addNotification({
       type: 'success',
-      title: 'Administrator erstellt',
-      message: `${newAdmin.value.first_name} ${newAdmin.value.last_name} wurde erfolgreich hinzugefügt.`
+      title: 'Einladung gesendet',
+      message: `${newAdmin.value.first_name} ${newAdmin.value.last_name} erhält eine Administrator-Einladung.`
     })
 
     showAddAdminModal.value = false
@@ -433,7 +406,7 @@ const createAdmin = async () => {
     uiStore.addNotification({
       type: 'error',
       title: 'Fehler',
-      message: 'Administrator konnte nicht erstellt werden.'
+      message: apiErrorMessage(err, 'Einladung konnte nicht gesendet werden.')
     })
   } finally {
     isCreatingAdmin.value = false
@@ -462,9 +435,7 @@ const updateAdmin = async () => {
         user_data: {
           first_name: editingAdmin.value.first_name,
           last_name: editingAdmin.value.last_name,
-          email: editingAdmin.value.email,
-          role: editingAdmin.value.role,
-          is_active: editingAdmin.value.is_active
+          email: editingAdmin.value.email
         }
       }
     }) as any
@@ -496,16 +467,13 @@ const updateAdmin = async () => {
 const toggleAdminStatus = async (admin: any) => {
   try {
     logger.debug('🔄 Toggling admin status via API:', admin.id, !admin.is_active)
-    
-    const toggleResponse = await $fetch('/api/admin/users', {
+
+    const endpoint = admin.is_active ? '/api/users/deactivate' : '/api/users/reactivate'
+    const toggleResponse = await $fetch(endpoint, {
       method: 'POST',
       body: {
-        action: 'update-admin',
-        tenant_id: props.currentUser.tenant_id,
         user_id: admin.id,
-        user_data: {
-          is_active: !admin.is_active
-        }
+        reason: admin.is_active ? 'Deaktiviert' : undefined
       }
     }) as any
 
@@ -524,7 +492,30 @@ const toggleAdminStatus = async (admin: any) => {
     uiStore.addNotification({
       type: 'error',
       title: 'Fehler',
-      message: 'Status konnte nicht geändert werden.'
+      message: apiErrorMessage(err, 'Status konnte nicht geändert werden.')
+    })
+  }
+}
+
+const transferPrimary = async (admin: any) => {
+  if (!confirm(`${admin.first_name} ${admin.last_name} zum Hauptadministrator machen?`)) return
+  try {
+    const response = await $fetch('/api/admin/transfer-primary', {
+      method: 'POST',
+      body: { target_user_id: admin.id }
+    }) as any
+    if (!response?.success) throw new Error(response?.message)
+    uiStore.addNotification({
+      type: 'success',
+      title: 'Hauptadministrator übertragen',
+      message: `${admin.first_name} ${admin.last_name} ist jetzt Hauptadministrator.`
+    })
+    await loadAdmins()
+  } catch (err: any) {
+    uiStore.addNotification({
+      type: 'error',
+      title: 'Fehler',
+      message: apiErrorMessage(err, 'Hauptadministrator konnte nicht übertragen werden.')
     })
   }
 }
@@ -537,12 +528,11 @@ const deleteAdmin = async (admin: any) => {
   try {
     logger.debug('🔄 Deleting admin via API:', admin.id)
     
-    const deleteResponse = await $fetch('/api/admin/users', {
+    const deleteResponse = await $fetch('/api/users/deactivate', {
       method: 'POST',
       body: {
-        action: 'delete-admin',
-        tenant_id: props.currentUser.tenant_id,
-        user_id: admin.id
+        user_id: admin.id,
+        reason: 'Deaktiviert'
       }
     }) as any
 
@@ -561,7 +551,7 @@ const deleteAdmin = async (admin: any) => {
     uiStore.addNotification({
       type: 'error',
       title: 'Fehler',
-      message: 'Administrator konnte nicht gelöscht werden.'
+      message: apiErrorMessage(err, 'Administrator konnte nicht deaktiviert werden.')
     })
   }
 }

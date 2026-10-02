@@ -1529,7 +1529,6 @@ const roleLabel = computed(() => {
   
   if (userDetails.value.role === 'admin') {
     if (userDetails.value.is_primary_admin) return 'Hauptadministrator'
-    if (userDetails.value.admin_level === 'sub_admin') return 'Subadministrator'
     return 'Administrator'
   }
   

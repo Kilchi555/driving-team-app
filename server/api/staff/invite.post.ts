@@ -16,6 +16,7 @@ import {
   checkEmailAvailableForStaff,
   emailConflictMessage,
 } from '~/server/utils/email-availability'
+import { pickStaffInviteFields } from '~/server/utils/invitation-role'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -30,7 +31,12 @@ export default defineEventHandler(async (event) => {
       || 'unknown'
 
     const body = await readBody(event)
-    const { firstName, phone, email: rawEmail } = body
+    const inviteFields = pickStaffInviteFields(body)
+    const firstName = inviteFields.first_name
+    const lastName = inviteFields.last_name
+    const phone = inviteFields.phone
+    const rawEmail = inviteFields.email
+    const inviteRole = inviteFields.role
 
     if (!firstName || !rawEmail) {
       throw createError({
@@ -39,7 +45,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const emailCandidate = String(rawEmail).trim().toLowerCase()
+    const emailCandidate = rawEmail
     if (!validateEmail(emailCandidate).valid) {
       throw createError({
         statusCode: 400,
@@ -84,7 +90,7 @@ export default defineEventHandler(async (event) => {
 
     const { data: userProfile, error: profileError } = await serviceSupabase
       .from('users')
-      .select('tenant_id, role')
+      .select('tenant_id, role, is_active, deleted_at')
       .eq('auth_user_id', user.id)
       .single()
 
@@ -96,7 +102,7 @@ export default defineEventHandler(async (event) => {
     }
     auditTenantId = userProfile.tenant_id
 
-    if (userProfile.role !== 'admin') {
+    if (userProfile.role !== 'admin' || userProfile.is_active === false || userProfile.deleted_at) {
       throw createError({
         statusCode: 403,
         statusMessage: 'Nur Admins können Einladungen versenden',
@@ -109,7 +115,7 @@ export default defineEventHandler(async (event) => {
       .eq('id', userProfile.tenant_id)
       .single()
 
-    if (tenantSub) {
+    if (tenantSub && inviteRole === 'staff') {
       const plan = tenantSub.subscription_plan || 'trial'
       const planDef = getPlanById(plan)
       const includedSeats = plan === 'trial' ? 3 : (planDef?.includedSeats ?? null)
@@ -130,6 +136,7 @@ export default defineEventHandler(async (event) => {
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', userProfile.tenant_id)
           .eq('status', 'pending')
+          .eq('role', 'staff')
 
         const usedSeats = (activeStaff || 0) + (pendingInvites || 0)
 
@@ -218,9 +225,10 @@ export default defineEventHandler(async (event) => {
       .insert({
         tenant_id: userProfile.tenant_id,
         first_name: sanitizedFirstName,
-        last_name: '',
+        last_name: sanitizeString(lastName, 100),
         email: staffEmail,
         phone: sanitizedPhone,
+        role: inviteRole,
         invitation_token: token,
         invited_by: user.id,
         expires_at: expiresAt.toISOString(),
@@ -249,6 +257,7 @@ export default defineEventHandler(async (event) => {
         invited_phone: sanitizedPhone,
         invited_email: staffEmail,
         invited_name: sanitizedFirstName,
+        invited_role: inviteRole,
         send_via: 'email',
         expires_at: expiresAt.toISOString(),
         duration_ms: Date.now() - startTime,
@@ -279,6 +288,7 @@ export default defineEventHandler(async (event) => {
 
     const terms = await getTenantTerminology(serviceSupabase, userProfile.tenant_id)
     const tenantName = tenant?.name || terms.businessNoun
+    const inviteLabel = inviteRole === 'admin' ? 'Administrator' : terms.staff
     const loginLink = tenant?.slug ? `${baseUrl}/${tenant.slug}` : baseUrl
     const primaryColor = tenant?.primary_color || '#6000BD'
     const rawLogo = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
@@ -287,12 +297,12 @@ export default defineEventHandler(async (event) => {
     try {
       await sendEmail({
         to: staffEmail,
-        subject: `Einladung als ${terms.staff} – ${tenantName}`,
+        subject: `Einladung als ${inviteLabel} – ${tenantName}`,
         html: buildStaffInviteEmailHtml({
           firstName: sanitizedFirstName,
           tenantName,
           inviteLink,
-          staffLabel: terms.staff,
+          staffLabel: inviteLabel,
           clientsLabel: terms.clientsPlural,
           loginUrl: loginLink,
           adminEmail,

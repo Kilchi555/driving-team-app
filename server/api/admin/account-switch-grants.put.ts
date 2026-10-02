@@ -7,7 +7,6 @@ import { validateUUID } from '~/server/utils/validators'
 import {
   assertCallerMayManageGrants,
   isPrimaryTenantAdmin,
-  isSubAdmin,
   loadSwitchUser,
   loadSwitchUserByAuthId,
 } from '~/server/utils/account-switch'
@@ -34,8 +33,8 @@ export default defineEventHandler(async (event) => {
   if (!actor || actor.tenant_id !== caller.tenant_id) {
     throw createError({ statusCode: 404, statusMessage: 'Benutzer nicht gefunden' })
   }
-  if (actor.role !== 'staff' && !isSubAdmin(actor)) {
-    throw createError({ statusCode: 400, statusMessage: 'Freigaben nur für Staff oder Sub-Admin' })
+  if (actor.role !== 'staff') {
+    throw createError({ statusCode: 400, statusMessage: 'Freigaben nur für Staff' })
   }
   if (isPrimaryTenantAdmin(actor)) {
     throw createError({ statusCode: 400, statusMessage: 'Hauptadmin braucht keine Freigaben' })

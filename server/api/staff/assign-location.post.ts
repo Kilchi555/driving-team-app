@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
 
     const { data: caller, error: callerError } = await supabase
       .from('users')
-      .select('id, tenant_id, role, admin_level')
+      .select('id, tenant_id, role')
       .eq('auth_user_id', authUser.id)
       .single()
 
@@ -77,7 +77,6 @@ export default defineEventHandler(async (event) => {
     }
 
     const isAdmin = ['admin', 'tenant_admin', 'super_admin'].includes(caller.role)
-      || caller.admin_level != null
 
     const targetStaffId = requestedStaffId || caller.id
 

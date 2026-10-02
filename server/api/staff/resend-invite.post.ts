@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
 
     const { data: invitation, error: inviteError } = await supabase
       .from('staff_invitations')
-      .select('id, tenant_id, first_name, last_name, phone, email, status, invitation_token, expires_at')
+      .select('id, tenant_id, first_name, last_name, phone, email, status, invitation_token, expires_at, role')
       .eq('id', invitationId)
       .eq('tenant_id', userProfile.tenant_id)
       .single()
@@ -171,6 +171,8 @@ export default defineEventHandler(async (event) => {
     const tenantName = tenant?.name || terms.businessNoun
     const loginLink = tenant?.slug ? `${baseUrl}/${tenant.slug}` : baseUrl
     const firstName = invitation.first_name || 'Hallo'
+    const invitationRole = invitation.role === 'admin' ? 'admin' : 'staff'
+    const inviteLabel = invitationRole === 'admin' ? 'Administrator' : terms.staff
     const primaryColor = tenant?.primary_color || '#6000BD'
     const rawLogo = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
     const logoUrl = rawLogo?.startsWith('data:') ? null : rawLogo
@@ -199,12 +201,12 @@ export default defineEventHandler(async (event) => {
     try {
       await sendEmail({
         to: sendToEmail,
-        subject: `Einladung als ${terms.staff} – ${tenantName}`,
+        subject: `Einladung als ${inviteLabel} – ${tenantName}`,
         html: buildStaffInviteEmailHtml({
           firstName,
           tenantName,
           inviteLink,
-          staffLabel: terms.staff,
+          staffLabel: inviteLabel,
           clientsLabel: terms.clientsPlural,
           loginUrl: loginLink,
           adminEmail: adminRow?.email || null,

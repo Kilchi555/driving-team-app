@@ -186,13 +186,9 @@
           </NuxtLink>
         </template>
             <template v-else-if="activeTab === 'admins'">
-              <button
-                @click="openCreateForCurrentTab()"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90 shadow-sm transition-all hover:-translate-y-0.5"
-                :style="{ background: primaryColor }"
-              >
-                Neuer Admin
-              </button>
+              <p class="max-w-md text-sm text-gray-600">
+                Weitere Administratoren werden per Einladung in der Administrator-Verwaltung angelegt. Es entsteht kein Profil ohne Login.
+              </p>
             </template>
           </div>
     </div>
@@ -506,8 +502,7 @@
         <div class="px-6 py-4 border-b border-gray-200">
           <h3 class="text-lg font-semibold text-gray-900">
             <span v-if="newUser.role === 'staff'">Neuen {{ t.staff }} hinzufügen</span>
-            <span v-else-if="newUser.role === 'sub_admin'">Neuen Sub-Admin hinzufügen</span>
-            <span v-else-if="newUser.role === 'admin'">Neuen Admin hinzufügen</span>
+            <span v-else-if="newUser.role === 'admin'">Administrator einladen</span>
             <span v-else>Neuen {{ t.client }} hinzufügen</span>
           </h3>
         </div>
@@ -978,17 +973,11 @@
             </div>
           </div>
 
-          <div v-if="newUser.role === 'sub_admin' || newUser.role === 'admin'">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Passwort *</label>
-            <input
-              v-model="newUser.password"
-              type="password"
-              required
-              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
-              placeholder="Mindestens 12 Zeichen"
-            />
-            <p class="text-xs text-gray-500 mt-1">
-              Mindestens 12 Zeichen, 1 Großbuchstabe und 1 Zahl
+          <div v-if="newUser.role === 'admin'" class="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-950 space-y-2">
+            <p class="font-medium">Administratoren werden per Einladung angelegt</p>
+            <p class="text-xs text-amber-900/80">
+              Weitere Administratoren erhalten einen eigenen Login über die Administrator-Verwaltung.
+              Ein Profil ohne Auth-Konto wird nicht erzeugt.
             </p>
           </div>
 
@@ -1053,7 +1042,7 @@
             </button>
             <button
               type="submit"
-              :disabled="isCreatingUser || newUser.role === 'staff' || clientContactBlocksSubmit"
+              :disabled="isCreatingUser || newUser.role === 'staff' || newUser.role === 'admin' || clientContactBlocksSubmit"
               class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               :style="{ background: primaryColor }"
             >
@@ -1061,7 +1050,7 @@
               <span v-else-if="newUser.role === 'client' && sendOnboardingInvite">Einladen &amp; speichern</span>
               <span v-else-if="newUser.role === 'client'">Kunde erstellen</span>
               <span v-else-if="newUser.role === 'staff'">Zur Einladung</span>
-              <span v-else-if="newUser.role === 'sub_admin'">🔧 Sub-Admin erstellen</span>
+              <span v-else-if="newUser.role === 'admin'">Zur Einladung</span>
               <span v-else>👤 Benutzer erstellen</span>
             </button>
           </div>
@@ -1135,9 +1124,9 @@ const togglingGuideEdit = ref<string | null>(null)
 const switchGrantsActor = ref<User | null>(null)
 const canManageSwitchGrants = computed(() => {
   const p = authStore.userProfile
-  if (!p || p.role !== 'admin') return false
-  if (p.admin_level === 'sub_admin') return false
-  return true
+  if (!p) return false
+  if (p.role === 'super_admin') return true
+  return p.role === 'admin' && p.is_primary_admin === true && p.is_active !== false && !p.deleted_at
 })
 const tableColspan = computed(() => {
   let n = 5
@@ -1148,7 +1137,7 @@ const tableColspan = computed(() => {
 const canEditSwitchGrantsFor = (user: User) => {
   if (user.is_invitation || user.deleted_at || !user.is_active) return false
   if (user.role === 'staff') return true
-  return user.admin_level === 'sub_admin'
+  return false
 }
 const openSwitchGrants = (user: User) => {
   switchGrantsActor.value = user
@@ -1655,7 +1644,7 @@ const filteredUsers = computed(() => {
   } else if (activeTab.value === 'staff') {
     filtered = filtered.filter(user => ['staff', 'tenant_admin'].includes(user.role))
   } else if (activeTab.value === 'admins') {
-    filtered = filtered.filter(user => ['admin', 'sub_admin'].includes(user.role))
+    filtered = filtered.filter(user => user.role === 'admin')
   }
 
   // Invitation filter
@@ -1841,7 +1830,6 @@ const getInitials = (firstName: string | null, lastName: string | null): string 
 const getRoleLabel = (user: User): string => {
   if (user.role === 'admin') {
     if (user.is_primary_admin) return 'Hauptadmin'
-    if (user.admin_level === 'sub_admin') return 'Subadmin'
     return 'Admin'
   }
   
@@ -1856,7 +1844,6 @@ const getRoleLabel = (user: User): string => {
 const getRoleBadgeClass = (user: User): string => {
   if (user.role === 'admin') {
     if (user.is_primary_admin) return 'bg-red-100 text-red-800 border border-red-300'
-    if (user.admin_level === 'sub_admin') return 'bg-orange-100 text-orange-800'
     return 'bg-red-100 text-red-800'
   }
   
@@ -1911,13 +1898,6 @@ const selectRole = (role: string) => {
   newUser.value.role = role
   showRoleDropdown.value = false
   
-  // Set appropriate defaults based on role
-  if (role === 'sub_admin') {
-    newUser.value.admin_level = 'sub_admin'
-  } else {
-    newUser.value.admin_level = ''
-  }
-  
   // Reset categories when role changes
   newUser.value.categories = []
   
@@ -1927,7 +1907,7 @@ const selectRole = (role: string) => {
 const availableRolesForTab = computed(() => {
   if (activeTab.value === 'customers') return ['client']
   if (activeTab.value === 'staff') return ['staff']
-  return ['admin', 'sub_admin']
+  return ['admin']
 })
 
 // File Upload Functions
@@ -2305,18 +2285,7 @@ const createUser = async () => {
       return
     }
 
-    // ── Admin / sub_admin: legacy password path not supported here ────────
-    if (newUser.value.password.length < 12) {
-      throw new Error('Passwort muss mindestens 12 Zeichen lang sein')
-    }
-    
-    const hasUppercase = /[A-Z]/.test(newUser.value.password)
-    const hasNumber = /[0-9]/.test(newUser.value.password)
-    if (!hasUppercase || !hasNumber) {
-      throw new Error('Passwort muss mindestens einen Großbuchstaben und eine Zahl enthalten')
-    }
-
-    throw new Error('Bitte Admin über die Admin-Verwaltung anlegen. Kunden ohne Passwort; Staff per Einladung.')
+    throw new Error('Administratoren werden per Einladung in der Administrator-Verwaltung angelegt.')
   } catch (error: any) {
     console.error('❌ Error creating user:', error)
     const msg = error?.data?.statusMessage || error?.statusMessage || error?.message

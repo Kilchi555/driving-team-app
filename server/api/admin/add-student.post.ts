@@ -130,7 +130,7 @@ export default defineEventHandler(async (event) => {
         .eq('tenant_id', tenantId)
         .eq('is_active', true)
         .maybeSingle()
-      if (!staffUser || !['staff', 'admin', 'sub_admin'].includes(staffUser.role || '')) {
+      if (!staffUser || !['staff', 'admin'].includes(staffUser.role || '')) {
         throw createError({ statusCode: 400, statusMessage: 'Ungültiger zugewiesener Mitarbeiter' })
       }
       assignedStaffId = staffUser.id
