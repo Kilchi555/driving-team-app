@@ -177,6 +177,8 @@ export async function createIndividualCourseInvoice(opts: {
     invoice_id: invoice.id,
     tenant_id: opts.tenantId,
     payment_id: opts.paymentId,
+    user_id: opts.userId,
+    event_type_code: null,
     product_name: opts.courseName,
     product_description: `Kursanmeldung ${studentName}`,
     quantity: 1,
@@ -361,10 +363,12 @@ export async function createCompanyCourseInvoice(opts: {
   }
 
   await supabase.from('invoice_items').insert(
-    items.map(({ registrationId: _r, userId: _u, _open_item_id, ...rest }) => ({
+    items.map(({ registrationId: _r, userId, _open_item_id, ...rest }) => ({
       ...rest,
       invoice_id: invoice.id,
       tenant_id: opts.tenantId,
+      user_id: userId || null,
+      event_type_code: null,
     }))
   )
 

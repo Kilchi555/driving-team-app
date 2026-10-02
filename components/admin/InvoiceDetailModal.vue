@@ -637,7 +637,8 @@
                     <!-- Mobile: stacked layout -->
                     <div class="flex items-start justify-between gap-3 sm:hidden">
                       <div class="flex-1 min-w-0">
-                        <div class="text-sm font-medium text-gray-900">{{ item.product_name }}</div>
+                        <div class="text-sm font-medium text-gray-900">{{ invoiceLineView(item).product_name }}</div>
+                        <div v-if="invoiceLineView(item).customer_line" class="text-xs text-gray-500 mt-0.5">{{ invoiceLineView(item).customer_line }}</div>
                         <div
                           v-if="item.product_description"
                           class="text-xs text-gray-500 mt-0.5 whitespace-pre-line"
@@ -661,7 +662,8 @@
                     <!-- Desktop: grid layout -->
                     <div class="hidden sm:grid sm:grid-cols-12 items-start">
                       <div class="col-span-6">
-                        <div class="text-sm font-medium text-gray-900">{{ item.product_name }}</div>
+                        <div class="text-sm font-medium text-gray-900">{{ invoiceLineView(item).product_name }}</div>
+                        <div v-if="invoiceLineView(item).customer_line" class="text-xs text-gray-500 mt-0.5">{{ invoiceLineView(item).customer_line }}</div>
                         <div
                           v-if="item.product_description"
                           class="text-xs text-gray-500 mt-0.5 whitespace-pre-line"
@@ -904,6 +906,18 @@ import DunningSendDialog from './DunningSendDialog.vue'
 // ProductSelectorModal entfernt (Rechnung ist read-only bzgl. Positionen)
 import type { InvoiceStatus, PaymentStatus } from '~/types/invoice'
 import { looksLikeCourseSessionsDescription, displayCourseSessionsDescription } from '~/utils/format-course-sessions'
+import { presentStoredInvoiceLine } from '~/server/utils/invoice-line-snapshot'
+
+function invoiceLineView(item: {
+  product_name?: string | null
+  product_id?: string | null
+  event_type_code?: string | null
+  staff_first_name?: string | null
+  customer_first_name?: string | null
+  customer_last_name?: string | null
+}) {
+  return presentStoredInvoiceLine(item)
+}
 import {
   documentDisplayNumber,
   quoteLifecycle,

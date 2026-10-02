@@ -8,7 +8,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { computeInvoiceDueDate } from '~/server/utils/invoice-due-date'
 import { computeVatAmountRappen, getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
 import { groupProductSalesByAppointment } from '~/server/utils/invoice-product-lines'
-import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { loadTenantEventTypeNames, resolveInvoiceLineLabel } from '~/server/utils/invoice-line-snapshot'
 import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
 import { resolveStudentBillingAddress } from '~/server/utils/billing-from-company'
 import { billingPersonNameParts } from '~/utils/billing-address-map'
@@ -62,7 +62,8 @@ export default defineEventHandler(async (event) => {
       event_type_code,
       status,
       cancellation_charge_percentage,
-      staff:users!staff_id (first_name)
+      staff_id,
+      staff:users!staff_id (id, first_name)
     )
   `
 
@@ -73,15 +74,22 @@ export default defineEventHandler(async (event) => {
       .select(paymentSelect)
       .in('id', explicitPaymentIds)
       .eq('user_id', student_user_id)
+      .eq('tenant_id', staffUser.tenant_id)
       .order('created_at', { ascending: true })
     openPayments = data
     paymentsError = error
+    const returned = new Set((data || []).map((row: any) => row.id))
+    const requested = Array.from(new Set(explicitPaymentIds))
+    if (!paymentsError && requested.some((id: string) => !returned.has(id))) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
   } else {
     // Fallback: fetch all uninvoiced 'invoice'-method payments for this student
     const baseQuery = () => supabase
       .from('payments')
       .select(paymentSelect)
       .eq('user_id', student_user_id)
+      .eq('tenant_id', staffUser.tenant_id)
       .eq('payment_method', 'invoice')
       .in('payment_status', ['pending', 'open', 'partial'])
       .order('created_at', { ascending: true })
@@ -121,6 +129,7 @@ export default defineEventHandler(async (event) => {
     .from('users')
     .select('id, first_name, last_name, email, street, street_nr, zip, city, phone, company_id, default_company_billing_address_id')
     .eq('id', student_user_id)
+    .eq('tenant_id', staffUser.tenant_id)
     .maybeSingle()
 
   if (studentById) {
@@ -130,6 +139,7 @@ export default defineEventHandler(async (event) => {
       .from('users')
       .select('id, first_name, last_name, email, street, street_nr, zip, city, phone, company_id, default_company_billing_address_id')
       .eq('auth_user_id', student_user_id)
+      .eq('tenant_id', staffUser.tenant_id)
       .maybeSingle()
     student = studentByAuthId
   }
@@ -260,26 +270,28 @@ export default defineEventHandler(async (event) => {
     const { data: productSales } = await supabase
       .from('product_sales')
       .select('appointment_id, product_id, quantity, total_price_rappen, products(id, name)')
+      .eq('tenant_id', staffUser.tenant_id)
       .in('appointment_id', aptIdsWithProducts)
     if (productSales) {
       productsByApt = groupProductSalesByAppointment(productSales as any[])
     }
   }
 
-  const terms = await getTenantTerminology(supabase, staffUser.tenant_id)
-  const eventTypeMap = eventTypeLabelMap(terms)
-  const appointmentFallback = terms.appointment || 'Termin'
+  const eventTypeNames = await loadTenantEventTypeNames(
+    supabase,
+    staffUser.tenant_id,
+    openPayments.map((p) => (p.appointments as any)?.event_type_code),
+  )
 
   let sortOrder = 0
   draft.items = openPayments.flatMap((p) => {
     const apt = p.appointments as any
-    const label = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
-    const staffFirstName = apt?.staff?.first_name || null
+    const eventTypeCode = String(apt?.event_type_code || '').trim() || null
     const serviceName = buildInvoiceServiceLineLabel({
-      eventLabel: label,
-      title: apt?.title,
-      fallback: appointmentFallback,
-      staffFirstName,
+      eventLabel: resolveInvoiceLineLabel({
+        eventTypeName: eventTypeCode ? eventTypeNames[eventTypeCode] : null,
+        existingTitle: apt?.title,
+      }),
       appointmentStatus: apt?.status,
       cancellationChargePercentage: apt?.cancellation_charge_percentage,
     })
@@ -297,6 +309,12 @@ export default defineEventHandler(async (event) => {
       payment_id: p.id,
       appointment_id: p.appointment_id,
       product_id: null as string | null,
+      event_type_code: eventTypeCode,
+      user_id: p.user_id || null,
+      staff_id: apt?.staff_id || apt?.staff?.id || null,
+      staff_first_name: apt?.staff?.first_name || null,
+      customer_first_name: student.first_name || null,
+      customer_last_name: student.last_name || null,
       product_name: serviceName,
       product_description: serviceDescription,
       appointment_title: apt?.title || null,

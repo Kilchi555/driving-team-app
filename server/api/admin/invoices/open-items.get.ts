@@ -16,13 +16,11 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
-import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { loadTenantEventTypeNames, resolveInvoiceLineLabel } from '~/server/utils/invoice-line-snapshot'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'superadmin'])
   const supabase = getSupabaseAdmin()
-  const terms = await getTenantTerminology(supabase, profile.tenant_id)
-  const appointmentFallback = terms.appointment || 'Termin'
   const { user_id, company_id } = getQuery(event) as any
 
   if (!user_id && !company_id) throw createError({ statusCode: 400, statusMessage: 'user_id or company_id required' })
@@ -32,8 +30,23 @@ export default defineEventHandler(async (event) => {
   const userNameMap: Record<string, string> = {}
 
   if (user_id) {
-    userIds = [user_id]
+    const { data: user } = await supabase
+      .from('users')
+      .select('id, first_name, last_name')
+      .eq('id', user_id)
+      .eq('tenant_id', profile.tenant_id)
+      .maybeSingle()
+    if (!user) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    userIds = [user.id]
+    userNameMap[user.id] = `${user.first_name || ''} ${user.last_name || ''}`.trim()
   } else if (company_id) {
+    const { data: company } = await supabase
+      .from('companies')
+      .select('id')
+      .eq('id', company_id)
+      .eq('tenant_id', profile.tenant_id)
+      .maybeSingle()
+    if (!company) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
     const { data: companyUsers } = await supabase
       .from('users').select('id, first_name, last_name').eq('company_id', company_id).eq('tenant_id', profile.tenant_id)
     userIds = (companyUsers || []).map((u: any) => u.id)
@@ -53,7 +66,7 @@ export default defineEventHandler(async (event) => {
       id, total_amount_rappen, created_at, payment_method, payment_status, user_id, appointment_id,
       description, metadata, course_registration_id,
       appointments(
-        title, start_time, duration_minutes, type,
+        title, start_time, duration_minutes, type, event_type_code,
         staff:staff_id(first_name, last_name)
       )
     `)
@@ -155,6 +168,12 @@ export default defineEventHandler(async (event) => {
     return clean
   }
 
+  const eventTypeNames = await loadTenantEventTypeNames(
+    supabase,
+    tenantId,
+    (lessonPayments || []).map((p: any) => p.appointments?.event_type_code),
+  )
+
   for (const p of (lessonPayments || [])) {
     const apt = (p as any).appointments
     const staff = apt?.staff
@@ -179,23 +198,32 @@ export default defineEventHandler(async (event) => {
       null
     const fallbackDescription =
       p.description && !/^Course:\s*Unknown$/i.test(p.description) ? p.description : null
+    const eventTypeCode = apt?.event_type_code ? String(apt.event_type_code) : null
+    const eventTypeName = eventTypeCode ? eventTypeNames[eventTypeCode] || null : null
+    const serviceLabel = isCoursePayment
+      ? (buildCourseLabel(resolvedCourseName, { individualSessionNumber: meta.individual_session_number, partialStartPosition: coursePartialStart })
+        || fallbackDescription
+        || 'Kurs')
+      : resolveInvoiceLineLabel({
+          eventTypeName,
+          existingTitle: apt?.title || fallbackDescription,
+        })
     items.push({
       type: isCoursePayment ? 'course' : 'lesson',
       source_id: p.id,
       source_table: 'payments',
       appointment_id: p.appointment_id || null,
-      label: apt?.title
-        || buildCourseLabel(resolvedCourseName, { individualSessionNumber: meta.individual_session_number, partialStartPosition: coursePartialStart })
-        || fallbackDescription
-        || appointmentFallback,
-      appointment_type: apt?.type || null,
+      event_type_code: eventTypeCode,
+      event_type_name: eventTypeName,
+      label: serviceLabel,
+      appointment_type: eventTypeCode,
       date: apt?.start_time || sessionDates[0] || meta.course_start_date || p.created_at,
       session_dates: sessionDates.length > 1 ? sessionDates : undefined,
       sessions: sessions.length > 0 ? sessions : undefined,
       duration_minutes: apt?.duration_minutes || null,
       staff_name: staffName,
       amount_rappen: p.total_amount_rappen || 0,
-      unit: isCoursePayment ? 'Kurs' : appointmentFallback,
+      unit: isCoursePayment ? 'Kurs' : serviceLabel,
       payment_method: p.payment_method,
       status: p.payment_status,
       user_id: p.user_id,

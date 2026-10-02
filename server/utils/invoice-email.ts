@@ -38,6 +38,7 @@ export interface InvoiceEmailItem {
   appointment_date?: string | null
   appointment_duration_minutes?: number | null
   product_description?: string | null
+  customer_line?: string | null
   quantity: number
   unit_price_rappen: number
   total_price_rappen: number
@@ -71,7 +72,7 @@ export interface InvoiceEmailData {
   introText?: string | null
   paymentTerms?: string | null
   footerText?: string | null
-  /** Breakdown label for lesson_price_rappen (default: Fahrstunde) */
+  /** @deprecated Prefer item.breakdown_label. */
   appointmentLabel?: string
   documentTitle?: string
   dateLabel?: string
@@ -96,7 +97,7 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
       <tr class="bd-row">
         <td colspan="4" style="padding:0 12px 10px;border-bottom:1px solid #f1f5f9;">
           <table width="100%" cellpadding="0" cellspacing="0">
-            ${(item.lesson_price_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">${appointmentLabel}</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${formatChfEmail(item.lesson_price_rappen!)}</td></tr>` : ''}
+            ${(item.lesson_price_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">${escapeHtml((item as any).breakdown_label || item.product_name || appointmentLabel)}</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${formatChfEmail(item.lesson_price_rappen!)}</td></tr>` : ''}
             ${(item.admin_fee_rappen || 0) > 0 ? `<tr><td style="padding:2px 0 2px 16px;font-size:11px;color:#94a3b8;">Admin-Gebühr</td><td style="padding:2px 0;text-align:right;font-size:11px;color:#64748b;">${formatChfEmail(item.admin_fee_rappen!)}</td></tr>` : ''}
             ${(item.products_price_rappen || 0) > 0
               ? (item.product_details && item.product_details.length > 0
@@ -145,6 +146,7 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
     <tr>
       <td class="col-desc" style="padding:12px 12px ${pb};border-bottom:${border};">
         <strong style="color:#1e293b;font-size:14px;">${escapeHtml(item.product_name)}</strong>
+        ${item.customer_line ? `<br><span style="color:#94a3b8;font-size:11px;">${escapeHtml(item.customer_line)}</span>` : ''}
         ${metaLine}${discountLine}
       </td>
       <td class="col-anz" style="padding:12px 8px ${pb};border-bottom:${border};text-align:center;color:#94a3b8;font-size:13px;">${item.quantity}</td>

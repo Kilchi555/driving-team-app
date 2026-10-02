@@ -71,6 +71,14 @@ export interface InvoiceItem {
   product_id?: string
   product_name: string
   product_description?: string
+  /** Event type frozen at creation. Null on course lines and historical rows. */
+  event_type_code?: string | null
+  /** Student frozen at creation. Not recomputed from the appointment. */
+  user_id?: string | null
+  staff_id?: string | null
+  staff_first_name?: string | null
+  customer_first_name?: string | null
+  customer_last_name?: string | null
   
   // Termin Information
   appointment_id?: string
@@ -171,6 +179,8 @@ export interface InvoiceItemFormData {
   product_id?: string
   product_name: string
   product_description?: string
+  event_type_code?: string | null
+  user_id?: string | null
   appointment_id?: string
   appointment_title?: string
   appointment_date?: string

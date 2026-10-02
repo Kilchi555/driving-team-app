@@ -10,6 +10,7 @@ import { applyMissingInvoiceBilling } from '~/server/utils/invoice-billing-snaps
 import { applyStudentCreditToPayments } from '~/server/utils/apply-student-credit'
 import { resolveInvoiceLineCreditRappen } from '~/server/utils/invoice-credit'
 import { snapshotBillingCompanyName } from '~/utils/billing-address-map'
+import { loadTenantEventTypeNames, resolveInvoiceLineLabel } from '~/server/utils/invoice-line-snapshot'
 
 export default defineEventHandler(async (event) => {
   // ✅ Use authenticated user
@@ -146,6 +147,100 @@ export default defineEventHandler(async (event) => {
 
     const totalRappen: number = subtotalRappen + vatRappen - discountRappen
 
+    const tenantId = userProfile.tenant_id
+    if (invoiceData.tenant_id && invoiceData.tenant_id !== tenantId) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+
+    if (invoiceData.user_id) {
+      const { data: billedUser } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('id', invoiceData.user_id)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+      if (!billedUser) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+
+    if (invoiceData.company_id) {
+      const { data: company } = await supabaseAdmin
+        .from('companies')
+        .select('id')
+        .eq('id', invoiceData.company_id)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+      if (!company) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+
+    if (invoiceData.staff_id) {
+      const { data: staff } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('id', invoiceData.staff_id)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+      if (!staff) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+
+    const appointmentIds = Array.from(new Set(
+      [
+        invoiceData.appointment_id,
+        ...invoiceItemsInput.map((item: any) => item.appointment_id),
+      ].filter(Boolean),
+    )) as string[]
+    const paymentIds = Array.from(new Set(
+      invoiceItemsInput.flatMap((item: any) => [
+        item.payment_id,
+        item._open_item_source_table === 'payments' ? item._open_item_id : null,
+      ]).filter(Boolean),
+    )) as string[]
+
+    const appointmentById = new Map<string, { id: string; user_id: string | null; staff_id: string | null; event_type_code: string | null; title: string | null }>()
+    if (appointmentIds.length > 0) {
+      const { data: appointments } = await supabaseAdmin
+        .from('appointments')
+        .select('id, user_id, staff_id, event_type_code, title')
+        .in('id', appointmentIds)
+        .eq('tenant_id', tenantId)
+      for (const row of appointments || []) appointmentById.set(row.id, row)
+      if (appointmentById.size !== appointmentIds.length) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+      }
+    }
+
+    const paymentById = new Map<string, { id: string; user_id: string | null; appointment_id: string | null }>()
+    if (paymentIds.length > 0) {
+      const { data: paymentRows } = await supabaseAdmin
+        .from('payments')
+        .select('id, user_id, appointment_id')
+        .in('id', paymentIds)
+        .eq('tenant_id', tenantId)
+      for (const row of paymentRows || []) paymentById.set(row.id, row)
+      if (paymentById.size !== paymentIds.length) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+      }
+    }
+
+    const partyIds = Array.from(new Set([
+      ...[...appointmentById.values()].flatMap((row) => [row.user_id, row.staff_id]),
+      ...[...paymentById.values()].map((row) => row.user_id),
+    ].filter(Boolean))) as string[]
+    const partyById = new Map<string, { id: string; first_name: string | null; last_name: string | null }>()
+    if (partyIds.length > 0) {
+      const { data: parties } = await supabaseAdmin
+        .from('users')
+        .select('id, first_name, last_name')
+        .in('id', partyIds)
+        .eq('tenant_id', tenantId)
+      for (const row of parties || []) partyById.set(row.id, row)
+    }
+
+    const eventTypeNames = await loadTenantEventTypeNames(
+      supabaseAdmin,
+      tenantId,
+      [...appointmentById.values()].map((row) => row.event_type_code),
+    )
+
     const billedInvoiceData = await applyMissingInvoiceBilling(
       supabaseAdmin,
       userProfile.tenant_id,
@@ -221,6 +316,7 @@ export default defineEventHandler(async (event) => {
             .from('payments')
             .update({ payment_status: 'invoice', payment_method: 'invoice', invoice_id: invoice.id })
             .eq('user_id', invoiceData.user_id)
+            .eq('tenant_id', tenantId)
             .in('appointment_id', appointmentIds)
 
           if (updatePaymentsError) {
@@ -250,12 +346,37 @@ export default defineEventHandler(async (event) => {
       }
 
       const invoiceItems = invoiceItemsInput.map((item: any, index: number) => {
-        // Strip internal metadata and computed-only fields before inserting
+        // Strip internal metadata and computed-only fields before inserting.
+        // tenant_id, user_id and event_type_code are never taken from the client.
         const {
           _open_item_id, _open_item_type, _open_item_source_table,
           payment_method, status,
+          tenant_id: _clientTenant,
+          user_id: _clientUser,
+          event_type_code: _clientEventType,
+          event_type_name: _clientEventName,
+          staff_id: _clientStaff,
+          staff_first_name: _clientStaffName,
+          customer_first_name: _clientCustomerFirst,
+          customer_last_name: _clientCustomerLast,
+          line_title: _clientLineTitle,
+          customer_line: _clientCustomerLine,
           ...cleanItem
         } = item
+        const appointment = item.appointment_id ? appointmentById.get(item.appointment_id) : null
+        const payment = paymentById.get(item.payment_id || (item._open_item_source_table === 'payments' ? item._open_item_id : ''))
+        const eventTypeCode = appointment?.event_type_code ? String(appointment.event_type_code) : null
+        const eventTypeName = eventTypeCode ? eventTypeNames[eventTypeCode] || null : null
+        const snapshotUserId = appointment?.user_id || payment?.user_id || null
+        const customer = snapshotUserId ? partyById.get(snapshotUserId) : null
+        const staffId = appointment?.staff_id && partyById.has(appointment.staff_id) ? appointment.staff_id : null
+        const staff = staffId ? partyById.get(staffId) : null
+        if (eventTypeCode || appointment) {
+          cleanItem.product_name = resolveInvoiceLineLabel({
+            eventTypeName,
+            existingTitle: cleanItem.product_name || appointment?.title,
+          })
+        }
         const creditToWallet = !asQuote && Boolean(item.credit_to_wallet)
         const creditAmount = creditToWallet
           ? resolveInvoiceLineCreditRappen(
@@ -272,7 +393,13 @@ export default defineEventHandler(async (event) => {
         return {
           ...cleanItem,
           invoice_id: invoice.id,
-          tenant_id: userProfile.tenant_id,
+          tenant_id: tenantId,
+          event_type_code: eventTypeCode,
+          user_id: snapshotUserId,
+          staff_id: eventTypeCode ? staffId : null,
+          staff_first_name: eventTypeCode ? (staff?.first_name || null) : null,
+          customer_first_name: eventTypeCode ? (customer?.first_name || null) : null,
+          customer_last_name: eventTypeCode ? (customer?.last_name || null) : null,
           sort_order: item.sort_order ?? index,
           discount_percent: item.discount_percent || 0,
           unit_price_rappen: toRappen(cleanItem.unit_price_rappen),
@@ -345,6 +472,7 @@ export default defineEventHandler(async (event) => {
           .from(table)
           .update({ invoice_id: invoice.id })
           .eq('id', sourceId)
+          .eq('tenant_id', tenantId)
         if (stampErr) console.warn(`[invoice/create] Could not stamp invoice_id on ${table}:`, stampErr)
       }
     }
@@ -358,7 +486,8 @@ export default defineEventHandler(async (event) => {
 
     return { success: true, data: fullInvoice }
   } catch (err: any) {
+    if (err?.statusCode && err.statusCode < 500) throw err
     console.error('Error creating invoice:', err)
-    throw createError({ statusCode: 500, statusMessage: err.message })
+    throw createError({ statusCode: 500, statusMessage: err.statusMessage || err.message })
   }
 })

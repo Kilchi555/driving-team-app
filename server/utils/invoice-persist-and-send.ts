@@ -9,6 +9,7 @@ import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/t
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 import { appointmentCountLabel, getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { presentStoredInvoiceLine } from '~/server/utils/invoice-line-snapshot'
 import { applyMissingInvoiceBilling, invoiceQrDebtorName, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
 import { formatBillingPersonLabel, joinStreetAndNumber, snapshotBillingCompanyName } from '~/utils/billing-address-map'
 
@@ -208,6 +209,12 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
       product_id: item.product_id || null,
       product_name: item.product_name,
       product_description: item.product_description || null,
+      event_type_code: item.event_type_code || null,
+      user_id: item.user_id || null,
+      staff_id: item.staff_id || null,
+      staff_first_name: item.staff_first_name || null,
+      customer_first_name: item.customer_first_name || null,
+      customer_last_name: item.customer_last_name || null,
       appointment_title: item.appointment_title || null,
       appointment_date: item.appointment_date || null,
       appointment_duration_minutes: item.appointment_duration_minutes || null,
@@ -235,6 +242,7 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
         updated_at: now,
       })
       .in('id', draft.payment_ids)
+      .eq('tenant_id', tenantId)
 
     if (paymentUpdateError) {
       console.error('⚠️ Fehler beim Setzen von payment_status=invoiced:', paymentUpdateError.message)
@@ -326,6 +334,18 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
   const uniqueRecipients = [...new Set(recipients)]
   let pdfAttachments: any[] = []
 
+  const displayItems = (draft.items || []).map((item: any) => {
+    const presented = presentStoredInvoiceLine({
+      productName: item.product_name,
+      productId: item.product_id,
+      eventTypeCode: item.event_type_code,
+      staffFirstName: item.staff_first_name,
+      customerFirstName: item.customer_first_name,
+      customerLastName: item.customer_last_name,
+    })
+    return { ...item, ...presented }
+  })
+
   if (sendEmailFlag && uniqueRecipients.length > 0) {
     try {
       const html = buildInvoiceEmailHtml({
@@ -333,7 +353,7 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
         invoiceNumber,
         invoiceDate: draft.invoice_date,
         dueDate: draft.due_date,
-        items: draft.items,
+        items: displayItems,
         subtotalRappen: draft.subtotal_rappen || draft.total_amount_rappen,
         discountRappen: draft.discount_amount_rappen || 0,
         totalRappen: draft.total_amount_rappen,
@@ -378,7 +398,7 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
           billingZip: pdfAddr.billingZip,
           billingCity: pdfAddr.billingCity,
           billingEmail: billingEmail || uniqueRecipients[0],
-          items: draft.items,
+          items: displayItems,
           subtotalRappen: draft.subtotal_rappen || draft.total_amount_rappen,
           discountRappen: draft.discount_amount_rappen || 0,
           vatRate: Number(draft.vat_rate) || 0,
