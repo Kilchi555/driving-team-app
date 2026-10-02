@@ -15,7 +15,7 @@ function statusOf(run: () => void): number | undefined {
 
 describe('sanitizeRoleChange', () => {
   it('lets a super_admin assign roles the application already stores', () => {
-    for (const role of ['client', 'staff', 'admin', 'tenant_admin', 'super_admin', 'accountant', 'customer']) {
+    for (const role of ['client', 'staff', 'admin', 'tenant_admin', 'super_admin', 'accountant', 'customer', 'affiliate']) {
       expect(sanitizeRoleChange('super_admin', role)).toBe(role)
     }
   })
@@ -37,6 +37,7 @@ describe('sanitizeRoleChange', () => {
     expect(statusOf(() => sanitizeRoleChange('admin', 'super_admin'))).toBe(403)
     expect(statusOf(() => sanitizeRoleChange('admin', 'accountant'))).toBe(403)
     expect(statusOf(() => sanitizeRoleChange('admin', 'tenant_admin'))).toBe(403)
+    expect(statusOf(() => sanitizeRoleChange('admin', 'affiliate'))).toBe(403)
   })
 
   it('treats an omitted role as no change', () => {

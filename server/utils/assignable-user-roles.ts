@@ -24,6 +24,7 @@ export const SUPER_ADMIN_ASSIGNABLE_ROLES = new Set([
   'super_admin',
   'accountant',
   'customer',
+  'affiliate',
 ])
 
 /**
