@@ -19,7 +19,7 @@
  *
  * Usage:
  *   SIMY_ENV_TARGET=simy-test \
- *   SUPABASE_URL=https://kssqalisskhvorqwgy.supabase.co \
+ *   SUPABASE_URL=https://kssqalisscxkhvorqwgy.supabase.co \
  *   SUPABASE_SERVICE_ROLE_KEY=... \
  *   E2E_DEMO_PASSWORD=... \
  *   node scripts/setup-apple-review-tenant.mjs

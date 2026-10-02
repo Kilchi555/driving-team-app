@@ -17,7 +17,7 @@ import {
   setAuthPassword,
 } from '../../scripts/simy-e2e-safety.mjs'
 
-const APPROVED_URL = 'https://kssqalisskhvorqwgy.supabase.co'
+const APPROVED_URL = 'https://kssqalisscxkhvorqwgy.supabase.co'
 const PASSWORD = 'unit-test-password-value'
 const SERVICE_ROLE = 'unit-test-service-role'
 const ROOT = path.resolve(__dirname, '../..')
@@ -72,10 +72,10 @@ describe('simy-test environment gate', () => {
   it('rejects malformed, insecure, and credentialed URLs', () => {
     for (const rawUrl of [
       'not a url',
-      'http://kssqalisskhvorqwgy.supabase.co',
-      'https://user:pass@kssqalisskhvorqwgy.supabase.co',
-      'https://kssqalisskhvorqwgy.supabase.co.evil.example',
-      'https://kssqalisskhvorqwgy.supabase.co:8443',
+      'http://kssqalisscxkhvorqwgy.supabase.co',
+      'https://user:pass@kssqalisscxkhvorqwgy.supabase.co',
+      'https://kssqalisscxkhvorqwgy.supabase.co.evil.example',
+      'https://kssqalisscxkhvorqwgy.supabase.co:8443',
     ]) {
       const result = evaluateSimyTestGate({
         SIMY_ENV_TARGET: 'simy-test',
