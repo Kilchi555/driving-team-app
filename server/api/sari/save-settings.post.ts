@@ -89,8 +89,8 @@ export default defineEventHandler(async (event) => {
       if (sari_client_id) {
         secretsToUpsert.push({
           tenant_id: userProfile.tenant_id,
-          secret_type: 'SARI_CLIENT_ID',
-          secret_name: 'SARI_CLIENT_ID',
+          secret_type: 'sari_credentials',
+          secret_name: 'sari_client_id',
           secret_value: encryptSecret(sari_client_id)
         })
       }
@@ -98,8 +98,8 @@ export default defineEventHandler(async (event) => {
       if (sari_client_secret) {
         secretsToUpsert.push({
           tenant_id: userProfile.tenant_id,
-          secret_type: 'SARI_CLIENT_SECRET',
-          secret_name: 'SARI_CLIENT_SECRET',
+          secret_type: 'sari_credentials',
+          secret_name: 'sari_client_secret',
           secret_value: encryptSecret(sari_client_secret)
         })
       }
@@ -107,8 +107,8 @@ export default defineEventHandler(async (event) => {
       if (sari_username) {
         secretsToUpsert.push({
           tenant_id: userProfile.tenant_id,
-          secret_type: 'SARI_USERNAME',
-          secret_name: 'SARI_USERNAME',
+          secret_type: 'sari_credentials',
+          secret_name: 'sari_username',
           secret_value: encryptSecret(sari_username)
         })
       }
@@ -116,8 +116,8 @@ export default defineEventHandler(async (event) => {
       if (sari_password) {
         secretsToUpsert.push({
           tenant_id: userProfile.tenant_id,
-          secret_type: 'SARI_PASSWORD',
-          secret_name: 'SARI_PASSWORD',
+          secret_type: 'sari_credentials',
+          secret_name: 'sari_password',
           secret_value: encryptSecret(sari_password)
         })
       }

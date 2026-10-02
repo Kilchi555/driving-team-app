@@ -76,30 +76,30 @@ export default defineEventHandler(async (event) => {
     // Credentials verschlüsselt in tenant_secrets
     const secretsToUpsert: any[] = []
 
-    const addSecret = (type: string, value: string | undefined) => {
+    const addSecret = (secretName: string, value: string | undefined) => {
       if (value?.trim()) {
         secretsToUpsert.push({
           tenant_id: tenantId,
-          secret_type: type,
-          secret_name: type,
+          secret_type: 'sari_credentials',
+          secret_name: secretName,
           secret_value: encryptSecret(value.trim())
         })
       }
     }
 
     // CZV Secrets
-    addSecret('SARI_CZV_CLIENT_ID', sari_czv_client_id)
-    addSecret('SARI_CZV_CLIENT_SECRET', sari_czv_client_secret)
-    addSecret('SARI_CZV_USERNAME', sari_czv_username)
-    addSecret('SARI_CZV_PASSWORD', sari_czv_password)
-    addSecret('SARI_CZV_REGISTRATION_ID', sari_czv_registration_id)
+    addSecret('sari_czv_client_id', sari_czv_client_id)
+    addSecret('sari_czv_client_secret', sari_czv_client_secret)
+    addSecret('sari_czv_username', sari_czv_username)
+    addSecret('sari_czv_password', sari_czv_password)
+    addSecret('sari_czv_registration_id', sari_czv_registration_id)
 
     // FL Secrets
-    addSecret('SARI_FL_CLIENT_ID', sari_fl_client_id)
-    addSecret('SARI_FL_CLIENT_SECRET', sari_fl_client_secret)
-    addSecret('SARI_FL_USERNAME', sari_fl_username)
-    addSecret('SARI_FL_PASSWORD', sari_fl_password)
-    addSecret('SARI_FL_REGISTRATION_ID', sari_fl_registration_id)
+    addSecret('sari_fl_client_id', sari_fl_client_id)
+    addSecret('sari_fl_client_secret', sari_fl_client_secret)
+    addSecret('sari_fl_username', sari_fl_username)
+    addSecret('sari_fl_password', sari_fl_password)
+    addSecret('sari_fl_registration_id', sari_fl_registration_id)
 
     if (secretsToUpsert.length > 0) {
       const { error: secretsError } = await supabaseAdmin
