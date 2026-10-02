@@ -314,9 +314,9 @@
                   📣
                 </div>
                 <div>
-                  <p class="font-semibold text-gray-900 text-sm">Marketing-Leads</p>
-                  <p class="text-xs text-gray-500 mt-0.5">Für Newsletter, Kampagnen und Interessenten. Kein Login-Zugang.</p>
-                  <p class="text-xs text-orange-600 mt-1.5 font-medium">→ leads Tabelle</p>
+                  <p class="font-semibold text-gray-900 text-sm">Import-Archiv</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Speichert Importkunden im Archiv. Es entsteht kein Kundenprofil.</p>
+                  <p class="text-xs text-orange-600 mt-1.5 font-medium">→ Import-Archiv (imported_customers)</p>
                 </div>
               </div>
               <div v-if="importTarget === 'leads'" class="absolute top-3 right-3 w-5 h-5 rounded-full bg-orange-400 flex items-center justify-center">
@@ -365,7 +365,7 @@
                   <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Name + Geburtsdatum</span>
                   <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Lernfahrausweis-Nr</span>
                 </div>
-                <p class="text-xs text-blue-600 mt-1.5">Ein Treffer via einem beliebigen Feld gilt als Duplikat. Das Ergebnis zeigt via welche Felder erkannt wurde.</p>
+                <p class="text-xs text-blue-600 mt-1.5">Ein Treffer via einem beliebigen Feld gilt als Duplikat. Dieselbe E-Mail oder dieselbe kanonische Telefonnummer weiter unten in der Datei wird übersprungen; die erste gültige Zeile bleibt. 079… und +41 … werden als dieselbe Nummer gespeichert. 0041… bleibt 0041….</p>
               </div>
             </div>
             <!-- Aktion bei Duplikat -->
@@ -577,6 +577,12 @@
                 <div class="text-xs text-red-600 mt-0.5">Ungültig (wird ignoriert)</div>
               </div>
             </div>
+            <p v-if="dryRunResult.total != null" class="text-xs text-gray-500">
+              {{ dryRunResult.total }} = {{ dryRunResult.created ?? dryRunResult.newCount ?? 0 }} neu
+              + {{ dryRunResult.updated ?? 0 }} Aktualisierungen
+              + {{ dryRunResult.skipped ?? 0 }} übersprungen
+              + {{ dryRunResult.failed ?? dryRunResult.invalidCount ?? 0 }} ungültig
+            </p>
 
             <!-- Duplikat-Details mit per-Zeile Aktion -->
             <div v-if="dryRunResult.duplicates?.length" class="overflow-hidden rounded-xl border border-yellow-200">
@@ -624,6 +630,7 @@
                       <td class="px-3 py-2">
                         <select
                           v-model="rowActions[dup.row]"
+                          :disabled="dup.locked"
                           :class="[
                             'w-full text-xs border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1',
                             rowActions[dup.row] === 'skip' ? 'border-gray-300 text-gray-600 bg-gray-50' :
@@ -791,7 +798,7 @@
             </div>
             <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium"
               :class="importTarget === 'users' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'">
-              {{ importTarget === 'users' ? '👤 Kunden (users)' : '📣 Leads (marketing)' }}
+              {{ importTarget === 'users' ? '👤 Kunden (users)' : '📣 Import-Archiv' }}
             </div>
             <div class="flex items-center gap-2 px-3 py-1.5 bg-green-100 rounded-lg text-sm text-green-700">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
@@ -877,33 +884,39 @@
             </div>
 
             <!-- Erfolgsmeldung -->
-            <div v-if="importResult.errorCount === 0"
+            <div v-if="(importResult.failed ?? importResult.errorCount ?? 0) === 0"
               class="p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2">
               <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-              <p class="text-sm font-medium text-green-800">Import erfolgreich abgeschlossen</p>
+              <p class="text-sm font-medium text-green-800">Import abgeschlossen — die Zähler unten sind das Server-Ergebnis</p>
             </div>
 
             <!-- Zähler -->
             <div class="p-4 rounded-xl border"
               :class="importResult.errorCount > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'">
               <div class="flex flex-wrap gap-5 text-sm">
-                <div v-if="importResult.importedCount" class="flex items-center gap-1.5 text-green-700">
+                <div class="flex items-center gap-1.5 text-green-700">
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                  <strong>{{ importResult.importedCount }}</strong> neu importiert
+                  <strong>{{ importResult.created ?? importResult.importedCount ?? 0 }}</strong> neu importiert
                 </div>
-                <div v-if="importResult.updatedCount" class="flex items-center gap-1.5 text-blue-700">
+                <div class="flex items-center gap-1.5 text-blue-700">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                  <strong>{{ importResult.updatedCount }}</strong> aktualisiert
+                  <strong>{{ importResult.updated ?? importResult.updatedCount ?? 0 }}</strong> aktualisiert
                 </div>
-                <div v-if="importResult.skippedCount" class="flex items-center gap-1.5 text-gray-500">
+                <div class="flex items-center gap-1.5 text-gray-500">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                  <strong>{{ importResult.skippedCount }}</strong> übersprungen
+                  <strong>{{ importResult.skipped ?? importResult.skippedCount ?? 0 }}</strong> übersprungen
                 </div>
-                <div v-if="importResult.errorCount" class="flex items-center gap-1.5 text-red-600">
+                <div class="flex items-center gap-1.5 text-red-600">
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
-                  <strong>{{ importResult.errorCount }}</strong> Fehler
+                  <strong>{{ importResult.failed ?? importResult.errorCount ?? 0 }}</strong> fehlgeschlagen
                 </div>
               </div>
+              <p v-if="importResult.total != null" class="text-xs text-gray-500 mt-3">
+                {{ importResult.total }} = {{ importResult.created ?? importResult.importedCount ?? 0 }}
+                + {{ importResult.updated ?? importResult.updatedCount ?? 0 }}
+                + {{ importResult.skipped ?? importResult.skippedCount ?? 0 }}
+                + {{ importResult.failed ?? importResult.errorCount ?? 0 }}
+              </p>
 
               <!-- Fehlerdetails -->
               <div v-if="importResult.errors?.length" class="mt-4">
@@ -1664,7 +1677,7 @@ const importSettings = reactive({
   dataType: '' as string,
 })
 
-// ── Import target & column mapping ────────────────────────────────────────────
+// 'leads' is the archive destination (imported_customers), not public.leads.
 const importTarget = ref<'leads' | 'users' | ''>('')
 const duplicateMode = ref<'skip' | 'overwrite' | 'supplement' | 'create'>('skip')
 const importResult = ref<any>(null)
@@ -1756,8 +1769,8 @@ const duplicateModeOptions = [
   {
     value: 'create',
     label: 'Als neuen Kunden anlegen',
-    description: 'Immer ein neues Kundenprofil erstellen, auch wenn E-Mail oder Telefon bereits existiert.',
-    example: 'Gut für: Familienangehörige mit gleicher Telefonnummer, oder bewusstes Separieren.',
+    description: 'Neues Profil nur, wenn E-Mail und Telefon im Mandanten noch frei sind. Eine schon vorhandene E-Mail oder Telefonnummer wird nicht ein zweites Mal angelegt.',
+    example: 'Gleicher Name mit anderer E-Mail kann ein zweites Profil werden. Dieselbe E-Mail in der Datei wird übersprungen.',
   },
 ] as const
 
@@ -2210,7 +2223,7 @@ async function runDryRun() {
     const mappedRows = rows.value.map((row, i) => buildMappedRow(row, i))
     dryRunResult.value = await $fetch('/api/admin/import-users', {
       method: 'POST',
-      body: { rows: mappedRows, duplicateMode: duplicateMode.value, dryRun: true, metadataFields: [...metadataColumns] },
+      body: { rows: mappedRows, duplicateMode: duplicateMode.value, rowActions: { ...rowActions }, dryRun: true, metadataFields: [...metadataColumns] },
     })
   } catch (err: any) {
     dryRunResult.value = { error: err.message }
@@ -2270,7 +2283,9 @@ async function importData() {
       importProgress.current = rows.value.length
       importResult.value = result
     } else {
-      // ── Import as leads (existing batch import system) ───────────────
+      // Archive path: imports_batches + imported_customers.
+      // dataType stays "leads" so existing archive history keeps matching.
+      // This does not write public.leads.
       const authStore = useAuthStore()
       const tenantId = authStore.userProfile?.tenant_id
       const userId = authStore.userProfile?.id
@@ -2289,23 +2304,56 @@ async function importData() {
       }) as any
       const batchId = batchResponse.batchId
 
+      let created = 0
+      let failed = 0
+      const errors: { row: number; identifier: string; reason: string }[] = []
       for (let i = 0; i < mappedRows.length; i += CHUNK_SIZE) {
         const chunk = mappedRows.slice(i, i + CHUNK_SIZE)
-        await $fetch('/api/imports/import-customers', {
-          method: 'POST',
-          body: { tenantId, batchId, customers: chunk, createdBy: userId },
-        })
+        try {
+          const chunkResult = await $fetch('/api/imports/import-customers', {
+            method: 'POST',
+            body: { tenantId, batchId, customers: chunk, createdBy: userId },
+          }) as { importedCount?: number }
+          const written = typeof chunkResult?.importedCount === 'number' ? chunkResult.importedCount : 0
+          created += written
+          if (written !== chunk.length) {
+            const missed = Math.max(0, chunk.length - written)
+            failed += missed
+            errors.push({
+              row: i + 2,
+              identifier: 'Import-Archiv',
+              reason: `Chunk hat ${written} von ${chunk.length} Zeilen geschrieben`,
+            })
+          }
+        } catch (chunkError: any) {
+          failed += chunk.length
+          errors.push({
+            row: i + 2,
+            identifier: 'Import-Archiv',
+            reason: chunkError?.message || 'Chunk fehlgeschlagen',
+          })
+        }
         importProgress.current = Math.min(i + CHUNK_SIZE, mappedRows.length)
       }
 
       importResult.value = {
-        importedCount: rows.value.length,
+        total: rows.value.length,
+        created,
+        updated: 0,
+        skipped: 0,
+        failed,
+        duplicates: 0,
+        importedCount: created,
         updatedCount: 0,
         skippedCount: 0,
-        errorCount: 0,
-        errors: [],
+        errorCount: failed,
+        errors,
       }
-      await loadBatches()
+      try {
+        await loadBatches()
+      } catch (loadError) {
+        console.error('Failed to refresh archive batches:', loadError)
+      }
     }
   } catch (error: any) {
     console.error('Import failed:', error)
