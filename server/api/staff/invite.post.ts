@@ -17,6 +17,10 @@ import {
   emailConflictMessage,
 } from '~/server/utils/email-availability'
 import { pickStaffInviteFields } from '~/server/utils/invitation-role'
+import {
+  missingStaffInvitationRole,
+  STAFF_INVITATION_ROLE_UNAVAILABLE,
+} from '~/server/utils/multi-admin-schema'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -106,6 +110,25 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 403,
         statusMessage: 'Nur Admins können Einladungen versenden',
+      })
+    }
+
+    const { error: roleColumnError } = await serviceSupabase
+      .from('staff_invitations')
+      .select('role')
+      .eq('id', '00000000-0000-0000-0000-000000000000')
+      .maybeSingle()
+
+    if (missingStaffInvitationRole(roleColumnError)) {
+      throw createError({
+        statusCode: 503,
+        statusMessage: STAFF_INVITATION_ROLE_UNAVAILABLE,
+      })
+    }
+    if (roleColumnError) {
+      throw createError({
+        statusCode: 503,
+        statusMessage: 'Einladungsrolle konnte nicht geprüft werden',
       })
     }
 

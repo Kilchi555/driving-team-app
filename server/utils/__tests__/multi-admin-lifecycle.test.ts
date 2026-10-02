@@ -13,6 +13,10 @@ import {
   type LifecycleUser,
 } from '../admin-lifecycle'
 import { staffCreatePayload } from '../assignable-user-roles'
+import {
+  missingStaffInvitationRole,
+  missingTransferPrimaryAdmin,
+} from '../multi-admin-schema'
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8')
 
@@ -270,7 +274,7 @@ describe('multi-admin primary lifecycle', () => {
     expect(sql).toContain('SET is_primary_admin = CASE')
     expect(sql).not.toMatch(/UPDATE public\.users[\s\S]*UPDATE public\.users/)
 
-    const repair = read('migrations/20261002_multi_admin_primary_repair.sql')
+    const repair = read('migrations/20261002_zz_multi_admin_primary_repair.sql')
     expect(repair).toContain('users_primary_admin_requires_admin_role')
     expect(repair).toContain('users_one_active_primary_per_tenant')
     expect(repair).toContain('CHECK (is_primary_admin = false OR role = \'admin\')')
@@ -341,5 +345,77 @@ describe('multi-admin database contracts', () => {
     }
     expect(executable).not.toMatch(/admin_level/i)
     expect(executable).not.toContain("u.role = 'admin'")
+  })
+
+  it('applies schema migrations before the primary repair file', () => {
+    const names = [
+      '20261002_sec_c01_extend_users_privilege_freeze.sql',
+      '20261002_staff_invitations_role.sql',
+      '20261002_staff_locations_admin_role_rls.sql',
+      '20261002_staff_locations_tenant_fk.sql',
+      '20261002_transfer_primary_admin.sql',
+      '20261002_zz_multi_admin_primary_repair.sql',
+    ]
+    expect([...names].sort()).toEqual(names)
+    expect(names.at(-1)).toBe('20261002_zz_multi_admin_primary_repair.sql')
+    for (const name of names) {
+      expect(read(`migrations/${name}`).length).toBeGreaterThan(0)
+    }
+  })
+
+  it('freezes client writes to is_primary_admin in the existing SEC-C01 extension', () => {
+    const sql = read('migrations/20261002_sec_c01_extend_users_privilege_freeze.sql')
+    expect(sql).toContain('NEW.is_primary_admin IS DISTINCT FROM OLD.is_primary_admin')
+    expect(sql).toContain(
+      'REVOKE UPDATE (is_primary_admin, auth_user_id, is_active, deleted_at) ON TABLE public.users FROM authenticated',
+    )
+    expect(sql).toContain("jwt_role = 'service_role'")
+  })
+
+  it('rejects a cross-tenant staff_locations row with composite foreign keys and no data rewrite', () => {
+    const sql = read('migrations/20261002_staff_locations_tenant_fk.sql')
+    expect(sql).toContain('FOREIGN KEY (staff_id, tenant_id)')
+    expect(sql).toContain('REFERENCES public.users (id, tenant_id)')
+    expect(sql).toContain('FOREIGN KEY (location_id, tenant_id)')
+    expect(sql).toContain('REFERENCES public.locations (id, tenant_id)')
+    expect(sql).toContain('users_id_tenant_id_key')
+    expect(sql).toContain('locations_id_tenant_id_key')
+    expect(sql).not.toMatch(/UPDATE\s+public/i)
+    expect(sql).not.toMatch(/DELETE\s+FROM/i)
+    expect(sql).not.toContain('CREATE POLICY')
+  })
+})
+
+describe('multi-admin migration availability', () => {
+  it('stops invitations when staff_invitations.role is absent and does not omit the column', () => {
+    expect(missingStaffInvitationRole({
+      message: "Could not find the 'role' column of 'staff_invitations' in the schema cache",
+    })).toBe(true)
+    expect(missingStaffInvitationRole({ message: 'permission denied' })).toBe(false)
+
+    const invite = read('server/api/staff/invite.post.ts')
+    const probe = invite.indexOf('if (missingStaffInvitationRole(roleColumnError))')
+    const insert = invite.indexOf('role: inviteRole')
+    expect(probe).toBeGreaterThan(-1)
+    expect(insert).toBeGreaterThan(probe)
+    expect(invite).toContain('STAFF_INVITATION_ROLE_UNAVAILABLE')
+    expect(invite).toContain('statusCode: 503')
+  })
+
+  it('stops primary transfer when transfer_primary_admin is absent', () => {
+    expect(missingTransferPrimaryAdmin({
+      message: 'Could not find the function public.transfer_primary_admin in the schema cache',
+    })).toBe(true)
+    expect(missingTransferPrimaryAdmin({
+      message: 'caller is not an active primary admin',
+    })).toBe(false)
+
+    const transfer = read('server/api/admin/transfer-primary.post.ts')
+    const guard = transfer.indexOf('if (missingTransferPrimaryAdmin(error))')
+    const rpc = transfer.indexOf("rpc('transfer_primary_admin'")
+    expect(rpc).toBeGreaterThan(-1)
+    expect(guard).toBeGreaterThan(rpc)
+    expect(transfer).toContain('TRANSFER_PRIMARY_UNAVAILABLE')
+    expect(transfer).not.toMatch(/\.update\(\s*\{[^}]*is_primary_admin/)
   })
 })

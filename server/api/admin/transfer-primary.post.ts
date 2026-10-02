@@ -4,6 +4,10 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { validateUUID } from '~/server/utils/validators'
 import { logAudit } from '~/server/utils/audit'
 import { getClientIP } from '~/server/utils/ip-utils'
+import {
+  missingTransferPrimaryAdmin,
+  TRANSFER_PRIMARY_UNAVAILABLE,
+} from '~/server/utils/multi-admin-schema'
 
 /**
  * Moves the single active primary flag.
@@ -29,6 +33,9 @@ export default defineEventHandler(async (event) => {
 
   if (error) {
     const message = error.message || ''
+    if (missingTransferPrimaryAdmin(error)) {
+      throw createError({ statusCode: 503, statusMessage: TRANSFER_PRIMARY_UNAVAILABLE })
+    }
     if (message.includes('caller is not an active primary')) {
       throw createError({ statusCode: 403, statusMessage: 'Nur der Hauptadministrator kann die Rolle übertragen' })
     }
