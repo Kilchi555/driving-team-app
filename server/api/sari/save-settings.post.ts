@@ -90,8 +90,8 @@ export default defineEventHandler(async (event) => {
         secretsToUpsert.push({
           tenant_id: userProfile.tenant_id,
           secret_type: 'SARI_CLIENT_ID',
-          secret_value: encryptSecret(sari_client_id),
-          updated_by: userProfile.id
+          secret_name: 'SARI_CLIENT_ID',
+          secret_value: encryptSecret(sari_client_id)
         })
       }
 
@@ -99,8 +99,8 @@ export default defineEventHandler(async (event) => {
         secretsToUpsert.push({
           tenant_id: userProfile.tenant_id,
           secret_type: 'SARI_CLIENT_SECRET',
-          secret_value: encryptSecret(sari_client_secret),
-          updated_by: userProfile.id
+          secret_name: 'SARI_CLIENT_SECRET',
+          secret_value: encryptSecret(sari_client_secret)
         })
       }
 
@@ -108,8 +108,8 @@ export default defineEventHandler(async (event) => {
         secretsToUpsert.push({
           tenant_id: userProfile.tenant_id,
           secret_type: 'SARI_USERNAME',
-          secret_value: encryptSecret(sari_username),
-          updated_by: userProfile.id
+          secret_name: 'SARI_USERNAME',
+          secret_value: encryptSecret(sari_username)
         })
       }
 
@@ -117,8 +117,8 @@ export default defineEventHandler(async (event) => {
         secretsToUpsert.push({
           tenant_id: userProfile.tenant_id,
           secret_type: 'SARI_PASSWORD',
-          secret_value: encryptSecret(sari_password),
-          updated_by: userProfile.id
+          secret_name: 'SARI_PASSWORD',
+          secret_value: encryptSecret(sari_password)
         })
       }
 
@@ -126,7 +126,7 @@ export default defineEventHandler(async (event) => {
         const { error: secretsError } = await supabaseAdmin
           .from('tenant_secrets')
           .upsert(secretsToUpsert, {
-            onConflict: 'tenant_id,secret_type'
+            onConflict: 'tenant_id,secret_type,secret_name'
           })
 
         if (secretsError) {

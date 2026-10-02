@@ -81,8 +81,8 @@ export default defineEventHandler(async (event) => {
         secretsToUpsert.push({
           tenant_id: tenantId,
           secret_type: type,
-          secret_value: encryptSecret(value.trim()),
-          updated_by: userProfile.id
+          secret_name: type,
+          secret_value: encryptSecret(value.trim())
         })
       }
     }
@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
     if (secretsToUpsert.length > 0) {
       const { error: secretsError } = await supabaseAdmin
         .from('tenant_secrets')
-        .upsert(secretsToUpsert, { onConflict: 'tenant_id,secret_type' })
+        .upsert(secretsToUpsert, { onConflict: 'tenant_id,secret_type,secret_name' })
 
       if (secretsError) {
         throw new Error(`Secrets konnten nicht gespeichert werden: ${secretsError.message}`)
