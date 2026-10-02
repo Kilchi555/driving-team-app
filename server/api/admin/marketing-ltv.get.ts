@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
       )
     `)
     .eq('tenant_id', user.tenant_id)
-    .eq('role', 'student')
+    .eq('role', 'client')
     .not('acquisition_at', 'is', null)
     .order('acquisition_at', { ascending: false })
 

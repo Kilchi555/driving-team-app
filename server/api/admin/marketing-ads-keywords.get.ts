@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
       payments (total_amount_rappen, payment_status)
     `)
     .eq('tenant_id', user.tenant_id)
-    .eq('role', 'student')
+    .eq('role', 'client')
     .not('acquisition_term', 'is', null)
 
   // ── 3. Phone clicks per keyword from booking_redirects ───────────────────

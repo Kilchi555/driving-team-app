@@ -1207,7 +1207,7 @@ export class SARISyncEngine {
         last_name: 'Import',
         sari_faberid: faberid,
         tenant_id: this.tenantId,
-        role: 'student',
+        role: 'client',
         is_active: true
       })
       .select('id')

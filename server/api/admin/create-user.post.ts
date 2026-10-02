@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
           last_name: userData.last_name,
           email: userData.email,
           phone: userData.phone || null,
-          role: 'student',
+          role: 'client',
           tenant_id: userProfile.tenant_id,
           is_active: true
         })

@@ -56,6 +56,7 @@ describe('AUTH-P0-01 — resolvePublicRegistrationRole is fail-closed', () => {
     expect(isPrivilegedUserRole('staff')).toBe(true)
     expect(isPrivilegedUserRole('super_admin')).toBe(true)
     expect(isPrivilegedUserRole('client')).toBe(false)
+    // `student` is not a valid public.users.role and must stay non-privileged.
     expect(isPrivilegedUserRole('student')).toBe(false)
   })
 })

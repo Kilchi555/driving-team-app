@@ -167,7 +167,7 @@ const loadStudents = async () => {
     const { data, error: queryError } = await supabase
       .from('users')
       .select('id, first_name, last_name')
-      .eq('role', 'student')
+      .eq('role', 'client')
       .order('first_name')
 
     if (queryError) throw queryError

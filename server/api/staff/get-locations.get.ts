@@ -281,7 +281,7 @@ export default defineEventHandler(async (event) => {
           data: filteredLocations
         }
       }
-    } else if (['client', 'customer', 'student'].includes(userProfile.role)) {
+    } else if (['client', 'customer'].includes(userProfile.role)) {
       // Clients see only their own pickup locations
       logger.debug('🔍 Client fetching own pickup locations:', {
         clientId: userProfile.id
