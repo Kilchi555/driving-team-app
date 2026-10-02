@@ -25,6 +25,14 @@ import { sha256Hex } from '~/server/utils/meta-capi'
 import { reportBindingCourseConversionSafely } from '~/server/utils/binding-booking-conversion'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
 import { resolveNonWalleeEnrollmentMethod } from '~/server/utils/course-enrollment-payment-method'
+import { payableAfterSourceDiscount } from '~/server/utils/discount-amount'
+import { escapeLikePattern } from '~/server/utils/sql-helpers'
+import {
+  computeCourseInvoiceTotals,
+  createEnrollmentPayment,
+  createIndividualCourseInvoice,
+} from '~/server/utils/course-enrollment-billing'
+import { getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
@@ -52,6 +60,100 @@ const rateLimiter = createRateLimitMiddleware({
   }
 })
 
+function enrollmentNetRappen(course: any, isPartial: boolean, isIndividualSess: boolean, individualSessionNumber: unknown): number {
+  if (isIndividualSess) {
+    const tgt = (course.course_sessions || []).find(
+      (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
+    )
+    return tgt?.individual_price_rappen ?? course.price_per_participant_rappen ?? 0
+  }
+  const partialPriceRappen: number = course.course_category?.partial_price_rappen ?? 0
+  if (isPartial && !course.is_partial_only && partialPriceRappen > 0) return partialPriceRappen
+  return course.price_per_participant_rappen ?? 0
+}
+
+/**
+ * Same tenant-scoped code lookup as enroll-wallee. The client-supplied
+ * discount amount is never an input.
+ */
+async function resolveServerDiscountRappen(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  tenantId: string,
+  discountCode: unknown,
+  baseRappen: number,
+): Promise<number> {
+  if (typeof discountCode !== 'string' || !discountCode.trim()) return 0
+  try {
+    const escapedDiscountCode = escapeLikePattern(discountCode.trim())
+    const { data: voucherData } = await supabase
+      .from('voucher_codes')
+      .select('*')
+      .ilike('code', escapedDiscountCode)
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    let discountRow: any = voucherData
+    let unitSource: 'voucher_code' | 'gift_card' | 'discount' | null = voucherData ? 'voucher_code' : null
+
+    if (!discountRow) {
+      const { data: giftCard } = await supabase
+        .from('vouchers')
+        .select('*')
+        .ilike('code', escapedDiscountCode)
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .maybeSingle()
+      if (giftCard && !giftCard.redeemed_at) {
+        discountRow = { ...giftCard, discount_type: 'fixed', discount_value: giftCard.amount_rappen, is_gift_card: true }
+        unitSource = 'gift_card'
+      }
+    }
+
+    if (!discountRow) {
+      const { data: discountData } = await supabase
+        .from('discounts')
+        .select('*')
+        .ilike('code', escapedDiscountCode)
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .maybeSingle()
+      if (discountData) {
+        discountRow = discountData
+        unitSource = 'discount'
+      }
+    }
+
+    if (!discountRow || !unitSource) return 0
+    const validUntil = discountRow.valid_until ? new Date(discountRow.valid_until) : null
+    if (validUntil && new Date() > validUntil) return 0
+    const payable = payableAfterSourceDiscount({
+      baseRappen,
+      source: unitSource,
+      discountType: discountRow.discount_type,
+      discountValue: Number(discountRow.discount_value || 0),
+      maxDiscountRappen: discountRow.max_discount_rappen,
+    })
+    return payable.discountRappen
+  } catch (discountErr: any) {
+    logger.warn('⚠️ Discount validation failed (non-critical):', discountErr.message)
+    return 0
+  }
+}
+
+async function rollbackNewInvoiceEnrollment(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  tenantId: string,
+  registrationId: string,
+  createdGuestUserId: string | null,
+) {
+  await supabase.from('payments').delete().eq('course_registration_id', registrationId).eq('tenant_id', tenantId)
+  await supabase.from('course_registrations').delete().eq('id', registrationId).eq('tenant_id', tenantId)
+  if (createdGuestUserId) {
+    await supabase.from('users').delete().eq('id', createdGuestUserId).eq('tenant_id', tenantId).is('auth_user_id', null)
+  }
+}
+
 const handler = defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -77,7 +179,10 @@ const handler = defineEventHandler(async (event) => {
       marketingAttribution, // Optional: client-side gclid/UTM blob
       vehicleId,            // Optional: selected rental vehicle
       paymentMethod: _requestedPaymentMethod, // accepted for back-compat; course.payment_method wins
+      discountCode,
+      discountAmountRappen: _discountAmountRappen, // client hint; never used for the amount
     } = body
+    void _discountAmountRappen
 
     logger.debug('💵 Cash enrollment request:', { courseId, requestedTenantId, hasCustomSessions: !!requestedCustomSessions, isPartialEnrollment })
 
@@ -170,6 +275,120 @@ const handler = defineEventHandler(async (event) => {
       invoiceEnabled: adminAllowedInvoice,
     })
 
+    // Partial / individual flags stay outside the SARI block. Price is the
+    // course net; the client cannot choose it.
+    const isPartial = !!(isPartialEnrollment || course.is_partial_only)
+    const isIndividualSess =
+      isPartial && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
+    const netRappen = enrollmentNetRappen(course, isPartial, isIndividualSess, individualSessionNumber)
+    const discountRappen = finalPaymentMethod === 'invoice'
+      ? await resolveServerDiscountRappen(supabase, tenantId, discountCode, netRappen)
+      : 0
+
+    const sendEnrollmentConfirmation = async (registrationId: string, totalAmountChf: number, method: 'invoice' | 'cash') => {
+      try {
+        await $fetch('/api/emails/send-course-enrollment-confirmation', {
+          method: 'POST',
+          headers: internalSecretHeaders(),
+          body: {
+            courseRegistrationId: registrationId,
+            paymentMethod: method,
+            totalAmount: totalAmountChf,
+          }
+        })
+        logger.info(`📧 Confirmation email sent for ${registrationId}`)
+      } catch (error: any) {
+        logger.warn('⚠️ Email send failed (non-critical):', error.message)
+      }
+    }
+
+    const billInvoiceEnrollment = async (registrationId: string, userId: string, participant: {
+      first_name?: string | null
+      last_name?: string | null
+      email?: string | null
+      street?: string | null
+      street_nr?: string | null
+      zip?: string | null
+      city?: string | null
+    }) => {
+      const vatRate = await getTenantDefaultVatRate(supabase, tenantId)
+      const totals = computeCourseInvoiceTotals(netRappen, discountRappen, vatRate)
+      const pay = await createEnrollmentPayment({
+        tenantId,
+        adminUserId: null,
+        userId,
+        enrollmentId: registrationId,
+        courseId: course.id,
+        courseName: course.name,
+        amountRappen: totals.netRappen,
+        payableTotalRappen: totals.totalAmountRappen,
+        paymentOption: 'invoice',
+      })
+      if (!pay?.paymentId) {
+        throw createError({ statusCode: 500, statusMessage: 'Payment konnte nicht erstellt werden' })
+      }
+      const invoice = await createIndividualCourseInvoice({
+        tenantId,
+        adminUserId: null,
+        userId,
+        enrollmentId: registrationId,
+        paymentId: pay.paymentId,
+        courseName: course.name,
+        amountRappen: totals.netRappen,
+        discountRappen: totals.discountRappen,
+        participant,
+        sendEmail: true,
+      })
+      return { paymentId: pay.paymentId, ...invoice }
+    }
+
+    const completeExistingInvoiceEnrollment = async (registrationId: string) => {
+      const { data: existing } = await supabase
+        .from('course_registrations')
+        .select('id, user_id, invoice_id, first_name, last_name, email, street, street_nr, zip, city')
+        .eq('id', registrationId)
+        .eq('tenant_id', tenantId)
+        .eq('course_id', course.id)
+        .maybeSingle()
+
+      if (!existing) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Diese E-Mail-Adresse ist bereits für diesen Kurs angemeldet.',
+        })
+      }
+
+      let totalAmountRappen: number
+      if (existing.invoice_id) {
+        const { data: invoice } = await supabase
+          .from('invoices')
+          .select('id, total_amount_rappen')
+          .eq('id', existing.invoice_id)
+          .eq('tenant_id', tenantId)
+          .maybeSingle()
+        if (!invoice) {
+          throw createError({ statusCode: 500, statusMessage: 'Bestehende Rechnung konnte nicht geladen werden.' })
+        }
+        totalAmountRappen = Number(invoice.total_amount_rappen) || 0
+      } else {
+        if (!existing.user_id) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Diese E-Mail oder Telefonnummer gehört bereits zu einem Kunden. Bitte melde dich an. Die Anmeldung wurde nicht verknüpft.',
+          })
+        }
+        const billed = await billInvoiceEnrollment(existing.id, existing.user_id, existing)
+        totalAmountRappen = billed.totalAmountRappen
+      }
+
+      await sendEnrollmentConfirmation(existing.id, totalAmountRappen / 100, 'invoice')
+      return {
+        success: true,
+        enrollmentId: existing.id,
+        message: 'Anmeldung bestätigt! Die Rechnung wurde erstellt.',
+      }
+    }
+
     // 3 & 4. SARI credential loading + validation (only for SARI-managed courses)
     let sari: any = null
     let faberidClean = ''
@@ -234,6 +453,9 @@ const handler = defineEventHandler(async (event) => {
         .maybeSingle()
 
       if (existingEnrollment) {
+        if (finalPaymentMethod === 'invoice') {
+          return await completeExistingInvoiceEnrollment(existingEnrollment.id)
+        }
         throw createError({ statusCode: 409, statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.' })
       }
     }
@@ -252,6 +474,9 @@ const handler = defineEventHandler(async (event) => {
         .maybeSingle()
 
       if (existingByEmail) {
+        if (finalPaymentMethod === 'invoice') {
+          return await completeExistingInvoiceEnrollment(existingByEmail.id)
+        }
         throw createError({
           statusCode: 409,
           statusMessage: 'Diese E-Mail-Adresse ist bereits für diesen Kurs angemeldet.'
@@ -296,6 +521,7 @@ const handler = defineEventHandler(async (event) => {
     }
 
     let guestUserId: string | null = sessionPrincipalId
+    let createdGuestUserId: string | null = null
 
     if (!guestUserId) {
       const existingUser = await findExistingUserByContact(supabase, {
@@ -307,6 +533,12 @@ const handler = defineEventHandler(async (event) => {
 
       if (existingUser) {
         logger.debug('ℹ️ Contact matches existing customer (discovery only; not attaching):', existingUser.id)
+        if (finalPaymentMethod === 'invoice') {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Diese E-Mail oder Telefonnummer gehört bereits zu einem Kunden. Bitte melde dich an. Die Anmeldung wurde nicht verknüpft.',
+          })
+        }
         guestUserId = null
       } else {
         logger.debug('👤 Creating guest user...')
@@ -329,7 +561,13 @@ const handler = defineEventHandler(async (event) => {
         if (userError || !newUser) {
           logger.error('❌ Failed to create guest user:', userError)
           if (userError?.code === '23505') {
-            // Unique contact collision: do not attach the existing row; continue unlinked.
+            // Unique contact collision: do not attach the existing row.
+            if (finalPaymentMethod === 'invoice') {
+              throw createError({
+                statusCode: 409,
+                statusMessage: 'Diese E-Mail oder Telefonnummer gehört bereits zu einem Kunden. Bitte melde dich an. Die Anmeldung wurde nicht verknüpft.',
+              })
+            }
             guestUserId = null
           } else {
             const msg = userError?.message || ''
@@ -354,17 +592,20 @@ const handler = defineEventHandler(async (event) => {
           }
         } else {
           guestUserId = newUser.id
+          createdGuestUserId = newUser.id
           logger.info('✅ Guest user created:', guestUserId)
         }
       }
     }
 
-    // Partial / individual flags are needed for the registration insert even when
-    // the course is NOT SARI-managed. Previously these lived only inside the SARI
-    // block → ReferenceError on every non-SARI cash enroll (Gemperli VKU etc.).
-    const isPartial = !!(isPartialEnrollment || course.is_partial_only)
-    const isIndividualSess =
-      isPartial && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
+    if (finalPaymentMethod === 'invoice' && !guestUserId) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Diese E-Mail oder Telefonnummer gehört bereits zu einem Kunden. Bitte melde dich an. Die Anmeldung wurde nicht verknüpft.',
+      })
+    }
+
+    // Flags above stay outside the SARI block so non-SARI enrollments can read them.
 
     // 9. SARI sync FIRST (before DB save) - if managed
     // Enroll in ALL sessions (GROUP_2159157_2159158_2159159 → [2159157, 2159158, 2159159])
@@ -588,6 +829,31 @@ const handler = defineEventHandler(async (event) => {
     if (enrollmentError || !enrollment) {
       throwIfCourseCapacityExceeded(enrollmentError)
       logger.error('❌ Failed to create enrollment:', enrollmentError)
+
+      if (finalPaymentMethod === 'invoice' && enrollmentError?.message?.includes('duplicate key')) {
+        let existingId: string | null = null
+        if (finalEmail) {
+          const { data: byEmail } = await supabase
+            .from('course_registrations')
+            .select('id')
+            .eq('course_id', course.id)
+            .eq('tenant_id', tenantId)
+            .eq('email', finalEmail)
+            .maybeSingle()
+          existingId = byEmail?.id || null
+        }
+        if (!existingId && faberidClean) {
+          const { data: byFaber } = await supabase
+            .from('course_registrations')
+            .select('id')
+            .eq('course_id', course.id)
+            .eq('tenant_id', tenantId)
+            .eq('sari_faberid', faberidClean)
+            .maybeSingle()
+          existingId = byFaber?.id || null
+        }
+        if (existingId) return await completeExistingInvoiceEnrollment(existingId)
+      }
       
       // Provide clearer error messages
       if (enrollmentError?.message?.includes('duplicate key')) {
@@ -618,6 +884,41 @@ const handler = defineEventHandler(async (event) => {
     }
 
     logger.info('✅ Confirmed enrollment created:', enrollment.id)
+
+    let chargedTotalRappen = netRappen
+    if (finalPaymentMethod === 'invoice') {
+      if (!guestUserId) {
+        await rollbackNewInvoiceEnrollment(supabase, tenantId, enrollment.id, createdGuestUserId)
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Diese E-Mail oder Telefonnummer gehört bereits zu einem Kunden. Bitte melde dich an. Die Anmeldung wurde nicht verknüpft.',
+        })
+      }
+      try {
+        const billed = await billInvoiceEnrollment(enrollment.id, guestUserId, {
+          first_name: customerData.firstname,
+          last_name: customerData.lastname,
+          email: finalEmail,
+          street: customerData.street || customerData.address || null,
+          street_nr: customerData.streetNr || null,
+          zip: customerData.zip || null,
+          city: customerData.city || null,
+        })
+        chargedTotalRappen = billed.totalAmountRappen
+      } catch (billErr: any) {
+        logger.error('❌ Invoice billing failed:', billErr?.message || billErr)
+        try {
+          await rollbackNewInvoiceEnrollment(supabase, tenantId, enrollment.id, createdGuestUserId)
+        } catch (rollbackErr: any) {
+          logger.error('❌ Invoice enrollment rollback failed:', rollbackErr?.message || rollbackErr)
+        }
+        if (billErr?.statusCode === 409) throw billErr
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Rechnung konnte nicht erstellt werden.',
+        })
+      }
+    }
 
     upsertMarketingLeadSafe({
       tenantId,
@@ -695,43 +996,21 @@ const handler = defineEventHandler(async (event) => {
       })
     }
 
-    const isPartialOrd = !!(isPartialEnrollment || course.is_partial_only)
-    const isIndivSess = isPartialOrd && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
-    let effectivePrice: number
-    if (isIndivSess) {
-      const tgt = (course.course_sessions || []).find(
-        (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
-      )
-      effectivePrice = tgt?.individual_price_rappen ?? course.price_per_participant_rappen
-    } else {
-      const partialPriceRappen: number = course.course_category?.partial_price_rappen ?? 0
-      effectivePrice = (isPartialOrd && !course.is_partial_only && partialPriceRappen > 0)
-        ? partialPriceRappen
-        : course.price_per_participant_rappen
-    }
+    const quotedTotalRappen = finalPaymentMethod === 'invoice' ? chargedTotalRappen : netRappen
 
-    // 11. Send confirmation email
-    try {
-      await $fetch('/api/emails/send-course-enrollment-confirmation', {
-        method: 'POST',
-        headers: internalSecretHeaders(),
-        body: {
-          courseRegistrationId: enrollment.id,
-          paymentMethod: finalPaymentMethod === 'invoice' ? 'invoice' : 'cash',
-          totalAmount: effectivePrice / 100 // In CHF
-        }
-      })
-      logger.info(`📧 Confirmation email sent to ${finalEmail}`)
-    } catch (error: any) {
-      logger.warn('⚠️ Email send failed (non-critical):', error.message)
-    }
+    // Confirmation is sent only after invoice rows exist. A mail failure keeps them.
+    await sendEnrollmentConfirmation(
+      enrollment.id,
+      quotedTotalRappen / 100,
+      finalPaymentMethod === 'invoice' ? 'invoice' : 'cash',
+    )
 
     try {
       const attrRow = await resolveMarketingAttribution(supabase, marketingSessionId, marketingAttribution)
       const hashedEmail = finalEmail ? await sha256Hex(finalEmail.trim().toLowerCase()) : null
       const normalizedPhone = (finalPhone || phone || '').replace(/\s+/g, '').replace(/^00/, '+')
       const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
-      const valueChf = effectivePrice / 100
+      const valueChf = quotedTotalRappen / 100
 
       await reportBindingCourseConversionSafely({
         supabase,
@@ -757,7 +1036,7 @@ const handler = defineEventHandler(async (event) => {
       success: true,
       enrollmentId: enrollment.id,
       message: finalPaymentMethod === 'invoice'
-        ? 'Anmeldung bestätigt! Sie erhalten die Rechnung in Kürze per E-Mail.'
+        ? 'Anmeldung bestätigt! Die Rechnung wurde erstellt.'
         : 'Anmeldung bestätigt! Bitte bringen Sie den Betrag in bar zum ersten Kurstag mit.'
     }
 
