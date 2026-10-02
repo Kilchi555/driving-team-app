@@ -6,23 +6,16 @@ import type { Ref } from 'vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { SESSION_STORAGE_KEY } from '~/utils/session-persistence'
+import { clearAppSessionCache } from '~/utils/session-persistence'
+import { resolveServerTrialAuthority, type TenantTrialSnapshot, type TrialAuthority } from '~/utils/trial-gate'
 import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
 import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
 import { isTenantLoginPath } from '~/utils/public-paths'
 
 // Types
-interface TenantTrialInfo {
-  is_trial: boolean
-  trial_ends_at: string | null
-  subscription_plan: string | null
-  current_period_end: string | null
-  website_only?: boolean
-  website_setup_paid_at?: string | null
-  website_hosting_plan?: string | null
-}
+type TenantTrialInfo = TenantTrialSnapshot
 
-interface UserProfile {
+export interface UserProfile {
   id: string
   email: string
   role: string
@@ -50,6 +43,8 @@ export const useAuthStore = defineStore('authV2', () => {
   const loading = ref<boolean>(false)
   const isInitialized = ref<boolean>(false)
   const tenantTrialInfo = ref<TenantTrialInfo | null>(null)
+  const tenantTrialAuthority = ref<TrialAuthority>('idle')
+  let tenantTrialInflight: Promise<void> | null = null
 
   // Computed Properties
 const isLoggedIn = computed(() => !!user.value && !!userProfile.value)
@@ -454,7 +449,7 @@ const isAdmin = computed(() => {
           // cleared too, otherwise the next page load restores authStore.user
           // straight from this cache (valid up to 24h) without ever checking
           // cookies or the Supabase session.
-          localStorage.removeItem(SESSION_STORAGE_KEY)
+          clearAppSessionCache(localStorage)
           // Clear Supabase's own localStorage keys
           Object.keys(localStorage).forEach(key => {
             if (key.startsWith('sb-') || key.startsWith('supabase-')) {
@@ -501,33 +496,76 @@ const isAdmin = computed(() => {
     }
   }
 
-  const loadTenantTrialInfo = async () => {
-    try {
-      // Pass the Supabase Bearer token so the endpoint works for both
-      // HTTP-only cookie sessions AND Supabase localStorage sessions
-      const supabaseClient = getSupabase()
-      const { data: { session } } = await supabaseClient.auth.getSession()
-      const headers: Record<string, string> = {}
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`
-      }
-
-      const data = await $fetch('/api/tenants/trial-status', { headers }) as any
-      if (data) {
-        tenantTrialInfo.value = {
-          is_trial: data.is_trial,
-          trial_ends_at: data.trial_ends_at ?? null,
-          subscription_plan: data.subscription_plan ?? null,
-          current_period_end: data.current_period_end ?? null,
-          website_only: !!data.website_only,
-          website_setup_paid_at: data.website_setup_paid_at ?? null,
-          website_hosting_plan: data.website_hosting_plan ?? null,
-        }
-        logger.debug('✅ Tenant trial info loaded:', tenantTrialInfo.value)
-      }
-    } catch (err: any) {
-      logger.debug('⚠️ Could not load tenant trial info:', err?.message)
+  const applyServerTenantTrial = (data: TenantTrialInfo | null | undefined) => {
+    if (!data || typeof data.is_trial !== 'boolean') {
+      tenantTrialInfo.value = null
+      tenantTrialAuthority.value = 'unavailable'
+      return
     }
+    tenantTrialInfo.value = {
+      is_trial: data.is_trial,
+      trial_ends_at: data.trial_ends_at ?? null,
+      subscription_plan: data.subscription_plan ?? null,
+      current_period_end: data.current_period_end ?? null,
+      website_only: !!data.website_only,
+      website_setup_paid_at: data.website_setup_paid_at ?? null,
+      website_hosting_plan: data.website_hosting_plan ?? null,
+    }
+    tenantTrialAuthority.value = 'server'
+  }
+
+  const loadTenantTrialInfo = async () => {
+    if (tenantTrialAuthority.value === 'server' && tenantTrialInfo.value) return
+    if (tenantTrialInflight) return tenantTrialInflight
+
+    const userIdAtStart = user.value?.id ?? null
+    tenantTrialAuthority.value = 'pending'
+    const run = (async () => {
+      // Cached trialInfo is never passed in. Only /api/tenants/trial-status counts.
+      const result = await resolveServerTrialAuthority({
+        cached: null,
+        fetchServer: async () => {
+          const supabaseClient = getSupabase()
+          const { data: { session } } = await supabaseClient.auth.getSession()
+          const headers: Record<string, string> = {}
+          if (session?.access_token) {
+            headers.Authorization = `Bearer ${session.access_token}`
+          }
+          type TrialStatusResponse = {
+            is_trial: unknown
+            trial_ends_at?: string | null
+            subscription_plan?: string | null
+            current_period_end?: string | null
+            website_only?: boolean
+            website_setup_paid_at?: string | null
+            website_hosting_plan?: string | null
+          }
+          const data = await $fetch<TrialStatusResponse>('/api/tenants/trial-status', { headers })
+          if (!data || typeof data.is_trial !== 'boolean') return null
+          return {
+            is_trial: data.is_trial,
+            trial_ends_at: data.trial_ends_at ?? null,
+            subscription_plan: data.subscription_plan ?? null,
+            current_period_end: data.current_period_end ?? null,
+            website_only: !!data.website_only,
+            website_setup_paid_at: data.website_setup_paid_at ?? null,
+            website_hosting_plan: data.website_hosting_plan ?? null,
+          }
+        },
+      })
+      if ((user.value?.id ?? null) !== userIdAtStart) return
+      tenantTrialInfo.value = result.info
+      tenantTrialAuthority.value = result.authority
+      if (result.authority === 'server') {
+        logger.debug('✅ Tenant trial info loaded:', tenantTrialInfo.value)
+      } else {
+        logger.debug('⚠️ Tenant trial info unavailable; cached trial status will not be used')
+      }
+    })().finally(() => {
+      tenantTrialInflight = null
+    })
+    tenantTrialInflight = run
+    return run
   }
 
   const fetchUserProfile = async (userId: string) => {
@@ -535,11 +573,11 @@ const isAdmin = computed(() => {
     const applyProfile = (p: UserProfile) => {
       userProfile.value = p
       userRole.value = p.role || ''
-      if (p.tenant) {
-        tenantTrialInfo.value = {
+      if (p.tenant && typeof p.tenant.is_trial === 'boolean') {
+        applyServerTenantTrial({
           ...p.tenant,
           website_only: !!p.tenant.website_only || !!(p as any).website_only,
-        }
+        })
       } else if ((p as any).website_only) {
         tenantTrialInfo.value = {
           is_trial: tenantTrialInfo.value?.is_trial ?? false,
@@ -712,6 +750,8 @@ const isAdmin = computed(() => {
     errorMessage.value = null
     loading.value = false // ✅ WICHTIG: Loading zurücksetzen damit Login-Seite nicht hängen bleibt
     tenantTrialInfo.value = null
+    tenantTrialAuthority.value = 'idle'
+    tenantTrialInflight = null
   }
 
   const clearError = () => {
@@ -748,6 +788,7 @@ const isAdmin = computed(() => {
     loading,
     isInitialized,
     tenantTrialInfo,
+    tenantTrialAuthority,
 
     // Computed
     isLoggedIn,
@@ -769,6 +810,7 @@ const isAdmin = computed(() => {
     logout,
     fetchUserProfile,
     loadTenantTrialInfo,
+    applyServerTenantTrial,
     updateUserProfile,
     createUserProfile,
     clearAuthState,

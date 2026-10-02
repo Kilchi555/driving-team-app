@@ -1,13 +1,18 @@
 // middleware/trial.global.ts
-// Runs on every navigation. Redirects to /upgrade when a tenant's
+// Runs on every client navigation. Redirects to /upgrade when a tenant's
 // subscription has expired (trial ended or paid sub lapsed).
+//
+// Trial/subscription fields are server-authoritative for this page load.
+// app-session-cache must not satisfy the gate. When a logged-in tenant's
+// server status is still loading, navigation waits. If the server status
+// cannot be loaded, the gate fails closed instead of trusting localStorage.
 //
 // When trial is expired, these routes remain accessible (read-only orientation):
 //   /admin           → Dashboard
 //   /admin/users     → Kundenliste
-const TRIAL_EXPIRED_ALLOWED = ['/admin', '/admin/users']
+import { decideTrialGate } from '~/utils/trial-gate'
 
-export default defineNuxtRouteMiddleware((to) => {
+export default defineNuxtRouteMiddleware(async (to) => {
   if (import.meta.server) return
 
   // Skip public routes where a redirect would be wrong
@@ -19,34 +24,23 @@ export default defineNuxtRouteMiddleware((to) => {
   if (!protectedPrefixes.some(p => to.path.startsWith(p))) return
 
   const auth = useAuthStore()
-  const info = auth.tenantTrialInfo
+  const loggedInWithTenant = !!(auth.user && auth.userProfile?.tenant_id)
 
-  // If trial data hasn't loaded yet (e.g. before login), allow navigation
-  if (!info) return
-
-  // Website-only product is not the Simy SaaS trial. Hosting gate comes later.
-  if (info.website_only) return
-
-  const now = new Date()
-
-  // ── Active paid subscription → always allow ────────────────────────────────
-  if (!info.is_trial && info.subscription_plan && info.subscription_plan !== 'trial') {
-    // No period end = legacy/manual subscription (e.g. old "premium" plan) → always allow
-    if (!info.current_period_end) return
-    if (now < new Date(info.current_period_end)) return
-    // Paid subscription exists but period has ended → redirect to upgrade
-    return navigateTo('/upgrade')
+  // Plugins await this before app:created navigation. Waiting here as well
+  // covers a protected navigation that starts before that refresh finishes.
+  if (loggedInWithTenant && auth.tenantTrialAuthority !== 'server') {
+    await auth.loadTenantTrialInfo()
   }
 
-  // ── Trial: check if expired ────────────────────────────────────────────────
-  if (info.is_trial && info.trial_ends_at) {
-    const trialEnd = new Date(info.trial_ends_at)
-    if (now > trialEnd) {
-      // Allow only exact matches or explicit sub-paths (e.g. /admin/users/[id])
-      const allowed = TRIAL_EXPIRED_ALLOWED.some(p =>
-        to.path === p || (p !== '/admin' && to.path.startsWith(p + '/'))
-      )
-      if (!allowed) return navigateTo('/upgrade')
-    }
-  }
+  const decision = decideTrialGate({
+    path: to.path,
+    now: new Date(),
+    info: auth.tenantTrialAuthority === 'server' ? auth.tenantTrialInfo : null,
+    loggedInWithTenant,
+    authority: loggedInWithTenant ? auth.tenantTrialAuthority : 'idle',
+  })
+
+  if (decision === 'allow') return
+  // 'wait' after the await means the server status never arrived.
+  return navigateTo('/upgrade')
 })

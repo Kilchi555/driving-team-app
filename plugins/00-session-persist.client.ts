@@ -1,9 +1,10 @@
 // plugins/00-session-persist.client.ts
 // Persists user session to localStorage for HMR recovery
 import { defineNuxtPlugin } from '#app'
-import { useAuthStore } from '~/stores/auth'
+import type { User } from '@supabase/supabase-js'
+import { useAuthStore, type UserProfile } from '~/stores/auth'
 import { logger } from '~/utils/logger'
-import { SESSION_STORAGE_KEY, type PersistentSession } from '~/utils/session-persistence'
+import { buildPersistentSession, clearAppSessionCache, sessionRestorePlan, SESSION_STORAGE_KEY, type PersistentSession } from '~/utils/session-persistence'
 import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
 
 export default defineNuxtPlugin(async (nuxtApp) => {
@@ -29,24 +30,23 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       // Check if session is still valid (24 hours)
       if (now - session.timestamp > session.expiresIn) {
         logger.debug('⏰ Cached session expired')
-        localStorage.removeItem(SESSION_STORAGE_KEY)
+        clearAppSessionCache(localStorage)
         return false
       }
 
       logger.debug('✅ Restoring session from localStorage (HMR recovery):', session.user.email)
-      authStore.user = session.user as any
-      authStore.userProfile = session.profile
-      authStore.userRole = session.profile.role
-      if (session.trialInfo) {
-        authStore.tenantTrialInfo = session.trialInfo
-      }
+      // Identity only. trialInfo / profile.tenant must not become tenantTrialInfo.
+      const restored = sessionRestorePlan(session)
+      authStore.user = restored.user as User
+      authStore.userProfile = restored.profile as unknown as UserProfile
+      authStore.userRole = restored.role
 
       // Set isInitialized immediately for HMR recovery
       authStore.isInitialized = true
       return true
     } catch (err) {
       logger.debug('⚠️ Error restoring from localStorage:', err)
-      localStorage.removeItem(SESSION_STORAGE_KEY)
+      clearAppSessionCache(localStorage)
       return false
     }
   }
@@ -76,30 +76,26 @@ export default defineNuxtPlugin(async (nuxtApp) => {
           authStore.userProfile = response.profile
           authStore.userRole = response.profile.role || ''
 
-          // Fetch trial info and persist it alongside the session
+          // Live server row from this request. Not copied into the session cache.
           if (response.profile.tenant) {
-            authStore.tenantTrialInfo = response.profile.tenant
+            authStore.applyServerTenantTrial(response.profile.tenant)
           } else if (response.profile.tenant_id) {
             await authStore.loadTenantTrialInfo()
           }
 
-          // Save to localStorage for HMR recovery (including trial info)
-          const session: PersistentSession = {
+          const session: PersistentSession = buildPersistentSession({
             user: response.user,
             profile: response.profile,
-            trialInfo: authStore.tenantTrialInfo ?? undefined,
-            timestamp: Date.now(),
-            expiresIn: 24 * 60 * 60 * 1000 // 24 hours
-          }
+          })
           localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
           logger.debug('💾 Session saved to localStorage for HMR recovery')
         } else {
           logger.debug('🔄 No valid session cookie found')
-          localStorage.removeItem(SESSION_STORAGE_KEY)
+          clearAppSessionCache(localStorage)
         }
       } catch (err: any) {
         logger.debug('⚠️ Session restore error:', err.message)
-        localStorage.removeItem(SESSION_STORAGE_KEY)
+        clearAppSessionCache(localStorage)
       }
 
       // Set isInitialized to true even if no session was found

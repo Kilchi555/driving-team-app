@@ -31,6 +31,11 @@
  *      timestamp: Date.now(),
  *      expiresIn: 24 * 60 * 60 * 1000  // 24 hours
  *    }
+ *
+ *    Trial and subscription fields (is_trial, trial_ends_at, current_period_end,
+ *    subscription_plan) are not part of this cache. Older entries may still
+ *    contain `trialInfo` or `profile.tenant`; both are ignored on restore.
+ *    The trial gate reads only a server response from this page load.
  * 
  * 4. SECURITY:
  *    - Real auth tokens remain in HTTP-Only cookies (not accessible to JS)
@@ -68,7 +73,10 @@ export interface PersistentSession {
     access_token: string
     refresh_token: string
   }
-  // Trial/subscription info for client-side middleware enforcement
+  /**
+   * Legacy field. Older browsers may still have this in localStorage.
+   * It must not be copied into tenantTrialInfo or used for access control.
+   */
   trialInfo?: {
     is_trial: boolean
     trial_ends_at: string | null
@@ -80,4 +88,47 @@ export interface PersistentSession {
   }
   timestamp: number
   expiresIn: number // 24 hours = 86400000 ms
+}
+
+export const SESSION_CACHE_TTL_MS = 24 * 60 * 60 * 1000
+
+/** Drops nested tenant subscription data so a cached profile cannot gate access. */
+export function stripCachedSubscriptionProfile<T extends Record<string, unknown>>(profile: T): T {
+  if (!profile || typeof profile !== 'object') return profile
+  const { tenant: _tenant, ...rest } = profile
+  return rest as T
+}
+
+/**
+ * Fields safe to copy from app-session-cache into the auth store.
+ * Trial/subscription status is intentionally absent.
+ */
+export function sessionRestorePlan(session: PersistentSession): {
+  user: PersistentSession['user']
+  profile: PersistentSession['profile']
+  role: string
+} {
+  return {
+    user: session.user,
+    profile: stripCachedSubscriptionProfile(session.profile),
+    role: session.profile.role,
+  }
+}
+
+/** Persists identity only. Never writes trialInfo. */
+export function buildPersistentSession<T extends { tenant?: unknown }>(input: {
+  user: PersistentSession['user']
+  profile: T
+  now?: number
+}): PersistentSession {
+  return {
+    user: input.user,
+    profile: stripCachedSubscriptionProfile(input.profile as T & Record<string, unknown>) as unknown as PersistentSession['profile'],
+    timestamp: input.now ?? Date.now(),
+    expiresIn: SESSION_CACHE_TTL_MS,
+  }
+}
+
+export function clearAppSessionCache(storage: { removeItem: (key: string) => void }) {
+  storage.removeItem(SESSION_STORAGE_KEY)
 }
