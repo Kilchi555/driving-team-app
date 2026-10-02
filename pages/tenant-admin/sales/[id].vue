@@ -127,6 +127,7 @@
 
 <script setup lang="ts">
 import { salesDetailFailureMessage, salesDetailLoadFailure, type SalesDetailLoadState } from '~/utils/sales-detail-state'
+import { runSalesContactSave } from '~/utils/sales-detail-save'
 
 definePageMeta({ layout: 'tenant-admin', middleware: ['superadmin'] })
 const route = useRoute()
@@ -209,26 +210,31 @@ const load = async () => {
 }
 
 const saveContact = async () => {
-  saving.value = true
   error.value = ''
   message.value = ''
-  try {
-    const headers = await authHeaders()
-    await $fetch(`/api/tenant-admin/sales/${route.params.id}/contact`, {
-      method: 'POST',
-      headers,
-      body: form,
-    })
-    message.value = 'Kontakt dokumentiert. Es wurde nichts gesendet.'
-  } catch (err: any) {
+  const result = await runSalesContactSave({
+    onSaving: (value) => {
+      saving.value = value
+    },
+    post: async () => {
+      const headers = await authHeaders()
+      await $fetch(`/api/tenant-admin/sales/${route.params.id}/contact`, {
+        method: 'POST',
+        headers,
+        body: form,
+      })
+      message.value = 'Kontakt dokumentiert. Es wurde nichts gesendet.'
+    },
+    reload: async () => {
+      await load()
+      if (loadState.value !== 'ready') {
+        loadError.value = `${loadError.value} Der Kontakt wurde bereits dokumentiert.`
+      }
+    },
+  })
+  if (!result.posted && result.postError) {
+    const err = result.postError as { data?: { statusMessage?: string }; message?: string }
     error.value = err?.data?.statusMessage || err?.message || 'Speichern fehlgeschlagen'
-  } finally {
-    saving.value = false
-  }
-  if (!message.value) return
-  await load()
-  if (loadState.value !== 'ready') {
-    loadError.value = `${loadError.value} Der Kontakt wurde bereits dokumentiert.`
   }
 }
 
