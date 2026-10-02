@@ -8,6 +8,7 @@ import {
   NEXT_ACTIONS,
   SALES_STATUSES,
 } from '~/server/utils/sales-intelligence'
+import { resolveStoredFollowUp } from '~/server/utils/sales-profile-update'
 import {
   isMissingSalesStore,
   loadSalesProfiles,
@@ -24,7 +25,6 @@ export default defineEventHandler(async (event) => {
   const nextAction = body?.next_action ? oneOf(body.next_action, NEXT_ACTIONS, 'next_action') : null
   const salesStatus = body?.sales_status ? oneOf(body.sales_status, SALES_STATUSES, 'sales_status') : null
   const notes = textField(body?.notes, 4000)
-  const followUp = optionalTimestamp(body?.next_follow_up_at)
   const prospects = await loadSalesProspects()
   const prospect = prospects.find((row) => row.prospect_id === id)
   if (!prospect) throw createError({ statusCode: 404, statusMessage: 'Prospect nicht gefunden' })
@@ -36,6 +36,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 503, statusMessage: 'Sales-Profilspeicher ist noch nicht migriert' })
   }
   const existing = profiles.rows.find((row) => row.prospect_id === id) || null
+  const followUp = resolveStoredFollowUp(body, existing?.next_follow_up_at || null)
+  if ('error' in followUp) throw createError({ statusCode: 400, statusMessage: 'Ungültiges Datum' })
   const status = salesStatus || existing?.sales_status || 'review_required'
   const now = new Date().toISOString()
   const actorId = authUser.db_user_id || authUser.profile?.id || null
@@ -48,7 +50,7 @@ export default defineEventHandler(async (event) => {
     size_evidence_confidence: prospect.size_evidence_confidence,
     assigned_to: existing?.assigned_to || actorId,
     last_contacted_at: now,
-    next_follow_up_at: followUp,
+    next_follow_up_at: followUp.value,
     last_contact_channel: channel,
     next_action: nextAction,
     contact_attempts: (existing?.contact_attempts || 0) + 1,
@@ -81,7 +83,7 @@ export default defineEventHandler(async (event) => {
     channel,
     result,
     notes,
-    next_follow_up_at: followUp,
+    next_follow_up_at: followUp.logged,
     next_action: nextAction,
     sales_status: status,
     created_by: actorId,
@@ -128,14 +130,4 @@ function textField(value: unknown, max: number): string | null {
   if (!cleaned) return null
   if (cleaned.length > max) throw createError({ statusCode: 400, statusMessage: 'Text ist zu lang' })
   return cleaned
-}
-
-function optionalTimestamp(value: unknown): string | null {
-  if (value == null || value === '') return null
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(value)) {
-    throw createError({ statusCode: 400, statusMessage: 'Ungültiges Datum' })
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) throw createError({ statusCode: 400, statusMessage: 'Ungültiges Datum' })
-  return date.toISOString()
 }

@@ -140,7 +140,7 @@ const FREEMAIL = new Set([
   'proton.me', 'protonmail.com', 'pm.me', 'bluewin.ch', 'gmx.ch', 'gmx.net',
   'gmx.com', 'gmx.de', 'posteo.ch', 'posteo.de', 'aol.com', 'yahoo.com',
   'yahoo.de', 'jimdo.com', 'wix.com', 'wordpress.com', 'facebook.com',
-  'instagram.com', 'simy.ch', 'hispeed.ch', 'sunrise.ch',
+  'instagram.com', 'simy.ch', 'hispeed.ch', 'sunrise.ch', 'web.de',
 ])
 
 const DOMAIN_STOP = new Set(['fahrschule', 'fahrschulen', 'fahrlehrer', 'driving', 'motorrad'])
@@ -214,6 +214,10 @@ function nameTokens(value: string): string[] {
   return foldText(value).split(/[^a-z0-9]+/).filter((token) => token.length >= 5)
 }
 
+function domainLabels(host: string): string[] {
+  return host.split('.')[0].split(/[^a-z0-9]+/).filter((token) => token.length > 0)
+}
+
 export function organizationDomain(lead: SalesLeadInput): string | null {
   const website = hostOf(lead.website)
   const mail = emailDomain(normalizeEmail(lead.email))
@@ -221,7 +225,8 @@ export function organizationDomain(lead: SalesLeadInput): string | null {
   const plausible = (host: string) => {
     if (isFreemail(host)) return false
     if (/(fahr|drive|auto|moto)/.test(host)) return true
-    return tokens.some((token) => host.includes(token))
+    const labels = domainLabels(host)
+    return tokens.some((token) => labels.includes(token))
   }
   if (plausible(website)) return website
   if (plausible(mail)) return mail
@@ -403,10 +408,38 @@ function matchLead(lead: SalesLeadInput, index: TenantIndex, org: string | null)
   if (mailDomain && index.hosts.has(mailDomain)) return { high: index.hosts.get(mailDomain) || 'Bestehender Tenant', possible: null }
   if (org) {
     const label = org.replace(/\.(ch|com|org|net|swiss|rocks)$/i, '')
-    const near = index.labels.find((item) => item.label !== label && item.label.length >= 8 && label.length >= 8 && (item.label.includes(label) || label.includes(item.label)))
+    const near = index.labels.find((item) => shortBrandPrefix(item.label, label))
     if (near) return { high: null, possible: near.name }
   }
   return { high: null, possible: null }
+}
+
+function shortBrandPrefix(left: string, right: string): boolean {
+  if (!left || !right || left === right || left.length < 8 || right.length < 8) return false
+  if (left.includes('-') || right.includes('-')) return false
+  const shorter = left.length <= right.length ? left : right
+  const longer = left.length <= right.length ? right : left
+  const extra = longer.length - shorter.length
+  if (extra < 2 || extra > 3 || !longer.endsWith(shorter)) return false
+  return /^[a-z]{2,3}$/.test(longer.slice(0, extra))
+}
+
+function groupAugust(group: Array<{ email: string }>, augustByEmail: Map<string, SalesAugustInput>): SalesAugustInput {
+  const merged = emptyAugust()
+  for (const row of group) {
+    const august = row.email ? augustByEmail.get(row.email) : undefined
+    if (!august) continue
+    for (const mail of [1, 2, 3, 4] as const) {
+      const prev = merged.mails[mail]
+      const next = august.mails[mail]
+      merged.mails[mail] = {
+        sent: prev.sent || next.sent,
+        opened: prev.opened || next.opened,
+        clicked: prev.clicked || next.clicked,
+      }
+    }
+  }
+  return merged
 }
 
 function engagementOf(august: SalesAugustInput): EngagementLevel {
@@ -567,7 +600,7 @@ export function buildSalesProspects(input: {
       if (match.high) high = match.high
       else if (match.possible) possible = match.possible
     }
-    const august = input.augustByEmail.get(canonical.email) || emptyAugust()
+    const august = groupAugust(group, input.augustByEmail)
     if (/sms/i.test(canonical.lead.notes || '')) august.sms_note = true
     const engagement = engagementOf(august)
     const stats = canonical.org ? (orgStats.get(canonical.org) || { people: 0, cities: 0, weakNamed: false }) : { people: 0, cities: 0, weakNamed: false }

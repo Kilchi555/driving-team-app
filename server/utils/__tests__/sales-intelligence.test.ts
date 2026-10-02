@@ -55,6 +55,14 @@ describe('organizationDomain', () => {
       website: 'https://mueller-fahrschule.ch',
     }))).toBe('mueller-fahrschule.ch')
   })
+
+  it('does not treat a name token as a domain when it is only a substring of the label', () => {
+    expect(organizationDomain(lead({
+      id: '1',
+      name: 'Samir Khedhri (Driving Team)',
+      email: 'samir@drivingteam.ch',
+    }))).toBeNull()
+  })
 })
 
 describe('displayPerson', () => {
@@ -193,6 +201,121 @@ describe('buildSalesProspects', () => {
     const sprint = initialSprint(rows, 50)
     expect(sprint.rows.map((row) => row.prospect_id)).toEqual(['hot'])
     expect(sprint.rows[0].consent_status).not.toBe('active')
+  })
+
+  it('does not match a tenant by domain-label containment', () => {
+    const tenants = [
+      {
+        id: 'sara',
+        name: 'FAHRSCHULE Sara',
+        contact_email: 'info@fahrschule-sara.ch',
+        from_email: 'info@fahrschule-sara.ch',
+        contact_phone: null,
+        website_url: 'https://fahrschule-sara.ch',
+        domain: null,
+        website_domain: null,
+      },
+      {
+        id: 'disha',
+        name: 'City Drive Disha',
+        contact_email: 'info@citydrive-disha.ch',
+        from_email: 'info@citydrive-disha.ch',
+        contact_phone: null,
+        website_url: 'https://citydrive-disha.ch',
+        domain: null,
+        website_domain: null,
+      },
+      {
+        id: 'fahrstil',
+        name: 'Fahrschule Fahrstil',
+        contact_email: 'info@fahrschulefahrstil.ch',
+        from_email: 'info@fahrschulefahrstil.ch',
+        contact_phone: null,
+        website_url: 'https://fahrschulefahrstil.ch',
+        domain: null,
+        website_domain: null,
+      },
+    ]
+    const rows = buildSalesProspects({
+      leads: [
+        lead({ id: 'sarah', name: 'Ecole Sarah', email: 'info@fahrschule-sarah.ch', website: 'https://fahrschule-sarah.ch', phone: '+41 79 100 00 01' }),
+        lead({ id: 'city', name: 'City Drive', email: 'info@citydrive.ch', website: 'https://citydrive.ch', phone: '+41 79 100 00 02' }),
+        lead({ id: 'stil', name: 'Fahrstil', email: 'hallo@fahrstil.org', website: 'https://fahrstil.org', phone: '+41 79 100 00 03' }),
+        lead({ id: 'real', name: 'Sara Schule', email: 'info@fahrschule-sara.ch', phone: '+41 79 100 00 04' }),
+      ],
+      tenants,
+      staff: [],
+      consent: [{ email: 'info@fahrschule-sarah.ch', status: 'pending_consent' }],
+      augustByEmail: new Map(),
+    })
+    expect(rows.find((row) => row.prospect_id === 'sarah')?.possible_existing_tenant).toBe(false)
+    expect(rows.find((row) => row.prospect_id === 'sarah')?.existing_tenant_match).toBe(false)
+    expect(rows.find((row) => row.prospect_id === 'sarah')?.contactability).toBe('REVIEW_REQUIRED')
+    expect(rows.find((row) => row.prospect_id === 'city')?.possible_existing_tenant).toBe(false)
+    expect(rows.find((row) => row.prospect_id === 'stil')?.possible_existing_tenant).toBe(false)
+    expect(rows.find((row) => row.prospect_id === 'real')?.existing_tenant_match).toBe(true)
+    expect(rows.find((row) => row.prospect_id === 'real')?.eligible).toBe(false)
+  })
+
+  it('uses the strongest engagement inside one canonical group and ignores another company', () => {
+    const august = augustFromCampaignRows([
+      {
+        campaign_name: '[Outreach] Fahrlehrer Mail 2 – Unsere Geschichte',
+        email: 'andi@sibling-fahrschule.ch',
+        status: 'clicked',
+        sent_at: '2026-08-06T00:00:00Z',
+        opened_at: '2026-08-06T01:00:00Z',
+        clicked_at: '2026-08-06T02:00:00Z',
+      },
+      {
+        campaign_name: '[Outreach] Fahrlehrer Mail 4 – Affiliate',
+        email: 'info@sibling-fahrschule.ch',
+        status: 'queued',
+        sent_at: null,
+        opened_at: null,
+        clicked_at: null,
+      },
+      {
+        campaign_name: '[Outreach] Fahrlehrer Mail 1 – All-in-One',
+        email: 'info@other-fahrschule.ch',
+        status: 'sent',
+        sent_at: '2026-08-06T00:00:00Z',
+        opened_at: null,
+        clicked_at: null,
+      },
+    ])
+    const rows = buildSalesProspects({
+      leads: [
+        lead({
+          id: 'canon',
+          name: 'Fahrschule Sibling',
+          email: 'info@sibling-fahrschule.ch',
+          phone: '+41 79 200 00 01',
+          city: 'Bern',
+          website: 'https://sibling-fahrschule.ch',
+        }),
+        lead({ id: 'sibling', name: 'Andi Sibling', email: 'andi@sibling-fahrschule.ch' }),
+        lead({
+          id: 'other',
+          name: 'Andere Fahrschule',
+          email: 'info@other-fahrschule.ch',
+          phone: '+41 79 200 00 02',
+          website: 'https://other-fahrschule.ch',
+        }),
+      ],
+      tenants: [],
+      staff: [],
+      consent: [{ email: 'info@sibling-fahrschule.ch', status: 'pending_consent' }],
+      augustByEmail: august,
+    })
+    const group = rows.find((row) => row.prospect_id === 'canon')
+    expect(group?.duplicate_group_size).toBe(2)
+    expect(group?.engagement_level).toBe('HOT')
+    expect(group?.august.mails[2].clicked).toBe(true)
+    expect(group?.august.mails[4].sent).toBe(false)
+    expect(group?.contactability).toBe('REVIEW_REQUIRED')
+    expect(rows.find((row) => row.prospect_id === 'other')?.engagement_level).toBe('COLD')
+    expect(rows.find((row) => row.prospect_id === 'other')?.august.clicked).toBe(false)
   })
 
   it('does not count a queued mail without sent_at as sent', () => {
