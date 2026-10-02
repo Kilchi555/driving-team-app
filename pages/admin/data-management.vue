@@ -945,7 +945,6 @@
         </div>
       </div>
     </div>
-    </div>
 
     <!-- Search Tab -->
     <div v-if="activeTab === 'search'" class="space-y-6">
@@ -1569,6 +1568,7 @@
           </div>
         </div>
       </div>
+    </div>
     </div>
   </div>
 </template>
