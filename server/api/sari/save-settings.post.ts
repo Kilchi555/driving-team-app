@@ -6,6 +6,13 @@ import { logAudit } from '~/server/utils/audit'
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 
+type SariSecretRow = {
+  tenant_id: string
+  secret_type: 'sari_credentials'
+  secret_name: string
+  secret_value: string
+}
+
 /**
  * POST /api/sari/save-settings
  * Save SARI configuration and credentials for a tenant
@@ -62,82 +69,60 @@ export default defineEventHandler(async (event) => {
       sari_password
     } = body
 
+    const tenantId = userProfile.tenant_id
+
     logger.debug('Saving SARI settings', {
-      tenant_id: userProfile.tenant_id,
+      tenant_id: tenantId,
       sari_enabled,
       sari_environment
     })
 
-    // ✅ Update configuration in tenants table
-    const configData: Record<string, any> = { sari_enabled, sari_environment }
+    // Empty string, null and undefined are omitted. Whitespace-only values stay
+    // truthy, matching the previous writer. Clearing a stored secret is unsupported.
+    const secretsToUpsert: SariSecretRow[] = []
+    const addSecret = (secretName: string, value: string | null | undefined) => {
+      if (!value) return
+      secretsToUpsert.push({
+        tenant_id: tenantId,
+        secret_type: 'sari_credentials',
+        secret_name: secretName,
+        secret_value: encryptSecret(value)
+      })
+    }
 
+    addSecret('sari_client_id', sari_client_id)
+    addSecret('sari_client_secret', sari_client_secret)
+    addSecret('sari_username', sari_username)
+    addSecret('sari_password', sari_password)
+
+    if (secretsToUpsert.length > 0) {
+      const { error: secretsError } = await supabaseAdmin
+        .from('tenant_secrets')
+        .upsert(secretsToUpsert, {
+          onConflict: 'tenant_id,secret_type,secret_name'
+        })
+
+      if (secretsError) {
+        throw new Error(`Failed to save secrets: ${secretsError.message}`)
+      }
+
+      logger.info(`✅ Saved ${secretsToUpsert.length} SARI secrets (encrypted)`, {
+        tenant_id: tenantId
+      })
+    }
+
+    // Flags run after secrets. A failed secret upsert returns before this update,
+    // so this save cannot turn sari_enabled on when the submitted credentials did not persist.
     const { error: configError } = await supabaseAdmin
       .from('tenants')
-      .update(configData)
-      .eq('id', userProfile.tenant_id)
+      .update({ sari_enabled, sari_environment })
+      .eq('id', tenantId)
 
     if (configError) {
       throw new Error(`Failed to update SARI config: ${configError.message}`)
     }
 
-    logger.debug('✅ SARI config updated', { tenant_id: userProfile.tenant_id })
-
-    // ✅ If credentials provided, save them encrypted in tenant_secrets
-    if (sari_client_id || sari_client_secret || sari_username || sari_password) {
-      const secretsToUpsert: any[] = []
-
-      if (sari_client_id) {
-        secretsToUpsert.push({
-          tenant_id: userProfile.tenant_id,
-          secret_type: 'SARI_CLIENT_ID',
-          secret_value: encryptSecret(sari_client_id),
-          updated_by: userProfile.id
-        })
-      }
-
-      if (sari_client_secret) {
-        secretsToUpsert.push({
-          tenant_id: userProfile.tenant_id,
-          secret_type: 'SARI_CLIENT_SECRET',
-          secret_value: encryptSecret(sari_client_secret),
-          updated_by: userProfile.id
-        })
-      }
-
-      if (sari_username) {
-        secretsToUpsert.push({
-          tenant_id: userProfile.tenant_id,
-          secret_type: 'SARI_USERNAME',
-          secret_value: encryptSecret(sari_username),
-          updated_by: userProfile.id
-        })
-      }
-
-      if (sari_password) {
-        secretsToUpsert.push({
-          tenant_id: userProfile.tenant_id,
-          secret_type: 'SARI_PASSWORD',
-          secret_value: encryptSecret(sari_password),
-          updated_by: userProfile.id
-        })
-      }
-
-      if (secretsToUpsert.length > 0) {
-        const { error: secretsError } = await supabaseAdmin
-          .from('tenant_secrets')
-          .upsert(secretsToUpsert, {
-            onConflict: 'tenant_id,secret_type'
-          })
-
-        if (secretsError) {
-          throw new Error(`Failed to save secrets: ${secretsError.message}`)
-        }
-
-        logger.info(`✅ Saved ${secretsToUpsert.length} SARI secrets (encrypted)`, {
-          tenant_id: userProfile.tenant_id
-        })
-      }
-    }
+    logger.debug('✅ SARI config updated', { tenant_id: tenantId })
 
     // Audit log
     await logAudit({
