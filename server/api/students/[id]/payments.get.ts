@@ -7,6 +7,7 @@ import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { validateUUID } from '~/server/utils/validators'
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { staffProductSaleRows } from '~/utils/staff-product-sale-display'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -75,6 +76,19 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const { data: studentRow, error: studentRowError } = await supabaseAdmin
+      .from('users')
+      .select('id, tenant_id')
+      .eq('id', requestedStudentId)
+      .maybeSingle()
+
+    if (studentRowError || !studentRow || studentRow.tenant_id !== tenantId) {
+      throw createError({
+        statusCode: 404,
+        message: 'Student not found'
+      })
+    }
+
     logger.debug('📊 Loading payments for student:', {
       requestedStudentId,
       requestedBy: userProfile.id,
@@ -119,7 +133,7 @@ export default defineEventHandler(async (event) => {
         created_at,
         notes,
         wallee_transaction_id,
-        appointments!inner(
+        appointments(
           id,
           title,
           user_id,
@@ -137,7 +151,7 @@ export default defineEventHandler(async (event) => {
         )
       `)
       .eq('user_id', requestedStudentId)
-      .eq('appointments.tenant_id', tenantId)
+      .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
 
     if (paymentsError) {
@@ -298,7 +312,7 @@ export default defineEventHandler(async (event) => {
           : null,
         product_sales: payment.appointment_id
           ? (productSalesMap[payment.appointment_id] || [])
-          : []
+          : staffProductSaleRows(payment)
       }
     })
 

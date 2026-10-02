@@ -18,6 +18,8 @@ import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/up
 import { syncPaymentRefundTotals } from '~/server/utils/wallee-refund'
 import { assertCustomSessionsForTenant } from '~/server/utils/course-custom-sessions'
 import { applyCreditProductsForCompletedSale } from '~/server/utils/credit-product-purchase'
+import { partitionWebhookPayments } from '~/server/utils/staff-product-sale'
+import { applyStaffProductSaleCredits } from '~/server/utils/staff-product-sale-credit'
 import { internalSecretHeaders, isInternalSecretRequest } from '~/server/utils/require-staff-or-internal'
 import { classifyWalleeWebhookTimestamp, shouldShortCircuitWalleeWebhook } from '~/server/utils/wallee-webhook-replay'
 import { capturedAmountChfFromWalleeTx, shouldRejectWalleeCaptureMismatch, walleeRemainingChf } from '~/server/utils/wallee-remaining-amount'
@@ -792,6 +794,7 @@ export default defineEventHandler(async (event) => {
     // payment out of the completed update so webhook/cron can retry.
     const skipCompleteIds = new Set<string>()
     let topupCreditFailedIds: string[] = []
+    let staffCreditFailedIds: string[] = []
     if (paymentStatus === 'completed') {
       const { failedIds } = await applyCapturedWalleeTopupCredits(supabase, payments)
       topupCreditFailedIds = failedIds
@@ -1784,7 +1787,11 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 10: CONFIRM CREDIT DEDUCTION FOR COMPLETED ============
     if (paymentStatus === 'completed') {
       await confirmCreditDeduction(paymentsToUpdate)
-      await processVouchersAndCredits(payments)
+      const { staffProductSales, legacy } = partitionWebhookPayments(payments)
+      await processVouchersAndCredits(legacy)
+      if (staffProductSales.length > 0) {
+        staffCreditFailedIds = await applyStaffProductSaleCredits(supabase, staffProductSales, paymentStatus)
+      }
     }
     
     // ============ LAYER 11: SEND COURSE ENROLLMENT CONFIRMATION EMAILS ============
@@ -1804,18 +1811,18 @@ export default defineEventHandler(async (event) => {
     const duration = Date.now() - startTime
     logger.info(`🎉 Webhook processed in ${duration}ms`)
 
-    if (topupCreditFailedIds.length > 0) {
-      logger.error('❌ Top-up credit failed; requesting webhook retry', {
+    if (topupCreditFailedIds.length > 0 || staffCreditFailedIds.length > 0) {
+      logger.error('❌ Payment credit failed; requesting webhook retry', {
         transactionId,
-        failedIds: topupCreditFailedIds,
+        failedIds: [...topupCreditFailedIds, ...staffCreditFailedIds],
       })
       setResponseStatus(event, 503)
       return {
         success: false,
-        error: 'Top-up credit not applied',
+        error: topupCreditFailedIds.length > 0 ? 'Top-up credit not applied' : 'Staff product sale credit not applied',
         transactionId,
         retry: true,
-        failed_payment_ids: topupCreditFailedIds,
+        failed_payment_ids: [...topupCreditFailedIds, ...staffCreditFailedIds],
         duration_ms: duration,
       }
     }
