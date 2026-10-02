@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
   augustFromCampaignRows,
   buildSalesProspects,
+  compareSalesProspects,
   displayPerson,
   filterSalesProspects,
   initialSprint,
   organizationDomain,
   type SalesAugustInput,
   type SalesLeadInput,
+  type SalesProspect,
 } from '../sales-intelligence'
 
 function lead(partial: Partial<SalesLeadInput> & { id: string; name: string }): SalesLeadInput {
@@ -359,5 +361,283 @@ describe('buildSalesProspects', () => {
     expect(sprint.rows.every((row) => row.priority === 'P1' || row.priority === 'P2')).toBe(true)
     const filtered = filterSalesProspects(rows, { quick: 'HOT', sprint: true }, new Map())
     expect(filtered.length).toBe(60)
+  })
+
+  it('does not inherit another business engagement from a shared domain', () => {
+    const august = augustFromCampaignRows([
+      {
+        campaign_name: '[Outreach] Fahrlehrer Mail 1 – All-in-One',
+        email: 'nord@depot-auto.ch',
+        status: 'sent',
+        sent_at: '2026-08-06T00:00:00Z',
+        opened_at: null,
+        clicked_at: null,
+      },
+      {
+        campaign_name: '[Outreach] Fahrlehrer Mail 2 – Unsere Geschichte',
+        email: 'sued@depot-auto.ch',
+        status: 'opened',
+        sent_at: '2026-08-06T00:00:00Z',
+        opened_at: '2026-08-06T01:00:00Z',
+        clicked_at: null,
+      },
+    ])
+    const rows = buildSalesProspects({
+      leads: [
+        lead({ id: 'brand-a', name: 'Nordmarke', email: 'nord@depot-auto.ch', website: 'https://depot-auto.ch' }),
+        lead({ id: 'brand-b', name: 'Levin Marti (Suedpunkt Drive)', email: 'sued@depot-auto.ch' }),
+      ],
+      tenants: [],
+      staff: [],
+      consent: [],
+      augustByEmail: august,
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0].prospect_id).toBe('brand-a')
+    expect(rows[0].engagement_level).toBe('COLD')
+    expect(rows[0].august.mails[2].opened).toBe(false)
+    expect(rows[0].august.opened).toBe(false)
+  })
+
+  it('inherits a sibling click when the mailboxes are the same business', () => {
+    const august = augustFromCampaignRows([{
+      campaign_name: '[Outreach] Fahrlehrer Mail 2 – Unsere Geschichte',
+      email: 'rolf@sibling-fahrschule.ch',
+      status: 'clicked',
+      sent_at: '2026-08-06T00:00:00Z',
+      opened_at: '2026-08-06T01:00:00Z',
+      clicked_at: '2026-08-06T02:00:00Z',
+    }])
+    const rows = buildSalesProspects({
+      leads: [
+        lead({ id: 'canon', name: 'Marlies', email: 'marlies@sibling-fahrschule.ch', website: 'https://sibling-fahrschule.ch' }),
+        lead({ id: 'sibling', name: 'Rolf', email: 'rolf@sibling-fahrschule.ch', website: 'https://sibling-fahrschule.ch' }),
+      ],
+      tenants: [],
+      staff: [],
+      consent: [],
+      augustByEmail: august,
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0].engagement_level).toBe('HOT')
+    expect(rows[0].august.clicked).toBe(true)
+  })
+
+  it('inherits a sibling click when the school label is shorter than a strong stem', () => {
+    const august = augustFromCampaignRows([{
+      campaign_name: '[Outreach] Fahrlehrer Mail 1 – All-in-One',
+      email: 'rolf@wesco-fahrschule.ch',
+      status: 'clicked',
+      sent_at: '2026-08-06T00:00:00Z',
+      opened_at: '2026-08-06T01:00:00Z',
+      clicked_at: '2026-08-06T02:00:00Z',
+    }])
+    const rows = buildSalesProspects({
+      leads: [
+        lead({ id: 'canon', name: 'Marlies', email: 'marlies@wesco-fahrschule.ch', website: 'https://wesco-fahrschule.ch' }),
+        lead({ id: 'sibling', name: 'Rolf', email: 'rolf@wesco-fahrschule.ch', website: 'https://wesco-fahrschule.ch' }),
+      ],
+      tenants: [],
+      staff: [],
+      consent: [],
+      augustByEmail: august,
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0].engagement_level).toBe('HOT')
+  })
+
+  it('does not treat two labels on one generic mailbox as two people', () => {
+    const rows = buildSalesProspects({
+      leads: [
+        lead({ id: 'paren-a', name: 'brandbox-example(Nico Huber)', email: 'info@brandbox-fahrschule.ch', website: 'https://brandbox-fahrschule.ch' }),
+        lead({ id: 'paren-b', name: 'Nico Huber (brandbox-example)', email: 'info@brandbox-fahrschule.ch' }),
+        lead({ id: 'org-a', name: 'Eurobox', email: 'info@eurobox-fahrschule.ch', website: 'https://eurobox-fahrschule.ch' }),
+        lead({ id: 'org-b', name: 'Eurobox AG(Timo Keller)', email: 'info@eurobox-fahrschule.ch' }),
+      ],
+      tenants: [],
+      staff: [],
+      consent: [],
+      augustByEmail: new Map(),
+    })
+    const paren = rows.find((row) => row.organization_domain === 'brandbox-fahrschule.ch')
+    const org = rows.find((row) => row.organization_domain === 'eurobox-fahrschule.ch')
+    expect(paren?.duplicate_group_size).toBe(2)
+    expect(paren?.strong_people).toBe(1)
+    expect(paren?.business_potential).not.toBe('HIGH_EVIDENCE')
+    expect(org?.strong_people).toBe(1)
+    expect(org?.business_potential).not.toBe('HIGH_EVIDENCE')
+  })
+
+  it('keeps high evidence when a weak canonical label still belongs to a coherent business', () => {
+    const rows = buildSalesProspects({
+      leads: [
+        lead({ id: 'weak', name: 'foreignlabel.ch(Johannes Keller)', email: 'johannes@coherent-fahrschule.ch', city: 'Winterthur' }),
+        lead({ id: 'same', name: 'Johannes Keller (Coherent Fahrschule)', email: 'johannes@coherent-fahrschule.ch' }),
+        lead({ id: 'two', name: 'Manfred Frei (Coherent Fahrschule)', email: 'manfred@coherent-fahrschule.ch' }),
+        lead({ id: 'three', name: 'Miriam Hauser (Coherent Fahrschule)', email: 'miriam@coherent-fahrschule.ch' }),
+      ],
+      tenants: [],
+      staff: [],
+      consent: [],
+      augustByEmail: new Map(),
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0].prospect_id).toBe('weak')
+    expect(rows[0].strong_people).toBeGreaterThanOrEqual(2)
+    expect(rows[0].business_potential).toBe('HIGH_EVIDENCE')
+  })
+
+  it('does not ignore a weak label when another business shares the domain', () => {
+    const rows = buildSalesProspects({
+      leads: [
+        lead({
+          id: 'canon',
+          name: 'Fahrschule Northal(Beatrice Kaegi-Bleuler)',
+          email: 'beatrice@northal-fahrschule.ch',
+          website: 'https://northal-fahrschule.ch',
+          city: 'Oberweningen',
+        }),
+        lead({ id: 'beatrice', name: 'Beatrice Kaegi-Bleuler (Fahrschule Northal)', email: 'beatrice@northal-fahrschule.ch' }),
+        lead({ id: 'david', name: 'David Bolli (Fahrschule Northal)', email: 'david@northal-fahrschule.ch' }),
+        lead({ id: 'other', name: 'Fahrschule Zurichsee GmbH(David Rueegg)', email: 'david@northal-fahrschule.ch' }),
+      ],
+      tenants: [],
+      staff: [],
+      consent: [],
+      augustByEmail: new Map(),
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0].business_potential).not.toBe('HIGH_EVIDENCE')
+    expect(rows[0].business_potential).toBe('MEDIUM_EVIDENCE')
+  })
+
+  it('still counts genuinely distinct mailboxes as multi-person evidence', () => {
+    const rows = buildSalesProspects({
+      leads: [
+        lead({ id: 'slash', name: 'Fahrschule Riverbox(Nico Huber/Lara Meier)', email: 'nico@riverbox-fahrschule.ch', website: 'https://riverbox-fahrschule.ch', city: 'Bern' }),
+        lead({ id: 'lara', name: 'Lara Meier (Riverbox Fahrschule)', email: 'lara@riverbox-fahrschule.ch', website: 'https://riverbox-fahrschule.ch' }),
+        lead({ id: 'one', name: 'Fahrschule Alpine(Otto Meier)', email: 'otto@alpine-fahrschule.ch', website: 'https://alpine-fahrschule.ch' }),
+        lead({ id: 'two', name: 'Klara Steiner (Alpine Fahrschule)', email: 'klara@alpine-fahrschule.ch', website: 'https://alpine-fahrschule.ch' }),
+        lead({ id: 'three', name: 'Jonas Widmer (Alpine Fahrschule)', email: 'jonas@alpine-fahrschule.ch', website: 'https://alpine-fahrschule.ch' }),
+      ],
+      tenants: [],
+      staff: [],
+      consent: [],
+      augustByEmail: clicked('nico@riverbox-fahrschule.ch'),
+    })
+    const river = rows.find((row) => row.organization_domain === 'riverbox-fahrschule.ch')
+    const alpine = rows.find((row) => row.organization_domain === 'alpine-fahrschule.ch')
+    expect(river?.strong_people).toBeGreaterThanOrEqual(2)
+    expect(river?.business_potential).toBe('HIGH_EVIDENCE')
+    expect(alpine?.strong_people).toBeGreaterThanOrEqual(2)
+    expect(alpine?.business_potential).toBe('HIGH_EVIDENCE')
+  })
+
+  it('keeps existing, possible, opt-out, and pending consent out of the wrong buckets', () => {
+    const rows = buildSalesProspects({
+      leads: [
+        lead({ id: 'existing', name: 'Existing Schule', email: 'info@existing-fahrschule.ch', website: 'https://existing-fahrschule.ch', phone: '+41 79 400 00 01' }),
+        lead({ id: 'possible', name: 'Possible Schule', email: 'info@fsdrivebox.ch', website: 'https://fsdrivebox.ch', phone: '+41 79 400 00 02' }),
+        lead({ id: 'opt', name: 'Opt Schule', email: 'out@opt-fahrschule.ch', website: 'https://opt-fahrschule.ch', phone: '+41 79 400 00 03' }),
+        lead({ id: 'pending', name: 'Pending Schule', email: 'info@pending-fahrschule.ch', website: 'https://pending-fahrschule.ch', phone: '+41 79 400 00 04', city: 'Bern' }),
+      ],
+      tenants: [
+        {
+          id: 'existing-tenant',
+          name: 'Existing Schule',
+          contact_email: 'info@existing-fahrschule.ch',
+          from_email: null,
+          contact_phone: null,
+          website_url: 'https://existing-fahrschule.ch',
+          domain: null,
+          website_domain: null,
+        },
+        {
+          id: 'alpine',
+          name: 'Drive Box',
+          contact_email: 'info@drivebox.ch',
+          from_email: 'info@drivebox.ch',
+          contact_phone: null,
+          website_url: 'https://drivebox.ch',
+          domain: null,
+          website_domain: null,
+        },
+      ],
+      staff: [],
+      consent: [
+        { email: 'out@opt-fahrschule.ch', status: 'unsubscribed' },
+        { email: 'info@pending-fahrschule.ch', status: 'pending_consent' },
+      ],
+      augustByEmail: clicked('info@pending-fahrschule.ch'),
+    })
+    expect(rows.find((row) => row.prospect_id === 'existing')?.existing_tenant_match).toBe(true)
+    expect(rows.find((row) => row.prospect_id === 'existing')?.eligible).toBe(false)
+    expect(rows.find((row) => row.prospect_id === 'possible')?.possible_existing_tenant).toBe(true)
+    expect(rows.find((row) => row.prospect_id === 'possible')?.eligible).toBe(false)
+    expect(rows.find((row) => row.prospect_id === 'opt')?.opt_out).toBe(true)
+    expect(rows.find((row) => row.prospect_id === 'opt')?.eligible).toBe(false)
+    const pending = rows.find((row) => row.prospect_id === 'pending')
+    expect(pending?.consent_status).toBe('pending_consent')
+    expect(pending?.contactability).toBe('REVIEW_REQUIRED')
+    expect(pending?.eligible).toBe(true)
+    expect(initialSprint(rows, 50).rows.map((row) => row.prospect_id)).toEqual(['pending'])
+  })
+})
+
+describe('compareSalesProspects', () => {
+  function tied(id: string, email = `${id}@example.ch`): SalesProspect {
+    return {
+      prospect_id: id,
+      name: 'Same Schule',
+      person: null,
+      phone: null,
+      email,
+      website: null,
+      website_host: null,
+      city: null,
+      postal_code: null,
+      address: null,
+      organization_domain: 'example-fahrschule.ch',
+      priority: 'P1',
+      engagement_level: 'HOT',
+      business_potential: 'HIGH_EVIDENCE',
+      size_evidence_confidence: 'HIGH',
+      business_score: 50,
+      contactability: 'REVIEW_REQUIRED',
+      contactability_label: 'CONTACTABILITY REVIEW REQUIRED',
+      consent_status: 'unknown',
+      existing_tenant_match: false,
+      possible_existing_tenant: false,
+      opt_out: false,
+      matched_tenant_name: null,
+      duplicate_group_size: 1,
+      strong_people: 2,
+      why: [],
+      august: {
+        sent: 1,
+        opened: true,
+        clicked: true,
+        mails: {
+          1: { sent: true, opened: true, clicked: true },
+          2: { sent: false, opened: false, clicked: false },
+          3: { sent: false, opened: false, clicked: false },
+          4: { sent: false, opened: false, clicked: false },
+        },
+        sms_note: false,
+        historical: true,
+      },
+      eligible: true,
+      contact_completeness: 5,
+    }
+  }
+
+  it('breaks a complete tie by canonical id without reordering a higher priority', () => {
+    expect([tied('b-prospect'), tied('a-prospect')].sort(compareSalesProspects).map((row) => row.prospect_id)).toEqual(['a-prospect', 'b-prospect'])
+    const higher = tied('z-prospect')
+    const lower = { ...tied('a-prospect'), priority: 'P2' as const }
+    expect([lower, higher].sort(compareSalesProspects).map((row) => row.prospect_id)).toEqual(['z-prospect', 'a-prospect'])
+    const noIdA = { ...tied(''), email: 'a@example.ch', organization_domain: 'b-fahrschule.ch', name: 'Zulu' }
+    const noIdB = { ...tied(''), email: 'b@example.ch', organization_domain: 'a-fahrschule.ch', name: 'Alpha' }
+    expect([noIdB, noIdA].sort(compareSalesProspects).map((row) => row.email)).toEqual(['a@example.ch', 'b@example.ch'])
   })
 })

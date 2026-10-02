@@ -268,9 +268,96 @@ function personParts(name: string): string[][] {
     .filter((tokens) => tokens.length > 0)
 }
 
+function sharePerson(left: string[], right: string[]): boolean {
+  const a = left.join(' ')
+  const b = right.join(' ')
+  if (a === b) return true
+  if (a.length >= 6 && b.length >= 6 && (a.includes(b) || b.includes(a))) return true
+  return left.some((token) => token.length >= 6 && right.includes(token))
+}
+
+function orgIdentityTokens(org: string): string[] {
+  return [...new Set([
+    ...domainStems(org),
+    ...domainLabels(org).filter((token) => token.length >= 4 && !TOKEN_STOP.has(token)),
+  ])]
+}
+
+function isBrandOnly(tokens: string[], org: string): boolean {
+  if (tokens.length === 0) return true
+  const identity = orgIdentityTokens(org)
+  return tokens.every((token) => identity.some((stem) => stem === token || stem.includes(token) || token.includes(stem)))
+}
+
+function looksLikeBusiness(text: string): boolean {
+  return /fahrschule|fahrlehrer|driving|drive|auto|moto|ecole|schule/i.test(text)
+    || /[a-z0-9.-]+\.(?:ch|com|net|org)/i.test(text)
+}
+
+function businessBrandTokens(name: string): string[] {
+  const tokens: string[] = []
+  const parens = [...name.matchAll(/\(([^)]*)\)/g)].map((match) => match[1])
+  const outside = name.replace(/\([^)]*\)/g, ' ')
+  for (const text of [...parens, outside]) {
+    if (!looksLikeBusiness(text)) continue
+    tokens.push(...signatureTokens(text))
+  }
+  return [...new Set(tokens)]
+}
+
+function foreignBrandTokens(tokens: string[], org: string | null): string[] {
+  const stems = org ? domainStems(org) : []
+  return tokens.filter((token) => !stems.some((stem) => stem === token || stem.includes(token) || (token.length >= 4 && token.includes(stem))))
+}
+
+function schoolStems(org: string | null): string[] {
+  if (!org) return []
+  const generic = new Set(['drive', 'schule', 'ecole'])
+  return [...new Set([
+    ...domainStems(org),
+    ...domainLabels(org).filter((token) => token.length >= 5 && !DOMAIN_STOP.has(token) && !generic.has(token)),
+  ])]
+}
+
+function mailboxKey(email: string): string {
+  const normalized = normalizeEmail(email)
+  const at = normalized.lastIndexOf('@')
+  if (at < 0) return normalized
+  return `${normalized.slice(0, at).split('+')[0]}@${normalized.slice(at + 1)}`
+}
+
+function sameEngagementIdentity(canonical: SalesLeadInput, member: SalesLeadInput, org: string | null): boolean {
+  const canonMail = mailboxKey(canonical.email || '')
+  const memberMail = mailboxKey(member.email || '')
+  if (canonMail.length > 1 && canonMail === memberMail) return true
+  const canonPeople = personParts(canonical.name || '')
+  const memberPeople = personParts(member.name || '')
+  if (canonPeople.some((left) => memberPeople.some((right) => sharePerson(left, right)))) return true
+  const canonForeign = foreignBrandTokens(businessBrandTokens(canonical.name || ''), org)
+  const memberForeign = foreignBrandTokens(businessBrandTokens(member.name || ''), org)
+  if (canonForeign.length > 0 && memberForeign.length > 0 && canonForeign.some((token) => memberForeign.includes(token))) return true
+  const stems = schoolStems(org)
+  return canonForeign.length === 0 && memberForeign.length === 0 && stems.length > 0
+}
+
+interface PersonPart {
+  tokens: string[]
+  email: string
+  explicit: boolean
+}
+
 function countPeople(rows: SalesLeadInput[], org: string): { people: number; cities: number; weakNamed: boolean } {
   const strong = rows.filter((row) => isStrong(row, org))
-  const parts = strong.flatMap((row) => personParts(row.name || ''))
+  const parts: PersonPart[] = []
+  for (const row of strong) {
+    const email = normalizeEmail(row.email)
+    const extracted = personParts(row.name || '').filter((tokens) => !isBrandOnly(tokens, org))
+    if (extracted.length >= 2) {
+      for (const tokens of extracted) parts.push({ tokens, email, explicit: true })
+    } else if (extracted.length === 1) {
+      parts.push({ tokens: extracted[0], email, explicit: false })
+    }
+  }
   const parent = parts.map((_, index) => index)
   const find = (index: number): number => {
     let cursor = index
@@ -283,26 +370,39 @@ function countPeople(rows: SalesLeadInput[], org: string): { people: number; cit
     }
     return cursor
   }
-  const share = (left: string[], right: string[]) => {
-    const a = left.join(' ')
-    const b = right.join(' ')
-    if (a === b) return true
-    if (a.length >= 6 && b.length >= 6 && (a.includes(b) || b.includes(a))) return true
-    return left.some((token) => token.length >= 6 && right.includes(token))
-  }
   for (let i = 0; i < parts.length; i += 1) {
     for (let j = i + 1; j < parts.length; j += 1) {
-      if (share(parts[i], parts[j])) parent[find(i)] = find(j)
+      const sameMailbox = !!parts[i].email && parts[i].email === parts[j].email
+      const explicitPair = parts[i].explicit && parts[j].explicit
+      if (sharePerson(parts[i].tokens, parts[j].tokens) || (sameMailbox && !explicitPair)) parent[find(i)] = find(j)
     }
   }
   const roots = new Set(parts.map((_, index) => find(index)))
+  const strongParts = strong.flatMap((row) => personParts(row.name || ''))
   const cities = new Set(
     strong
       .map((row) => foldText(row.city).trim())
       .filter((city) => city.length >= 3 && city !== 'st'),
   )
-  const weakNamed = rows.some((row) => !isStrong(row, org) && /fahrschule/i.test(row.name || ''))
+  const weakNamed = rows.some((row) => {
+    if (isStrong(row, org) || !/fahrschule/i.test(row.name || '')) return false
+    const weakParts = personParts(row.name || '')
+    if (weakParts.length === 0) return true
+    return !weakParts.every((part) => strongParts.some((other) => sharePerson(part, other)))
+  })
   return { people: roots.size, cities: cities.size, weakNamed }
+}
+
+function canonicalAligns(canonical: SalesLeadInput, rows: SalesLeadInput[], org: string): boolean {
+  const mine = personParts(canonical.name || '')
+  const email = normalizeEmail(canonical.email)
+  return rows.some((row) => {
+    if (row.id === canonical.id || !isStrong(row, org)) return false
+    const parts = personParts(row.name || '')
+    if (mine.some((left) => parts.some((right) => sharePerson(left, right)))) return true
+    if (!email || normalizeEmail(row.email) !== email) return false
+    return parts.some((tokens) => !isBrandOnly(tokens, org))
+  })
 }
 
 function multiNamed(name: string): boolean {
@@ -424,9 +524,14 @@ function shortBrandPrefix(left: string, right: string): boolean {
   return /^[a-z]{2,3}$/.test(longer.slice(0, extra))
 }
 
-function groupAugust(group: Array<{ email: string }>, augustByEmail: Map<string, SalesAugustInput>): SalesAugustInput {
+function groupAugust(
+  group: Array<{ lead: SalesLeadInput; email: string; org: string | null }>,
+  augustByEmail: Map<string, SalesAugustInput>,
+  canonical: { lead: SalesLeadInput; org: string | null },
+): SalesAugustInput {
   const merged = emptyAugust()
   for (const row of group) {
+    if (row.lead.id !== canonical.lead.id && !sameEngagementIdentity(canonical.lead, row.lead, canonical.org || row.org)) continue
     const august = row.email ? augustByEmail.get(row.email) : undefined
     if (!august) continue
     for (const mail of [1, 2, 3, 4] as const) {
@@ -450,9 +555,13 @@ function engagementOf(august: SalesAugustInput): EngagementLevel {
   return 'UNKNOWN'
 }
 
-function evidenceOf(canonical: SalesLeadInput, org: string | null, stats: { people: number; weakNamed: boolean }): BusinessPotential {
+function evidenceOf(
+  canonical: SalesLeadInput,
+  org: string | null,
+  stats: { people: number; weakNamed: boolean; aligned: boolean },
+): BusinessPotential {
   const strong = isStrong(canonical, org)
-  if (strong && stats.people >= 2 && !stats.weakNamed) return 'HIGH_EVIDENCE'
+  if ((strong || stats.aligned) && stats.people >= 2 && !stats.weakNamed) return 'HIGH_EVIDENCE'
   if (strong && (stats.people >= 2 || multiNamed(canonical.name || ''))) return 'MEDIUM_EVIDENCE'
   const mailDomain = emailDomain(normalizeEmail(canonical.email))
   const otherHost = (canonical.name || '').match(/[a-z0-9.-]+\.(?:ch|com|net|org)/i)?.[0]?.toLowerCase()
@@ -600,11 +709,12 @@ export function buildSalesProspects(input: {
       if (match.high) high = match.high
       else if (match.possible) possible = match.possible
     }
-    const august = groupAugust(group, input.augustByEmail)
+    const august = groupAugust(group, input.augustByEmail, canonical)
     if (/sms/i.test(canonical.lead.notes || '')) august.sms_note = true
     const engagement = engagementOf(august)
     const stats = canonical.org ? (orgStats.get(canonical.org) || { people: 0, cities: 0, weakNamed: false }) : { people: 0, cities: 0, weakNamed: false }
-    const evidence = evidenceOf(canonical.lead, canonical.org, stats)
+    const aligned = !!canonical.org && canonicalAligns(canonical.lead, byOrgRows.get(canonical.org) || [], canonical.org)
+    const evidence = evidenceOf(canonical.lead, canonical.org, { ...stats, aligned })
     const consent = consentFor(canonical.email, input.consent)
     const optOut = consent === 'unsubscribed'
     const existing = !!high
@@ -687,7 +797,13 @@ export function compareSalesProspects(a: SalesProspect, b: SalesProspect): numbe
   if (evidence) return evidence
   if (b.business_score !== a.business_score) return b.business_score - a.business_score
   if (b.contact_completeness !== a.contact_completeness) return b.contact_completeness - a.contact_completeness
-  return CONFIDENCE_RANK[a.size_evidence_confidence] - CONFIDENCE_RANK[b.size_evidence_confidence]
+  const confidence = CONFIDENCE_RANK[a.size_evidence_confidence] - CONFIDENCE_RANK[b.size_evidence_confidence]
+  if (confidence) return confidence
+  const id = (a.prospect_id || '').localeCompare(b.prospect_id || '')
+  if (id) return id
+  const email = normalizeEmail(a.email).localeCompare(normalizeEmail(b.email))
+  if (email) return email
+  return `${a.organization_domain || ''}|${foldText(a.name)}`.localeCompare(`${b.organization_domain || ''}|${foldText(b.name)}`)
 }
 
 export interface SalesListQuery {
