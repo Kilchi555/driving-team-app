@@ -12,6 +12,7 @@
  * ✅ Layer 7: Error Handling (no credential leakage)
  */
 
+import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { SARIClient } from '~/utils/sariClient'
 import { checkSARIRateLimit, formatRateLimitError, validateSARIInput, sanitizeSARIInput } from '~/server/utils/sari-rate-limit'
@@ -111,12 +112,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get course session with SARI course ID
+    // Get course session with SARI course ID.
+    // Service role bypasses RLS, so the course tenant must be checked here.
     const { data: session, error: sessionError } = await supabase
       .from('course_sessions')
       .select(`
         id,
         course_id,
+        sari_session_id,
         course:courses(
           id,
           sari_course_id,
@@ -127,11 +130,12 @@ export default defineEventHandler(async (event) => {
       .eq('id', courseSessionId)
       .single()
 
-    if (sessionError || !session) {
+    const course = (Array.isArray(session?.course) ? session.course[0] : session?.course) as any
+
+    // Missing and foreign-tenant sessions share one response.
+    if (sessionError || !session || !course || course.tenant_id !== userProfile.tenant_id) {
       throw createError({ statusCode: 404, statusMessage: 'Course session not found' })
     }
-
-    const course = session.course as any
     
     if (!course?.sari_managed) {
       throw createError({ 
@@ -140,21 +144,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // For SARI, we need the individual session's SARI ID
-    const { data: sariSession, error: sariSessionError } = await supabase
-      .from('course_sessions')
-      .select('sari_session_id')
-      .eq('id', courseSessionId)
-      .single()
-
-    if (sariSessionError || !sariSession?.sari_session_id) {
+    if (!session.sari_session_id) {
       throw createError({ 
         statusCode: 400, 
         statusMessage: 'Course session has no SARI ID. Cannot enroll via SARI.' 
       })
     }
 
-    const sariCourseId = parseInt(sariSession.sari_session_id)
+    const sariCourseId = parseInt(session.sari_session_id)
 
     // Get tenant SARI settings and check if enabled
     const { data: tenantSettings, error: tenantError } = await supabase

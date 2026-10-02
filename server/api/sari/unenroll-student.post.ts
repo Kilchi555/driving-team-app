@@ -12,6 +12,7 @@
  * ✅ Layer 7: Error Handling (no credential leakage)
  */
 
+import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { SARIClient, isSariUnenrollIdempotent, isSariUnenrollBlocked, getSariUnenrollBlockedMessage } from '~/utils/sariClient'
 import { checkSARIRateLimit, formatRateLimitError, validateSARIInput, sanitizeSARIInput } from '~/server/utils/sari-rate-limit'
@@ -122,14 +123,17 @@ export default defineEventHandler(async (event) => {
       courseId = registration.course_id
       sariCourseId = parseInt((registration.courses as any)?.sari_course_id || '0')
     } else {
-      // Get course from course session
+      // Service role bypasses RLS, so the joined course tenant is the boundary.
       const { data: session, error: sessionError } = await supabase
         .from('course_sessions')
-        .select('course_id, sari_session_id')
+        .select('course_id, sari_session_id, course:courses(id, tenant_id)')
         .eq('id', courseSessionId)
         .single()
 
-      if (sessionError || !session) {
+      const sessionCourse = (Array.isArray(session?.course) ? session.course[0] : session?.course) as { tenant_id?: string } | null
+
+      // Missing and foreign-tenant sessions share one response.
+      if (sessionError || !session || !sessionCourse || sessionCourse.tenant_id !== userProfile.tenant_id) {
         throw createError({ statusCode: 404, statusMessage: 'Course session not found' })
       }
 
@@ -203,6 +207,7 @@ export default defineEventHandler(async (event) => {
       })
       .eq('course_id', courseId)
       .eq('user_id', studentId)
+      .eq('tenant_id', userProfile.tenant_id)
       .is('deleted_at', null)
 
     if (updateError) {

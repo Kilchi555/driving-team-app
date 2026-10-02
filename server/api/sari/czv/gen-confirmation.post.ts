@@ -53,6 +53,17 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'type und courseId sind erforderlich' })
     }
 
+    const { data: ownedCourse, error: ownedCourseError } = await supabaseAdmin
+      .from('courses')
+      .select('id')
+      .eq('id', courseId)
+      .eq('tenant_id', userProfile.tenant_id)
+      .maybeSingle()
+
+    if (ownedCourseError || !ownedCourse) {
+      throw createError({ statusCode: 404, statusMessage: 'Kurs nicht gefunden' })
+    }
+
     const client = await createClientForType(
       userProfile.tenant_id,
       type,

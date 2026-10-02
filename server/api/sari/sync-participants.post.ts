@@ -1,3 +1,4 @@
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseServerWithSession } from '~/utils/supabase'
 import { SARIClient, type SARICourseMember } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
@@ -50,37 +51,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Get tenant's SARI configuration (only env, no credentials)
-  const { data: tenantConfig, error: tenantError } = await supabase
-    .from('tenants')
-    .select('sari_environment')
-    .eq('id', userData.tenant_id)
-    .single()
-
-  if (tenantError || !tenantConfig) {
-    throw createError({
-      statusCode: 404,
-      message: 'Tenant not found'
-    })
-  }
-
-  // ✅ Load SARI credentials securely
-  let sariSecrets
-  try {
-    sariSecrets = await getTenantSecretsSecure(
-      userData.tenant_id,
-      ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
-      'SARI_SYNC_PARTICIPANTS'
-    )
-  } catch (secretsErr: any) {
-    logger.error('❌ Failed to load SARI credentials:', secretsErr.message)
-    throw createError({
-      statusCode: 400,
-      message: 'SARI credentials not configured for this tenant'
-    })
-  }
-
-  // Get the course and its sessions to find SARI course IDs
+  // Course ownership is established before credentials or any SARI call.
   const { data: course, error: courseError } = await supabase
     .from('courses')
     .select(`
@@ -104,33 +75,31 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Collect all SARI course IDs (from sessions or provided)
-  let sariIds: number[] = []
-  
-  if (sariCourseIds && Array.isArray(sariCourseIds)) {
-    sariIds = sariCourseIds.map((id: string | number) => parseInt(String(id)))
-  } else if (course.course_sessions) {
-    // Extract SARI session IDs
-    for (const session of course.course_sessions) {
-      if (session.sari_session_id) {
-        const id = parseInt(session.sari_session_id)
-        if (!isNaN(id) && !sariIds.includes(id)) {
-          sariIds.push(id)
-        }
-      }
-    }
+  const ownedSariIds: number[] = []
+  const addOwnedId = (value: unknown) => {
+    const parsed = parseInt(String(value), 10)
+    if (!Number.isNaN(parsed) && !ownedSariIds.includes(parsed)) ownedSariIds.push(parsed)
   }
 
-  // Also try to parse from sari_course_id (GROUP_xxx_xxx format)
-  if (course.sari_course_id && course.sari_course_id.startsWith('GROUP_')) {
-    const ids = course.sari_course_id.replace('GROUP_', '').split('_')
-    for (const id of ids) {
-      const parsedId = parseInt(id)
-      if (!isNaN(parsedId) && !sariIds.includes(parsedId)) {
-        sariIds.push(parsedId)
-      }
-    }
+  for (const session of course.course_sessions || []) {
+    if (session?.sari_session_id) addOwnedId(session.sari_session_id)
   }
+
+  if (typeof course.sari_course_id === 'string' && course.sari_course_id.startsWith('GROUP_')) {
+    for (const part of course.sari_course_id.replace('GROUP_', '').split('_')) addOwnedId(part)
+  }
+
+  // Client ids are accepted only when they already belong to this course.
+  const seenSariIds = new Set<number>()
+  const sariIds = Array.isArray(sariCourseIds)
+    ? sariCourseIds
+        .map((id: string | number) => parseInt(String(id), 10))
+        .filter((id: number) => {
+          if (!ownedSariIds.includes(id) || seenSariIds.has(id)) return false
+          seenSariIds.add(id)
+          return true
+        })
+    : ownedSariIds
 
   if (sariIds.length === 0) {
     return {
@@ -139,6 +108,34 @@ export default defineEventHandler(async (event) => {
       imported: 0,
       skipped: 0
     }
+  }
+
+  const { data: tenantConfig, error: tenantError } = await supabase
+    .from('tenants')
+    .select('sari_environment')
+    .eq('id', userData.tenant_id)
+    .single()
+
+  if (tenantError || !tenantConfig) {
+    throw createError({
+      statusCode: 404,
+      message: 'Tenant not found'
+    })
+  }
+
+  let sariSecrets
+  try {
+    sariSecrets = await getTenantSecretsSecure(
+      userData.tenant_id,
+      ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
+      'SARI_SYNC_PARTICIPANTS'
+    )
+  } catch (secretsErr: any) {
+    logger.error('❌ Failed to load SARI credentials:', secretsErr.message)
+    throw createError({
+      statusCode: 400,
+      message: 'SARI credentials not configured for this tenant'
+    })
   }
 
   // Create SARI client
