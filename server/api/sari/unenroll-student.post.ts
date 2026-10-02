@@ -22,6 +22,62 @@ import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { assignSessionDayPositions, registrationAttendsTeil } from '~/utils/course-session-attendance'
+
+type RegistrationCourse = {
+  id?: string
+  tenant_id?: string
+  sari_managed?: boolean
+  sari_course_id?: string | null
+}
+
+type RegistrationSessionRow = {
+  id?: string
+  sari_session_id?: string | number | null
+  session_number?: number | null
+  tenant_id?: string | null
+  start_time?: string | null
+}
+
+function numericSariSessionId(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isInteger(value) && value > 0) return value
+  if (typeof value !== 'string' || !/^[0-9]+$/.test(value)) return null
+  const parsed = parseInt(value, 10)
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null
+}
+
+function relevantRegistrationSessionIds(
+  registration: {
+    is_partial_enrollment?: boolean | null
+    partial_start_session?: number | null
+    individual_session_number?: number | null
+    custom_sessions?: Record<string, unknown> | null
+  },
+  rows: RegistrationSessionRow[],
+  tenantId: string,
+): number[] | null {
+  const owned = rows.filter((row) => row?.tenant_id === tenantId)
+  if (owned.some((row) => !row.start_time)) return null
+
+  const positioned = assignSessionDayPositions(
+    owned.map((row) => ({
+      id: row.id,
+      session_number: row.session_number,
+      start_time: String(row.start_time),
+      sari_session_id: row.sari_session_id,
+    })),
+  )
+  const relevant = positioned.filter((row) =>
+    registrationAttendsTeil(registration, row.teil, row.session_number),
+  )
+  const ids: number[] = []
+  for (const row of relevant) {
+    const id = numericSariSessionId(row.sari_session_id)
+    if (id == null) return null
+    ids.push(id)
+  }
+  return ids
+}
 
 export default defineEventHandler(async (event) => {
   try {
@@ -60,8 +116,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Layer 3: Input Sanitization
-    const { registrationId, courseSessionId, studentId } = sanitizeSARIInput(raw)
+    // sanitizeSARIInput does not return registrationId. Keep the validated raw value.
+    const { courseSessionId, studentId } = sanitizeSARIInput(raw)
+    const registrationId = typeof raw.registrationId === 'string' ? raw.registrationId.trim() : raw.registrationId
 
     // Layer 2: Rate Limiting
     const rateLimitCheck = await checkSARIRateLimit(user.id, 'unenroll_student')
@@ -104,29 +161,51 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Determine course ID and session ID
-    let courseId, sariCourseId
+    // Determine course ID and the numeric SARI session ids to unenroll.
+    let courseId: string | undefined
+    let sariCourseIds: number[] = []
 
     if (registrationId) {
-      // Get course from registration
+      // Service role bypasses RLS. Hint the course FK: unhinted courses(...) is
+      // ambiguous where a second course relationship exists, and course_sessions
+      // is not a foreign key of course_registrations.
       const { data: registration, error: regError } = await supabase
         .from('course_registrations')
-        .select('course_id, courses(sari_managed, sari_course_id), course_sessions(sari_session_id)')
+        .select('course_id, is_partial_enrollment, individual_session_number, partial_start_session, custom_sessions, courses!course_registrations_course_id_fkey(id, tenant_id, sari_managed, sari_course_id)')
         .eq('id', registrationId)
         .eq('tenant_id', userProfile.tenant_id)
         .single()
 
-      if (regError || !registration) {
+      const registrationCourse = (Array.isArray(registration?.courses) ? registration.courses[0] : registration?.courses) as RegistrationCourse | null
+      if (regError || !registration || !registrationCourse?.id || registrationCourse.tenant_id !== userProfile.tenant_id) {
         throw createError({ statusCode: 404, statusMessage: 'Registration not found' })
       }
 
-      courseId = registration.course_id
-      sariCourseId = parseInt((registration.courses as any)?.sari_course_id || '0')
+      // Direct embed course_sessions(sari_session_id) is not a relationship of
+      // course_registrations. Sessions are loaded by course_id and tenant_id.
+      const { data: sessionRows, error: sessionRowsError } = await supabase
+        .from('course_sessions')
+        .select('id, sari_session_id, session_number, tenant_id, start_time')
+        .eq('course_id', registrationCourse.id)
+        .eq('tenant_id', userProfile.tenant_id)
+
+      if (sessionRowsError) {
+        throw createError({ statusCode: 404, statusMessage: 'Registration not found' })
+      }
+
+      const sessions = (Array.isArray(sessionRows) ? sessionRows : []) as RegistrationSessionRow[]
+      const relevantIds = relevantRegistrationSessionIds(registration, sessions, userProfile.tenant_id)
+      if (!relevantIds || relevantIds.length === 0) {
+        throw createError({ statusCode: 404, statusMessage: 'Registration not found' })
+      }
+
+      courseId = registrationCourse.id
+      sariCourseIds = relevantIds
     } else {
       // Service role bypasses RLS, so the joined course tenant is the boundary.
       const { data: session, error: sessionError } = await supabase
         .from('course_sessions')
-        .select('course_id, sari_session_id, course:courses(id, tenant_id)')
+        .select('course_id, sari_session_id, course:courses!course_sessions_course_id_fkey(id, tenant_id)')
         .eq('id', courseSessionId)
         .single()
 
@@ -138,7 +217,14 @@ export default defineEventHandler(async (event) => {
       }
 
       courseId = session.course_id
-      sariCourseId = parseInt(session.sari_session_id || '0')
+      sariCourseIds = [parseInt(session.sari_session_id || '0')]
+    }
+
+    if (!courseId) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: registrationId ? 'Registration not found' : 'Course session not found',
+      })
     }
 
     // Get tenant SARI settings
@@ -178,20 +264,22 @@ export default defineEventHandler(async (event) => {
       password: sariSecrets.SARI_PASSWORD
     })
 
-    // Unenroll student from SARI
-    console.log(`📝 [${userProfile.auth_user_id}] Unenrolling student ${student.id} from SARI course ${sariCourseId}`)
+    // Unenroll student from SARI. One call per authorized session id.
+    // A non-idempotent failure stops before the local update.
+    console.log(`📝 [${userProfile.auth_user_id}] Unenrolling student ${student.id} from SARI sessions ${sariCourseIds.join(',')}`)
 
-    let alreadyUnenrolled = false
-    try {
-      await sariClient.unenrollStudent(sariCourseId, student.faberid)
-      console.log(`✅ [${userProfile.auth_user_id}] Successfully unenrolled student from SARI course ${sariCourseId}`)
-    } catch (unenrollErr: any) {
-      if (isSariUnenrollIdempotent(unenrollErr.message)) {
-        // Already in the desired end state — not an error from the caller's perspective.
-        alreadyUnenrolled = true
-        console.log(`ℹ️ [${userProfile.auth_user_id}] Student already unenrolled from SARI course ${sariCourseId}`)
-      } else {
-        throw unenrollErr
+    let alreadyUnenrolled = sariCourseIds.length > 0
+    for (const sariCourseId of sariCourseIds) {
+      try {
+        await sariClient.unenrollStudent(sariCourseId, student.faberid)
+        alreadyUnenrolled = false
+        console.log(`✅ [${userProfile.auth_user_id}] Successfully unenrolled student from SARI session ${sariCourseId}`)
+      } catch (unenrollErr: any) {
+        if (isSariUnenrollIdempotent(unenrollErr.message)) {
+          console.log(`ℹ️ [${userProfile.auth_user_id}] Student already unenrolled from SARI session ${sariCourseId}`)
+        } else {
+          throw unenrollErr
+        }
       }
     }
 
@@ -223,7 +311,7 @@ export default defineEventHandler(async (event) => {
       details: {
         student_id: studentId,
         course_id: courseId,
-        sari_course_id: sariCourseId,
+        sari_course_id: sariCourseIds.length === 1 ? sariCourseIds[0] : sariCourseIds,
       },
       ip_address: getClientIP(event),
     })
@@ -234,7 +322,7 @@ export default defineEventHandler(async (event) => {
       message: alreadyUnenrolled
         ? `Student ${student.first_name} ${student.last_name} was already unenrolled from SARI course`
         : `Student ${student.first_name} ${student.last_name} unenrolled from SARI course`,
-      sariCourseId
+      sariCourseId: sariCourseIds.length === 1 ? sariCourseIds[0] : sariCourseIds
     }
 
   } catch (error: any) {
