@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { SARIClient } from '~/utils/sariClient'
 
 const TENANT = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 const OTHER = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
@@ -6,6 +7,7 @@ const SESSION = '11111111-1111-4111-8111-111111111111'
 const STUDENT = '22222222-2222-4222-8222-222222222222'
 const COURSE = '33333333-3333-4333-8333-333333333333'
 const FOREIGN_COURSE = '44444444-4444-4444-8444-444444444444'
+const REGISTRATION = '55555555-5555-4555-8555-555555555555'
 
 const mocks = vi.hoisted(() => ({
   body: {} as Record<string, unknown>,
@@ -32,6 +34,7 @@ const mocks = vi.hoisted(() => ({
 
 const state = {
   sessionTenant: TENANT,
+  registrationCourseTenant: TENANT,
   inserts: [] as Array<{ table: string; payload: Record<string, unknown> }>,
   updates: [] as Array<{ table: string; payload: unknown; filters: Record<string, unknown> }>,
 }
@@ -72,6 +75,24 @@ function from(table: string) {
         }
       }
       return { data: null, error: { message: 'not found' } }
+    }
+    if (table === 'course_registrations' && op === 'select') {
+      if (filters.id !== REGISTRATION || filters.tenant_id !== TENANT) {
+        return { data: null, error: { message: 'not found' } }
+      }
+      const courseTenant = state.registrationCourseTenant
+      return {
+        data: {
+          course_id: courseTenant === TENANT ? COURSE : FOREIGN_COURSE,
+          courses: {
+            tenant_id: courseTenant,
+            sari_managed: true,
+            sari_course_id: '2110027',
+          },
+          course_sessions: { sari_session_id: '2110027' },
+        },
+        error: null,
+      }
     }
     if (table === 'course_sessions') {
       if (filters.id !== SESSION) return { data: null, error: { message: 'not found' } }
@@ -237,6 +258,7 @@ beforeAll(async () => {
 beforeEach(() => {
   mocks.body = {}
   state.sessionTenant = TENANT
+  state.registrationCourseTenant = TENANT
   state.inserts = []
   state.updates = []
   mocks.enrollStudent.mockClear()
@@ -252,6 +274,7 @@ beforeEach(() => {
     genConfirmation: mocks.genConfirmation,
   }))
   mocks.getTenantSecretsSecure.mockClear()
+  vi.mocked(SARIClient).mockClear()
 })
 
 const courseData = {
@@ -323,6 +346,38 @@ describe('unenroll-student tenant boundary', () => {
     })
     expect(mocks.unenrollStudent).not.toHaveBeenCalled()
     expect(mocks.getTenantSecretsSecure).not.toHaveBeenCalled()
+    expect(state.updates).toHaveLength(0)
+  })
+
+  it('unenrolls a registration whose course belongs to the authenticated tenant', async () => {
+    mocks.body = { registrationId: REGISTRATION, studentId: STUDENT, tenant_id: OTHER }
+    const result = await handlers.unenroll!({})
+    expect(result.success).toBe(true)
+    expect(mocks.unenrollStudent).toHaveBeenCalledTimes(1)
+    expect(mocks.unenrollStudent).toHaveBeenCalledWith(2110027, 'FABER1')
+    expect(mocks.getTenantSecretsSecure).toHaveBeenCalledWith(
+      TENANT,
+      expect.any(Array),
+      'SARI_UNENROLL',
+    )
+    expect(state.updates).toHaveLength(1)
+    expect(state.updates[0]?.filters).toMatchObject({
+      course_id: COURSE,
+      user_id: STUDENT,
+      tenant_id: TENANT,
+    })
+  })
+
+  it('blocks a registration whose joined course belongs to another tenant before SARI', async () => {
+    state.registrationCourseTenant = OTHER
+    mocks.body = { registrationId: REGISTRATION, studentId: STUDENT, tenant_id: TENANT }
+    await expect(handlers.unenroll!({})).rejects.toMatchObject({
+      statusCode: 404,
+      statusMessage: 'Registration not found',
+    })
+    expect(mocks.unenrollStudent).not.toHaveBeenCalled()
+    expect(mocks.getTenantSecretsSecure).not.toHaveBeenCalled()
+    expect(vi.mocked(SARIClient)).not.toHaveBeenCalled()
     expect(state.updates).toHaveLength(0)
   })
 })
