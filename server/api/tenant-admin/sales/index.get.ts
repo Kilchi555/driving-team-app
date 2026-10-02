@@ -1,6 +1,6 @@
 import { getQuery, setHeader, defineEventHandler } from 'h3'
 import { requireSuperAdmin } from '~/server/utils/require-super-admin'
-import { filterSalesProspects, initialSprint, type SalesListQuery } from '~/server/utils/sales-intelligence'
+import { filterSalesProspects, initialSprint, profileForProspect, type SalesListQuery } from '~/server/utils/sales-intelligence'
 import { loadSalesProfiles, loadSalesProspects, manualIndex } from '~/server/utils/sales-workspace'
 
 export default defineEventHandler(async (event) => {
@@ -23,15 +23,18 @@ export default defineEventHandler(async (event) => {
   const manual = manualIndex(profiles.rows)
   const filtered = filterSalesProspects(prospects, listQuery, manual)
   const limit = sprint ? 50 : filtered.length
-  const rows = filtered.slice(0, limit).map((prospect) => ({
-    ...prospect,
-    sales_status: manual.get(prospect.prospect_id)?.sales_status || null,
-    assigned_to: manual.get(prospect.prospect_id)?.assigned_to || null,
-    last_contacted_at: manual.get(prospect.prospect_id)?.last_contacted_at || null,
-    next_follow_up_at: manual.get(prospect.prospect_id)?.next_follow_up_at || null,
-    last_contact_channel: manual.get(prospect.prospect_id)?.last_contact_channel || null,
-    conversation_outcome: manual.get(prospect.prospect_id)?.conversation_outcome || null,
-  }))
+  const rows = filtered.slice(0, limit).map((prospect) => {
+    const profile = profileForProspect(prospect, manual)
+    return {
+      ...prospect,
+      sales_status: profile?.sales_status || null,
+      assigned_to: profile?.assigned_to || null,
+      last_contacted_at: profile?.last_contacted_at || null,
+      next_follow_up_at: profile?.next_follow_up_at || null,
+      last_contact_channel: profile?.last_contact_channel || null,
+      conversation_outcome: profile?.conversation_outcome || null,
+    }
+  })
   const sprintMeta = initialSprint(prospects, 50)
   return {
     success: true,

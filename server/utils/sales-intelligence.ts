@@ -132,6 +132,7 @@ export interface SalesProspect {
   }
   eligible: boolean
   contact_completeness: number
+  source_ids: string[]
 }
 
 const FREEMAIL = new Set([
@@ -729,6 +730,7 @@ export function buildSalesProspects(input: {
           ? 'OPT_OUT'
           : 'REVIEW_REQUIRED'
     const sentCount = ([1, 2, 3, 4] as const).filter((mail) => august.mails[mail].sent).length
+    const source_ids = group.map((row) => row.lead.id).sort((a, b) => a.localeCompare(b))
     prospects.push({
       prospect_id: canonical.lead.id,
       name: canonical.lead.name || 'Ohne Name',
@@ -766,6 +768,7 @@ export function buildSalesProspects(input: {
       },
       eligible,
       contact_completeness: contactScore(canonical.lead),
+      source_ids,
     })
   }
   return prospects
@@ -819,6 +822,43 @@ export interface SalesListQuery {
   quick?: string
 }
 
+export interface SalesProfileAttachment {
+  prospect_id: string
+  sales_status?: string | null
+  assigned_to?: string | null
+  next_follow_up_at?: string | null
+  last_contacted_at?: string | null
+  contact_attempts?: number
+  updated_at?: string | null
+}
+
+export function findSalesProspect(prospects: SalesProspect[], id: string): SalesProspect | null {
+  return prospects.find((row) => row.prospect_id === id || row.source_ids.includes(id)) || null
+}
+
+export function profileForProspect<T extends Omit<SalesProfileAttachment, 'prospect_id'>>(
+  prospect: { prospect_id: string; source_ids?: readonly string[] },
+  manual: Map<string, T>,
+): (T & { prospect_id: string }) | null {
+  const ids = prospect.source_ids?.length ? prospect.source_ids : [prospect.prospect_id]
+  const matches = [...new Set([prospect.prospect_id, ...ids])].flatMap((id) => {
+    const row = manual.get(id)
+    return row ? [{ ...row, prospect_id: id }] : []
+  })
+  if (!matches.length) return null
+  const exact = matches.find((row) => row.prospect_id === prospect.prospect_id)
+  if (exact) return exact
+  return [...matches].sort((a, b) => {
+    const updated = (b.updated_at || '').localeCompare(a.updated_at || '')
+    if (updated) return updated
+    const contacted = (b.last_contacted_at || '').localeCompare(a.last_contacted_at || '')
+    if (contacted) return contacted
+    const attempts = (b.contact_attempts || 0) - (a.contact_attempts || 0)
+    if (attempts) return attempts
+    return a.prospect_id.localeCompare(b.prospect_id)
+  })[0]
+}
+
 export function filterSalesProspects(
   prospects: SalesProspect[],
   query: SalesListQuery,
@@ -826,7 +866,7 @@ export function filterSalesProspects(
 ): SalesProspect[] {
   const today = new Date().toISOString().slice(0, 10)
   return prospects.filter((prospect) => {
-    const profile = manual.get(prospect.prospect_id)
+    const profile = profileForProspect(prospect, manual)
     if (query.sprint && !(prospect.eligible && (prospect.priority === 'P1' || prospect.priority === 'P2'))) return false
     if (query.priority && prospect.priority !== query.priority) return false
     if (query.engagement && prospect.engagement_level !== query.engagement) return false

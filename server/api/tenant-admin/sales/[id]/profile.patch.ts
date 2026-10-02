@@ -2,8 +2,9 @@ import { createError, getRouterParam, readBody, setHeader, defineEventHandler } 
 import { logAudit } from '~/server/utils/audit'
 import { requireSuperAdmin } from '~/server/utils/require-super-admin'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { findSalesProspect, profileForProspect } from '~/server/utils/sales-intelligence'
 import { buildProfileWrite } from '~/server/utils/sales-profile-update'
-import { isMissingSalesStore, loadSalesProfiles, loadSalesProspects } from '~/server/utils/sales-workspace'
+import { isMissingSalesStore, loadSalesProfiles, loadSalesProspects, manualIndex } from '~/server/utils/sales-workspace'
 
 export default defineEventHandler(async (event) => {
   const authUser = await requireSuperAdmin(event)
@@ -14,7 +15,7 @@ export default defineEventHandler(async (event) => {
   }
   const body = await readBody(event)
   const prospects = await loadSalesProspects()
-  const prospect = prospects.find((row) => row.prospect_id === id)
+  const prospect = findSalesProspect(prospects, id)
   if (!prospect) throw createError({ statusCode: 404, statusMessage: 'Prospect nicht gefunden' })
   if (!prospect.eligible) {
     throw createError({ statusCode: 409, statusMessage: prospect.contactability_label })
@@ -23,7 +24,7 @@ export default defineEventHandler(async (event) => {
   if (!profiles.available) {
     throw createError({ statusCode: 503, statusMessage: 'Sales-Profilspeicher ist noch nicht migriert' })
   }
-  const existing = profiles.rows.find((row) => row.prospect_id === id) || null
+  const existing = profileForProspect(prospect, manualIndex(profiles.rows))
   const now = new Date().toISOString()
   const actorId = authUser.db_user_id || authUser.profile?.id || null
   const write = buildProfileWrite({
@@ -40,7 +41,7 @@ export default defineEventHandler(async (event) => {
   const saved = existing
     ? await supabase.from('sales_pipeline_profiles').update(write.fields).eq('id', existing.id).select('id').single()
     : await supabase.from('sales_pipeline_profiles').insert({
-      prospect_id: id,
+      prospect_id: prospect.prospect_id,
       contact_attempts: 0,
       priority: prospect.priority,
       engagement_level: prospect.engagement_level,
@@ -61,7 +62,7 @@ export default defineEventHandler(async (event) => {
     resource_type: 'sales_pipeline_profile',
     resource_id: saved.data.id,
     status: 'success',
-    details: { prospect_id: id, sales_status: write.salesStatus, sends: 0 },
+    details: { prospect_id: existing?.prospect_id || prospect.prospect_id, sales_status: write.salesStatus, sends: 0 },
     ip_address: event.node.req.socket.remoteAddress,
   }, event)
   return { success: true, sends: 0, profile_id: saved.data.id }

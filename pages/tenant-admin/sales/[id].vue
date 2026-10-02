@@ -1,5 +1,13 @@
 <template>
-  <div v-if="prospect">
+  <div v-if="loadState === 'loading'" class="sa-card block">
+    <p class="meta">Sales-Daten werden geladen…</p>
+  </div>
+  <div v-else-if="loadState !== 'ready'" class="sa-card block">
+    <NuxtLink to="/tenant-admin/sales" class="sa-back">← Sales-Liste</NuxtLink>
+    <h1 class="sa-page-title">{{ loadTitle }}</h1>
+    <p class="sa-error">{{ loadError }}</p>
+  </div>
+  <div v-else-if="prospect">
     <NuxtLink to="/tenant-admin/sales" class="sa-back">← Sales-Liste</NuxtLink>
     <header class="sa-page-header">
       <h1 class="sa-page-title">{{ prospect.name }}</h1>
@@ -118,6 +126,8 @@
 </template>
 
 <script setup lang="ts">
+import { salesDetailFailureMessage, salesDetailLoadFailure, type SalesDetailLoadState } from '~/utils/sales-detail-state'
+
 definePageMeta({ layout: 'tenant-admin', middleware: ['superadmin'] })
 const route = useRoute()
 const prospect = ref<any>(null)
@@ -127,6 +137,13 @@ const error = ref('')
 const message = ref('')
 const saving = ref(false)
 const storeUnavailable = ref(false)
+const loadState = ref<SalesDetailLoadState>('loading')
+const loadError = ref('')
+const loadTitle = computed(() => {
+  if (loadState.value === 'not_found') return 'Prospect nicht gefunden'
+  if (loadState.value === 'unauthorized') return 'Kein Zugriff'
+  return 'Sales-Daten nicht verfügbar'
+})
 const statuses = ['review_required', 'new', 'contact_1', 'contacted', 'conversation', 'demo_booked', 'demo_completed', 'proposal', 'won', 'lost', 'nurture', 'do_not_contact', 'excluded_existing_tenant']
 const form = reactive({
   channel: 'phone',
@@ -155,21 +172,40 @@ const flag = (mail: { sent: boolean; opened: boolean; clicked: boolean }) => {
 
 const load = async () => {
   error.value = ''
-  const headers = await authHeaders()
-  const data = await $fetch<any>(`/api/tenant-admin/sales/${route.params.id}`, { headers })
-  prospect.value = data.prospect
-  profile.value = data.profile
-  logs.value = data.logs || []
-  storeUnavailable.value = data.profile_store === 'unavailable'
-  if (data.profile) {
-    form.sales_status = data.profile.sales_status || form.sales_status
-    form.current_software = data.profile.current_software || ''
-    form.pain_points = data.profile.pain_points || ''
-    form.interested_features = data.profile.interested_features || ''
-    form.objections = data.profile.objections || ''
-    form.notes = data.profile.notes || ''
+  loadError.value = ''
+  try {
+    const headers = await authHeaders()
+    const data = await $fetch<any>(`/api/tenant-admin/sales/${route.params.id}`, { headers })
+    if (!data?.prospect) {
+      prospect.value = null
+      loadState.value = 'not_found'
+      loadError.value = salesDetailFailureMessage('not_found')
+      useHead({ title: 'Sales' })
+      return
+    }
+    prospect.value = data.prospect
+    profile.value = data.profile
+    logs.value = data.logs || []
+    storeUnavailable.value = data.profile_store === 'unavailable'
+    if (data.profile) {
+      form.sales_status = data.profile.sales_status || form.sales_status
+      form.current_software = data.profile.current_software || ''
+      form.pain_points = data.profile.pain_points || ''
+      form.interested_features = data.profile.interested_features || ''
+      form.objections = data.profile.objections || ''
+      form.notes = data.profile.notes || ''
+    }
+    loadState.value = 'ready'
+    useHead({ title: `${data.prospect?.name || 'Prospect'} – Sales` })
+  } catch (err: any) {
+    prospect.value = null
+    profile.value = null
+    logs.value = []
+    const state = salesDetailLoadFailure(err?.statusCode || err?.status || err?.response?.status)
+    loadState.value = state
+    loadError.value = salesDetailFailureMessage(state)
+    useHead({ title: 'Sales' })
   }
-  useHead({ title: `${data.prospect?.name || 'Prospect'} – Sales` })
 }
 
 const saveContact = async () => {
@@ -184,11 +220,15 @@ const saveContact = async () => {
       body: form,
     })
     message.value = 'Kontakt dokumentiert. Es wurde nichts gesendet.'
-    await load()
   } catch (err: any) {
     error.value = err?.data?.statusMessage || err?.message || 'Speichern fehlgeschlagen'
   } finally {
     saving.value = false
+  }
+  if (!message.value) return
+  await load()
+  if (loadState.value !== 'ready') {
+    loadError.value = `${loadError.value} Der Kontakt wurde bereits dokumentiert.`
   }
 }
 

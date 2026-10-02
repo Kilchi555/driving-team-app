@@ -1,5 +1,6 @@
 import { setHeader, defineEventHandler } from 'h3'
 import { requireSuperAdmin } from '~/server/utils/require-super-admin'
+import { profileForProspect } from '~/server/utils/sales-intelligence'
 import { loadSalesProfiles, loadSalesProspects, manualIndex } from '~/server/utils/sales-workspace'
 
 export default defineEventHandler(async (event) => {
@@ -10,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const today = new Date().toISOString().slice(0, 10)
   const rows = prospects
     .map((prospect) => {
-      const profile = manual.get(prospect.prospect_id)
+      const profile = profileForProspect(prospect, manual)
       return { prospect, profile }
     })
     .filter((row) => row.profile?.next_follow_up_at)

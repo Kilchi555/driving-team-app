@@ -48,6 +48,7 @@ export async function loadSalesProspects(): Promise<SalesProspect[]> {
     supabase
       .from('tenants')
       .select('id, name, contact_email, from_email, contact_phone, website_url, domain, website_domain')
+      .order('id', { ascending: true })
       .range(from, to),
   )
   const staff = await fetchPages<SalesStaffInput>((from, to) =>
@@ -56,13 +57,14 @@ export async function loadSalesProspects(): Promise<SalesProspect[]> {
       .select('email, phone, role')
       .in('role', ['staff', 'admin', 'super_admin', 'tenant_admin'])
       .is('deleted_at', null)
+      .order('id', { ascending: true })
       .range(from, to),
   )
   const consent = await fetchPages<SalesConsentInput & { id: string }>((from, to) =>
     supabase.from('leads').select('id, email, status').order('id', { ascending: true }).range(from, to),
   )
   const campaigns = await fetchPages<{ id: string; name: string | null }>((from, to) =>
-    supabase.from('email_campaigns').select('id, name').ilike('name', '%Fahrlehrer Mail%').range(from, to),
+    supabase.from('email_campaigns').select('id, name').ilike('name', '%Fahrlehrer Mail%').order('id', { ascending: true }).range(from, to),
   )
   const outreach = campaigns.filter((row) => /outreach/i.test(row.name || '') && /mail\s+[1-4]/i.test(row.name || ''))
   const campaignName = new Map(outreach.map((row) => [row.id, row.name]))
@@ -88,6 +90,7 @@ export async function loadSalesProspects(): Promise<SalesProspect[]> {
         .from('email_campaign_leads')
         .select('campaign_id, lead_id, status, sent_at, opened_at, clicked_at')
         .in('campaign_id', outreach.map((row) => row.id))
+        .order('id', { ascending: true })
         .range(from, to),
     )
     for (const event of events) {
@@ -132,13 +135,14 @@ export interface SalesProfileRow {
   lost_at: string | null
   lost_reason: string | null
   notes: string | null
+  updated_at?: string | null
 }
 
 export async function loadSalesProfiles(): Promise<{ rows: SalesProfileRow[]; available: boolean }> {
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('sales_pipeline_profiles')
-    .select('id, prospect_id, sales_status, assigned_to, last_contacted_at, next_follow_up_at, last_contact_channel, next_action, contact_attempts, conversation_outcome, current_software, pain_points, interested_features, objections, demo_booked_at, demo_completed_at, proposal_sent_at, won_at, lost_at, lost_reason, notes')
+    .select('id, prospect_id, sales_status, assigned_to, last_contacted_at, next_follow_up_at, last_contact_channel, next_action, contact_attempts, conversation_outcome, current_software, pain_points, interested_features, objections, demo_booked_at, demo_completed_at, proposal_sent_at, won_at, lost_at, lost_reason, notes, updated_at')
   if (error) {
     if (isMissingSalesStore(error)) return { rows: [], available: false }
     throw error
@@ -150,12 +154,14 @@ export function manualIndex(rows: SalesProfileRow[]) {
   return new Map(rows.map((row) => [row.prospect_id, row]))
 }
 
-export async function loadContactLogs(prospectId: string) {
+export async function loadContactLogs(prospectIds: string[]) {
+  const ids = [...new Set(prospectIds.filter(Boolean))]
+  if (!ids.length) return []
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('sales_contact_logs')
     .select('id, channel, result, notes, next_follow_up_at, next_action, sales_status, created_by, created_at')
-    .eq('prospect_id', prospectId)
+    .in('prospect_id', ids)
     .order('created_at', { ascending: false })
     .limit(100)
   if (error) {

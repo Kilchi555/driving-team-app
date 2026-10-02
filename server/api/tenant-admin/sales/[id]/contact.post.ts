@@ -5,7 +5,9 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import {
   CONTACT_CHANNELS,
   CONTACT_RESULTS,
+  findSalesProspect,
   NEXT_ACTIONS,
+  profileForProspect,
   SALES_STATUSES,
 } from '~/server/utils/sales-intelligence'
 import { resolveStoredFollowUp } from '~/server/utils/sales-profile-update'
@@ -13,6 +15,7 @@ import {
   isMissingSalesStore,
   loadSalesProfiles,
   loadSalesProspects,
+  manualIndex,
 } from '~/server/utils/sales-workspace'
 
 export default defineEventHandler(async (event) => {
@@ -26,7 +29,7 @@ export default defineEventHandler(async (event) => {
   const salesStatus = body?.sales_status ? oneOf(body.sales_status, SALES_STATUSES, 'sales_status') : null
   const notes = textField(body?.notes, 4000)
   const prospects = await loadSalesProspects()
-  const prospect = prospects.find((row) => row.prospect_id === id)
+  const prospect = findSalesProspect(prospects, id)
   if (!prospect) throw createError({ statusCode: 404, statusMessage: 'Prospect nicht gefunden' })
   if (!prospect.eligible) {
     throw createError({ statusCode: 409, statusMessage: prospect.contactability_label })
@@ -35,14 +38,13 @@ export default defineEventHandler(async (event) => {
   if (!profiles.available) {
     throw createError({ statusCode: 503, statusMessage: 'Sales-Profilspeicher ist noch nicht migriert' })
   }
-  const existing = profiles.rows.find((row) => row.prospect_id === id) || null
+  const existing = profileForProspect(prospect, manualIndex(profiles.rows))
   const followUp = resolveStoredFollowUp(body, existing?.next_follow_up_at || null)
   if ('error' in followUp) throw createError({ statusCode: 400, statusMessage: 'Ungültiges Datum' })
   const status = salesStatus || existing?.sales_status || 'review_required'
   const now = new Date().toISOString()
   const actorId = authUser.db_user_id || authUser.profile?.id || null
   const profilePatch = {
-    prospect_id: id,
     sales_status: status,
     priority: prospect.priority,
     engagement_level: prospect.engagement_level,
@@ -70,16 +72,17 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const saved = existing
     ? await supabase.from('sales_pipeline_profiles').update(profilePatch).eq('id', existing.id).select('id').single()
-    : await supabase.from('sales_pipeline_profiles').insert(profilePatch).select('id').single()
+    : await supabase.from('sales_pipeline_profiles').insert({ ...profilePatch, prospect_id: prospect.prospect_id }).select('id').single()
   if (saved.error) {
     if (isMissingSalesStore(saved.error)) {
       throw createError({ statusCode: 503, statusMessage: 'Sales-Profilspeicher ist noch nicht migriert' })
     }
     throw createError({ statusCode: 500, statusMessage: saved.error.message })
   }
+  const storedProspectId = existing?.prospect_id || prospect.prospect_id
   const log = await supabase.from('sales_contact_logs').insert({
     profile_id: saved.data.id,
-    prospect_id: id,
+    prospect_id: storedProspectId,
     channel,
     result,
     notes,
@@ -97,7 +100,7 @@ export default defineEventHandler(async (event) => {
     resource_id: saved.data.id,
     status: 'success',
     details: {
-      prospect_id: id,
+      prospect_id: storedProspectId,
       channel,
       result,
       sales_status: status,

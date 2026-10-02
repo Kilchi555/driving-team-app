@@ -6,6 +6,7 @@ import {
   displayPerson,
   filterSalesProspects,
   initialSprint,
+  profileForProspect,
   organizationDomain,
   type SalesAugustInput,
   type SalesLeadInput,
@@ -487,6 +488,66 @@ describe('buildSalesProspects', () => {
     expect(rows[0].business_potential).toBe('HIGH_EVIDENCE')
   })
 
+  it('loads a saved profile after a richer duplicate becomes the canonical lead', () => {
+    const sparseId = '11111111-1111-4111-8111-111111111111'
+    const richerId = '22222222-2222-4222-8222-222222222222'
+    const thirdId = '33333333-3333-4333-8333-333333333333'
+    const base = {
+      tenants: [],
+      staff: [],
+      consent: [],
+      augustByEmail: new Map(),
+    }
+    const sparse = lead({
+      id: sparseId,
+      name: 'Nordschule',
+      email: 'info@nordschule-fahrschule.ch',
+      website: 'https://nordschule-fahrschule.ch',
+      created_at: '2024-01-01T00:00:00Z',
+    })
+    const savedOnSparse = buildSalesProspects({ ...base, leads: [sparse] })
+    expect(savedOnSparse).toHaveLength(1)
+    expect(savedOnSparse[0].prospect_id).toBe(sparseId)
+    const richer = lead({
+      id: richerId,
+      name: 'Nordschule Fahrschule GmbH',
+      email: 'info@nordschule-fahrschule.ch',
+      phone: '+41 79 111 22 33',
+      city: 'Bern',
+      address: 'Bahnstrasse 1',
+      website: 'https://nordschule-fahrschule.ch',
+      created_at: '2026-06-01T00:00:00Z',
+    })
+    const third = lead({
+      id: thirdId,
+      name: 'Nordschule',
+      email: 'office@nordschule-fahrschule.ch',
+      website: 'https://nordschule-fahrschule.ch',
+      created_at: '2025-01-01T00:00:00Z',
+    })
+    const after = buildSalesProspects({ ...base, leads: [sparse, richer, third] })
+    expect(after).toHaveLength(1)
+    expect(after[0].prospect_id).toBe(richerId)
+    expect(after[0].engagement_level).toBe(savedOnSparse[0].engagement_level)
+    expect(after[0].source_ids).toEqual([sparseId, richerId, thirdId].sort((a, b) => a.localeCompare(b)))
+    const orphan = new Map([
+      [sparseId, { sales_status: 'conversation', assigned_to: null, next_follow_up_at: '2026-10-05T00:00:00Z', last_contacted_at: '2026-09-01T00:00:00Z', contact_attempts: 1 }],
+    ])
+    expect(profileForProspect(after[0], orphan)?.sales_status).toBe('conversation')
+    expect(profileForProspect(after[0], orphan)?.prospect_id).toBe(sparseId)
+    expect(filterSalesProspects(after, { salesStatus: 'conversation', sprint: false }, orphan).map((row) => row.prospect_id)).toEqual([richerId])
+    const own = new Map([
+      [richerId, { sales_status: 'proposal', assigned_to: null, next_follow_up_at: null }],
+      [sparseId, { sales_status: 'lost', assigned_to: null, next_follow_up_at: null, last_contacted_at: '2026-09-02T00:00:00Z' }],
+    ])
+    expect(profileForProspect(after[0], own)?.sales_status).toBe('proposal')
+    const siblings = new Map([
+      [sparseId, { sales_status: 'nurture', assigned_to: null, next_follow_up_at: null, last_contacted_at: '2026-08-01T00:00:00Z', contact_attempts: 4 }],
+      [thirdId, { sales_status: 'contacted', assigned_to: null, next_follow_up_at: null, last_contacted_at: '2026-09-03T00:00:00Z', contact_attempts: 1 }],
+    ])
+    expect(profileForProspect(after[0], siblings)?.prospect_id).toBe(thirdId)
+  })
+
   it('does not ignore a weak label when another business shares the domain', () => {
     const rows = buildSalesProspects({
       leads: [
@@ -628,6 +689,7 @@ describe('compareSalesProspects', () => {
       },
       eligible: true,
       contact_completeness: 5,
+      source_ids: [id],
     }
   }
 
