@@ -133,6 +133,9 @@ export interface SalesProspect {
   eligible: boolean
   contact_completeness: number
   source_ids: string[]
+  additional_phones: string[]
+  additional_emails: string[]
+  additional_addresses: string[]
 }
 
 const FREEMAIL = new Set([
@@ -618,6 +621,9 @@ function whyLines(prospect: {
   lead: SalesLeadInput
   people: number
   august: SalesAugustInput
+  hasPhone?: boolean
+  hasEmail?: boolean
+  hasPlace?: boolean
 }): string[] {
   const lines: string[] = []
   if (prospect.engagement === 'HOT') lines.push('August-Kampagne geklickt')
@@ -625,9 +631,9 @@ function whyLines(prospect: {
   else if (prospect.engagement === 'COLD') lines.push('August-Kampagne gesendet, kein Open')
   else lines.push('Kein gespeichertes Kampagnensignal')
   if (prospect.org) lines.push('Eigene Domain')
-  if (prospect.lead.phone) lines.push('Telefon vorhanden')
-  if (prospect.lead.email) lines.push('E-Mail vorhanden')
-  if (prospect.lead.city || prospect.lead.address) lines.push('Ort vorhanden')
+  if (prospect.hasPhone ?? prospect.lead.phone) lines.push('Telefon vorhanden')
+  if (prospect.hasEmail ?? prospect.lead.email) lines.push('E-Mail vorhanden')
+  if (prospect.hasPlace ?? (prospect.lead.city || prospect.lead.address)) lines.push('Ort vorhanden')
   if (prospect.people >= 2) lines.push(`${prospect.people} Kontaktsignaturen erkannt`)
   if (prospect.august.sms_note) lines.push('SMS-Notiz vorhanden')
   lines.push('Keine gespeicherte Antwort gefunden')
@@ -643,6 +649,62 @@ function consentFor(email: string, rows: SalesConsentInput[]): string {
   if (statuses.includes('pending_consent')) return 'pending_consent'
   if (statuses.includes('bounced')) return 'bounced'
   return email ? 'unknown' : 'unknown'
+}
+
+function addressKey(value: string | null | undefined): string {
+  return foldText(value).replace(/[^a-z0-9]+/g, ' ').trim()
+}
+
+export function groupedProspectContacts(
+  group: Array<{ lead: SalesLeadInput }>,
+  canonical: SalesLeadInput,
+): { additional_phones: string[]; additional_emails: string[]; additional_addresses: string[] } {
+  const seenPhones = new Set<string>()
+  const seenEmails = new Set<string>()
+  const seenAddresses = new Set<string>()
+  const primaryPhone = normalizePhone(canonical.phone)
+  const primaryEmail = normalizeEmail(canonical.email)
+  const primaryAddress = addressKey(canonical.address)
+  if (primaryPhone) seenPhones.add(primaryPhone)
+  if (primaryEmail) seenEmails.add(primaryEmail)
+  if (primaryAddress) seenAddresses.add(primaryAddress)
+  const additional_phones: string[] = []
+  const additional_emails: string[] = []
+  const additional_addresses: string[] = []
+  for (const row of [...group].sort((a, b) => a.lead.id.localeCompare(b.lead.id))) {
+    const phoneKey = normalizePhone(row.lead.phone)
+    const phone = (row.lead.phone || '').trim()
+    if (phoneKey && phone && !seenPhones.has(phoneKey)) {
+      seenPhones.add(phoneKey)
+      additional_phones.push(phone)
+    }
+    const email = normalizeEmail(row.lead.email)
+    if (email && !seenEmails.has(email)) {
+      seenEmails.add(email)
+      additional_emails.push(email)
+    }
+    const address = (row.lead.address || '').trim()
+    const key = addressKey(address)
+    if (key && !seenAddresses.has(key)) {
+      seenAddresses.add(key)
+      additional_addresses.push(address)
+    }
+  }
+  return { additional_phones, additional_emails, additional_addresses }
+}
+
+function groupHasReachableContact(
+  group: Array<{ lead: SalesLeadInput }>,
+  canonical: SalesLeadInput,
+  consent: SalesConsentInput[],
+): boolean {
+  if (canonical.email || normalizePhone(canonical.phone)) return true
+  for (const row of group) {
+    if (normalizePhone(row.lead.phone)) return true
+    const email = normalizeEmail(row.lead.email)
+    if (email && consentFor(email, consent) !== 'unsubscribed') return true
+  }
+  return false
 }
 
 export function buildSalesProspects(input: {
@@ -720,7 +782,8 @@ export function buildSalesProspects(input: {
     const optOut = consent === 'unsubscribed'
     const existing = !!high
     const possibleOnly = !existing && !!possible
-    const eligible = !existing && !possibleOnly && !optOut && !!(canonical.email || normalizePhone(canonical.lead.phone))
+    const contacts = groupedProspectContacts(group, canonical.lead)
+    const eligible = !existing && !possibleOnly && !optOut && groupHasReachableContact(group, canonical.lead, input.consent)
     const priority = priorityOf({ eligible, engagement, evidence, lead: canonical.lead, org: canonical.org })
     const contactability: Contactability = existing
       ? 'EXISTING_TENANT'
@@ -757,7 +820,16 @@ export function buildSalesProspects(input: {
       matched_tenant_name: high || possible,
       duplicate_group_size: group.length,
       strong_people: stats.people,
-      why: whyLines({ engagement, org: canonical.org, lead: canonical.lead, people: stats.people, august }),
+      why: whyLines({
+        engagement,
+        org: canonical.org,
+        lead: canonical.lead,
+        people: stats.people,
+        august,
+        hasPhone: !!(canonical.lead.phone || contacts.additional_phones.length),
+        hasEmail: !!(canonical.lead.email || contacts.additional_emails.length),
+        hasPlace: !!(canonical.lead.city || canonical.lead.address || contacts.additional_addresses.length),
+      }),
       august: {
         sent: sentCount,
         opened: engagement === 'HOT' || engagement === 'WARM',
@@ -769,6 +841,9 @@ export function buildSalesProspects(input: {
       eligible,
       contact_completeness: contactScore(canonical.lead),
       source_ids,
+      additional_phones: contacts.additional_phones,
+      additional_emails: contacts.additional_emails,
+      additional_addresses: contacts.additional_addresses,
     })
   }
   return prospects

@@ -26,10 +26,21 @@
     <section class="sa-card block">
       <h2>Contact</h2>
       <dl>
-        <div><dt>Phone</dt><dd><a v-if="prospect.phone" :href="`tel:${prospect.phone}`">{{ prospect.phone }}</a><template v-else>—</template></dd></div>
-        <div><dt>Email</dt><dd>{{ prospect.email || '—' }}</dd></div>
+        <div><dt>Phone</dt><dd>
+          <template v-if="phoneList(prospect).length">
+            <template v-for="(phone, index) in phoneList(prospect)" :key="phone">
+              <template v-if="index"> · </template>
+              <a :href="`tel:${phone}`">{{ phone }}</a>
+            </template>
+          </template>
+          <template v-else>—</template>
+        </dd></div>
+        <div><dt>Email</dt><dd>{{ emailList(prospect).join(' · ') || '—' }}</dd></div>
         <div><dt>Website</dt><dd>{{ prospect.website || prospect.website_host || '—' }}</dd></div>
-        <div><dt>Location</dt><dd>{{ [prospect.address, prospect.postal_code, prospect.city].filter(Boolean).join(', ') || '—' }}</dd></div>
+        <div><dt>Location</dt><dd>
+          {{ [prospect.address, prospect.postal_code, prospect.city].filter(Boolean).join(', ') || '—' }}
+          <template v-for="address in prospect.additional_addresses || []" :key="address"> · {{ address }}</template>
+        </dd></div>
       </dl>
     </section>
 
@@ -127,7 +138,7 @@
 
 <script setup lang="ts">
 import { salesDetailFailureMessage, salesDetailLoadFailure, type SalesDetailLoadState } from '~/utils/sales-detail-state'
-import { runSalesContactSave } from '~/utils/sales-detail-save'
+import { initialNextAction, runSalesContactSave } from '~/utils/sales-detail-save'
 
 definePageMeta({ layout: 'tenant-admin', middleware: ['superadmin'] })
 const route = useRoute()
@@ -166,6 +177,8 @@ const authHeaders = async () => {
 }
 const formatWhen = (iso?: string | null) => iso ? new Date(iso).toLocaleString('de-CH', { dateStyle: 'short', timeStyle: 'short' }) : '—'
 const evidenceLabel = (value: string) => ({ HIGH_EVIDENCE: 'HIGH evidence', MEDIUM_EVIDENCE: 'MEDIUM evidence', LOW_EVIDENCE: 'LOW evidence', AMBIGUOUS: 'AMBIGUOUS evidence' }[value] || value)
+const phoneList = (row: { phone?: string | null; additional_phones?: string[] }) => [row.phone, ...(row.additional_phones || [])].filter((value): value is string => !!value)
+const emailList = (row: { email?: string | null; additional_emails?: string[] }) => [row.email, ...(row.additional_emails || [])].filter((value): value is string => !!value)
 const flag = (mail: { sent: boolean; opened: boolean; clicked: boolean }) => {
   if (!mail?.sent && !mail?.opened && !mail?.clicked) return 'nicht gesendet'
   return `${mail.sent ? 'sent' : 'nicht gesendet'} / ${mail.opened ? 'opened' : 'nicht geöffnet'} / ${mail.clicked ? 'clicked' : 'kein Click'}`
@@ -195,6 +208,7 @@ const load = async () => {
       form.interested_features = data.profile.interested_features || ''
       form.objections = data.profile.objections || ''
       form.notes = data.profile.notes || ''
+      form.next_action = initialNextAction(data.profile.next_action)
     }
     loadState.value = 'ready'
     useHead({ title: `${data.prospect?.name || 'Prospect'} – Sales` })

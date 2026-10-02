@@ -594,6 +594,115 @@ describe('buildSalesProspects', () => {
     expect(alpine?.business_potential).toBe('HIGH_EVIDENCE')
   })
 
+  it('keeps a sibling phone and email without changing the canonical row', () => {
+    const rows = buildSalesProspects({
+      leads: [
+        lead({
+          id: 'canon-rich',
+          name: 'Fahrschule Siblingbox mit langem Namen',
+          website: 'https://siblingbox-fahrschule.ch',
+          city: 'Bern',
+          address: 'Bahnhofstrasse 1',
+          created_at: '2024-01-01T00:00:00Z',
+        }),
+        lead({
+          id: 'sib-phone',
+          name: 'Kurz',
+          phone: '+41 79 555 11 22',
+          website: 'https://siblingbox-fahrschule.ch',
+          created_at: '2026-02-01T00:00:00Z',
+        }),
+        lead({
+          id: 'sib-mail',
+          name: 'Mail',
+          email: 'info@siblingbox-fahrschule.ch',
+          phone: '079 555 11 22',
+          created_at: '2026-03-01T00:00:00Z',
+        }),
+        lead({
+          id: 'sib-other-phone',
+          name: 'Andere',
+          phone: '+41 79 555 33 44',
+          website: 'https://siblingbox-fahrschule.ch',
+          created_at: '2025-01-01T00:00:00Z',
+        }),
+      ],
+      tenants: [],
+      staff: [],
+      consent: [],
+      augustByEmail: new Map(),
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0].prospect_id).toBe('canon-rich')
+    expect(rows[0].phone).toBeNull()
+    expect(rows[0].email).toBeNull()
+    expect(rows[0].additional_phones).toEqual(['079 555 11 22', '+41 79 555 33 44'])
+    expect(rows[0].additional_emails).toEqual(['info@siblingbox-fahrschule.ch'])
+    expect(rows[0].additional_addresses).toEqual([])
+    expect(rows[0].eligible).toBe(true)
+    expect(rows[0].contactability).toBe('REVIEW_REQUIRED')
+    expect(rows[0].why).toContain('Telefon vorhanden')
+    expect(rows[0].why).toContain('E-Mail vorhanden')
+  })
+
+  it('does not let a sibling phone bypass opt-out, an existing tenant, or a possible tenant', () => {
+    const rows = buildSalesProspects({
+      leads: [
+        lead({ id: 'opt-canon', name: 'Opt Schule mit langem Namen', email: 'out@optbox-fahrschule.ch', website: 'https://optbox-fahrschule.ch', city: 'Bern', address: 'Weg 1' }),
+        lead({ id: 'opt-phone', name: 'Opt', phone: '+41 79 555 44 55', website: 'https://optbox-fahrschule.ch' }),
+        lead({ id: 'exist-canon', name: 'Existing Schule mit langem Namen', website: 'https://existbox-fahrschule.ch', city: 'Bern', address: 'Weg 2' }),
+        lead({ id: 'exist-phone', name: 'Exist', phone: '+41 79 555 66 77', email: 'info@existbox-fahrschule.ch', website: 'https://existbox-fahrschule.ch' }),
+        lead({ id: 'poss-canon', name: 'Possible Schule mit langem Namen', website: 'https://fsdrivebox.ch', city: 'Bern', address: 'Weg 3' }),
+        lead({ id: 'poss-phone', name: 'Poss', phone: '+41 79 555 88 99', website: 'https://fsdrivebox.ch' }),
+        lead({ id: 'unsub-mail', name: 'Unsub Schule mit langem Namen', website: 'https://unsubbox-fahrschule.ch', city: 'Bern', address: 'Weg 4' }),
+        lead({ id: 'unsub-only', name: 'Unsub', email: 'gone@unsubbox-fahrschule.ch', website: 'https://unsubbox-fahrschule.ch' }),
+      ],
+      tenants: [
+        {
+          id: 'existing-tenant',
+          name: 'Existing Schule mit langem Namen',
+          contact_email: 'info@existbox-fahrschule.ch',
+          from_email: null,
+          contact_phone: null,
+          website_url: 'https://existbox-fahrschule.ch',
+          domain: null,
+          website_domain: null,
+        },
+        {
+          id: 'alpine',
+          name: 'Drive Box',
+          contact_email: 'info@drivebox.ch',
+          from_email: 'info@drivebox.ch',
+          contact_phone: null,
+          website_url: 'https://drivebox.ch',
+          domain: null,
+          website_domain: null,
+        },
+      ],
+      staff: [],
+      consent: [
+        { email: 'out@optbox-fahrschule.ch', status: 'unsubscribed' },
+        { email: 'gone@unsubbox-fahrschule.ch', status: 'unsubscribed' },
+      ],
+      augustByEmail: new Map(),
+    })
+    const opt = rows.find((row) => row.prospect_id === 'opt-canon')
+    const existing = rows.find((row) => row.organization_domain === 'existbox-fahrschule.ch')
+    const possible = rows.find((row) => row.organization_domain === 'fsdrivebox.ch')
+    const unsubOnly = rows.find((row) => row.organization_domain === 'unsubbox-fahrschule.ch')
+    expect(opt?.prospect_id).toBe('opt-canon')
+    expect(opt?.additional_phones).toEqual(['+41 79 555 44 55'])
+    expect(opt?.opt_out).toBe(true)
+    expect(opt?.eligible).toBe(false)
+    expect(existing?.existing_tenant_match).toBe(true)
+    expect(existing?.eligible).toBe(false)
+    expect(existing?.additional_phones).toContain('+41 79 555 66 77')
+    expect(possible?.possible_existing_tenant).toBe(true)
+    expect(possible?.eligible).toBe(false)
+    expect(unsubOnly?.additional_emails).toEqual(['gone@unsubbox-fahrschule.ch'])
+    expect(unsubOnly?.eligible).toBe(false)
+  })
+
   it('keeps existing, possible, opt-out, and pending consent out of the wrong buckets', () => {
     const rows = buildSalesProspects({
       leads: [
@@ -690,6 +799,9 @@ describe('compareSalesProspects', () => {
       eligible: true,
       contact_completeness: 5,
       source_ids: [id],
+      additional_phones: [],
+      additional_emails: [],
+      additional_addresses: [],
     }
   }
 

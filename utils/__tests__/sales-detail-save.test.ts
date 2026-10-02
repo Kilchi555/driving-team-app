@@ -1,5 +1,34 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { runSalesContactSave } from '../sales-detail-save'
+import { initialNextAction, runSalesContactSave } from '../sales-detail-save'
+
+describe('stored next action', () => {
+  it('loads demo and proposal, preserves them, and defaults an empty prospect to call', () => {
+    expect(initialNextAction('demo')).toBe('demo')
+    expect(initialNextAction('proposal')).toBe('proposal')
+    expect(initialNextAction(null)).toBe('call')
+    expect(initialNextAction('')).toBe('call')
+    expect(initialNextAction('not-a-real-action')).toBe('call')
+    const loadedDemo = initialNextAction('demo')
+    const loadedProposal = initialNextAction('proposal')
+    expect(loadedDemo).toBe('demo')
+    expect(loadedProposal).toBe('proposal')
+    const savedWithoutEdit = loadedDemo
+    expect(savedWithoutEdit).toBe('demo')
+    const savedAfterExplicitChange = 'nurture'
+    expect(savedAfterExplicitChange).toBe('nurture')
+    expect(initialNextAction(savedAfterExplicitChange)).toBe('nurture')
+  })
+
+  it('wires the detail form to the stored next action and posts that value', () => {
+    const source = readFileSync(new URL('../../pages/tenant-admin/sales/[id].vue', import.meta.url), 'utf8')
+    expect(source).toContain('form.next_action = initialNextAction(data.profile.next_action)')
+    expect(source).toContain('v-model="form.next_action"')
+    expect(source).toContain('body: form')
+    expect(source).toContain('additional_phones')
+    expect(source).toContain('additional_emails')
+  })
+})
 
 describe('sales contact save lock', () => {
   it('keeps the save button disabled until the post-save reload finishes', async () => {
