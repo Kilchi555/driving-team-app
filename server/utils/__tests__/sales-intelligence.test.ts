@@ -634,9 +634,9 @@ describe('buildSalesProspects', () => {
     })
     expect(rows).toHaveLength(1)
     expect(rows[0].prospect_id).toBe('canon-rich')
-    expect(rows[0].phone).toBeNull()
+    expect(rows[0].phone).toBe('079 555 11 22')
     expect(rows[0].email).toBeNull()
-    expect(rows[0].additional_phones).toEqual(['079 555 11 22', '+41 79 555 33 44'])
+    expect(rows[0].additional_phones).toEqual(['+41 79 555 33 44'])
     expect(rows[0].additional_emails).toEqual(['info@siblingbox-fahrschule.ch'])
     expect(rows[0].additional_addresses).toEqual([])
     expect(rows[0].eligible).toBe(true)
@@ -691,16 +691,84 @@ describe('buildSalesProspects', () => {
     const possible = rows.find((row) => row.organization_domain === 'fsdrivebox.ch')
     const unsubOnly = rows.find((row) => row.organization_domain === 'unsubbox-fahrschule.ch')
     expect(opt?.prospect_id).toBe('opt-canon')
-    expect(opt?.additional_phones).toEqual(['+41 79 555 44 55'])
+    expect(opt?.phone).toBe('+41 79 555 44 55')
     expect(opt?.opt_out).toBe(true)
     expect(opt?.eligible).toBe(false)
     expect(existing?.existing_tenant_match).toBe(true)
     expect(existing?.eligible).toBe(false)
-    expect(existing?.additional_phones).toContain('+41 79 555 66 77')
+    expect(existing?.phone).toBe('+41 79 555 66 77')
     expect(possible?.possible_existing_tenant).toBe(true)
     expect(possible?.eligible).toBe(false)
     expect(unsubOnly?.additional_emails).toEqual(['gone@unsubbox-fahrschule.ch'])
+    expect(unsubOnly?.opt_out).toBe(true)
+    expect(unsubOnly?.contactability).toBe('OPT_OUT')
     expect(unsubOnly?.eligible).toBe(false)
+  })
+
+  it('keeps a callable canonical phone from making an unsubscribed sibling eligible', () => {
+    const rows = buildSalesProspects({
+      leads: [
+        lead({
+          id: 'canon-phone',
+          name: 'Fahrschule Holdbox mit langem Namen',
+          phone: '+41 79 555 10 10',
+          website: 'https://holdbox-fahrschule.ch',
+          city: 'Bern',
+          address: 'Weg 9',
+        }),
+        lead({
+          id: 'sib-unsub',
+          name: 'Hold',
+          email: 'gone@holdbox-fahrschule.ch',
+          phone: '+41 79 555 10 11',
+          website: 'https://holdbox-fahrschule.ch',
+        }),
+      ],
+      tenants: [],
+      staff: [],
+      consent: [{ email: 'gone@holdbox-fahrschule.ch', status: 'unsubscribed' }],
+      augustByEmail: new Map(),
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0].prospect_id).toBe('canon-phone')
+    expect(rows[0].phone).toBe('+41 79 555 10 10')
+    expect(rows[0].additional_phones).toEqual(['+41 79 555 10 11'])
+    expect(rows[0].opt_out).toBe(true)
+    expect(rows[0].consent_status).toBe('unsubscribed')
+    expect(rows[0].eligible).toBe(false)
+    expect(rows[0].contactability).toBe('OPT_OUT')
+  })
+
+  it('uses the canonical phone as primary and otherwise the first sibling phone', () => {
+    const withCanonical = buildSalesProspects({
+      leads: [
+        lead({ id: 'b-sib', name: 'B', phone: '+41 79 555 20 02', website: 'https://phonebox-fahrschule.ch' }),
+        lead({ id: 'a-canon', name: 'Fahrschule Phonebox mit langem Namen', phone: '079 555 20 01', website: 'https://phonebox-fahrschule.ch', city: 'Bern', address: 'Weg 1' }),
+        lead({ id: 'c-dup', name: 'C', phone: '+41 79 555 20 02', website: 'https://phonebox-fahrschule.ch' }),
+      ],
+      tenants: [],
+      staff: [],
+      consent: [],
+      augustByEmail: new Map(),
+    })
+    expect(withCanonical[0].prospect_id).toBe('a-canon')
+    expect(withCanonical[0].phone).toBe('079 555 20 01')
+    expect(withCanonical[0].additional_phones).toEqual(['+41 79 555 20 02'])
+    const siblingOnly = buildSalesProspects({
+      leads: [
+        lead({ id: 'c-late', name: 'Late', phone: '079 555 30 03', website: 'https://openbox-fahrschule.ch' }),
+        lead({ id: 'a-first', name: 'First', phone: '+41 79 555 30 01', website: 'https://openbox-fahrschule.ch' }),
+        lead({ id: 'b-mid', name: 'Mid', phone: '0041 79 555 30 01', website: 'https://openbox-fahrschule.ch' }),
+        lead({ id: 'canon-empty', name: 'Fahrschule Openbox mit langem Namen', website: 'https://openbox-fahrschule.ch', city: 'Bern', address: 'Weg 2' }),
+      ],
+      tenants: [],
+      staff: [],
+      consent: [],
+      augustByEmail: new Map(),
+    })
+    expect(siblingOnly[0].prospect_id).toBe('canon-empty')
+    expect(siblingOnly[0].phone).toBe('+41 79 555 30 01')
+    expect(siblingOnly[0].additional_phones).toEqual(['079 555 30 03'])
   })
 
   it('keeps existing, possible, opt-out, and pending consent out of the wrong buckets', () => {

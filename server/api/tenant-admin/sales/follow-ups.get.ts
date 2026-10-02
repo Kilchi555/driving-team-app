@@ -1,6 +1,6 @@
 import { setHeader, defineEventHandler } from 'h3'
 import { requireSuperAdmin } from '~/server/utils/require-super-admin'
-import { profileForProspect } from '~/server/utils/sales-intelligence'
+import { primaryGroupedPhone, profileForProspect } from '~/server/utils/sales-intelligence'
 import { loadSalesProfiles, loadSalesProspects, manualIndex } from '~/server/utils/sales-workspace'
 
 export default defineEventHandler(async (event) => {
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
         prospect_id: row.prospect.prospect_id,
         name: row.prospect.name,
         person: row.prospect.person,
-        phone: row.prospect.phone,
+        phone: primaryGroupedPhone(row.prospect.phone, row.prospect.additional_phones),
         contactability: row.prospect.contactability,
         contactability_label: row.prospect.contactability_label,
         last_contacted_at: row.profile!.last_contacted_at,

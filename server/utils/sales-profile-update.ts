@@ -55,6 +55,18 @@ export function resolveStoredFollowUp(
   return { value, logged: value }
 }
 
+export function resolveExplicitText(
+  body: unknown,
+  key: TextKey,
+  existing: string | null | undefined,
+): { ok: true; value: string | null; present: boolean } | { ok: false; message: string } {
+  const record = asRecord(body)
+  if (!hasOwn(record, key)) return { ok: true, value: existing ?? null, present: false }
+  const parsed = textValue(record[key], TEXT_LIMITS[key])
+  if (!parsed.ok) return parsed
+  return { ok: true, value: parsed.value, present: true }
+}
+
 function textValue(value: unknown, max: number): { ok: true; value: string | null } | { ok: false; message: string } {
   if (value == null) return { ok: true, value: null }
   if (typeof value !== 'string') return { ok: false, message: 'Text erwartet' }

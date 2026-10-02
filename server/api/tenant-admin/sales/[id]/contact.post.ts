@@ -10,7 +10,7 @@ import {
   profileForProspect,
   SALES_STATUSES,
 } from '~/server/utils/sales-intelligence'
-import { resolveStoredFollowUp } from '~/server/utils/sales-profile-update'
+import { resolveExplicitText, resolveStoredFollowUp } from '~/server/utils/sales-profile-update'
 import {
   isMissingSalesStore,
   loadSalesProfiles,
@@ -27,7 +27,6 @@ export default defineEventHandler(async (event) => {
   const result = oneOf(body?.result, CONTACT_RESULTS, 'result')
   const nextAction = body?.next_action ? oneOf(body.next_action, NEXT_ACTIONS, 'next_action') : null
   const salesStatus = body?.sales_status ? oneOf(body.sales_status, SALES_STATUSES, 'sales_status') : null
-  const notes = textField(body?.notes, 4000)
   const prospects = await loadSalesProspects()
   const prospect = findSalesProspect(prospects, id)
   if (!prospect) throw createError({ statusCode: 404, statusMessage: 'Prospect nicht gefunden' })
@@ -44,6 +43,16 @@ export default defineEventHandler(async (event) => {
   const status = salesStatus || existing?.sales_status || 'review_required'
   const now = new Date().toISOString()
   const actorId = authUser.db_user_id || authUser.profile?.id || null
+  const currentSoftware = resolveExplicitText(body, 'current_software', existing?.current_software)
+  const painPoints = resolveExplicitText(body, 'pain_points', existing?.pain_points)
+  const interestedFeatures = resolveExplicitText(body, 'interested_features', existing?.interested_features)
+  const objections = resolveExplicitText(body, 'objections', existing?.objections)
+  const notes = resolveExplicitText(body, 'notes', existing?.notes)
+  const textResult = [currentSoftware, painPoints, interestedFeatures, objections, notes].find((item) => !item.ok)
+  if (textResult && !textResult.ok) throw createError({ statusCode: 400, statusMessage: textResult.message })
+  if (!currentSoftware.ok || !painPoints.ok || !interestedFeatures.ok || !objections.ok || !notes.ok) {
+    throw createError({ statusCode: 400, statusMessage: 'Text erwartet' })
+  }
   const profilePatch = {
     sales_status: status,
     priority: prospect.priority,
@@ -57,11 +66,11 @@ export default defineEventHandler(async (event) => {
     next_action: nextAction,
     contact_attempts: (existing?.contact_attempts || 0) + 1,
     conversation_outcome: result,
-    current_software: textField(body?.current_software, 500) ?? existing?.current_software ?? null,
-    pain_points: textField(body?.pain_points, 2000) ?? existing?.pain_points ?? null,
-    interested_features: textField(body?.interested_features, 2000) ?? existing?.interested_features ?? null,
-    objections: textField(body?.objections, 2000) ?? existing?.objections ?? null,
-    notes: notes ?? existing?.notes ?? null,
+    current_software: currentSoftware.value,
+    pain_points: painPoints.value,
+    interested_features: interestedFeatures.value,
+    objections: objections.value,
+    notes: notes.value,
     demo_booked_at: existing?.demo_booked_at || (result === 'demo_booked' || status === 'demo_booked' ? now : null),
     demo_completed_at: existing?.demo_completed_at || (status === 'demo_completed' ? now : null),
     proposal_sent_at: existing?.proposal_sent_at || (status === 'proposal' ? now : null),
@@ -85,7 +94,7 @@ export default defineEventHandler(async (event) => {
     prospect_id: storedProspectId,
     channel,
     result,
-    notes,
+    notes: notes.present ? notes.value : null,
     next_follow_up_at: followUp.logged,
     next_action: nextAction,
     sales_status: status,

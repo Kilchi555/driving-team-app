@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildProfileWrite, resolveStoredFollowUp } from '../sales-profile-update'
+import { buildProfileWrite, resolveExplicitText, resolveStoredFollowUp } from '../sales-profile-update'
 
 const existing = {
   sales_status: 'contacted',
@@ -67,6 +67,47 @@ describe('buildProfileWrite', () => {
     expect(write.ok).toBe(true)
     if (!write.ok) return
     expect(write.fields).toEqual({ objections: 'migration' })
+  })
+
+  it('preserves an omitted text field, clears an explicit empty field, and replaces text', () => {
+    const stored = {
+      current_software: 'other',
+      pain_points: 'Price objection',
+      interested_features: 'billing',
+      objections: 'price',
+      notes: 'existing',
+    }
+    expect(resolveExplicitText({}, 'pain_points', stored.pain_points)).toEqual({
+      ok: true,
+      value: 'Price objection',
+      present: false,
+    })
+    expect(resolveExplicitText({ pain_points: '' }, 'pain_points', stored.pain_points)).toEqual({
+      ok: true,
+      value: null,
+      present: true,
+    })
+    expect(resolveExplicitText({ pain_points: 'Calendar' }, 'pain_points', stored.pain_points)).toEqual({
+      ok: true,
+      value: 'Calendar',
+      present: true,
+    })
+    const cleared = buildProfileWrite({
+      body: { pain_points: '' },
+      existing: { ...existing, ...stored },
+      now: '2026-10-02T00:00:00.000Z',
+      fallbackAssignee: null,
+    })
+    expect(cleared.ok).toBe(true)
+    if (!cleared.ok) return
+    expect(cleared.fields.pain_points).toBeNull()
+    expect(cleared.fields.notes).toBeUndefined()
+    expect(cleared.fields.current_software).toBeUndefined()
+    expect(cleared.fields.objections).toBeUndefined()
+    expect(cleared.fields.interested_features).toBeUndefined()
+    for (const key of ['current_software', 'interested_features', 'objections', 'notes'] as const) {
+      expect(resolveExplicitText({ pain_points: '' }, key, stored[key]).value).toBe(stored[key])
+    }
   })
 
   it('rejects an invalid status, a non-text value, and oversized text', () => {

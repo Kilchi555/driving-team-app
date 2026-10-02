@@ -655,6 +655,16 @@ function addressKey(value: string | null | undefined): string {
   return foldText(value).replace(/[^a-z0-9]+/g, ' ').trim()
 }
 
+export function primaryGroupedPhone(canonicalPhone: string | null | undefined, siblingPhones: readonly string[]): string | null {
+  const canonical = (canonicalPhone || '').trim()
+  if (normalizePhone(canonical)) return canonical
+  for (const phone of siblingPhones) {
+    const trimmed = phone.trim()
+    if (normalizePhone(trimmed)) return trimmed
+  }
+  return null
+}
+
 export function groupedProspectContacts(
   group: Array<{ lead: SalesLeadInput }>,
   canonical: SalesLeadInput,
@@ -691,6 +701,18 @@ export function groupedProspectContacts(
     }
   }
   return { additional_phones, additional_emails, additional_addresses }
+}
+
+function groupConsent(group: Array<{ lead: SalesLeadInput }>, canonicalEmail: string, consent: SalesConsentInput[]): { status: string; optOut: boolean } {
+  const canonical = normalizeEmail(canonicalEmail)
+  const status = consentFor(canonical, consent)
+  if (status === 'unsubscribed') return { status, optOut: true }
+  for (const row of group) {
+    const email = normalizeEmail(row.lead.email)
+    if (!email || email === canonical) continue
+    if (consentFor(email, consent) === 'unsubscribed') return { status: 'unsubscribed', optOut: true }
+  }
+  return { status, optOut: false }
 }
 
 function groupHasReachableContact(
@@ -778,11 +800,16 @@ export function buildSalesProspects(input: {
     const stats = canonical.org ? (orgStats.get(canonical.org) || { people: 0, cities: 0, weakNamed: false }) : { people: 0, cities: 0, weakNamed: false }
     const aligned = !!canonical.org && canonicalAligns(canonical.lead, byOrgRows.get(canonical.org) || [], canonical.org)
     const evidence = evidenceOf(canonical.lead, canonical.org, { ...stats, aligned })
-    const consent = consentFor(canonical.email, input.consent)
-    const optOut = consent === 'unsubscribed'
+    const consent = groupConsent(group, canonical.email, input.consent)
+    const optOut = consent.optOut
     const existing = !!high
     const possibleOnly = !existing && !!possible
     const contacts = groupedProspectContacts(group, canonical.lead)
+    const phone = primaryGroupedPhone(canonical.lead.phone, contacts.additional_phones)
+    const primaryPhoneKey = normalizePhone(phone)
+    const additionalPhones = primaryPhoneKey
+      ? contacts.additional_phones.filter((value) => normalizePhone(value) !== primaryPhoneKey)
+      : contacts.additional_phones
     const eligible = !existing && !possibleOnly && !optOut && groupHasReachableContact(group, canonical.lead, input.consent)
     const priority = priorityOf({ eligible, engagement, evidence, lead: canonical.lead, org: canonical.org })
     const contactability: Contactability = existing
@@ -798,7 +825,7 @@ export function buildSalesProspects(input: {
       prospect_id: canonical.lead.id,
       name: canonical.lead.name || 'Ohne Name',
       person: displayPerson(canonical.lead.first_name),
-      phone: canonical.lead.phone,
+      phone,
       email: canonical.lead.email,
       website: canonical.lead.website,
       website_host: hostOf(canonical.lead.website) || null,
@@ -813,7 +840,7 @@ export function buildSalesProspects(input: {
       business_score: scoreOf(canonical.lead, canonical.org, stats, evidence),
       contactability,
       contactability_label: contactabilityLabel(contactability),
-      consent_status: consent,
+      consent_status: consent.status,
       existing_tenant_match: existing,
       possible_existing_tenant: possibleOnly,
       opt_out: optOut,
@@ -826,7 +853,7 @@ export function buildSalesProspects(input: {
         lead: canonical.lead,
         people: stats.people,
         august,
-        hasPhone: !!(canonical.lead.phone || contacts.additional_phones.length),
+        hasPhone: !!(phone || additionalPhones.length),
         hasEmail: !!(canonical.lead.email || contacts.additional_emails.length),
         hasPlace: !!(canonical.lead.city || canonical.lead.address || contacts.additional_addresses.length),
       }),
@@ -841,7 +868,7 @@ export function buildSalesProspects(input: {
       eligible,
       contact_completeness: contactScore(canonical.lead),
       source_ids,
-      additional_phones: contacts.additional_phones,
+      additional_phones: additionalPhones,
       additional_emails: contacts.additional_emails,
       additional_addresses: contacts.additional_addresses,
     })
