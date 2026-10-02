@@ -314,13 +314,32 @@ describe('multi-admin database contracts', () => {
     expect(historical).not.toContain('is_primary_admin')
   })
 
-  it('reauthorizes staff_locations admins by role instead of admin_level', () => {
+  it('keeps the staff_locations migration a no-op against the live policies', () => {
     const sql = read('migrations/20261002_staff_locations_admin_role_rls.sql')
-    expect(sql).toContain("u.role = 'admin'")
-    expect(sql).toContain('u.is_active = true')
-    expect(sql).toContain('u.deleted_at IS NULL')
-    expect(sql).toContain('u.tenant_id = staff_locations.tenant_id')
-    expect(sql).not.toContain('admin_level IS NOT NULL')
-    expect(sql).not.toContain('staff_locations_select_own')
+    const executable = sql
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .map((line) => line.replace(/--.*$/, ''))
+      .join('\n')
+    const statements = executable
+      .split(';')
+      .map((part) => part.trim())
+      .filter(Boolean)
+    expect(statements).toEqual(['BEGIN', 'COMMIT'])
+    const upper = executable.toUpperCase()
+    for (const forbidden of [
+      'CREATE POLICY',
+      'DROP POLICY',
+      'ALTER POLICY',
+      'GRANT',
+      'REVOKE',
+      'INSERT',
+      'UPDATE',
+      'DELETE',
+    ]) {
+      expect(upper).not.toContain(forbidden)
+    }
+    expect(executable).not.toMatch(/admin_level/i)
+    expect(executable).not.toContain("u.role = 'admin'")
   })
 })
