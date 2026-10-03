@@ -10,6 +10,14 @@ import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 import { appointmentCountLabel, getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { applyMissingInvoiceBilling, invoiceQrDebtorName, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
+import {
+  claimPaymentsForInvoice,
+  deleteTenantInvoice,
+  loadClaimablePayments,
+  PaymentClaimRejectedError,
+  releasePaymentClaims,
+  uniquePaymentIds,
+} from '~/server/utils/invoice-tenant-guards'
 import { formatBillingPersonLabel, joinStreetAndNumber, snapshotBillingCompanyName } from '~/utils/billing-address-map'
 
 export type InvoiceDraftPayload = {
@@ -155,6 +163,13 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
     tenantData = { ...tenantBasic, invoice_number_prefix: 'RE', next_invoice_number: 1 }
   }
 
+  const paymentIds = uniquePaymentIds(draft.payment_ids)
+  const paymentPrior = await loadClaimablePayments({
+    supabase,
+    tenantId,
+    paymentIds,
+  })
+
   const invoiceNumber = await allocateInvoiceNumber(supabase, tenantId)
   const now = new Date().toISOString()
   const billedDraft = await applyMissingInvoiceBilling(supabase, tenantId, draft)
@@ -225,19 +240,31 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
     }
   }
 
-  if (draft.payment_ids?.length) {
-    const { error: paymentUpdateError } = await supabase
-      .from('payments')
-      .update({
-        invoice_id: invoice.id,
-        payment_status: 'invoiced',
-        payment_method: 'invoice',
-        updated_at: now,
+  if (paymentIds.length) {
+    let claim: Awaited<ReturnType<typeof claimPaymentsForInvoice>>
+    try {
+      claim = await claimPaymentsForInvoice({
+        supabase,
+        tenantId,
+        invoiceId: invoice.id,
+        paymentIds,
+        now,
       })
-      .in('id', draft.payment_ids)
+    } catch (claimErr) {
+      await deleteTenantInvoice({ supabase, tenantId, invoiceId: invoice.id })
+      throw claimErr
+    }
 
-    if (paymentUpdateError) {
-      console.error('⚠️ Fehler beim Setzen von payment_status=invoiced:', paymentUpdateError.message)
+    if (!claim.complete) {
+      await releasePaymentClaims({
+        supabase,
+        tenantId,
+        invoiceId: invoice.id,
+        claimedIds: claim.claimedIds,
+        prior: paymentPrior,
+      })
+      await deleteTenantInvoice({ supabase, tenantId, invoiceId: invoice.id })
+      throw new PaymentClaimRejectedError('Payment claim rejected')
     }
   }
 
