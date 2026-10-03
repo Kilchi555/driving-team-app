@@ -5,12 +5,7 @@
     <div class="bg-white border-b p-4">
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold text-gray-900">Administratoren</h2>
-        <button 
-          @click="addNewAdmin"
-          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-        >
-          + Administrator einladen
-        </button>
+        <AdminInviteDialog @invited="loadAdmins" />
       </div>
     </div>
 
@@ -44,12 +39,11 @@
           <div class="text-6xl mb-4">👑</div>
           <h3 class="text-lg font-semibold text-gray-900 mb-2">Noch keine Administratoren</h3>
           <p class="text-gray-600 mb-4">Fügen Sie den ersten Administrator hinzu</p>
-          <button 
-            @click="addNewAdmin"
-            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-          >
-            Ersten Administrator einladen
-          </button>
+          <AdminInviteDialog
+            label="Ersten Administrator einladen"
+            button-class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+            @invited="loadAdmins"
+          />
         </div>
       </div>
 
@@ -153,70 +147,6 @@
       </div>
     </div>
 
-    <!-- Add Admin Modal -->
-    <div v-if="showAddAdminModal" class="fixed inset-0 z-50 flex items-center justify-center">
-      <div class="absolute inset-0 bg-black bg-opacity-50" @click="showAddAdminModal = false"></div>
-      
-      <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div class="p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-1">Administrator einladen</h3>
-          <p class="text-sm text-gray-600 mb-4">Die Person erhält eine Einladung und legt selbst ein Login an. Es wird kein Konto ohne Zugang erzeugt.</p>
-          
-          <form @submit.prevent="createAdmin">
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Vorname</label>
-                <input 
-                  v-model="newAdmin.first_name"
-                  type="text" 
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-              </div>
-              
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nachname</label>
-                <input 
-                  v-model="newAdmin.last_name"
-                  type="text" 
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-              </div>
-              
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail</label>
-                <input 
-                  v-model="newAdmin.email"
-                  type="email" 
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-              </div>
-
-            </div>
-            
-            <div class="flex gap-3 mt-6">
-              <button 
-                type="button"
-                @click="showAddAdminModal = false"
-                class="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Abbrechen
-              </button>
-              <button 
-                type="submit"
-                :disabled="isCreatingAdmin"
-                class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400"
-              >
-                {{ isCreatingAdmin ? 'Sende...' : 'Einladung senden' }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
     <!-- Edit Admin Modal -->
     <div v-if="showEditAdminModal" class="fixed inset-0 z-50 flex items-center justify-center">
       <div class="absolute inset-0 bg-black bg-opacity-50" @click="showEditAdminModal = false"></div>
@@ -290,6 +220,7 @@ import { ref, computed, onMounted } from 'vue'
 // import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
 import LoadingLogo from '~/components/LoadingLogo.vue'
+import AdminInviteDialog from '~/components/users/AdminInviteDialog.vue'
 
 // Props
 const props = defineProps<{
@@ -309,16 +240,9 @@ const uiStore = useUIStore()
 const adminList = ref<any[]>([])
 const isLoading = ref(false)
 const error = ref<string | null>(null)
-const showAddAdminModal = ref(false)
 const showEditAdminModal = ref(false)
-const isCreatingAdmin = ref(false)
 const isUpdatingAdmin = ref(false)
 const editingAdmin = ref<any>(null)
-const newAdmin = ref({
-  first_name: '',
-  last_name: '',
-  email: ''
-})
 
 const callerIsPrimary = computed(() =>
   props.currentUser?.role === 'admin' && props.currentUser?.is_primary_admin === true
@@ -358,60 +282,8 @@ const loadAdmins = async () => {
   }
 }
 
-const addNewAdmin = () => {
-  newAdmin.value = {
-    first_name: '',
-    last_name: '',
-    email: ''
-  }
-  showAddAdminModal.value = true
-}
-
 const apiErrorMessage = (err: any, fallback: string) =>
   err?.data?.statusMessage || err?.data?.message || err?.statusMessage || err?.message || fallback
-
-const createAdmin = async () => {
-  if (!props.currentUser) return
-  
-  isCreatingAdmin.value = true
-  
-  try {
-    logger.debug('🔄 Creating new admin...')
-    
-    // (Removed direct Supabase auth calls - now using currentUser prop)
-
-    const createResponse = await $fetch('/api/staff/invite', {
-      method: 'POST',
-      body: {
-        first_name: newAdmin.value.first_name,
-        last_name: newAdmin.value.last_name,
-        email: newAdmin.value.email,
-        role: 'admin'
-      }
-    }) as any
-
-    if (!createResponse?.success) throw new Error(createResponse?.message)
-
-    uiStore.addNotification({
-      type: 'success',
-      title: 'Einladung gesendet',
-      message: `${newAdmin.value.first_name} ${newAdmin.value.last_name} erhält eine Administrator-Einladung.`
-    })
-
-    showAddAdminModal.value = false
-    await loadAdmins()
-
-  } catch (err: any) {
-    console.error('❌ Error creating admin:', err)
-    uiStore.addNotification({
-      type: 'error',
-      title: 'Fehler',
-      message: apiErrorMessage(err, 'Einladung konnte nicht gesendet werden.')
-    })
-  } finally {
-    isCreatingAdmin.value = false
-  }
-}
 
 const editAdmin = (admin: any) => {
   editingAdmin.value = { ...admin }
