@@ -5,15 +5,23 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { sanitizeRoleChange, staffCreatePayload } from '~/server/utils/assignable-user-roles'
+import { deactivateTenantUser, resolveScopedTenantId, type LifecycleUser } from '~/server/utils/admin-lifecycle'
+import { getClientIP } from '~/server/utils/ip-utils'
 
-// Allowed columns per update action to prevent mass assignment
-// NOTE: `role` is intentionally excluded from tenant-admin whitelists — see sanitizeRoleChange()
-const ADMIN_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone', 'is_active'] as const
-const STAFF_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone', 'is_active', 'can_edit_guide'] as const
+// Privileged columns are not client-writable. Status changes go through deactivation.
+const ADMIN_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone'] as const
+const STAFF_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone', 'can_edit_guide'] as const
 const USER_UPDATE_WHITELIST = [
-  'first_name', 'last_name', 'email', 'phone', 'is_active', 'category',
+  'first_name', 'last_name', 'email', 'phone', 'category',
   'birthdate', 'street', 'street_nr', 'zip', 'city', 'profession', 'faberid'
 ] as const
+
+const USER_READ_COLUMNS = [
+  'id', 'first_name', 'last_name', 'email', 'phone', 'role', 'tenant_id',
+  'is_active', 'deleted_at', 'created_at', 'admin_level', 'is_primary_admin',
+  'category', 'birthdate', 'street', 'street_nr', 'zip', 'city', 'profession',
+  'faberid', 'can_edit_guide', 'preferred_payment_method',
+].join(', ')
 
 function pickFields<T extends object>(data: T, allowed: readonly string[]): Partial<T> {
   return Object.fromEntries(
@@ -22,7 +30,6 @@ function pickFields<T extends object>(data: T, allowed: readonly string[]): Part
 }
 
 export default defineEventHandler(async (event) => {
-  // ✅ Auth check — must be authenticated admin
   const authUser = await getAuthenticatedUser(event)
   if (!authUser) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
@@ -32,32 +39,61 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const { 
+  const {
     action,
     tenant_id,
     user_id,
     user_data,
-    role,
     search_term
-  } = body
-
-  // ✅ Tenant isolation — non-super_admin can only access their own tenant
-  if (authUser.role !== 'super_admin' && tenant_id && tenant_id !== authUser.tenant_id) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden: Tenant mismatch' })
-  }
+  } = body || {}
 
   const supabase = createClient(
     process.env.SUPABASE_URL || '',
     process.env.SUPABASE_SERVICE_ROLE_KEY || ''
   )
 
+  const scopedTenantId = () => resolveScopedTenantId(authUser.role, authUser.tenant_id, tenant_id)
+
+  async function loadCaller(): Promise<LifecycleUser> {
+    if (!authUser.db_user_id) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, tenant_id, role, is_primary_admin, is_active, deleted_at')
+      .eq('id', authUser.db_user_id)
+      .maybeSingle()
+    if (error || !data || data.is_active === false || data.deleted_at) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+    return data as LifecycleUser
+  }
+
+  async function assertTargetInScope(targetId: string) {
+    if (!targetId) {
+      throw createError({ statusCode: 400, statusMessage: 'user_id required' })
+    }
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, tenant_id')
+      .eq('id', targetId)
+      .maybeSingle()
+    if (error || !data) {
+      throw createError({ statusCode: 404, statusMessage: 'User not found' })
+    }
+    if (authUser.role !== 'super_admin' && data.tenant_id !== authUser.tenant_id) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden: Tenant mismatch' })
+    }
+    return data
+  }
+
   try {
     if (action === 'get-admins') {
-      // Get all admins for tenant
+      const tenantId = scopedTenantId()
       const { data, error } = await supabase
         .from('users')
-        .select('id, first_name, last_name, email, role, created_at')
-        .eq('tenant_id', tenant_id)
+        .select('id, first_name, last_name, email, role, is_active, is_primary_admin, created_at')
+        .eq('tenant_id', tenantId)
         .eq('role', 'admin')
         .order('created_at', { ascending: false })
 
@@ -66,33 +102,16 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'create-admin') {
-      // Create new admin user — force caller tenant + admin role (never accept super_admin from tenant admins)
-      const insertTenantId = authUser.role === 'super_admin'
-        ? (tenant_id || user_data?.tenant_id || authUser.tenant_id)
-        : authUser.tenant_id
-      if (!insertTenantId) {
-        throw createError({ statusCode: 400, statusMessage: 'tenant_id required' })
-      }
-      const insertData = {
-        ...pickFields(user_data || {}, ['first_name', 'last_name', 'email', 'phone', 'is_active']),
-        role: 'admin',
-        tenant_id: insertTenantId
-      }
-
-      const { data, error } = await supabase
-        .from('users')
-        .insert([insertData])
-        .select()
-        .single()
-
-      if (error) throw error
-      return { success: true, data }
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'create-admin wurde entfernt. Administratoren werden per Einladung angelegt.',
+      })
     }
 
     if (action === 'update-admin') {
-      // Update admin user — whitelist fields to prevent mass assignment
+      await assertTargetInScope(user_id)
       const safeData: Record<string, any> = pickFields(user_data || {}, ADMIN_UPDATE_WHITELIST)
-      if (user_data?.role !== undefined) {
+      if (authUser.role === 'super_admin' && user_data?.role !== undefined) {
         const nextRole = sanitizeRoleChange(authUser.role || '', user_data.role)
         if (nextRole) safeData.role = nextRole
       }
@@ -102,13 +121,12 @@ export default defineEventHandler(async (event) => {
         .update(safeData)
         .eq('id', user_id)
 
-      // Tenant isolation for non-super_admin
       if (authUser.role !== 'super_admin') {
         query = query.eq('tenant_id', authUser.tenant_id)
       }
 
       const { data, error } = await query
-        .select('*, auth_user_id')
+        .select(`${USER_READ_COLUMNS}, auth_user_id`)
         .single()
 
       if (error) throw error
@@ -120,23 +138,25 @@ export default defineEventHandler(async (event) => {
       return { success: true, data }
     }
 
-    if (action === 'delete-admin') {
-      // Delete admin user (soft delete or hard delete)
-      const { error } = await supabase
-        .from('users')
-        .update({ is_active: false })
-        .eq('id', user_id)
-
-      if (error) throw error
+    if (action === 'delete-admin' || action === 'delete-staff') {
+      const caller = await loadCaller()
+      await deactivateTenantUser({
+        supabase,
+        caller,
+        targetUserId: user_id,
+        reason: 'Deaktiviert',
+        authUserId: authUser.id,
+        ipAddress: getClientIP(event),
+      })
       return { success: true, message: 'Deleted' }
     }
 
     if (action === 'get-staff') {
-      // Get all staff for tenant
+      const tenantId = scopedTenantId()
       const { data, error } = await supabase
         .from('users')
         .select('id, first_name, last_name, email, role, created_at')
-        .eq('tenant_id', tenant_id)
+        .eq('tenant_id', tenantId)
         .eq('role', 'staff')
         .order('created_at', { ascending: false })
 
@@ -145,12 +165,14 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'create-staff') {
-      // Staff users only. A caller-supplied role, including `student`, is ignored.
-      const insertData = staffCreatePayload(user_data)
+      const tenantId = authUser.role === 'super_admin'
+        ? resolveScopedTenantId(authUser.role, authUser.tenant_id, tenant_id || null)
+        : resolveScopedTenantId(authUser.role, authUser.tenant_id, tenant_id)
+      const insertData = staffCreatePayload(user_data, tenantId)
       const { data, error } = await supabase
         .from('users')
         .insert([insertData])
-        .select()
+        .select(USER_READ_COLUMNS)
         .single()
 
       if (error) throw error
@@ -158,13 +180,19 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'update-staff') {
-      // Update staff user — whitelist fields to prevent mass assignment
+      await assertTargetInScope(user_id)
       const safeData = pickFields(user_data || {}, STAFF_UPDATE_WHITELIST)
-      const { data, error } = await supabase
+      let query = supabase
         .from('users')
         .update(safeData)
         .eq('id', user_id)
-        .select('*, auth_user_id')
+
+      if (authUser.role !== 'super_admin') {
+        query = query.eq('tenant_id', authUser.tenant_id)
+      }
+
+      const { data, error } = await query
+        .select(`${USER_READ_COLUMNS}, auth_user_id`)
         .single()
 
       if (error) throw error
@@ -176,23 +204,12 @@ export default defineEventHandler(async (event) => {
       return { success: true, data }
     }
 
-    if (action === 'delete-staff') {
-      // Delete staff user
-      const { error } = await supabase
-        .from('users')
-        .update({ is_active: false })
-        .eq('id', user_id)
-
-      if (error) throw error
-      return { success: true, message: 'Deleted' }
-    }
-
     if (action === 'get-customers') {
-      // Get all customers for tenant
+      const tenantId = scopedTenantId()
       const { data, error } = await supabase
         .from('users')
         .select('id, first_name, last_name, email, phone, created_at')
-        .eq('tenant_id', tenant_id)
+        .eq('tenant_id', tenantId)
         .eq('role', 'customer')
         .order('created_at', { ascending: false })
 
@@ -201,11 +218,11 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'search-users') {
-      // Search users by email/name
+      const tenantId = scopedTenantId()
       const { data, error } = await supabase
         .from('users')
         .select('id, first_name, last_name, email, role')
-        .eq('tenant_id', tenant_id)
+        .eq('tenant_id', tenantId)
         .or(`email.ilike.%${search_term}%,first_name.ilike.%${search_term}%,last_name.ilike.%${search_term}%`)
         .limit(10)
 
@@ -214,44 +231,32 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-user-by-id') {
-      // Get single user
-      const { data, error } = await supabase
+      await assertTargetInScope(user_id)
+      let query = supabase
         .from('users')
-        .select('*')
+        .select(USER_READ_COLUMNS)
         .eq('id', user_id)
-        .single()
 
-      if (error) throw error
+      if (authUser.role !== 'super_admin') {
+        query = query.eq('tenant_id', authUser.tenant_id)
+      }
+
+      const { data, error } = await query.maybeSingle()
+      if (error || !data) {
+        throw createError({ statusCode: 404, statusMessage: 'User not found' })
+      }
       return { success: true, data }
     }
 
     if (action === 'update-user') {
-      if (!user_id) {
-        throw createError({ statusCode: 400, statusMessage: 'user_id required' })
-      }
-
-      // Tenant isolation for non-super_admin
-      const { data: existing, error: existingError } = await supabase
-        .from('users')
-        .select('id, tenant_id, auth_user_id')
-        .eq('id', user_id)
-        .single()
-
-      if (existingError || !existing) {
-        throw createError({ statusCode: 404, statusMessage: 'User not found' })
-      }
-
-      if (authUser.role !== 'super_admin' && existing.tenant_id !== authUser.tenant_id) {
-        throw createError({ statusCode: 403, statusMessage: 'Forbidden: Tenant mismatch' })
-      }
+      const existing = await assertTargetInScope(user_id)
 
       const safeData: Record<string, any> = pickFields(user_data || {}, USER_UPDATE_WHITELIST)
-      if (user_data?.role !== undefined) {
+      if (authUser.role === 'super_admin' && user_data?.role !== undefined) {
         const nextRole = sanitizeRoleChange(authUser.role || '', user_data.role)
         if (nextRole) safeData.role = nextRole
       }
 
-      // Normalize empty strings to null for optional personalien
       for (const key of ['birthdate', 'street', 'street_nr', 'zip', 'city', 'profession', 'faberid', 'phone', 'email'] as const) {
         if (key in safeData && (safeData as any)[key] === '') {
           ;(safeData as any)[key] = null
@@ -263,7 +268,7 @@ export default defineEventHandler(async (event) => {
         .update(safeData)
         .eq('id', user_id)
         .eq('tenant_id', existing.tenant_id)
-        .select('*, auth_user_id')
+        .select(`${USER_READ_COLUMNS}, auth_user_id`)
         .single()
 
       if (error) throw error
@@ -276,6 +281,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-user-appointments') {
+      await assertTargetInScope(user_id)
       const { data, error } = await supabase
         .from('appointments')
         .select('id, start_time, end_time, status, duration_minutes, type, notes, cancellation_charge_percentage, staff:users!appointments_staff_id_fkey(first_name, last_name)')
@@ -288,7 +294,8 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-staff-appointments') {
-      const { year, month } = body // month: 1-12
+      await assertTargetInScope(user_id)
+      const { year, month } = body
       if (!user_id || !year || !month) throw createError({ statusCode: 400, statusMessage: 'user_id, year and month required' })
       const from = new Date(Date.UTC(year, month - 1, 1)).toISOString()
       const to   = new Date(Date.UTC(year, month, 1)).toISOString()
@@ -304,6 +311,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-user-course-registrations') {
+      await assertTargetInScope(user_id)
       const { data, error } = await supabase
         .from('course_registrations')
         .select('id, status, payment_status, amount_paid_rappen, discount_applied_rappen, registration_date, created_at, sari_faberid, is_partial_enrollment, course:courses(id, name, price_per_participant_rappen, course_sessions(start_time, end_time, session_number))')
@@ -317,6 +325,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-user-payments') {
+      await assertTargetInScope(user_id)
       const { data, error } = await supabase
         .from('payments')
         .select('id, total_amount_rappen, payment_status, payment_method, created_at, paid_at, invoice_id, wallee_transaction_id, notes, appointment_id, appointments(id, title, start_time, event_type_code)')
@@ -329,10 +338,11 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-tenant-categories') {
+      const tenantId = scopedTenantId()
       const { data, error } = await supabase
         .from('categories')
         .select('id, code, name, is_active, parent_category_id')
-        .eq('tenant_id', tenant_id)
+        .eq('tenant_id', tenantId)
         .eq('is_active', true)
         .order('code')
 
@@ -341,8 +351,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-staff-license-photos') {
-      if (!user_id) throw createError({ statusCode: 400, statusMessage: 'user_id required' })
-      // Fetch documents
+      await assertTargetInScope(user_id)
       const { data: docs, error: docsError } = await supabase
         .from('user_documents')
         .select('id, document_type, side, file_name, file_type, storage_path, title, is_verified, created_at')
@@ -353,7 +362,6 @@ export default defineEventHandler(async (event) => {
       if (docsError) throw docsError
       if (!docs || docs.length === 0) return { success: true, data: [] }
 
-      // Generate signed URLs (valid 1 hour)
       const withUrls = await Promise.all(docs.map(async (doc) => {
         const { data: signed } = await supabase.storage
           .from('user-documents')
@@ -372,7 +380,8 @@ export default defineEventHandler(async (event) => {
     console.error('❌ Admin Users API error:', err)
     throw createError({
       statusCode: err.statusCode || 500,
-      message: err.message || 'Admin users operation failed'
+      statusMessage: err.statusMessage || err.message || 'Admin users operation failed',
+      message: err.statusMessage || err.message || 'Admin users operation failed'
     })
   }
 })

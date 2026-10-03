@@ -44,26 +44,7 @@
       </dl>
     </section>
 
-    <section class="sa-card block">
-      <h2>Why this lead</h2>
-      <ul>
-        <li v-for="line in prospect.why" :key="line">{{ line }}</li>
-      </ul>
-      <p class="meta">Signaturen: {{ prospect.strong_people }}. Das ist keine Mitarbeiterzahl.</p>
-    </section>
-
-    <section class="sa-card block">
-      <h2>HISTORICAL OUTREACH</h2>
-      <p class="meta">August-Kampagne. Das ist keine aktuelle Sales-Aktivität.</p>
-      <ul>
-        <li v-for="mail in [1, 2, 3, 4]" :key="mail">
-          Mail {{ mail }}: {{ flag(prospect.august.mails[mail]) }}
-        </li>
-        <li>SMS: {{ prospect.august.sms_note ? 'Notiz vorhanden, kein Ergebnis gespeichert' : 'keine SMS-Notiz' }}</li>
-      </ul>
-    </section>
-
-    <section class="sa-card block">
+    <section class="sa-card block is-current">
       <h2>Gespräch</h2>
       <p v-if="!prospect.eligible" class="stop">Für diesen Datensatz wird kein Kontaktformular angeboten.</p>
       <form v-else @submit.prevent="saveContact">
@@ -123,6 +104,73 @@
       </form>
     </section>
 
+    <section class="sa-card block briefing">
+      <h2>Why this lead</h2>
+      <ul class="signals">
+        <li v-for="item in whySignals" :key="item.key" :class="['signal', item.tone]">
+          <span class="signal-icon" aria-hidden="true">{{ item.icon }}</span>
+          <span class="signal-copy">
+            <span class="signal-label">{{ item.label }}</span>
+            <span class="signal-value">{{ item.value }}</span>
+          </span>
+        </li>
+      </ul>
+    </section>
+
+    <section v-if="weiterbildung?.hasRegistration" class="sa-card block history">
+      <div class="history-head">
+        <p class="history-kicker">Frühere Weiterbildung</p>
+        <h2><span class="history-icon" aria-hidden="true">▤</span> {{ weiterbildung.title }}</h2>
+        <p class="history-detail">{{ weiterbildung.detail }}</p>
+      </div>
+      <ul v-if="weiterbildung.courses?.length" class="mails">
+        <li v-for="course in weiterbildung.courses" :key="course.label" class="mail">
+          <p class="mail-title course-title">{{ course.label }}</p>
+        </li>
+      </ul>
+    </section>
+
+    <section class="sa-card block history">
+      <div class="history-head">
+        <p class="history-kicker">August-Kampagne</p>
+        <h2>Historisches Outreach</h2>
+        <p class="history-note">Keine aktuelle Sales-Aktivität</p>
+      </div>
+      <ol class="mails">
+        <li v-for="mail in [1, 2, 3, 4]" :key="mail" class="mail">
+          <p class="mail-title"><span aria-hidden="true">✉</span> Mail {{ mail }}</p>
+          <ul class="mail-states">
+            <li v-for="state in historicalMailStates(prospect.august.mails[mail])" :key="state.key">
+              <span class="state-label">{{ state.label }}</span>
+              <span :class="['state-mark', state.on ? 'is-on' : 'is-off']">
+                <span aria-hidden="true">{{ state.mark }}</span>
+                <span>{{ state.text }}</span>
+              </span>
+            </li>
+          </ul>
+        </li>
+      </ol>
+      <div class="sms">
+        <p class="mail-title"><span aria-hidden="true">💬</span> SMS</p>
+        <ul class="mail-states">
+          <li>
+            <span class="state-label">Notiz</span>
+            <span :class="['state-mark', prospect.august.sms_note ? 'is-on' : 'is-off']">
+              <span aria-hidden="true">{{ prospect.august.sms_note ? '✓' : '—' }}</span>
+              <span>{{ prospect.august.sms_note ? 'Notiz vorhanden' : 'Keine SMS-Notiz' }}</span>
+            </span>
+          </li>
+          <li>
+            <span class="state-label">Ergebnis</span>
+            <span class="state-mark is-off">
+              <span aria-hidden="true">—</span>
+              <span>Kein Ergebnis gespeichert</span>
+            </span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
     <section class="sa-card block">
       <h2>Dokumentierte Kontakte</h2>
       <ul v-if="logs.length">
@@ -137,6 +185,7 @@
 </template>
 
 <script setup lang="ts">
+import { briefingFromWhy, historicalMailStates } from '~/utils/sales-detail-briefing'
 import { salesDetailFailureMessage, salesDetailLoadFailure, type SalesDetailLoadState } from '~/utils/sales-detail-state'
 import { initialNextAction, runSalesContactSave } from '~/utils/sales-detail-save'
 
@@ -145,6 +194,7 @@ const route = useRoute()
 const prospect = ref<any>(null)
 const profile = ref<any>(null)
 const logs = ref<any[]>([])
+const weiterbildung = ref<any>(null)
 const error = ref('')
 const message = ref('')
 const saving = ref(false)
@@ -179,10 +229,7 @@ const formatWhen = (iso?: string | null) => iso ? new Date(iso).toLocaleString('
 const evidenceLabel = (value: string) => ({ HIGH_EVIDENCE: 'HIGH evidence', MEDIUM_EVIDENCE: 'MEDIUM evidence', LOW_EVIDENCE: 'LOW evidence', AMBIGUOUS: 'AMBIGUOUS evidence' }[value] || value)
 const phoneList = (row: { phone?: string | null; additional_phones?: string[] }) => [row.phone, ...(row.additional_phones || [])].filter((value): value is string => !!value)
 const emailList = (row: { email?: string | null; additional_emails?: string[] }) => [row.email, ...(row.additional_emails || [])].filter((value): value is string => !!value)
-const flag = (mail: { sent: boolean; opened: boolean; clicked: boolean }) => {
-  if (!mail?.sent && !mail?.opened && !mail?.clicked) return 'nicht gesendet'
-  return `${mail.sent ? 'sent' : 'nicht gesendet'} / ${mail.opened ? 'opened' : 'nicht geöffnet'} / ${mail.clicked ? 'clicked' : 'kein Click'}`
-}
+const whySignals = computed(() => briefingFromWhy(prospect.value?.why || []))
 
 const load = async () => {
   error.value = ''
@@ -200,6 +247,7 @@ const load = async () => {
     prospect.value = data.prospect
     profile.value = data.profile
     logs.value = data.logs || []
+    weiterbildung.value = data.weiterbildung || null
     storeUnavailable.value = data.profile_store === 'unavailable'
     if (data.profile) {
       form.sales_status = data.profile.sales_status || form.sales_status
@@ -216,6 +264,7 @@ const load = async () => {
     prospect.value = null
     profile.value = null
     logs.value = []
+    weiterbildung.value = null
     const state = salesDetailLoadFailure(err?.statusCode || err?.status || err?.response?.status)
     loadState.value = state
     loadError.value = salesDetailFailureMessage(state)
@@ -283,5 +332,32 @@ onMounted(load)
 .sa-badge-neutral { background:rgba(100,116,139,0.15); color:#94a3b8; }
 .sa-btn-primary { margin-top:0.8rem; padding:0.55rem 1rem; background:linear-gradient(135deg,#4f46e5,#7c3aed); border:none; border-radius:8px; font-weight:700; color:white; cursor:pointer; }
 .sa-btn-primary:disabled { opacity:0.55; }
+.is-current { border-color:rgba(129,140,248,0.45); }
+.signals, .mail-states { list-style:none; margin:0; padding:0; }
+.signals { display:flex; flex-wrap:wrap; gap:0.55rem; }
+.signal { display:flex; align-items:flex-start; gap:0.55rem; flex:1 1 11rem; min-width:0; padding:0.65rem 0.75rem; border-radius:10px; background:#121526; border:1px solid rgba(255,255,255,0.06); }
+.signal-icon { width:1.4rem; color:#a5b4fc; font-size:0.95rem; line-height:1.2; }
+.signal-copy { display:flex; flex-direction:column; gap:0.1rem; min-width:0; }
+.signal-label { color:#e2e8f0; font-size:0.82rem; font-weight:700; }
+.signal-value { color:#94a3b8; font-size:0.75rem; }
+.signal.neutral { background:transparent; }
+.signal.neutral .signal-icon, .signal.neutral .signal-label { color:#94a3b8; }
+.history { background:#141724; }
+.history-head { margin-bottom:0.75rem; }
+.history-kicker, .history-note { margin:0; color:#64748b; font-size:0.72rem; font-weight:700; letter-spacing:0.02em; text-transform:uppercase; }
+.history h2 { display:flex; align-items:flex-start; gap:0.4rem; margin:0.15rem 0; }
+.history-icon { color:#94a3b8; font-size:0.95rem; line-height:1.2; font-weight:400; }
+.history-detail { margin:0.15rem 0 0; color:#94a3b8; font-size:0.78rem; }
+.mails { display:grid; grid-template-columns:repeat(auto-fit,minmax(11.5rem,1fr)); gap:0.55rem; margin:0; padding:0; list-style:none; }
+.mail, .sms { min-width:0; padding:0.7rem 0.75rem; border-radius:10px; background:#121526; border:1px solid rgba(255,255,255,0.05); }
+.sms { margin-top:0.55rem; }
+.mail-title { margin:0 0 0.45rem; color:#e2e8f0; font-size:0.82rem; font-weight:700; }
+.course-title { margin:0; overflow-wrap:anywhere; }
+.mail-states { display:flex; flex-direction:column; gap:0.28rem; }
+.mail-states li { display:flex; justify-content:space-between; gap:0.5rem; align-items:baseline; }
+.state-label { color:#64748b; font-size:0.68rem; font-weight:700; text-transform:uppercase; }
+.state-mark { display:inline-flex; gap:0.3rem; color:#cbd5e1; font-size:0.75rem; }
+.state-mark.is-on { color:#34d399; }
+.state-mark.is-off { color:#94a3b8; }
 @media (max-width: 720px) { .block dl, .grid { grid-template-columns:1fr; } }
 </style>

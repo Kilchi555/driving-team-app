@@ -4,7 +4,6 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { validateUUID } from '~/server/utils/validators'
 import {
   assertCallerMayManageGrants,
-  isSubAdmin,
   loadSwitchUser,
   loadSwitchUserByAuthId,
 } from '~/server/utils/account-switch'
@@ -30,8 +29,8 @@ export default defineEventHandler(async (event) => {
   if (!actor || actor.tenant_id !== caller.tenant_id) {
     throw createError({ statusCode: 404, statusMessage: 'Benutzer nicht gefunden' })
   }
-  if (actor.role !== 'staff' && !isSubAdmin(actor)) {
-    throw createError({ statusCode: 400, statusMessage: 'Freigaben nur für Staff oder Sub-Admin' })
+  if (actor.role !== 'staff') {
+    throw createError({ statusCode: 400, statusMessage: 'Freigaben nur für Staff' })
   }
 
   const supabase = getSupabaseAdmin()

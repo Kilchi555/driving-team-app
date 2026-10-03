@@ -48,20 +48,30 @@ describe('sanitizeRoleChange', () => {
 })
 
 describe('staffCreatePayload', () => {
-  it('forces staff and drops a caller-supplied student role', () => {
+  it('forces staff in the caller tenant and drops a caller-supplied student role', () => {
     expect(staffCreatePayload({
       first_name: 'Ada',
       role: 'student',
       tenant_id: 'tenant-a',
-    })).toEqual({
+      is_primary_admin: true,
+      auth_user_id: 'auth-injected',
+      admin_level: 'sub_admin',
+      is_active: false,
+      deleted_at: '2020-01-01',
+      user_data: { tenant_id: 'nested-tenant', role: 'admin' },
+    }, 'caller-tenant')).toEqual({
       first_name: 'Ada',
       role: 'staff',
-      tenant_id: 'tenant-a',
+      tenant_id: 'caller-tenant',
+      is_primary_admin: false,
     })
   })
 
   it('still forces staff when the body has no role', () => {
-    expect(staffCreatePayload({ email: 'ada@example.com' }).role).toBe('staff')
+    const payload = staffCreatePayload({ email: 'ada@example.com' }, 'caller-tenant')
+    expect(payload.role).toBe('staff')
+    expect(payload.tenant_id).toBe('caller-tenant')
+    expect(payload.is_primary_admin).toBe(false)
   })
 })
 

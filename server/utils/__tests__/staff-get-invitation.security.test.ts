@@ -340,6 +340,7 @@ describe('staff get-invitation handler', () => {
     expect(result.invitation.email).toBe('staff@example.com')
     expect(result.invitation.phone).toBe('+41790000000')
     expect(result.invitation.tenant_id).toBe(TENANT_A)
+    expect(result.invitation.role).toBe('staff')
     expect(result.tenant.name).toBe('Example Driving School')
     expect(result.tenant.slug).toBe('example-school')
     expect(result.admin_email).toBe('admin@example.com')
@@ -454,10 +455,13 @@ describe('staff get-invitation handler', () => {
 describe('staff register authorization contracts', () => {
   const src = readFileSync(registerApiPath, 'utf8')
 
-  it('hardcodes role staff from the server, not from the request body', () => {
-    expect(src).toContain("role: 'staff'")
+  it('sets role from the invitation, never from the request body, and never as primary', () => {
+    expect(src).toContain('roleFromInvitation')
+    expect(src).toContain('role: registeredRole')
+    expect(src).toContain('is_primary_admin: false')
     expect(src).not.toMatch(/role:\s*body\.role/)
     expect(src).not.toMatch(/role:\s*\(body/)
+    expect(src).toContain("registeredRole === 'staff'")
   })
 
   it('binds tenant_id from the invitation row, not from the client', () => {

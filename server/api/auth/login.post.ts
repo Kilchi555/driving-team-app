@@ -4,6 +4,8 @@ import { checkProgressiveRateLimitWithHistory } from '~/server/utils/progressive
 import { logger } from '~/utils/logger'
 import { validateEmail, throwValidationError } from '~/server/utils/validators'
 import { setAuthCookies } from '~/server/utils/cookies'
+import { hasActiveLoginProfile } from '~/server/utils/profile-access'
+import { revokeAuthSessions } from '~/server/utils/session-control'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { getSupabaseAdmin, getSupabaseAnon } from '~/server/utils/supabase-admin'
 
@@ -377,6 +379,23 @@ export default defineEventHandler(async (event) => {
                      getHeader(event, 'x-real-ip') || 
                      event.node.req.socket.remoteAddress || 
                      'unknown'
+
+    // Active, non-deleted public.users profile is required before any session is issued.
+    const { data: loginProfile, error: loginProfileError } = await adminSupabase
+      .from('users')
+      .select('id, is_active, deleted_at')
+      .eq('auth_user_id', data.user.id)
+      .maybeSingle()
+
+    if (loginProfileError || !hasActiveLoginProfile(loginProfile)) {
+      await revokeAuthSessions(adminSupabase, data.user.id).catch((revokeErr: any) => {
+        logger.warn('⚠️ [LOGIN] Could not revoke session for inactive profile:', revokeErr?.message)
+      })
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Konto ist nicht aktiv.',
+      })
+    }
 
     // Set httpOnly cookies for session (secure, XSS-protected)
     setAuthCookies(event, data.session.access_token, data.session.refresh_token, {

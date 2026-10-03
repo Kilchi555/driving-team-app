@@ -57,13 +57,42 @@ export function sanitizeRoleChange(callerRole: string, requestedRole: unknown): 
   return role
 }
 
-/** create-staff always persists a staff user. Caller-supplied roles are ignored. */
-export function staffCreatePayload(userData: unknown): Record<string, unknown> {
-  const base = userData && typeof userData === 'object' && !Array.isArray(userData)
-    ? { ...(userData as Record<string, unknown>) }
+const STAFF_CREATE_FIELDS = [
+  'first_name',
+  'last_name',
+  'email',
+  'phone',
+  'category',
+  'birthdate',
+  'street',
+  'street_nr',
+  'zip',
+  'city',
+  'profession',
+  'faberid',
+  'language',
+] as const
+
+/**
+ * create-staff persists a staff profile in the caller tenant.
+ * Client role, tenant_id, admin_level, is_primary_admin, auth_user_id,
+ * is_active, and deleted_at are ignored, including when nested beside profile fields.
+ */
+export function staffCreatePayload(userData: unknown, callerTenantId: string): Record<string, unknown> {
+  if (!callerTenantId) {
+    throw createError({ statusCode: 400, statusMessage: 'tenant_id required' })
+  }
+  const source = userData && typeof userData === 'object' && !Array.isArray(userData)
+    ? userData as Record<string, unknown>
     : {}
+  const picked: Record<string, unknown> = {}
+  for (const key of STAFF_CREATE_FIELDS) {
+    if (source[key] !== undefined) picked[key] = source[key]
+  }
   return {
-    ...base,
+    ...picked,
     role: 'staff',
+    tenant_id: callerTenantId,
+    is_primary_admin: false,
   }
 }

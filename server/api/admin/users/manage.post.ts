@@ -5,6 +5,13 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { logger } from '~/utils/logger'
+import {
+  countActiveAdmins,
+  evaluateDeactivation,
+  isActivePrimaryAdmin,
+  type LifecycleUser,
+} from '~/server/utils/admin-lifecycle'
+import { revokeAuthSessions } from '~/server/utils/session-control'
 
 type ManageAction =
   | 'soft_delete'
@@ -42,7 +49,7 @@ export default defineEventHandler(async (event) => {
       .is('deleted_at', null)
       .single()
 
-    if (callerError || !callerUser) {
+    if (callerError || !callerUser || callerUser.is_active === false) {
       throw createError({ statusCode: 403, statusMessage: 'Access denied' })
     }
 
@@ -64,6 +71,13 @@ export default defineEventHandler(async (event) => {
     }>(event)
 
     const { action } = body
+
+    if (action === 'create_sub_admin') {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'create_sub_admin wurde entfernt. Administratoren werden per Einladung angelegt.',
+      })
+    }
 
     // ─── load_current_user ───────────────────────────────────────────────────
     if (action === 'load_current_user') {
@@ -91,6 +105,20 @@ export default defineEventHandler(async (event) => {
     if (action === 'get_audit_log') {
       const { target_user_id } = body
       if (!target_user_id) throw createError({ statusCode: 400, statusMessage: 'Missing target_user_id' })
+
+      const { data: auditTarget, error: auditTargetError } = await supabase
+        .from('users')
+        .select('id, tenant_id')
+        .eq('id', target_user_id)
+        .maybeSingle()
+
+      if (auditTargetError || !auditTarget) {
+        throw createError({ statusCode: 404, statusMessage: 'Target user not found' })
+      }
+
+      if (callerUser.role !== 'super_admin' && auditTarget.tenant_id !== callerUser.tenant_id) {
+        throw createError({ statusCode: 403, statusMessage: 'Cannot read audit data in other tenants' })
+      }
 
       const { data, error } = await supabase
         .from('user_management_audit')
@@ -129,7 +157,7 @@ export default defineEventHandler(async (event) => {
     // Load target user for authorization checks
     const { data: targetUser, error: targetError } = await supabase
       .from('users')
-      .select('id, role, admin_level, is_primary_admin, tenant_id, deleted_at')
+      .select('id, role, admin_level, is_primary_admin, is_active, tenant_id, deleted_at, auth_user_id')
       .eq('id', target_user_id)
       .single()
 
@@ -148,9 +176,16 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 409, statusMessage: 'User already deleted' })
       }
 
-      // Primary admins cannot delete other primary admins
-      if (callerUser.admin_level === 'primary_admin' && targetUser.is_primary_admin) {
-        throw createError({ statusCode: 403, statusMessage: 'Cannot delete another primary admin' })
+      const activeAdminCount = targetUser.role === 'admin'
+        ? await countActiveAdmins(supabase, targetUser.tenant_id)
+        : 0
+      const decision = evaluateDeactivation({
+        caller: callerUser as LifecycleUser,
+        target: targetUser as LifecycleUser,
+        activeAdminCount,
+      })
+      if (!decision.ok) {
+        throw createError({ statusCode: decision.statusCode, statusMessage: decision.statusMessage })
       }
 
       const { error: deleteError } = await supabase.rpc('soft_delete_user', {
@@ -159,6 +194,10 @@ export default defineEventHandler(async (event) => {
         reason: reason || 'Admin action'
       })
       if (deleteError) throw deleteError
+
+      if (targetUser.auth_user_id) {
+        await revokeAuthSessions(supabase, targetUser.auth_user_id)
+      }
 
       await supabase.rpc('log_user_management_action', {
         action_type: 'soft_delete',
@@ -188,7 +227,7 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 409, statusMessage: 'User is not deleted' })
       }
 
-      if (callerUser.admin_level !== 'primary_admin' && callerUser.role !== 'super_admin') {
+      if (callerUser.role !== 'super_admin' && !isActivePrimaryAdmin(callerUser)) {
         throw createError({ statusCode: 403, statusMessage: 'Only primary admins can restore users' })
       }
 
@@ -217,57 +256,6 @@ export default defineEventHandler(async (event) => {
       })
 
       return { success: true, message: 'User restored' }
-    }
-
-    // ─── create_sub_admin ────────────────────────────────────────────────────
-    if (action === 'create_sub_admin') {
-      if (!callerUser.is_primary_admin && callerUser.role !== 'super_admin') {
-        throw createError({ statusCode: 403, statusMessage: 'Only primary admins can create sub-admins' })
-      }
-
-      const { user_data } = body
-      if (!user_data?.email || !user_data?.first_name || !user_data?.last_name) {
-        throw createError({ statusCode: 400, statusMessage: 'Missing sub-admin user data' })
-      }
-
-      const { data: newAdmin, error: createError2 } = await supabase
-        .from('users')
-        .insert({
-          first_name: user_data.first_name,
-          last_name: user_data.last_name,
-          email: user_data.email,
-          phone: user_data.phone || null,
-          role: 'admin',
-          admin_level: 'sub_admin',
-          is_primary_admin: false,
-          created_by: callerUser.id,
-          tenant_id: callerUser.tenant_id,
-          is_active: true
-        })
-        .select('id, email, first_name, last_name')
-        .single()
-
-      if (createError2) throw createError2
-
-      await supabase.rpc('log_user_management_action', {
-        action_type: 'create_sub_admin',
-        target_id: newAdmin.id,
-        performer_id: callerUser.id,
-        reason_text: 'Sub-admin created',
-        old_vals: null,
-        new_vals: null
-      })
-
-      await logAudit({
-        user_id: authUser.id,
-        action: 'admin_create_sub_admin',
-        resource_type: 'user',
-        resource_id: newAdmin.id,
-        status: 'success',
-        ip_address: clientIP
-      })
-
-      return { success: true, user: newAdmin }
     }
 
     throw createError({ statusCode: 400, statusMessage: `Unknown action: ${action}` })
