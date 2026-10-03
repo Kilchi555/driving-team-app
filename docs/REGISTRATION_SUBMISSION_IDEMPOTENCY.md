@@ -87,4 +87,4 @@ SQL draft: `sql_migrations/20260930_booking_proposals_submission_id.sql` — **n
 | `pages/login.vue` | Passkey/backup redirect path fixes (#307) |
 | `sql_migrations/20260930_booking_proposals_submission_id.sql` | Column + unique index (draft) |
 | `server/utils/__tests__/public-registration-idempotency.test.ts` | Idempotency coverage |
-| `utils/__tests__/registration-success-target.test.ts` | Success CTA coverage |
+| `server/utils/__tests__/registration-success-target.test.ts` | Success CTA coverage |
