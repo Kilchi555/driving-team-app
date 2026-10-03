@@ -67,6 +67,22 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 409, statusMessage: 'Diese E-Mail-Adresse ist bereits als Benutzer registriert.' })
   }
 
+  const { count: primaryCount, error: primaryErr } = await supabase
+    .from('users')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenant_id)
+    .eq('role', 'admin')
+    .eq('is_primary_admin', true)
+    .eq('is_active', true)
+    .is('deleted_at', null)
+
+  if (primaryErr) {
+    throw createError({ statusCode: 500, statusMessage: 'Hauptadministrator konnte nicht geprüft werden.' })
+  }
+  if ((primaryCount || 0) > 0) {
+    throw createError({ statusCode: 409, statusMessage: 'Für diesen Tenant existiert bereits ein Hauptadministrator.' })
+  }
+
   // 1. Create Supabase Auth user
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email: email.toLowerCase().trim(),
@@ -110,6 +126,9 @@ export default defineEventHandler(async (event) => {
   if (userErr) {
     await supabase.auth.admin.deleteUser(authData.user.id).catch(() => {})
     console.error('❌ Admin users row creation failed:', userErr)
+    if (userErr.code === '23505') {
+      throw createError({ statusCode: 409, statusMessage: 'Für diesen Tenant existiert bereits ein Hauptadministrator.' })
+    }
     throw createError({ statusCode: 500, statusMessage: 'Benutzerprofil konnte nicht erstellt werden. Bitte erneut versuchen.' })
   }
 

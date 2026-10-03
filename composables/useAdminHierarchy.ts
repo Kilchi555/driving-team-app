@@ -61,26 +61,26 @@ export const useAdminHierarchy = () => {
     const current = currentUser.value
 
     if (current.role === 'super_admin') return true
+    if (current.role !== 'admin' || current.tenant_id !== targetUser.tenant_id) return false
+    if (current.is_active === false || current.deleted_at) return false
 
-    if (current.admin_level === 'primary_admin' && current.tenant_id === targetUser.tenant_id) {
-      if (targetUser.is_primary_admin) return false
+    if (current.is_primary_admin === true) {
+      if (targetUser.is_primary_admin === true && targetUser.id !== current.id) return false
       return true
     }
 
-    if (current.admin_level === 'sub_admin' && current.tenant_id === targetUser.tenant_id) {
-      if (targetUser.admin_level) return false
-      return ['client', 'staff'].includes(targetUser.role as string)
-    }
-
-    return false
+    return targetUser.role === 'staff' || targetUser.role === 'client'
   }
 
   const canRestoreUser = (targetUser: AdminUser): boolean => {
     if (!currentUser.value) return false
     const current = currentUser.value
     if (current.role === 'super_admin') return true
-    if (current.admin_level === 'primary_admin' && current.tenant_id === targetUser.tenant_id) return true
-    return false
+    return current.role === 'admin'
+      && current.is_primary_admin === true
+      && current.is_active !== false
+      && !current.deleted_at
+      && current.tenant_id === targetUser.tenant_id
   }
 
   const softDeleteUser = async (userId: string, reason: string = 'Admin action'): Promise<boolean> => {
@@ -107,26 +107,6 @@ export const useAdminHierarchy = () => {
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to restore user'
       console.error('Error restoring user:', err)
-      return false
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  const createSubAdmin = async (userData: {
-    first_name: string
-    last_name: string
-    email: string
-    phone?: string
-  }): Promise<boolean> => {
-    isLoading.value = true
-    error.value = null
-    try {
-      await callManageApi({ action: 'create_sub_admin', user_data: userData })
-      return true
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to create sub-admin'
-      console.error('Error creating sub-admin:', err)
       return false
     } finally {
       isLoading.value = false
@@ -165,13 +145,17 @@ export const useAdminHierarchy = () => {
   }
 
   const isSuperAdmin = computed(() => currentUser.value?.role === 'super_admin')
-  const isPrimaryAdmin = computed(() => currentUser.value?.is_primary_admin === true)
-  const isSubAdmin = computed(() => currentUser.value?.admin_level === 'sub_admin')
+  const isPrimaryAdmin = computed(() =>
+    currentUser.value?.role === 'admin'
+    && currentUser.value?.is_primary_admin === true
+    && currentUser.value?.is_active !== false
+    && !currentUser.value?.deleted_at
+  )
 
   const adminLevel = computed(() => {
     if (isSuperAdmin.value) return 'Super Admin'
     if (isPrimaryAdmin.value) return 'Primary Admin'
-    if (isSubAdmin.value) return 'Sub Admin'
+    if (currentUser.value?.role === 'admin') return 'Admin'
     return 'Regular User'
   })
 
@@ -181,14 +165,12 @@ export const useAdminHierarchy = () => {
     error: readonly(error),
     isSuperAdmin,
     isPrimaryAdmin,
-    isSubAdmin,
     adminLevel,
     loadCurrentUser,
     canManageUser,
     canRestoreUser,
     softDeleteUser,
     restoreUser,
-    createSubAdmin,
     getUserAuditLog,
     getDeletedUsers,
     logUserAction

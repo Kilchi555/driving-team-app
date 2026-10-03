@@ -55,8 +55,8 @@
                   {{ userInfo.first_name }} {{ userInfo.last_name }}
                 </p>
                 <p class="text-sm text-gray-600">{{ userInfo.email }}</p>
-                <p class="text-xs text-blue-600">
-                  {{ userInfo.role === 'staff' ? '👨‍🏫 Mitarbeiter' : '🔧 Sub-Admin' }}
+                <p v-if="userInfo.role === 'staff' || userInfo.role === 'admin'" class="text-xs text-blue-600">
+                  {{ userInfo.role === 'staff' ? '👨‍🏫 Mitarbeiter' : '🔧 Administrator' }}
                 </p>
               </div>
             </div>
@@ -254,8 +254,6 @@ const setPassword = async () => {
             first_name: userInfo.value.first_name,
             last_name: userInfo.value.last_name,
             phone: userInfo.value.phone || null,
-            role: userInfo.value.role,
-            tenant_id: userInfo.value.tenant_id
           }
         })
       } catch (registrationError: any) {

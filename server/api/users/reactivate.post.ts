@@ -1,77 +1,83 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { evaluateReactivation, type LifecycleUser } from '~/server/utils/admin-lifecycle'
+import { logAudit } from '~/server/utils/audit'
+import { getClientIP } from '~/server/utils/ip-utils'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
 
-  // Bearer header with HTTP-only-cookie fallback + token refresh, instead of
-  // a raw Bearer-only check that would 401 whenever the client's access
-  // token had just expired.
   const authUser = await getAuthenticatedUser(event)
-  if (!authUser) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  if (!authUser?.db_user_id) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  // User profile and permissions (already resolved by getAuthenticatedUser)
-  const userProfile = authUser.db_user_id
-    ? { id: authUser.db_user_id, tenant_id: authUser.tenant_id, role: authUser.role }
-    : null
+  const { data: caller, error: callerError } = await supabase
+    .from('users')
+    .select('id, tenant_id, role, is_primary_admin, is_active, deleted_at')
+    .eq('id', authUser.db_user_id)
+    .maybeSingle()
 
-  if (!userProfile) {
-    throw createError({ statusCode: 403, message: 'User profile not found' })
+  if (callerError || !caller) {
+    throw createError({ statusCode: 403, statusMessage: 'Insufficient permissions' })
   }
 
-  // Only admins/staff can reactivate users
-  if (!['admin', 'staff'].includes(userProfile.role)) {
-    throw createError({ statusCode: 403, message: 'Insufficient permissions' })
+  const decision = evaluateReactivation(caller as LifecycleUser)
+  if (!decision.ok) {
+    throw createError({ statusCode: decision.statusCode, statusMessage: decision.statusMessage })
   }
 
-  // Read body
   const body = await readBody(event)
-  const { user_id } = body
-
-  if (!user_id) {
-    throw createError({
-      statusCode: 400,
-      message: 'Missing required field: user_id'
-    })
+  const userId = typeof body?.user_id === 'string' ? body.user_id : ''
+  if (!userId) {
+    throw createError({ statusCode: 400, statusMessage: 'Missing required field: user_id' })
   }
 
-  // Verify target user belongs to same tenant
-  const { data: targetUser } = await supabase
+  const { data: targetUser, error: targetError } = await supabase
     .from('users')
     .select('id, tenant_id')
-    .eq('id', user_id)
-    .single()
+    .eq('id', userId)
+    .maybeSingle()
 
-  if (!targetUser || targetUser.tenant_id !== userProfile.tenant_id) {
+  if (targetError || !targetUser) {
+    throw createError({ statusCode: 404, statusMessage: 'User not found' })
+  }
+
+  if (caller.role !== 'super_admin' && targetUser.tenant_id !== caller.tenant_id) {
     throw createError({
       statusCode: 403,
-      message: 'Cannot reactivate user from different tenant'
+      statusMessage: 'Cannot reactivate user from different tenant',
     })
   }
 
-  // Reactivate user
   const { error: updateError } = await supabase
     .from('users')
     .update({
       is_active: true,
       deleted_at: null,
-      deletion_reason: null
+      deletion_reason: null,
     })
-    .eq('id', user_id)
+    .eq('id', targetUser.id)
+    .eq('tenant_id', targetUser.tenant_id)
 
   if (updateError) {
-    console.error('Error reactivating user:', updateError)
-    throw createError({
-      statusCode: 500,
-      message: 'Failed to reactivate user'
-    })
+    throw createError({ statusCode: 500, statusMessage: 'Failed to reactivate user' })
   }
+
+  await logAudit({
+    user_id: caller.id,
+    auth_user_id: authUser.id,
+    action: 'user_reactivated',
+    resource_type: 'user',
+    resource_id: targetUser.id,
+    status: 'success',
+    tenant_id: targetUser.tenant_id || undefined,
+    ip_address: getClientIP(event),
+  })
 
   return {
     success: true,
-    message: 'User reactivated successfully'
+    message: 'User reactivated successfully',
   }
 })

@@ -93,6 +93,36 @@ describe('SEC-C01 — users privileged column freeze', () => {
   })
 })
 
+describe('SEC-C01 extension — primary, login, and active flags', () => {
+  const sql = readFileSync(
+    resolve(process.cwd(), 'migrations/20261002_sec_c01_extend_users_privilege_freeze.sql'),
+    'utf8',
+  )
+
+  it('keeps the service_role bypass and blocks the additional privileged columns', () => {
+    expect(sql).toContain("jwt_role = 'service_role'")
+    expect(sql).toContain('NEW.is_primary_admin IS DISTINCT FROM OLD.is_primary_admin')
+    expect(sql).toContain('NEW.auth_user_id IS DISTINCT FROM OLD.auth_user_id')
+    expect(sql).toContain('NEW.is_active IS DISTINCT FROM OLD.is_active')
+    expect(sql).toContain('NEW.deleted_at IS DISTINCT FROM OLD.deleted_at')
+    expect(sql).toContain('NEW.role IS DISTINCT FROM OLD.role')
+    expect(sql).toContain('NEW.tenant_id IS DISTINCT FROM OLD.tenant_id')
+    expect(sql).toContain('NEW.admin_level IS DISTINCT FROM OLD.admin_level')
+  })
+
+  it('revokes the extended columns from anon, authenticated, and PUBLIC', () => {
+    expect(sql).toContain(
+      'REVOKE UPDATE (is_primary_admin, auth_user_id, is_active, deleted_at) ON TABLE public.users FROM authenticated',
+    )
+    expect(sql).toContain(
+      'REVOKE UPDATE (is_primary_admin, auth_user_id, is_active, deleted_at) ON TABLE public.users FROM anon',
+    )
+    expect(sql).toContain(
+      'REVOKE UPDATE (is_primary_admin, auth_user_id, is_active, deleted_at) ON TABLE public.users FROM PUBLIC',
+    )
+  })
+})
+
 describe('SEC-C02 — marketing-overview authorization', () => {
   it('handler source requires requireSuperAdmin before data access', () => {
     const src = readFileSync(marketingPath, 'utf8')

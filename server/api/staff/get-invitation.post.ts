@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
 
     const { data: invitationRow, error: invError } = await supabase
       .from('staff_invitations')
-      .select('id, tenant_id, first_name, last_name, email, phone, status, expires_at')
+      .select('id, tenant_id, first_name, last_name, email, phone, status, expires_at, role')
       .eq('invitation_token', token)
       .eq('status', 'pending')
       .maybeSingle()
@@ -198,6 +198,7 @@ export default defineEventHandler(async (event) => {
         last_name: invitationRow.last_name,
         email: invitationRow.email,
         phone: invitationRow.phone,
+        role: invitationRow.role === 'admin' ? 'admin' : 'staff',
         tenant_id: tenantId,
       },
       tenant,

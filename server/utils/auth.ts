@@ -2,6 +2,7 @@ import { H3Event, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { switchFlagsForUser, type SwitchUserRow } from '~/server/utils/account-switch'
+import { isDeactivatedOrDeleted } from '~/server/utils/profile-access'
 
 const AUTH_USER_COLS =
   'id, tenant_id, auth_user_id, role, email, first_name, last_name, can_edit_guide, can_view_all_students, admin_level, is_primary_admin, linked_admin_user_id, can_switch_all_staff, is_active, deleted_at'
@@ -138,10 +139,6 @@ export async function getAuthenticatedUser(event: H3Event) {
 
             if (session) {
               logger.debug('✅ Server-side token refreshed via refresh token fallback')
-              // Set new cookies with refreshed tokens
-              const { setAuthCookies } = await import('~/server/utils/cookies')
-              setAuthCookies(event, session.access_token, session.refresh_token)
-              // Re-use the new access token for this request
               token = session.access_token
               const retryResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
                 headers: { 'Authorization': `Bearer ${token}`, 'apikey': supabaseKey }
@@ -160,6 +157,9 @@ export async function getAuthenticatedUser(event: H3Event) {
                   .eq('auth_user_id', authUser.id)
                   .single()
                 if (dbUser) {
+                  if (isDeactivatedOrDeleted(dbUser)) return null
+                  const { setAuthCookies } = await import('~/server/utils/cookies')
+                  setAuthCookies(event, session.access_token, session.refresh_token)
                   let tenantTrialData: { is_trial: boolean; trial_ends_at: string | null; subscription_plan: string | null; current_period_end: string | null; slug?: string | null; website_only?: boolean; website_setup_paid_at?: string | null; website_hosting_plan?: string | null } | null = null
                   if (dbUser.tenant_id) {
                     const { data: tenantRow } = await supabaseAdmin
@@ -192,6 +192,8 @@ export async function getAuthenticatedUser(event: H3Event) {
                   }
                 }
               }
+              const { setAuthCookies } = await import('~/server/utils/cookies')
+              setAuthCookies(event, session.access_token, session.refresh_token)
               return authUser
             }
           } catch (refreshErr: any) {
@@ -216,6 +218,7 @@ export async function getAuthenticatedUser(event: H3Event) {
         .single()
       
       if (dbUser) {
+        if (isDeactivatedOrDeleted(dbUser)) return null
         // Also fetch tenant trial/subscription status so middleware can check it synchronously
         let tenantTrialData: { is_trial: boolean; trial_ends_at: string | null; subscription_plan: string | null; current_period_end: string | null; slug?: string | null; website_only?: boolean; website_setup_paid_at?: string | null; website_hosting_plan?: string | null } | null = null
         if (dbUser.tenant_id) {
@@ -334,7 +337,7 @@ export async function getAuthenticatedUserWithDbId(event: H3Event) {
     const supabase = getSupabaseAdmin()
     const { data: dbUser, error: userError } = await supabase
       .from('users')
-      .select('id, tenant_id, auth_user_id, role')
+      .select('id, tenant_id, auth_user_id, role, is_active, deleted_at')
       .eq('auth_user_id', authUserId)
       .single()
 
@@ -342,6 +345,8 @@ export async function getAuthenticatedUserWithDbId(event: H3Event) {
       logger.warn(`❌ User not found in database for auth_user_id: ${authUserId}`)
       return null
     }
+
+    if (isDeactivatedOrDeleted(dbUser)) return null
 
     logger.debug(`✅ Database user found: ${dbUser.id} (auth_user_id: ${authUserId})`)
 

@@ -1,78 +1,46 @@
-import { defineEventHandler, createError } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { getAuthenticatedUser } from '~/server/utils/auth'
-import { toLocalTimeString } from '~/utils/dateUtils'
+import { deactivateTenantUser, type LifecycleUser } from '~/server/utils/admin-lifecycle'
+import { getClientIP } from '~/server/utils/ip-utils'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
 
-  // Bearer header with HTTP-only-cookie fallback + token refresh, instead of
-  // a raw Bearer-only check that would 401 whenever the client's access
-  // token had just expired.
   const authUser = await getAuthenticatedUser(event)
-  if (!authUser) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
+  if (!authUser?.db_user_id) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  // User profile and permissions (already resolved by getAuthenticatedUser)
-  const userProfile = authUser.db_user_id
-    ? { id: authUser.db_user_id, tenant_id: authUser.tenant_id, role: authUser.role }
-    : null
-
-  if (!userProfile) {
-    throw createError({ statusCode: 403, message: 'User profile not found' })
+  if (!['admin', 'super_admin'].includes(authUser.role || '')) {
+    throw createError({ statusCode: 403, statusMessage: 'Insufficient permissions' })
   }
 
-  // Only admins can deactivate users
-  if (!['admin', 'super_admin'].includes(userProfile.role)) {
-    throw createError({ statusCode: 403, message: 'Insufficient permissions' })
+  const { data: caller, error: callerError } = await supabase
+    .from('users')
+    .select('id, tenant_id, role, is_primary_admin, is_active, deleted_at')
+    .eq('id', authUser.db_user_id)
+    .maybeSingle()
+
+  if (callerError || !caller || caller.is_active === false || caller.deleted_at) {
+    throw createError({ statusCode: 403, statusMessage: 'Insufficient permissions' })
   }
 
-  // Read body
   const body = await readBody(event)
-  const { user_id, reason } = body
+  const userId = typeof body?.user_id === 'string' ? body.user_id : ''
+  const reason = typeof body?.reason === 'string' ? body.reason : undefined
 
-  if (!user_id) {
-    throw createError({
-      statusCode: 400,
-      message: 'Missing required field: user_id'
-    })
-  }
-
-  // Verify target user belongs to same tenant
-  const { data: targetUser } = await supabase
-    .from('users')
-    .select('id, tenant_id')
-    .eq('id', user_id)
-    .single()
-
-  if (!targetUser || targetUser.tenant_id !== userProfile.tenant_id) {
-    throw createError({
-      statusCode: 403,
-      message: 'Cannot deactivate user from different tenant'
-    })
-  }
-
-  // Deactivate user
-  const { error: updateError } = await supabase
-    .from('users')
-    .update({
-      is_active: false,
-      deleted_at: toLocalTimeString(new Date()),
-      deletion_reason: reason || 'Deaktiviert'
-    })
-    .eq('id', user_id)
-
-  if (updateError) {
-    console.error('Error deactivating user:', updateError)
-    throw createError({
-      statusCode: 500,
-      message: 'Failed to deactivate user'
-    })
-  }
+  const result = await deactivateTenantUser({
+    supabase,
+    caller: caller as LifecycleUser,
+    targetUserId: userId,
+    reason,
+    authUserId: authUser.id,
+    ipAddress: getClientIP(event),
+  })
 
   return {
-    success: true,
-    message: 'User deactivated successfully'
+    success: result.success,
+    message: 'User deactivated successfully',
   }
 })

@@ -57,19 +57,25 @@ function isProduction(): boolean {
   return process.env.NODE_ENV === 'production'
 }
 
-export function isSubAdmin(user: Pick<SwitchUserRow, 'role' | 'admin_level'>): boolean {
-  return user.role === 'admin' && user.admin_level === 'sub_admin'
-}
-
 export function isTenantAdmin(user: Pick<SwitchUserRow, 'role'>): boolean {
   return user.role === 'admin'
 }
 
-/** Hauptadmin or unmarked tenant admin (not sub_admin). Super-admin is excluded. */
-export function isPrimaryTenantAdmin(user: Pick<SwitchUserRow, 'role' | 'admin_level' | 'is_primary_admin'>): boolean {
-  if (user.role !== 'admin') return false
-  if (user.admin_level === 'sub_admin') return false
-  return true
+/** Active primary of a tenant. admin_level is not an authorization source. */
+export function isPrimaryTenantAdmin(
+  user: Pick<SwitchUserRow, 'role' | 'is_primary_admin' | 'is_active' | 'deleted_at'>,
+): boolean {
+  return user.role === 'admin'
+    && user.is_primary_admin === true
+    && user.is_active === true
+    && user.deleted_at == null
+}
+
+/** Any active admin may switch admin → staff. Primary is not required. */
+export function isActiveTenantAdmin(
+  user: Pick<SwitchUserRow, 'role' | 'is_active' | 'deleted_at'>,
+): boolean {
+  return user.role === 'admin' && user.is_active === true && user.deleted_at == null
 }
 
 export function isSwitchableStaff(user: SwitchUserRow): boolean {
@@ -93,7 +99,7 @@ export function isEligibleSwitchActor(
   if (user.role === 'super_admin') return false
   if (isTenantAdmin(user)) return true
   if (user.role === 'staff' && !!user.linked_admin_user_id) return true
-  if (user.can_switch_all_staff === true && (isSubAdmin(user) || user.role === 'staff')) return true
+  if (user.can_switch_all_staff === true && user.role === 'staff') return true
   return false
 }
 
@@ -285,7 +291,7 @@ export async function canSwitchToStaff(
   if (actor.role === 'super_admin') return false
   if (actor.tenant_id !== target.tenant_id) return false
 
-  if (isPrimaryTenantAdmin(actor)) return true
+  if (isActiveTenantAdmin(actor)) return true
 
   if (actor.role === 'staff' && actor.linked_admin_user_id) {
     const linked = await loadSwitchUser(actor.linked_admin_user_id)
@@ -294,7 +300,7 @@ export async function canSwitchToStaff(
     }
   }
 
-  if (actor.can_switch_all_staff === true && (isSubAdmin(actor) || actor.role === 'staff')) {
+  if (actor.can_switch_all_staff === true && actor.role === 'staff') {
     return true
   }
 
@@ -579,7 +585,7 @@ export function applySessionCookies(
 
 export async function assertCallerMayManageGrants(caller: SwitchUserRow): Promise<void> {
   if (caller.role === 'super_admin') return
-  if (!isPrimaryTenantAdmin(caller) || !caller.is_active || caller.deleted_at) deny()
+  if (!isPrimaryTenantAdmin(caller)) deny()
 }
 
 export { USER_SWITCH_COLS }

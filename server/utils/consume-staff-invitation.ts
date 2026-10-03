@@ -18,6 +18,7 @@ export type ConsumedStaffInvitation = {
   link_to_admin: boolean | null
   invited_by: string | null
   accepted_at: string
+  role: string | null
 }
 
 type InvitationWriter = {
@@ -25,7 +26,7 @@ type InvitationWriter = {
 }
 
 const CONSUME_COLUMNS =
-  'id, tenant_id, first_name, last_name, email, phone, link_to_admin, invited_by, accepted_at'
+  'id, tenant_id, first_name, last_name, email, phone, link_to_admin, invited_by, accepted_at, role'
 
 export async function consumePendingStaffInvitation(
   supabase: InvitationWriter,

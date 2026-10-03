@@ -12,6 +12,7 @@ import {
   consumePendingStaffInvitation,
   releaseStaffInvitationClaim,
 } from '~/server/utils/consume-staff-invitation'
+import { roleFromInvitation } from '~/server/utils/invitation-role'
 import { verifyStaffRegistrationLocations } from '~/server/utils/verify-staff-locations'
 
 const INVITATION_TOKEN_MAX_LENGTH = 128
@@ -295,8 +296,10 @@ export default defineEventHandler(async (event) => {
     createdAuthUserId = authData.user.id
     logger.debug('✅ Auth user created:', authData.user.id)
 
+    const registeredRole = roleFromInvitation(invitation.role)
+
     let linkedAdminId: string | null = null
-    if (invitation.link_to_admin && invitation.invited_by) {
+    if (registeredRole === 'staff' && invitation.link_to_admin && invitation.invited_by) {
       const { data: ownerAdmin } = await serviceSupabase
         .from('users')
         .select('id')
@@ -324,7 +327,8 @@ export default defineEventHandler(async (event) => {
         first_name: sanitizedFirstName,
         last_name: sanitizedLastName,
         phone: sanitizedPhone,
-        role: 'staff',
+        role: registeredRole,
+        is_primary_admin: false,
         tenant_id: invitation.tenant_id,
         is_active: true,
         birthdate: birthdate || null,
@@ -337,7 +341,7 @@ export default defineEventHandler(async (event) => {
         category: Array.isArray(selectedCategories) && selectedCategories.length > 0
           ? selectedCategories
           : null,
-        linked_admin_user_id: linkedAdminId,
+        linked_admin_user_id: registeredRole === 'staff' ? linkedAdminId : null,
       })
       .select('id')
       .single()
@@ -604,7 +608,7 @@ export default defineEventHandler(async (event) => {
 
     // 10. Send welcome email (non-blocking — don't hold the registration response)
     void sendWelcomeEmail({
-      role: 'staff',
+      role: registeredRole,
       to: email.toLowerCase().trim(),
       firstName: sanitizedFirstName,
       tenantId: invitation.tenant_id,
@@ -628,6 +632,7 @@ export default defineEventHandler(async (event) => {
         invitation_id: invitation.id,
         categories: selectedCategories || [],
         invited_by: invitation.invited_by,
+        role: registeredRole,
         duration_ms: Date.now() - startTime
       }
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
