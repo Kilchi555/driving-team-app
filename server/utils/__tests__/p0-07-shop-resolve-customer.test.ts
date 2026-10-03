@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   readBody: vi.fn(),
   getClientIP: vi.fn(() => '198.51.100.10'),
   getSupabaseAdmin: vi.fn(),
+  getAuthenticatedUserWithDbId: vi.fn(),
 }))
 
 vi.mock('h3', async (importOriginal) => {
@@ -23,6 +24,10 @@ vi.mock('~/server/utils/ip-utils', () => ({
 
 vi.mock('~/server/utils/supabase-admin', () => ({
   getSupabaseAdmin: mocks.getSupabaseAdmin,
+}))
+
+vi.mock('~/server/utils/auth', () => ({
+  getAuthenticatedUserWithDbId: mocks.getAuthenticatedUserWithDbId,
 }))
 
 vi.mock('~/utils/logger', () => ({
@@ -66,13 +71,15 @@ describe('P0-07 resolve-customer', () => {
     mocks.getClientIP.mockReturnValue(`198.51.100.${ipNonce}`)
     mocks.readBody.mockReset()
     mocks.getSupabaseAdmin.mockReset()
+    mocks.getAuthenticatedUserWithDbId.mockReset()
+    mocks.getAuthenticatedUserWithDbId.mockResolvedValue(null)
   })
 
   async function handler(): Promise<EventHandler> {
     return (await import('../../api/shop/resolve-customer.post')).default as EventHandler
   }
 
-  it('returns only an id for an existing customer, with no profile fields or tokens', async () => {
+  it('does not return an existing customer id from an email match', async () => {
     mocks.readBody.mockResolvedValue({ tenant_slug: 'demo-school', email: 'ada@example.com' })
     const from = vi.fn((table: string) => {
       if (table === 'tenants') {
@@ -82,7 +89,8 @@ describe('P0-07 resolve-customer', () => {
     })
     mocks.getSupabaseAdmin.mockReturnValue({ from })
     const result = await (await handler())({}) as { customer: Record<string, unknown> }
-    expect(result).toEqual({ customer: { id: 'user-existing' } })
+    expect(result).toEqual({ customer: { id: null } })
+    expect(result.customer.id).not.toBe('user-existing')
     expect(result.customer).not.toHaveProperty('phone')
     expect(result.customer).not.toHaveProperty('firstName')
     expect(result.customer).not.toHaveProperty('street')
