@@ -217,6 +217,51 @@ describe('public inquiry staff assignment', () => {
     })).resolves.toBeNull()
   })
 
+  it('regression: a valid same-tenant staff assignment stays assignable', async () => {
+    const lookup = createLookup(
+      [sameTenantStaff],
+      [{ staff_id: STAFF, location_id: LOCATION, tenant_id: TENANT, is_active: true }],
+    )
+    await expect(resolveAssignableInquiryStaff(lookup, {
+      tenantId: TENANT,
+      staffId: STAFF,
+      locationId: LOCATION,
+    })).resolves.toBe(STAFF)
+  })
+
+  it('regression: a foreign-tenant staff id is stored as null', async () => {
+    const lookup = createLookup(
+      [foreignStaff],
+      [{ staff_id: OTHER_STAFF, location_id: LOCATION, tenant_id: OTHER, is_active: true }],
+    )
+    await expect(resolveAssignableInquiryStaff(lookup, {
+      tenantId: TENANT,
+      staffId: OTHER_STAFF,
+      locationId: LOCATION,
+    })).resolves.toBeNull()
+  })
+
+  it('regression: a staff user on another or inactive location assignment is stored as null', async () => {
+    const otherLocation = createLookup(
+      [sameTenantStaff],
+      [{ staff_id: STAFF, location_id: OTHER_LOCATION, tenant_id: TENANT, is_active: true }],
+    )
+    const inactiveAssignment = createLookup(
+      [sameTenantStaff],
+      [{ staff_id: STAFF, location_id: LOCATION, tenant_id: TENANT, is_active: false }],
+    )
+    await expect(resolveAssignableInquiryStaff(otherLocation, {
+      tenantId: TENANT,
+      staffId: STAFF,
+      locationId: LOCATION,
+    })).resolves.toBeNull()
+    await expect(resolveAssignableInquiryStaff(inactiveAssignment, {
+      tenantId: TENANT,
+      staffId: STAFF,
+      locationId: LOCATION,
+    })).resolves.toBeNull()
+  })
+
   it('keeps the public inquiry insert on the resolved staff id', () => {
     const src = readFileSync(resolve(process.cwd(), 'server/api/booking/submit-general-inquiry.post.ts'), 'utf8')
     expect(src).toContain('resolveAssignableInquiryStaff')

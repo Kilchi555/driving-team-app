@@ -6,6 +6,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { recordAndUploadInquiryConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { upsertMarketingLeadSafe } from '~/server/utils/upsert-marketing-lead'
+import { confirmTenantInquiryUserId, resolveInquiryUserId } from '~/server/utils/resolve-inquiry-user'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
 import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
 
@@ -92,53 +93,6 @@ export default defineEventHandler(async (event) => {
         statusCode: 400,
         statusMessage: 'Invalid time slot format. Expected { day_of_week: 0-6, start_time: "HH:MM", end_time: "HH:MM" }'
       })
-    }
-
-    // Validate customer contact information (required only if NOT created by a logged-in user)
-    // If user is logged in, these fields are optional
-    const isLoggedInUser = !!created_by_user_id
-    
-    if (!isLoggedInUser) {
-      // For anonymous users, all contact fields are required
-      if (!first_name?.trim() || !last_name?.trim() || !email?.trim() || !phone?.trim()) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Missing required customer information: first_name, last_name, email, phone'
-        })
-      }
-
-      // Address is required for anonymous users as well
-      if (!street?.trim() || !house_number?.trim() || !postal_code?.trim() || !city?.trim()) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Missing required address information: street, house_number, postal_code, city'
-        })
-      }
-
-      // String length limits to prevent abuse
-      if (first_name.trim().length > 100) throw createError({ statusCode: 400, statusMessage: 'First name too long (max 100 chars)' })
-      if (last_name.trim().length > 100) throw createError({ statusCode: 400, statusMessage: 'Last name too long (max 100 chars)' })
-      if (email.trim().length > 254) throw createError({ statusCode: 400, statusMessage: 'Email too long (max 254 chars)' })
-      if (phone.trim().length > 30) throw createError({ statusCode: 400, statusMessage: 'Phone too long (max 30 chars)' })
-      if (notes && notes.trim().length > 1000) throw createError({ statusCode: 400, statusMessage: 'Notes too long (max 1000 chars)' })
-
-      // Validate email format
-      const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/
-      if (!emailRegex.test(email)) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Invalid email address format'
-        })
-      }
-
-      // Validate phone format (Swiss format: +41 XX XXX XX XX or 0XX XXX XX XX)
-      const phoneRegex = /^(?:\+41|0)\d{2}(?:\d{3})\d{2}(?:\d{2})$/
-      if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Invalid phone number format (e.g. +41 79 123 45 67 or 079 123 45 67)'
-        })
-      }
     }
 
     const supabase = getSupabaseAdmin()
@@ -228,6 +182,72 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // A body created_by_user_id is not a login. Contact and address stay
+    // required until that id is confirmed on a users row in this tenant.
+    const claimedBodyUserId = typeof created_by_user_id === 'string' && created_by_user_id.trim()
+      ? created_by_user_id.trim()
+      : null
+    const claimedTenantUserId = await confirmTenantInquiryUserId({
+      tenantId: tenant_id,
+      createdByUserId: claimedBodyUserId,
+      admin: supabase,
+    })
+
+    if (!claimedTenantUserId) {
+      if (!first_name?.trim() || !last_name?.trim() || !email?.trim() || !phone?.trim()) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Missing required customer information: first_name, last_name, email, phone'
+        })
+      }
+
+      if (!street?.trim() || !house_number?.trim() || !postal_code?.trim() || !city?.trim()) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Missing required address information: street, house_number, postal_code, city'
+        })
+      }
+
+      if (first_name.trim().length > 100) throw createError({ statusCode: 400, statusMessage: 'First name too long (max 100 chars)' })
+      if (last_name.trim().length > 100) throw createError({ statusCode: 400, statusMessage: 'Last name too long (max 100 chars)' })
+      if (email.trim().length > 254) throw createError({ statusCode: 400, statusMessage: 'Email too long (max 254 chars)' })
+      if (phone.trim().length > 30) throw createError({ statusCode: 400, statusMessage: 'Phone too long (max 30 chars)' })
+      if (notes && notes.trim().length > 1000) throw createError({ statusCode: 400, statusMessage: 'Notes too long (max 1000 chars)' })
+
+      const guestEmailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/
+      if (!guestEmailRegex.test(email)) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Invalid email address format'
+        })
+      }
+
+      const guestPhoneRegex = /^(?:\+41|0)\d{2}(?:\d{3})\d{2}(?:\d{2})$/
+      if (!guestPhoneRegex.test(phone.replace(/\s/g, ''))) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Invalid phone number format (e.g. +41 79 123 45 67 or 079 123 45 67)'
+        })
+      }
+    }
+
+    const resolvedUserId = claimedTenantUserId ?? await resolveInquiryUserId({
+      tenantId: tenant_id,
+      createdByUserId: null,
+      categoryCode: category_code || null,
+      fields: {
+        first_name: first_name?.trim() || '',
+        last_name: last_name?.trim() || '',
+        email: email?.trim() || '',
+        phone: phone?.trim() || '',
+        street: street?.trim() || '',
+        street_nr: house_number?.trim() || '',
+        zip: postal_code?.trim() || '',
+        city: city?.trim() || '',
+      },
+      admin: supabase,
+    })
+
     const resolvedAttribution = await resolveMarketingAttribution(
       supabase,
       marketing_session_id,
@@ -254,7 +274,7 @@ export default defineEventHandler(async (event) => {
         postal_code: postal_code?.trim() || null,
         city: city?.trim() || null,
         notes: notes?.trim() || null,
-        created_by_user_id: created_by_user_id || null,
+        created_by_user_id: resolvedUserId,
         status: 'pending',
         marketing_session_id: marketing_session_id || null,
         utm_source: resolvedAttribution?.utm_source ?? null,
