@@ -24,14 +24,12 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
-import { SARIClient, isSariUnenrollBlocked, isSariUnenrollIdempotent } from '~/utils/sariClient'
+import { SARIClient } from '~/utils/sariClient'
 import {
-  deleteConfirmedSariMembership,
+  isUnresolvedSariRegistration,
   listRegistrationSariMemberships,
-  recordConfirmedSariMembership,
-  SARI_MEMBERSHIP_SOURCE,
-  parsePositiveSariSessionId,
 } from '~/server/utils/registration-sari-membership'
+import { applySariSessionTransfer } from '~/server/utils/sari-session-transfer'
 import { logger } from '~/utils/logger'
 import { sendTenantEmail } from '~/server/utils/email'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
@@ -107,7 +105,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: reg } = await supabase
     .from('course_registrations')
-    .select('id, course_id, tenant_id, user_id, sari_faberid, birthdate, sari_data, custom_sessions, status, email, first_name, last_name, notes')
+    .select('id, course_id, tenant_id, user_id, sari_faberid, birthdate, sari_data, custom_sessions, status, payment_method, email, first_name, last_name, notes')
     .eq('id', registrationId)
     .eq('tenant_id', profile.tenant_id)
     .in('status', ['confirmed', 'enrolled', 'pending'])
@@ -279,6 +277,20 @@ export default defineEventHandler(async (event) => {
   let sariTestPassed = false
 
   if (course.sari_managed && sariSyncActive && faberid) {
+    const existingMemberships = await listRegistrationSariMemberships(supabase, profile.tenant_id, reg.id)
+    if (isUnresolvedSariRegistration({
+      sariManaged: true,
+      faberid,
+      status: reg.status,
+      paymentMethod: reg.payment_method,
+      membershipCount: existingMemberships.length,
+    })) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'SARI membership status unknown',
+        data: { sariSynced: false },
+      })
+    }
     const credentials = await getSARICredentialsSecure(profile.tenant_id, 'ADMIN_TRANSFER_SESSION')
     if (!credentials) {
       sariWarning = 'Keine SARI-Zugangsdaten — nur lokal gespeichert'
@@ -308,58 +320,21 @@ export default defineEventHandler(async (event) => {
 
       // ── Apply SARI changes ──────────────────────────────────────────────
       try {
-        const memberships = await listRegistrationSariMemberships(supabase, profile.tenant_id, reg.id)
-        const membershipIds = new Set(memberships.map((membership) => membership.sari_session_id))
-        if (memberships.length === 0) {
+        if (existingMemberships.length === 0) {
           sariWarning = 'Keine bestätigte SARI-Membership — nur lokal gespeichert'
         } else {
-          for (const ch of prepared) {
-          for (const sid of ch.oldSariIds) {
-            if (ch.targetSariSessionIds.includes(sid)) continue // unchanged id
-            const numericId = parsePositiveSariSessionId(sid)
-            if (numericId == null || !membershipIds.has(numericId)) continue
-            let confirmedAbsent = false
-            try {
-              await sari.unenrollStudent(numericId, faberid)
-              confirmedAbsent = true
-            } catch (err: any) {
-              if (isSariUnenrollIdempotent(err?.message)) {
-                confirmedAbsent = true
-              } else {
-                throw createError({
-                  statusCode: isSariUnenrollBlocked(err?.message) ? 409 : 502,
-                  statusMessage: err?.message || `SARI-Abmeldung für ${numericId} fehlgeschlagen`,
-                })
-              }
-            }
-            if (!confirmedAbsent) continue
-            await deleteConfirmedSariMembership({
-              supabase,
-              tenantId: profile.tenant_id,
-              registrationId: reg.id,
-              sariSessionId: numericId,
-            })
-            membershipIds.delete(numericId)
-          }
-          for (const sid of ch.targetSariSessionIds) {
-            if (ch.oldSariIds.includes(sid)) continue
-            const numericId = parsePositiveSariSessionId(sid)
-            if (numericId == null) {
-              throw createError({ statusCode: 400, statusMessage: `Ungültige SARI-Session-ID: ${sid}` })
-            }
-            await sari.enrollStudent(numericId, faberid, birthdate || '')
-            await recordConfirmedSariMembership({
-              supabase,
-              tenantId: profile.tenant_id,
-              registrationId: reg.id,
-              sariSessionId: numericId,
-              courseSessionId: null,
-              source: SARI_MEMBERSHIP_SOURCE.transferSession,
-            })
-          }
+          await applySariSessionTransfer({
+            supabase,
+            sari,
+            tenantId: profile.tenant_id,
+            registrationId: reg.id,
+            faberid,
+            birthdate: birthdate || '',
+            changes: prepared,
+            memberships: existingMemberships,
+          })
+          sariSynced = true
         }
-        }
-        if (memberships.length > 0) sariSynced = true
       } catch (err: any) {
         if (err?.statusCode) throw err
         logger.error('❌ SARI apply after successful test failed:', err?.message)

@@ -16,7 +16,15 @@ import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
-import { recordConfirmedSariMembership, SARI_MEMBERSHIP_SOURCE } from '~/server/utils/registration-sari-membership'
+import {
+  isConfirmedSariEnrollDuplicate,
+  parsePositiveSariSessionId,
+  recordConfirmedSariMembershipWithRetry,
+  SARI_MEMBERSHIP_SOURCE,
+  setRegistrationSariSynced,
+  strictSariIdsFromGroup,
+  uniqueLocalCourseSessionId,
+} from '~/server/utils/registration-sari-membership'
 import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 import { findExistingUserByContact, findStaffOrAdminByEmail, findStaffOrAdminByPhone } from '~/server/utils/user-matching'
@@ -206,9 +214,16 @@ const handler = defineEventHandler(async (event) => {
       // 6. SARI enrollment possibility check
       if (course.sari_course_id) {
         try {
-          const enrollmentCheck = await sari.canEnrollInCourse(course.sari_course_id, faberidClean)
-          if (!enrollmentCheck.canEnroll) {
-            throw createError({ statusCode: 400, statusMessage: enrollmentCheck.reason || 'SARI enrollment not possible' })
+          const probeIds = strictSariIdsFromGroup(course.sari_course_id)
+          if (probeIds.length === 0) {
+            throw createError({ statusCode: 400, statusMessage: 'Ungültiges Kursformat. Bitte kontaktieren Sie uns.' })
+          }
+          for (const probeId of probeIds) {
+            const enrollmentCheck = await sari.canEnrollInCourse(probeId, faberidClean)
+            const alreadyOnSession = (enrollmentCheck.reason || '').includes('bereits')
+            if (!enrollmentCheck.canEnroll && !alreadyOnSession) {
+              throw createError({ statusCode: 400, statusMessage: enrollmentCheck.reason || 'SARI enrollment not possible' })
+            }
           }
         } catch (error: any) {
           if (error.statusCode) throw error
@@ -367,13 +382,13 @@ const handler = defineEventHandler(async (event) => {
     const isIndividualSess =
       isPartial && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
     const confirmedSariSessions: Array<{ sariSessionId: number; courseSessionId: string | null }> = []
+    let sariErrorCount = 0
 
     // 9. SARI sync FIRST (before DB save) - if managed
     // Enroll in ALL sessions (GROUP_2159157_2159158_2159159 → [2159157, 2159158, 2159159])
     if (course.sari_managed && course.sari_course_id && faberidClean) {
       // Extract ALL session IDs from the group
-      const sariCourseIdParts = String(course.sari_course_id).split('_')
-      let sariSessionIds = sariCourseIdParts.slice(1).filter((id: string) => id && !isNaN(parseInt(id)))
+      let sariSessionIds = strictSariIdsFromGroup(course.sari_course_id).map(String)
 
       // For partial enrollment, only keep session IDs from partial_start_position onwards.
       // Session IDs are ordered, so we resolve position from course_sessions by date grouping.
@@ -389,8 +404,9 @@ const handler = defineEventHandler(async (event) => {
         const targetSess = (course.course_sessions || []).find(
           (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
         )
-        if (targetSess?.sari_session_id) {
-          sariSessionIds = [String(targetSess.sari_session_id)]
+        const individualSariId = parsePositiveSariSessionId(targetSess?.sari_session_id)
+        if (individualSariId != null) {
+          sariSessionIds = [String(individualSariId)]
         } else if (sariSessionIds.length >= individualSessionNumber) {
           sariSessionIds = [sariSessionIds[individualSessionNumber - 1]]
         }
@@ -447,10 +463,11 @@ const handler = defineEventHandler(async (event) => {
               const origId = originalIds[i]
               const newId = newIds[i]
               
-              const idx = sariSessionIds.findIndex((id: string) => id === origId || id === origId.toString())
-              if (idx >= 0) {
-                logger.debug(`📝 Replacing session ID ${sariSessionIds[idx]} → ${newId} at index ${idx}`)
-                sariSessionIds[idx] = newId
+              const strictNewId = parsePositiveSariSessionId(newId)
+              const idx = sariSessionIds.findIndex((id: string) => id === origId || id === String(origId))
+              if (idx >= 0 && strictNewId != null) {
+                logger.debug(`📝 Replacing session ID ${sariSessionIds[idx]} → ${strictNewId} at index ${idx}`)
+                sariSessionIds[idx] = String(strictNewId)
               } else {
                 logger.warn(`⚠️ Original session ID ${origId} not found in course sessions`)
               }
@@ -485,8 +502,10 @@ const handler = defineEventHandler(async (event) => {
             }
             
             for (let i = 0; i < newIds.length && (startIdx + i) < sariSessionIds.length; i++) {
-              logger.debug(`📝 Legacy replacing session at index ${startIdx + i}: ${sariSessionIds[startIdx + i]} → ${newIds[i]}`)
-              sariSessionIds[startIdx + i] = newIds[i]
+              const strictNewId = parsePositiveSariSessionId(newIds[i])
+              if (strictNewId == null) continue
+              logger.debug(`📝 Legacy replacing session at index ${startIdx + i}: ${sariSessionIds[startIdx + i]} → ${strictNewId}`)
+              sariSessionIds[startIdx + i] = String(strictNewId)
             }
           }
         }
@@ -497,13 +516,12 @@ const handler = defineEventHandler(async (event) => {
       // Enroll in ALL sessions. Membership rows are written only for ids SARI confirmed,
       // and only after the registration row exists.
       let successCount = 0
-      let errorCount = 0
       let lastError: any = null
 
       for (const sessionId of sariSessionIds) {
-        const numericId = parseInt(sessionId, 10)
-        if (!Number.isInteger(numericId) || numericId <= 0) {
-          errorCount++
+        const numericId = parsePositiveSariSessionId(sessionId)
+        if (numericId == null) {
+          sariErrorCount++
           continue
         }
         try {
@@ -512,29 +530,29 @@ const handler = defineEventHandler(async (event) => {
           successCount++
           confirmedSariSessions.push({
             sariSessionId: numericId,
-            courseSessionId: courseSessionIdForConfirmedSari(course.course_sessions, numericId),
+            courseSessionId: uniqueLocalCourseSessionId(course.course_sessions, numericId, tenantId),
           })
           logger.debug(`✅ Session ${sessionId} enrolled`)
         } catch (error: any) {
           const errorMessage = error.message || ''
           
           // If already enrolled, that's OK - count as success
-          if (errorMessage.includes('ALREADY_ENROLLED') || errorMessage.includes('PERSON_ALREADY_ADDED')) {
+          if (isConfirmedSariEnrollDuplicate(errorMessage)) {
             logger.debug(`⏭️ Session ${sessionId}: Already enrolled (OK)`)
             successCount++
             confirmedSariSessions.push({
               sariSessionId: numericId,
-              courseSessionId: courseSessionIdForConfirmedSari(course.course_sessions, numericId),
+              courseSessionId: uniqueLocalCourseSessionId(course.course_sessions, numericId, tenantId),
             })
           } else {
             lastError = error
-            errorCount++
+            sariErrorCount++
             logger.warn(`⚠️ Session ${sessionId} enrollment failed:`, errorMessage)
           }
         }
       }
       
-      logger.info(`✅ SARI enrollment: ${successCount}/${sariSessionIds.length} sessions successful${errorCount > 0 ? `, ${errorCount} errors` : ''}`)
+      logger.info(`✅ SARI enrollment: ${successCount}/${sariSessionIds.length} sessions successful${sariErrorCount > 0 ? `, ${sariErrorCount} errors` : ''}`)
       
       // If ALL sessions failed, throw error with the last error message
       if (successCount === 0 && lastError) {
@@ -593,8 +611,8 @@ const handler = defineEventHandler(async (event) => {
         is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
         individual_session_number: (typeof individualSessionNumber === 'number' && individualSessionNumber > 0) ? individualSessionNumber : null,
         partial_start_session: (!isIndividualSess && (isPartialEnrollment || course.is_partial_only)) ? (course.course_category?.partial_start_position ?? 3) : null,
-        sari_synced: course.sari_managed ? true : null,
-        sari_synced_at: course.sari_managed ? new Date().toISOString() : null,
+        sari_synced: false,
+        sari_synced_at: null,
         notes: marketingSessionId ? `marketing_session_id:${marketingSessionId}` : null,
         vehicle_id: vehicleId || null,
       })
@@ -636,7 +654,7 @@ const handler = defineEventHandler(async (event) => {
     logger.info('✅ Confirmed enrollment created:', enrollment.id)
 
     for (const confirmed of confirmedSariSessions) {
-      await recordConfirmedSariMembership({
+      await recordConfirmedSariMembershipWithRetry({
         supabase,
         tenantId,
         registrationId: enrollment.id,
@@ -644,6 +662,9 @@ const handler = defineEventHandler(async (event) => {
         courseSessionId: confirmed.courseSessionId,
         source: SARI_MEMBERSHIP_SOURCE.cashEnrollment,
       })
+    }
+    if (course.sari_managed && confirmedSariSessions.length > 0 && sariErrorCount === 0) {
+      await setRegistrationSariSynced(supabase, tenantId, enrollment.id, true)
     }
 
     upsertMarketingLeadSafe({
@@ -801,11 +822,6 @@ const handler = defineEventHandler(async (event) => {
     })
   }
 })
-
-function courseSessionIdForConfirmedSari(sessions: Array<{ id?: string; sari_session_id?: string | number | null }> | null | undefined, sariSessionId: number): string | null {
-  const matches = (sessions || []).filter((session) => String(session.sari_session_id) === String(sariSessionId))
-  return matches.length === 1 && matches[0]?.id ? matches[0].id : null
-}
 
 export default defineEventHandler(async (event) => {
   // Apply rate limiting first

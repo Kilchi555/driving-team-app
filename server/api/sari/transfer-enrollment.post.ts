@@ -20,10 +20,14 @@ import { SARIClient, isSariUnenrollIdempotent, isSariUnenrollBlocked, getSariUne
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import {
   deleteConfirmedSariMembership,
+  isConfirmedSariEnrollDuplicate,
+  isUnresolvedSariRegistration,
   listRegistrationSariMemberships,
+  parsePositiveSariSessionId,
   recordConfirmedSariMembership,
   SARI_MEMBERSHIP_SOURCE,
-  parsePositiveSariSessionId,
+  setRegistrationSariSynced,
+  strictSariIdsFromGroup,
 } from '~/server/utils/registration-sari-membership'
 import { logger } from '~/utils/logger'
 import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
@@ -163,6 +167,7 @@ export default defineEventHandler(async (event) => {
 
   // ── SARI sync (best-effort) ──────────────────────────────────────────────
   let sariSynced = false
+  let targetSeatsConfirmed = false
   const enrolledTargetIds: number[] = []
   let sariWarning: string | undefined
   let transferSari: SARIClient | null = null
@@ -193,8 +198,7 @@ export default defineEventHandler(async (event) => {
       })
 
       const extractAllSariIds = (sariCourseId: string): string[] => {
-        const parts = String(sariCourseId).split('_')
-        return parts.filter(p => p && !isNaN(parseInt(p)))
+        return strictSariIdsFromGroup(sariCourseId).map(String)
       }
 
       const partialStartPos: number = (oldCourse.course_categories as any)?.partial_start_position ?? 3
@@ -216,6 +220,19 @@ export default defineEventHandler(async (event) => {
         .filter((id): id is number => id != null)
 
       if (oldMemberships.length === 0) {
+        if (isUnresolvedSariRegistration({
+          sariManaged: !!oldCourse.sari_managed,
+          faberid,
+          status: oldReg.status,
+          paymentMethod: oldReg.payment_method,
+          membershipCount: 0,
+        })) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'SARI membership status unknown',
+            data: { sariSynced: false },
+          })
+        }
         sariWarning = 'Keine bestätigte SARI-Membership — nur lokal umgebucht'
       } else if (targetSariIds.length === 0) {
         throw createError({
@@ -266,7 +283,11 @@ export default defineEventHandler(async (event) => {
               }
               for (const membership of oldMemberships) {
                 try {
-                  await sari.enrollStudent(membership.sari_session_id, faberid, birthdate ?? '')
+                  try {
+                    await sari.enrollStudent(membership.sari_session_id, faberid, birthdate ?? '')
+                  } catch (restoreEnrollErr: any) {
+                    if (!isConfirmedSariEnrollDuplicate(restoreEnrollErr?.message)) throw restoreEnrollErr
+                  }
                   await recordConfirmedSariMembership({
                     supabase: supabaseAdmin,
                     tenantId: callerProfile.tenant_id,
@@ -289,7 +310,7 @@ export default defineEventHandler(async (event) => {
               throw createError({ statusCode: 502, statusMessage: `SARI-Anmeldung (Session ${sessionId}) fehlgeschlagen: ${err.message}` })
             }
           }
-          sariSynced = true
+          targetSeatsConfirmed = true
         } catch (err: any) {
           if (err?.statusCode) throw err
           throw createError({
@@ -304,7 +325,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // A leftover membership means SARI was not confirmed clear. Do not cancel locally.
-  if (!sariSynced) {
+  if (!targetSeatsConfirmed) {
     const remainingMemberships = await listRegistrationSariMemberships(
       supabaseAdmin,
       callerProfile.tenant_id,
@@ -379,8 +400,8 @@ export default defineEventHandler(async (event) => {
       sari_faberid: faberid,
       sari_data: oldReg.sari_data,
       sari_licenses: oldReg.sari_licenses,
-      sari_synced: sariSynced,
-      sari_synced_at: sariSynced ? now : null,
+      sari_synced: false,
+      sari_synced_at: null,
       transferred_from_registration_id: oldReg.id,
       notes: `Umgebucht von Kurs "${oldCourse.name}" am ${new Date().toLocaleDateString('de-CH')}`,
       registered_by: callerProfile.id,
@@ -389,22 +410,76 @@ export default defineEventHandler(async (event) => {
     .select('id')
     .single()
 
-  if (!newRegError && newReg?.id && sariSynced) {
-    for (const sariSessionId of enrolledTargetIds) {
-      await recordConfirmedSariMembership({
+  if (!newRegError && newReg?.id && targetSeatsConfirmed) {
+    try {
+      for (const sariSessionId of enrolledTargetIds) {
+        await recordConfirmedSariMembership({
+          supabase: supabaseAdmin,
+          tenantId: callerProfile.tenant_id,
+          registrationId: newReg.id,
+          sariSessionId,
+          courseSessionId: null,
+          source: SARI_MEMBERSHIP_SOURCE.transferEnrollment,
+        })
+      }
+      await setRegistrationSariSynced(supabaseAdmin, callerProfile.tenant_id, newReg.id, true)
+      sariSynced = true
+    } catch (writeErr: any) {
+      let membershipRestoreError: string | null = null
+      if (transferSari && faberid) {
+        try {
+          for (const sid of enrolledTargetIds) {
+            try {
+              await transferSari.unenrollStudent(sid, faberid)
+            } catch (rollbackErr: any) {
+              if (!isSariUnenrollIdempotent(rollbackErr?.message)) throw rollbackErr
+            }
+          }
+          for (const membership of transferOldMemberships) {
+            try {
+              await transferSari.enrollStudent(membership.sari_session_id, faberid, birthdate ?? '')
+            } catch (restoreEnrollErr: any) {
+              if (!isConfirmedSariEnrollDuplicate(restoreEnrollErr?.message)) throw restoreEnrollErr
+            }
+            await recordConfirmedSariMembership({
+              supabase: supabaseAdmin,
+              tenantId: callerProfile.tenant_id,
+              registrationId: oldReg.id,
+              sariSessionId: membership.sari_session_id,
+              courseSessionId: membership.course_session_id,
+              source: membership.source,
+            })
+          }
+        } catch (restoreErr: any) {
+          membershipRestoreError = restoreErr?.message || 'SARI-Membership konnte nicht wiederhergestellt werden'
+        }
+      }
+      await supabaseAdmin
+        .from('course_registrations')
+        .update({ status: 'cancelled', deleted_at: now, sari_synced: false })
+        .eq('id', newReg.id)
+      const restored = await restoreTransferredSource({
         supabase: supabaseAdmin,
-        tenantId: callerProfile.tenant_id,
-        registrationId: newReg.id,
-        sariSessionId,
-        courseSessionId: null,
-        source: SARI_MEMBERSHIP_SOURCE.transferEnrollment,
+        snapshot: sourceSnapshot,
+        updatedAt: now,
+      })
+      if (!restored.ok || membershipRestoreError) {
+        const reason = membershipRestoreError || (!restored.ok ? restored.reason : 'unknown')
+        throw createError({
+          statusCode: 502,
+          statusMessage: `SARI-Membership konnte nicht gespeichert werden und die bisherige Membership konnte nicht wiederhergestellt werden: ${reason}`,
+        })
+      }
+      throw createError({
+        statusCode: 502,
+        statusMessage: `SARI-Membership konnte nicht gespeichert werden: ${writeErr?.message || 'unbekannt'}`,
       })
     }
   }
 
   if (newRegError) {
     let membershipRestoreError: string | null = null
-    if (sariSynced && transferSari && faberid) {
+    if (targetSeatsConfirmed && transferSari && faberid) {
       try {
         for (const sid of enrolledTargetIds) {
           try {
@@ -414,7 +489,11 @@ export default defineEventHandler(async (event) => {
           }
         }
         for (const membership of transferOldMemberships) {
-          await transferSari.enrollStudent(membership.sari_session_id, faberid, birthdate ?? '')
+          try {
+            await transferSari.enrollStudent(membership.sari_session_id, faberid, birthdate ?? '')
+          } catch (restoreEnrollErr: any) {
+            if (!isConfirmedSariEnrollDuplicate(restoreEnrollErr?.message)) throw restoreEnrollErr
+          }
           await recordConfirmedSariMembership({
             supabase: supabaseAdmin,
             tenantId: callerProfile.tenant_id,

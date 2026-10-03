@@ -512,19 +512,14 @@ describe('unenroll-student tenant boundary', () => {
     expect(result.success).toBe(true)
     expect(mocks.unenrollStudent).toHaveBeenCalledTimes(1)
     expect(mocks.unenrollStudent).toHaveBeenCalledWith(2110027, 'FABER1')
+    expect(state.deletes.map((row) => row.filters.sari_session_id)).toEqual([2110027])
     expect(state.queries.some((query) => query.table === 'course_sessions' && query.select.includes('courses!course_sessions_course_id_fkey'))).toBe(true)
     expect(mocks.getTenantSecretsSecure).toHaveBeenCalledWith(
       TENANT,
       expect.any(Array),
       'SARI_UNENROLL',
     )
-    expect(state.updates).toHaveLength(1)
-    expect(state.updates[0]?.filters).toMatchObject({
-      course_id: COURSE,
-      user_id: STUDENT,
-      tenant_id: TENANT,
-    })
-    expect(state.updates[0]?.filters.tenant_id).not.toBe(OTHER)
+    expect(state.updates).toHaveLength(0)
   })
 
   it('blocks a foreign session before SARI and before the registration update', async () => {
@@ -561,8 +556,7 @@ describe('unenroll-student tenant boundary', () => {
     expect(state.deletes.map((row) => row.filters.sari_session_id)).toEqual([2110027, 2110028])
     expect(state.updates).toHaveLength(1)
     expect(state.updates[0]?.filters).toMatchObject({
-      course_id: COURSE,
-      user_id: STUDENT,
+      id: REGISTRATION,
       tenant_id: TENANT,
     })
   })

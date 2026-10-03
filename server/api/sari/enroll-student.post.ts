@@ -22,7 +22,7 @@ import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { getAuthenticatedUser } from '~/server/utils/auth'
-import { parsePositiveSariSessionId, recordConfirmedSariMembership, SARI_MEMBERSHIP_SOURCE } from '~/server/utils/registration-sari-membership'
+import { parsePositiveSariSessionId, recordConfirmedSariMembershipWithRetry, SARI_MEMBERSHIP_SOURCE, setRegistrationSariSynced } from '~/server/utils/registration-sari-membership'
 
 async function findConfirmedRegistrationId(
   supabase: ReturnType<typeof createClient>,
@@ -298,8 +298,8 @@ export default defineEventHandler(async (event) => {
       } : null,
       
       // Metadata
-      sari_synced: true,
-      sari_synced_at: new Date().toISOString(),
+      sari_synced: false,
+      sari_synced_at: null,
       registered_by: user.id,
       notes: `Manually enrolled by admin on ${new Date().toLocaleDateString('de-CH')} | SARI ID: ${student.faberid}`
     }
@@ -309,7 +309,7 @@ export default defineEventHandler(async (event) => {
       : null
 
     if (existingRegistrationId) {
-      await recordConfirmedSariMembership({
+      await recordConfirmedSariMembershipWithRetry({
         supabase,
         tenantId: userProfile.tenant_id,
         registrationId: existingRegistrationId,
@@ -317,6 +317,7 @@ export default defineEventHandler(async (event) => {
         courseSessionId: session.id,
         source: SARI_MEMBERSHIP_SOURCE.manualEnrollment,
       })
+      await setRegistrationSariSynced(supabase, userProfile.tenant_id, existingRegistrationId, true)
       throw createError({
         statusCode: 409,
         statusMessage: 'Student is already enrolled in this course',
@@ -337,7 +338,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    await recordConfirmedSariMembership({
+    await recordConfirmedSariMembershipWithRetry({
       supabase,
       tenantId: userProfile.tenant_id,
       registrationId: registration.id,
@@ -345,6 +346,7 @@ export default defineEventHandler(async (event) => {
       courseSessionId: session.id,
       source: SARI_MEMBERSHIP_SOURCE.manualEnrollment,
     })
+    await setRegistrationSariSynced(supabase, userProfile.tenant_id, registration.id, true)
 
     // Layer 5: Audit Logging - Log successful enrollment
     await logAudit({

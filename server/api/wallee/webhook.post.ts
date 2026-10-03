@@ -27,7 +27,17 @@ import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
 import { mergePaymentMetadata, normalizePaymentMetadata } from '~/server/utils/payment-metadata'
 import { applyCapturedWalleeTopupCredits } from '~/server/utils/topup-credit'
 import { isCourseCapacityExceeded } from '~/server/utils/course-capacity'
-import { recordConfirmedSariMembership, SARI_MEMBERSHIP_SOURCE } from '~/server/utils/registration-sari-membership'
+import {
+  isConfirmedSariEnrollDuplicate,
+  isUnresolvedSariRegistration,
+  listRegistrationSariMemberships,
+  parsePositiveSariSessionId,
+  recordConfirmedSariMembershipWithRetry,
+  SARI_MEMBERSHIP_SOURCE,
+  setRegistrationSariSynced,
+  strictSariIdsFromGroup,
+  uniqueLocalCourseSessionId,
+} from '~/server/utils/registration-sari-membership'
 import {
   ensureGuestUserForCoursePayment,
   fulfillCourseWalleePayment,
@@ -89,6 +99,7 @@ export default defineEventHandler(async (event) => {
   
   let webhookLogId: string | undefined
   let transactionId: string | undefined
+  const pendingSariRepairs = new Set<string>()
   
   try {
     // ============ LAYER 0: PARSE BODY ============
@@ -141,6 +152,22 @@ export default defineEventHandler(async (event) => {
               transactionId: body.entityId,
               missingPaymentIds: missing.map((p: any) => p.id),
             })
+          } else {
+            const { data: linkedRegs } = await supabase
+              .from('course_registrations')
+              .select('id')
+              .in('payment_id', ids)
+              .is('deleted_at', null)
+            for (const reg of linkedRegs || []) {
+              if (await registrationNeedsSariMembershipRepair(supabase, reg.id)) {
+                alreadyProcessedSameState = false
+                logger.warn('⚠️ webhook_logs success=true without SARI membership — not short-circuiting', {
+                  transactionId: body.entityId,
+                  registrationId: reg.id,
+                })
+                break
+              }
+            }
           }
         }
       }
@@ -731,6 +758,9 @@ export default defineEventHandler(async (event) => {
         }
         if (result.status === 'fulfilled' && result.registrationId) {
           newlyFulfilledCourseIds.add(payment.id)
+          const enrollResult = await enrollInSARIAfterPayment(supabase, result.registrationId)
+          if (enrollResult.membershipPending) pendingSariRepairs.add(result.registrationId)
+          else pendingSariRepairs.delete(result.registrationId)
           try {
             await runPostCommitCourseFulfillmentSideEffects({
               supabase,
@@ -761,6 +791,37 @@ export default defineEventHandler(async (event) => {
             failed_payment_ids: failedIds,
           }
         }
+      }
+      if (paymentStatus === 'completed') {
+        const repairPending = await repairCompletedCourseSariMemberships(supabase, payments)
+        if (repairPending) {
+          if (webhookLogId) {
+            try {
+              await supabase.from('webhook_logs').update({
+                success: false,
+                error_message: 'SARI membership not saved',
+                processing_duration_ms: Date.now() - startTime,
+              }).eq('id', webhookLogId)
+            } catch { /* non-fatal */ }
+          }
+          setResponseStatus(event, 503)
+          return {
+            success: false,
+            error: 'SARI membership not saved',
+            transactionId,
+            retry: true,
+            paymentStatus,
+          }
+        }
+      }
+      if (paymentStatus === 'completed' && webhookLogId) {
+        try {
+          await supabase.from('webhook_logs').update({
+            success: true,
+            payment_status_after: paymentStatus,
+            processing_duration_ms: Date.now() - startTime,
+          }).eq('id', webhookLogId)
+        } catch { /* non-fatal */ }
       }
       logger.debug('✅ All payments already have equal or better status')
       return {
@@ -1542,7 +1603,9 @@ export default defineEventHandler(async (event) => {
           // ============ ENROLL IN SARI AFTER PAYMENT ============
           if (paymentStatus === 'completed') {
             for (const reg of updatedRegistrations) {
-              await enrollInSARIAfterPayment(supabase, reg.id)
+              const enrollResult = await enrollInSARIAfterPayment(supabase, reg.id)
+              if (enrollResult.membershipPending) pendingSariRepairs.add(reg.id)
+              else pendingSariRepairs.delete(reg.id)
             }
           }
           
@@ -1811,6 +1874,29 @@ export default defineEventHandler(async (event) => {
     
     const duration = Date.now() - startTime
     logger.info(`🎉 Webhook processed in ${duration}ms`)
+
+    if (pendingSariRepairs.size > 0) {
+      logger.error('❌ SARI membership was not saved; webhook stays unsuccessful so a later delivery can repair it', {
+        transactionId,
+      })
+      if (webhookLogId) {
+        try {
+          await supabase.from('webhook_logs').update({
+            success: false,
+            error_message: 'SARI membership not saved',
+            processing_duration_ms: duration,
+          }).eq('id', webhookLogId)
+        } catch { /* non-fatal */ }
+      }
+      setResponseStatus(event, 503)
+      return {
+        success: false,
+        error: 'SARI membership not saved',
+        transactionId,
+        retry: true,
+        duration_ms: duration,
+      }
+    }
 
     if (topupCreditFailedIds.length > 0 || staffCreditFailedIds.length > 0) {
       logger.error('❌ Payment credit failed; requesting webhook retry', {
@@ -2497,8 +2583,52 @@ async function sendCourseEnrollmentEmails(payments: any[]) {
   }
 }
 
+async function registrationNeedsSariMembershipRepair(supabase: any, registrationId: string): Promise<boolean> {
+  const { data: registration } = await supabase
+    .from('course_registrations')
+    .select('id, tenant_id, sari_faberid, status, payment_method, courses!inner(sari_managed)')
+    .eq('id', registrationId)
+    .maybeSingle()
+  if (!registration?.tenant_id) return false
+  const memberships = await listRegistrationSariMemberships(supabase, registration.tenant_id, registrationId)
+  const course = Array.isArray(registration.courses) ? registration.courses[0] : registration.courses
+  return isUnresolvedSariRegistration({
+    sariManaged: !!course?.sari_managed,
+    faberid: registration.sari_faberid,
+    status: registration.status,
+    paymentMethod: registration.payment_method,
+    membershipCount: memberships.length,
+  })
+}
+
+async function repairCompletedCourseSariMemberships(supabase: any, payments: any[]): Promise<boolean> {
+  const registrationIds = new Set<string>()
+  const paymentIds: string[] = []
+  for (const payment of payments || []) {
+    if (!paymentHasCourseId(payment)) continue
+    paymentIds.push(payment.id)
+    if (payment.course_registration_id) registrationIds.add(payment.course_registration_id)
+  }
+  if (paymentIds.length > 0) {
+    const { data: regs } = await supabase
+      .from('course_registrations')
+      .select('id')
+      .in('payment_id', paymentIds)
+      .is('deleted_at', null)
+    for (const reg of regs || []) registrationIds.add(reg.id)
+  }
+  let pending = false
+  for (const registrationId of registrationIds) {
+    if (!(await registrationNeedsSariMembershipRepair(supabase, registrationId))) continue
+    const result = await enrollInSARIAfterPayment(supabase, registrationId)
+    if (result.membershipPending) pending = true
+  }
+  return pending
+}
+
 // ============ SARI ENROLLMENT AFTER PAYMENT ============
-async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
+export async function enrollInSARIAfterPayment(supabase: any, registrationId: string): Promise<{ membershipPending: boolean }> {
+  const settled = (membershipPending: boolean) => ({ membershipPending })
   try {
     logger.info(`📝 SARI enrollment for registration: ${registrationId}`)
     
@@ -2530,26 +2660,26 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
     
     if (regError || !registration) {
       logger.warn('⚠️ Registration not found for SARI enrollment:', registrationId)
-      return
+      return settled(false)
     }
     
     const course = registration.courses
 
     if (!course || !course.tenant_id || course.tenant_id !== registration.tenant_id) {
       logger.warn('⚠️ Skipping SARI enrollment: course/registration tenant mismatch', registrationId)
-      return
+      return settled(false)
     }
     
     // 2. Skip if not SARI-managed
     if (!course.sari_managed || !course.sari_course_id) {
       logger.debug('⏭️ Course is not SARI-managed, skipping SARI enrollment')
-      return
+      return settled(false)
     }
     
     // 3. Skip if no FABERID
     if (!registration.sari_faberid) {
       logger.warn('⚠️ No SARI FABERID found for registration:', registrationId)
-      return
+      return settled(false)
     }
     
     // 4. Get birthdate + enrollment shape from payment metadata (source of truth after Wallee pay)
@@ -2593,26 +2723,24 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
 
     if (!birthdate) {
       logger.error('❌ No birthdate available for SARI enrollment (not in payment metadata)')
-      return
+      return settled(false)
     }
     
     // 5. Get SARI credentials
     const credentials = await getSARICredentialsSecure(registration.tenant_id, 'WEBHOOK_ENROLLMENT')
     if (!credentials) {
       logger.error('❌ SARI credentials not found for tenant:', registration.tenant_id)
-      return
+      return settled(false)
     }
     
     // 6. Create SARI client and enroll
     const sari = new SARIClient(credentials)
     
-    // Get ALL course IDs from group (e.g., "GROUP_2110027_2110028_2110029_2110030" → [2110027, 2110028, 2110029, 2110030])
-    const sariCourseIdParts = course.sari_course_id.split('_')
-    let sariCourseIds = sariCourseIdParts.slice(1).filter((id: string) => id && !isNaN(parseInt(id)))
+    let sariCourseIds = strictSariIdsFromGroup(course.sari_course_id).map(String)
     
     if (sariCourseIds.length === 0) {
       logger.error('❌ Invalid SARI course ID format:', course.sari_course_id)
-      return
+      return settled(false)
     }
 
     // For partial enrollment, filter session IDs to only those the customer booked.
@@ -2624,8 +2752,9 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
         const targetSess = (course.course_sessions || []).find(
           (s: any) => s.session_number === individualSessionNum && s.allow_individual_booking
         )
-        if (targetSess?.sari_session_id) {
-          sariCourseIds = [String(targetSess.sari_session_id)]
+        const individualSariId = parsePositiveSariSessionId(targetSess?.sari_session_id)
+        if (individualSariId != null) {
+          sariCourseIds = [String(individualSariId)]
         } else if (sariCourseIds.length >= individualSessionNum) {
           sariCourseIds = [sariCourseIds[individualSessionNum - 1]]
         }
@@ -2697,10 +2826,11 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
             const newId = newIds[i]
             
             // Find and replace in the array
-            const idx = sariCourseIds.findIndex((id: string) => id === origId || id === origId.toString())
-            if (idx >= 0) {
-              logger.debug(`📝 Replacing session ID ${sariCourseIds[idx]} → ${newId} at index ${idx}`)
-              sariCourseIds[idx] = newId
+            const strictNewId = parsePositiveSariSessionId(newId)
+            const idx = sariCourseIds.findIndex((id: string) => id === origId || id === String(origId))
+            if (idx >= 0 && strictNewId != null) {
+              logger.debug(`📝 Replacing session ID ${sariCourseIds[idx]} → ${strictNewId} at index ${idx}`)
+              sariCourseIds[idx] = String(strictNewId)
             } else {
               logger.warn(`⚠️ Original session ID ${origId} not found in course sessions`)
             }
@@ -2744,8 +2874,10 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
           }
           
           for (let i = 0; i < newIds.length && (startIdx + i) < sariCourseIds.length; i++) {
-            logger.debug(`📝 Legacy replacing session at index ${startIdx + i}: ${sariCourseIds[startIdx + i]} → ${newIds[i]}`)
-            sariCourseIds[startIdx + i] = newIds[i]
+            const strictNewId = parsePositiveSariSessionId(newIds[i])
+            if (strictNewId == null) continue
+            logger.debug(`📝 Legacy replacing session at index ${startIdx + i}: ${sariCourseIds[startIdx + i]} → ${strictNewId}`)
+            sariCourseIds[startIdx + i] = String(strictNewId)
           }
         }
       }
@@ -2763,10 +2895,11 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
     // Enroll in ALL sessions
     let successCount = 0
     let errorCount = 0
+    let membershipPending = false
     
     for (const sessionId of sariCourseIds) {
-      const numericId = parseInt(sessionId, 10)
-      if (!Number.isInteger(numericId) || numericId <= 0) {
+      const numericId = parsePositiveSariSessionId(sessionId)
+      if (numericId == null) {
         errorCount++
         continue
       }
@@ -2777,8 +2910,7 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
         sariConfirmed = true
         logger.debug(`✅ Session ${sessionId} enrolled, result:`, result)
       } catch (sessionError: any) {
-        // If already enrolled, that's OK - count as success
-        if (sessionError.message?.includes('ALREADY_ENROLLED') || sessionError.message?.includes('PERSON_ALREADY_ADDED')) {
+        if (isConfirmedSariEnrollDuplicate(sessionError.message)) {
           logger.debug(`⏭️ Session ${sessionId}: Already enrolled (OK)`)
           sariConfirmed = true
         } else {
@@ -2792,45 +2924,36 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
       }
       if (!sariConfirmed) continue
       try {
-        const sessionRows = (course.course_sessions || []) as Array<{ id?: string; sari_session_id?: string | number | null }>
-        const matches = sessionRows.filter((row) => String(row.sari_session_id) === String(numericId))
-        await recordConfirmedSariMembership({
+        await recordConfirmedSariMembershipWithRetry({
           supabase,
           tenantId: registration.tenant_id,
           registrationId,
           sariSessionId: numericId,
-          courseSessionId: matches.length === 1 ? matches[0]?.id || null : null,
+          courseSessionId: uniqueLocalCourseSessionId(course.course_sessions, numericId, registration.tenant_id),
           source: SARI_MEMBERSHIP_SOURCE.webhookEnrollment,
         })
         successCount++
       } catch (persistErr: any) {
         errorCount++
+        membershipPending = true
         logger.error(`❌ SARI confirmed session ${numericId}, but membership was not saved:`, persistErr?.message)
       }
     }
     
     logger.info(`✅ SARI enrollment completed: ${successCount}/${sariCourseIds.length} sessions successful${errorCount > 0 ? `, ${errorCount} errors` : ''}`)
 
-    const fullySynced = errorCount === 0 && successCount >= sariCourseIds.length
+    const fullySynced = !membershipPending && errorCount === 0 && successCount >= sariCourseIds.length
     if (fullySynced) {
-      await supabase
-        .from('course_registrations')
-        .update({
-          sari_synced: true,
-          sari_synced_at: new Date().toISOString(),
-        })
-        .eq('id', registrationId)
+      await setRegistrationSariSynced(supabase, registration.tenant_id, registrationId, true)
       logger.info('✅ Registration marked as SARI synced')
     } else {
       logger.error(`🚨 SARI enrollment incomplete for registration ${registrationId}: ${successCount}/${sariCourseIds.length}`)
-      await supabase
-        .from('course_registrations')
-        .update({ sari_synced: false, sari_synced_at: null })
-        .eq('id', registrationId)
+      await setRegistrationSariSynced(supabase, registration.tenant_id, registrationId, false)
     }
+    return settled(membershipPending)
   } catch (error: any) {
     logger.error('❌ SARI enrollment failed:', error.message)
-    // Non-critical - payment was successful, enrollment can be done manually
+    return settled(true)
   }
 }
 

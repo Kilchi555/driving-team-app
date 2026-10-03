@@ -12,6 +12,7 @@ import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import {
   deleteConfirmedSariMembership,
+  isUnresolvedSariRegistration,
   listRegistrationSariMemberships,
 } from '~/server/utils/registration-sari-membership'
 
@@ -70,6 +71,9 @@ export default defineEventHandler(async (event) => {
       first_name,
       last_name,
       email,
+      status,
+      payment_method,
+      sari_faberid,
       is_partial_enrollment,
       courses!inner(
         id,
@@ -107,11 +111,24 @@ export default defineEventHandler(async (event) => {
   const terms = await getTenantTerminology(supabase, profile.tenant_id)
   // ── 1. SARI de-enrollment ──────────────────────────────────────────────────
   const user   = reg.users as any
-  const faberid = user?.faberid
+  const faberid = String(reg.sari_faberid || user?.faberid || '').replace(/\./g, '')
 
   const sariSync: SariSyncResult = { attempted: false, success: true, blocked: false }
 
   const memberships = await listRegistrationSariMemberships(supabase, profile.tenant_id, enrollmentId)
+
+  if (isUnresolvedSariRegistration({
+    sariManaged: !!course?.sari_managed,
+    faberid,
+    status: reg.status,
+    paymentMethod: reg.payment_method,
+    membershipCount: memberships.length,
+  })) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'SARI membership status unknown',
+    })
+  }
 
   if (course?.sari_managed && faberid && memberships.length > 0) {
     sariSync.attempted = true

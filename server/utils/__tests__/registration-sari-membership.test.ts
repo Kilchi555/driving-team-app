@@ -4,11 +4,15 @@ import { describe, expect, it } from 'vitest'
 import {
   assertRegistrationsDeletable,
   deleteConfirmedSariMembership,
+  isUnresolvedSariRegistration,
   listRegistrationSariMemberships,
   parsePositiveSariSessionId,
   recordConfirmedSariMembership,
   SARI_MEMBERSHIP_SOURCE,
   SariMembershipWriteError,
+  strictSariIdsFromGroup,
+  uniqueCourseSessionIdForSari,
+  uniqueLocalCourseSessionId,
 } from '~/server/utils/registration-sari-membership'
 
 const TENANT = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -79,6 +83,7 @@ function fakeDb(seed?: { registrations?: Row[]; sessions?: Row[]; memberships?: 
       orderColumn = column
       return builder
     }
+    builder.update = () => builder
     builder.limit = (value: number) => {
       limit = value
       return builder
@@ -237,6 +242,61 @@ describe('registration SARI membership source of truth', () => {
     await expect(assertRegistrationsDeletable(db as never, [REG])).rejects.toMatchObject({ code: 'membership_exists' })
     const empty = fakeDb()
     await expect(assertRegistrationsDeletable(empty as never, [REG])).resolves.toBeUndefined()
+  })
+
+  it('I. parser rejects partial, grouped, zero, negative, decimal, blank, and unsafe ids', () => {
+    expect(parsePositiveSariSessionId('2110027')).toBe(2110027)
+    expect(parsePositiveSariSessionId('2110028')).toBe(2110028)
+    expect(parsePositiveSariSessionId('2110027abc')).toBeNull()
+    expect(parsePositiveSariSessionId('GROUP_2110027_2110028')).toBeNull()
+    expect(parsePositiveSariSessionId('0')).toBeNull()
+    expect(parsePositiveSariSessionId('-1')).toBeNull()
+    expect(parsePositiveSariSessionId('1.5')).toBeNull()
+    expect(parsePositiveSariSessionId('')).toBeNull()
+    expect(parsePositiveSariSessionId(String(Number.MAX_SAFE_INTEGER + 1))).toBeNull()
+    expect(strictSariIdsFromGroup('GROUP_2110027_2110028_2110027abc')).toEqual([2110027, 2110028])
+  })
+
+  it('unresolved is only a confirmed SARI registration with a faberid and no snapshot', () => {
+    expect(isUnresolvedSariRegistration({
+      sariManaged: true,
+      faberid: '7181751',
+      status: 'confirmed',
+      paymentMethod: 'wallee',
+      membershipCount: 0,
+    })).toBe(true)
+    expect(isUnresolvedSariRegistration({
+      sariManaged: true,
+      faberid: '7181751',
+      status: 'confirmed',
+      paymentMethod: 'reserved',
+      membershipCount: 0,
+    })).toBe(false)
+    expect(isUnresolvedSariRegistration({
+      sariManaged: false,
+      faberid: '7181751',
+      status: 'confirmed',
+      paymentMethod: 'cash',
+      membershipCount: 0,
+    })).toBe(false)
+  })
+
+  it('K. ambiguous local sessions do not pick a course_session_id', async () => {
+    expect(uniqueLocalCourseSessionId([
+      { id: 'a', sari_session_id: '2110027', tenant_id: TENANT },
+      { id: 'b', sari_session_id: '2110027', tenant_id: TENANT },
+    ], 2110027, TENANT)).toBeNull()
+    const db = fakeDb({
+      sessions: [
+        { id: 'a', tenant_id: TENANT, course_id: 'course', sari_session_id: '2110027' },
+        { id: 'b', tenant_id: TENANT, course_id: 'course', sari_session_id: '2110027' },
+      ],
+    })
+    await expect(uniqueCourseSessionIdForSari(db as never, TENANT, 'course', 2110027)).resolves.toBeNull()
+    const one = fakeDb({
+      sessions: [{ id: SESSION, tenant_id: TENANT, course_id: 'course', sari_session_id: '2110027' }],
+    })
+    await expect(uniqueCourseSessionIdForSari(one as never, TENANT, 'course', 2110027)).resolves.toBe(SESSION)
   })
 
   it('M. client surfaces do not query the membership table', () => {

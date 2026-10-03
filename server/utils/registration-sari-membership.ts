@@ -21,6 +21,8 @@ export const SARI_MEMBERSHIP_SOURCE = {
   adminCourseEnroll: 'ADMIN_COURSE_ENROLL',
   transferEnrollment: 'TRANSFER_ENROLLMENT',
   transferSession: 'ADMIN_TRANSFER_SESSION',
+  syncEngine: 'SARI_SYNC_ENGINE',
+  syncParticipants: 'SARI_SYNC_PARTICIPANTS',
 } as const
 
 export type SariMembershipSource = (typeof SARI_MEMBERSHIP_SOURCE)[keyof typeof SARI_MEMBERSHIP_SOURCE]
@@ -67,6 +69,118 @@ export function parsePositiveSariSessionId(value: unknown): number | null {
 function isUniqueViolation(error: { code?: string; message?: string } | null | undefined): boolean {
   if (!error) return false
   return error.code === '23505' || (error.message || '').toLowerCase().includes('duplicate key')
+}
+
+/** Every segment must be a positive safe integer. GROUP_ stays a catalog string, never a SARI id. */
+export function strictSariIdsFromParts(parts: unknown[]): number[] {
+  const ids: number[] = []
+  for (const part of parts) {
+    const parsed = parsePositiveSariSessionId(part)
+    if (parsed != null && !ids.includes(parsed)) ids.push(parsed)
+  }
+  return ids
+}
+
+export function strictSariIdsFromGroup(value: unknown): number[] {
+  if (typeof value !== 'string') {
+    const single = parsePositiveSariSessionId(value)
+    return single == null ? [] : [single]
+  }
+  const trimmed = value.trim()
+  if (!trimmed) return []
+  if (trimmed.startsWith('GROUP_')) {
+    return strictSariIdsFromParts(trimmed.slice('GROUP_'.length).split('_'))
+  }
+  const single = parsePositiveSariSessionId(trimmed)
+  return single == null ? [] : [single]
+}
+
+export function isConfirmedSariEnrollDuplicate(message: string | undefined | null): boolean {
+  const text = message || ''
+  return text.includes('ALREADY_ENROLLED') || text.includes('PERSON_ALREADY_ADDED')
+}
+
+/**
+ * SARI-managed + faberid + confirmed + not reserved + no snapshot.
+ * That state is unknown, not "unenrolled".
+ */
+export function isUnresolvedSariRegistration(args: {
+  sariManaged: boolean
+  faberid: unknown
+  status: unknown
+  paymentMethod: unknown
+  membershipCount: number
+}): boolean {
+  const faberid = String(args.faberid || '').trim()
+  return Boolean(args.sariManaged)
+    && faberid.length > 0
+    && args.status === 'confirmed'
+    && args.paymentMethod !== 'reserved'
+    && args.membershipCount === 0
+}
+
+export function uniqueLocalCourseSessionId(
+  sessions: Array<{ id?: string | null; sari_session_id?: unknown; tenant_id?: string | null }> | null | undefined,
+  sariSessionId: number,
+  tenantId?: string,
+): string | null {
+  const matches = (sessions || []).filter((row) => {
+    if (tenantId && row.tenant_id && row.tenant_id !== tenantId) return false
+    return parsePositiveSariSessionId(row.sari_session_id) === sariSessionId && Boolean(row.id)
+  })
+  return matches.length === 1 ? matches[0].id || null : null
+}
+
+export async function uniqueCourseSessionIdForSari(
+  supabase: MembershipDb,
+  tenantId: string,
+  courseId: string,
+  sariSessionId: number,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('course_sessions')
+    .select('id, tenant_id, sari_session_id')
+    .eq('tenant_id', tenantId)
+    .eq('course_id', courseId)
+    .eq('sari_session_id', String(sariSessionId))
+
+  if (error) throw new SariMembershipWriteError('persist_failed', error.message)
+  return uniqueLocalCourseSessionId(data || [], sariSessionId, tenantId)
+}
+
+export async function setRegistrationSariSynced(
+  supabase: MembershipDb,
+  tenantId: string,
+  registrationId: string,
+  synced: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from('course_registrations')
+    .update({
+      sari_synced: synced,
+      sari_synced_at: synced ? new Date().toISOString() : null,
+    })
+    .eq('id', registrationId)
+    .eq('tenant_id', tenantId)
+  if (error) throw new SariMembershipWriteError('persist_failed', error.message)
+}
+
+export async function recordConfirmedSariMembershipWithRetry(
+  args: Parameters<typeof recordConfirmedSariMembership>[0],
+  attempts = 3,
+): Promise<{ created: boolean }> {
+  let last: unknown
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await recordConfirmedSariMembership(args)
+    } catch (error) {
+      last = error
+      if (!(error instanceof SariMembershipWriteError) || error.code !== 'persist_failed' || attempt === attempts) {
+        throw error
+      }
+    }
+  }
+  throw last
 }
 
 export async function recordConfirmedSariMembership(args: {

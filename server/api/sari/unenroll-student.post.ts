@@ -249,26 +249,30 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Update local registration only after every membership row is gone.
-    const { error: updateError } = await supabase
-      .from('course_registrations')
-      .update({
-        status: 'cancelled',
-        deleted_at: new Date().toISOString(),
-        deleted_by: user.id,
-        sari_synced: true,
-        sari_synced_at: new Date().toISOString()
-      })
-      .eq('course_id', courseId)
-      .eq('user_id', studentId)
-      .eq('tenant_id', userProfile.tenant_id)
-      .is('deleted_at', null)
+    // Update only the registrations whose membership rows were removed.
+    const registrationIds = [...new Set(memberships.map((membership) => membership.registration_id))]
+    for (const registrationId of registrationIds) {
+      const remaining = await listRegistrationSariMemberships(supabase, userProfile.tenant_id, registrationId)
+      if (remaining.length > 0) continue
+      const { error: updateError } = await supabase
+        .from('course_registrations')
+        .update({
+          status: 'cancelled',
+          deleted_at: new Date().toISOString(),
+          deleted_by: user.id,
+          sari_synced: true,
+          sari_synced_at: new Date().toISOString()
+        })
+        .eq('id', registrationId)
+        .eq('tenant_id', userProfile.tenant_id)
+        .is('deleted_at', null)
 
-    if (updateError) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'SARI membership was removed, but the local registration could not be updated',
-      })
+      if (updateError) {
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'SARI membership was removed, but the local registration could not be updated',
+        })
+      }
     }
 
     // Layer 5: Audit Logging

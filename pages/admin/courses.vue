@@ -6643,18 +6643,21 @@ const executeCourseCancellation = async () => {
     if (sari) {
       if (sari.error) {
         msg += ` ⚠️ SARI-Abmeldung fehlgeschlagen: ${sari.error}`
-        if (sari.restoredCount > 0) {
-          msg += ` Deren Anmeldung bleibt aktiv, weil die SARI-Membership noch besteht.`
-        }
-      } else if (sari.failedCount > 0) {
-        msg += ` ⚠️ ${sari.failedCount} von ${sari.unenrolled + sari.failedCount} Teilnehmer(n) konnten NICHT aus SARI abgemeldet werden`
-        msg += sari.blockedMessage ? ` (${sari.blockedMessage})` : '.'
-        if (sari.restoredCount > 0) {
-          msg += ` Deren Anmeldung bleibt aktiv, weil die SARI-Membership noch besteht.`
-        }
-      } else {
-        msg += ` ${sari.unenrolled} Teilnehmer wurden aus SARI abgemeldet.`
       }
+      const removed = Number(sari.unenrolled) || 0
+      const unresolved = Number(sari.unresolved) || 0
+      const failed = Number(sari.failed ?? sari.failedCount) || 0
+      const localOnly = Number(sari.localOnly) || 0
+      if (removed > 0) msg += ` ${removed} SARI-Mitgliedschaft(en) entfernt.`
+      if (unresolved > 0) msg += ` ${unresolved} Anmeldung(en) mit unbekanntem SARI-Status bleiben aktiv.`
+      if (failed > 0) {
+        msg += ` ⚠️ ${failed} Anmeldung(en) konnten nicht vollständig aus SARI entfernt werden`
+        msg += sari.blockedMessage ? ` (${sari.blockedMessage}).` : '.'
+      }
+      if (sari.restoredCount > 0) {
+        msg += ` Deren Anmeldung bleibt aktiv, weil die SARI-Membership noch besteht.`
+      }
+      if (localOnly > 0) msg += ` ${localOnly} lokale Anmeldung(en) ohne SARI-Mitgliedschaft verarbeitet.`
       msg += ` Hinweis: Den Kurs selbst musst du manuell in SARI löschen.`
     }
     success.value = msg

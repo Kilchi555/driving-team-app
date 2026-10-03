@@ -1,9 +1,18 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseServerWithSession } from '~/utils/supabase'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { SARIClient, type SARICourseMember } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { logger } from '~/utils/logger'
 import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
+import {
+  parsePositiveSariSessionId,
+  recordConfirmedSariMembership,
+  SARI_MEMBERSHIP_SOURCE,
+  SariMembershipWriteError,
+  strictSariIdsFromParts,
+  uniqueCourseSessionIdForSari,
+} from '~/server/utils/registration-sari-membership'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseServerWithSession(event)
@@ -75,27 +84,20 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const ownedSariIds: number[] = []
-  const addOwnedId = (value: unknown) => {
-    const parsed = parseInt(String(value), 10)
-    if (!Number.isNaN(parsed) && !ownedSariIds.includes(parsed)) ownedSariIds.push(parsed)
-  }
-
-  for (const session of course.course_sessions || []) {
-    if (session?.sari_session_id) addOwnedId(session.sari_session_id)
-  }
-
-  if (typeof course.sari_course_id === 'string' && course.sari_course_id.startsWith('GROUP_')) {
-    for (const part of course.sari_course_id.replace('GROUP_', '').split('_')) addOwnedId(part)
-  }
+  const ownedSariIds = strictSariIdsFromParts([
+    ...(course.course_sessions || []).map((session: { sari_session_id?: unknown }) => session?.sari_session_id),
+    ...(typeof course.sari_course_id === 'string' && course.sari_course_id.startsWith('GROUP_')
+      ? course.sari_course_id.slice('GROUP_'.length).split('_')
+      : []),
+  ])
 
   // Client ids are accepted only when they already belong to this course.
   const seenSariIds = new Set<number>()
   const sariIds = Array.isArray(sariCourseIds)
     ? sariCourseIds
-        .map((id: string | number) => parseInt(String(id), 10))
-        .filter((id: number) => {
-          if (!ownedSariIds.includes(id) || seenSariIds.has(id)) return false
+        .map((id: unknown) => parsePositiveSariSessionId(id))
+        .filter((id: number | null): id is number => {
+          if (id == null || !ownedSariIds.includes(id) || seenSariIds.has(id)) return false
           seenSariIds.add(id)
           return true
         })
@@ -147,9 +149,10 @@ export default defineEventHandler(async (event) => {
     password: sariSecrets.SARI_PASSWORD
   })
 
-  // Collect all unique participants from all SARI courses
-  const allParticipants = new Map<string, SARICourseMember>()
+  // Keep every confirmed SARI id for a faberid. The proving id must not collapse to one row.
+  const allParticipants = new Map<string, { participant: SARICourseMember; sariIds: Set<number> }>()
   const errors: string[] = []
+  const admin = getSupabaseAdmin()
 
   for (const sariCourseId of sariIds) {
     try {
@@ -157,9 +160,12 @@ export default defineEventHandler(async (event) => {
       const participants = await sari.getCourseDetail(sariCourseId)
       
       for (const participant of participants) {
-        // Use faberid as unique key
-        if (participant.faberid && !allParticipants.has(participant.faberid)) {
-          allParticipants.set(participant.faberid, participant)
+        if (!participant.faberid) continue
+        const existing = allParticipants.get(participant.faberid)
+        if (existing) {
+          existing.sariIds.add(sariCourseId)
+        } else {
+          allParticipants.set(participant.faberid, { participant, sariIds: new Set([sariCourseId]) })
         }
       }
       console.log(`✅ Found ${participants.length} participants in SARI course ${sariCourseId}`)
@@ -176,10 +182,11 @@ export default defineEventHandler(async (event) => {
   let skipped = 0
   let registrationsCreated = 0
 
-  for (const [faberid, participant] of allParticipants) {
+  for (const [faberid, entry] of allParticipants) {
+    const participant = entry.participant
     try {
       // Check if course_participant with this faberid already exists in this tenant
-      const { data: existingParticipant, error: lookupError } = await supabase
+      const { data: existingParticipant, error: lookupError } = await admin
         .from('course_participants')
         .select('id, first_name, last_name, user_id')
         .eq('tenant_id', userData.tenant_id)
@@ -195,7 +202,7 @@ export default defineEventHandler(async (event) => {
         console.log(`⏭️ Participant ${faberid} already exists: ${existingParticipant.first_name} ${existingParticipant.last_name}`)
       } else {
         // Create new course_participant
-        const { data: newParticipant, error: createError } = await supabase
+        const { data: newParticipant, error: createError } = await admin
           .from('course_participants')
           .insert({
             tenant_id: userData.tenant_id,
@@ -222,39 +229,84 @@ export default defineEventHandler(async (event) => {
       }
 
       // Check if registration already exists
-      const { data: existingReg } = await supabase
+      const { data: existingReg } = await admin
         .from('course_registrations')
-        .select('id')
+        .select('id, tenant_id')
         .eq('course_id', courseId)
+        .eq('tenant_id', userData.tenant_id)
         .eq('participant_id', participantId)
         .maybeSingle()
 
-      if (!existingReg) {
-        // Create course registration
-        const { error: regError } = await supabase
+      let registrationId = existingReg?.id as string | undefined
+      if (existingReg && existingReg.tenant_id !== userData.tenant_id) {
+        throw new SariMembershipWriteError('registration_tenant', 'Registration does not belong to the verified tenant')
+      }
+
+      if (!registrationId) {
+        const { data: createdReg, error: regError } = await admin
           .from('course_registrations')
           .insert({
             course_id: courseId,
             participant_id: participantId,
             tenant_id: userData.tenant_id,
             status: participant.confirmed ? 'confirmed' : 'pending',
-            sari_synced: true,
-            sari_synced_at: new Date().toISOString(),
+            sari_synced: false,
+            sari_synced_at: null,
             created_at: new Date().toISOString()
           })
+          .select('id')
+          .single()
 
-        if (regError) {
+        if (regError || !createdReg?.id) {
           console.error(`Error creating registration for ${faberid}:`, regError)
-          errors.push(`Registration ${faberid}: ${regError.message}`)
-        } else {
-          registrationsCreated++
-          console.log(`✅ Created registration for ${faberid} in course ${courseId}`)
+          errors.push(`Registration ${faberid}: ${regError?.message || 'insert failed'}`)
+          continue
         }
+        registrationId = createdReg.id
+        registrationsCreated++
+        console.log(`✅ Created registration for ${faberid} in course ${courseId}`)
+      }
+
+      for (const sariSessionId of entry.sariIds) {
+        const courseSessionId = await uniqueCourseSessionIdForSari(
+          admin,
+          userData.tenant_id,
+          courseId,
+          sariSessionId,
+        )
+        await recordConfirmedSariMembership({
+          supabase: admin,
+          tenantId: userData.tenant_id,
+          registrationId,
+          sariSessionId,
+          courseSessionId,
+          source: SARI_MEMBERSHIP_SOURCE.syncParticipants,
+        })
+      }
+
+      const { error: syncedError } = await admin
+        .from('course_registrations')
+        .update({ sari_synced: true, sari_synced_at: new Date().toISOString() })
+        .eq('id', registrationId)
+        .eq('tenant_id', userData.tenant_id)
+      if (syncedError) {
+        throw new SariMembershipWriteError('persist_failed', syncedError.message)
       }
 
     } catch (error: any) {
       console.error(`Error processing participant ${faberid}:`, error)
       errors.push(`Participant ${faberid}: ${error.message}`)
+      if (error instanceof SariMembershipWriteError) {
+        return {
+          success: false,
+          message: `SARI membership could not be saved: ${error.message}`,
+          imported,
+          skipped,
+          registrationsCreated,
+          totalParticipants: allParticipants.size,
+          errors,
+        }
+      }
     }
   }
 

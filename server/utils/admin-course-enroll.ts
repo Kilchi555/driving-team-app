@@ -12,9 +12,11 @@ import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
 import {
-  recordConfirmedSariMembership,
+  recordConfirmedSariMembershipWithRetry,
   SARI_MEMBERSHIP_SOURCE,
   parsePositiveSariSessionId,
+  setRegistrationSariSynced,
+  SariMembershipWriteError,
 } from '~/server/utils/registration-sari-membership'
 
 export type AdminPaymentOption = 'cash' | 'invoice' | 'paid' | 'reserve' | 'online_link'
@@ -465,8 +467,8 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
       zip: opts.participant.zip || user.zip || null,
       city: opts.participant.city || user.city || null,
       sari_faberid: faberid,
-      sari_synced: sariResult.synced,
-      sari_synced_at: sariResult.synced ? new Date().toISOString() : null,
+      sari_synced: false,
+      sari_synced_at: null,
       status: registrationStatus,
       payment_method: paymentFields.payment_method,
       payment_status: paymentFields.payment_status,
@@ -504,15 +506,30 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
     })
   }
 
-  for (const confirmed of sariResult.confirmed) {
-    await recordConfirmedSariMembership({
-      supabase,
-      tenantId: opts.tenantId,
-      registrationId: enrollment.id,
-      sariSessionId: confirmed.sariSessionId,
-      courseSessionId: confirmed.courseSessionId,
-      source: SARI_MEMBERSHIP_SOURCE.adminCourseEnroll,
-    })
+  let membershipSynced = false
+  if (sariResult.confirmed.length > 0) {
+    try {
+      for (const confirmed of sariResult.confirmed) {
+        await recordConfirmedSariMembershipWithRetry({
+          supabase,
+          tenantId: opts.tenantId,
+          registrationId: enrollment.id,
+          sariSessionId: confirmed.sariSessionId,
+          courseSessionId: confirmed.courseSessionId,
+          source: SARI_MEMBERSHIP_SOURCE.adminCourseEnroll,
+        })
+      }
+      await setRegistrationSariSynced(supabase, opts.tenantId, enrollment.id, true)
+      membershipSynced = true
+    } catch (membershipErr) {
+      if (membershipErr instanceof SariMembershipWriteError) {
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'SARI enrollment succeeded, but the membership could not be saved',
+        })
+      }
+      throw membershipErr
+    }
   }
 
   // Recount participants
@@ -694,7 +711,7 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
     invoiceId,
     invoiceNumber,
     billingMode: isCompanyCollective ? 'company_collective' : 'individual',
-    sari: sariResult,
+    sari: { ...sariResult, synced: membershipSynced },
     paymentUrl,
     emailSent,
     warning,
