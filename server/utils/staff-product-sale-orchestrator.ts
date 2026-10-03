@@ -82,6 +82,7 @@ function mapRpcError(error: any): StaffProductSaleError {
     ['invalid_payment', 404, 'Zahlung nicht gefunden'],
     ['invalid_vat_rate', 400, 'MwSt-Satz ist ungültig'],
     ['no_exact_net', 400, 'Für diesen Preis gibt es keinen passenden Nettobetrag'],
+    ['zero_credit_snapshot', 409, 'Guthaben-Snapshot ist ungültig'],
     ['invoice_total_mismatch', 409, 'Rechnungsbetrag stimmt nicht mit dem Katalogpreis überein'],
     ['vat_allocation_failed', 409, 'MwSt-Aufteilung ist ungültig'],
   ]

@@ -29,10 +29,10 @@ export default defineEventHandler(async (event) => {
     q = q.eq('category', category)
   }
 
-  // If user has tenant, filter by tenant
-  if (userProfile?.tenant_id) {
-    q = q.eq('tenant_id', userProfile.tenant_id)
+  if (!userProfile?.tenant_id) {
+    return { success: true, data: [] }
   }
+  q = q.eq('tenant_id', userProfile.tenant_id)
 
   const { data: products, error } = await q
 

@@ -6,6 +6,7 @@ import {
   STAFF_POS_MAX_QUANTITY,
   StaffProductSaleError,
   buildSaleMetadata,
+  creditFromSaleSnapshot,
   creditRappenForProduct,
   creditsImmediately,
   customerRejectionCode,
@@ -16,6 +17,7 @@ import {
   parseStaffPosMethod,
   partitionWebhookPayments,
   paymentStatusFor,
+  staffPosPaymentProvider,
   planInvoiceSend,
   allocatePositionNets,
   autoDraftAmountsFromPayments,
@@ -45,6 +47,7 @@ const activeClient = {
   tenant_id: tenant,
   role: 'client',
   deleted_at: null,
+  is_active: true,
 }
 
 function catalog(overrides: Record<string, unknown> = {}) {
@@ -77,6 +80,12 @@ describe('customer authorization', () => {
     const row = { ...activeClient, deleted_at: '2026-01-01' }
     expect(isEligiblePosCustomer(row, tenant)).toBe(false)
     expect(customerRejectionCode(row, tenant)).toBe('deleted_customer')
+  })
+
+  it('rejects an inactive client even when the search API is skipped', () => {
+    const row = { ...activeClient, is_active: false }
+    expect(isEligiblePosCustomer(row, tenant)).toBe(false)
+    expect(customerRejectionCode(row, tenant)).toBe('inactive_customer')
   })
 
   it('rejects a staff user', () => {
@@ -545,6 +554,53 @@ describe('migration and legacy guards', () => {
   })
 })
 
+describe('sale snapshot credit', () => {
+  it('keeps the sold credit after the live product amount changes', () => {
+    const sold = [{ is_credit_product: true, credit_amount_rappen: 95000, quantity: 1 }]
+    expect(creditFromSaleSnapshot(sold)).toBe(95000)
+  })
+
+  it('rejects a zero credit snapshot for a credit product', () => {
+    expect(() => creditFromSaleSnapshot([
+      { is_credit_product: true, credit_amount_rappen: 0, quantity: 1 },
+    ])).toThrow(StaffProductSaleError)
+  })
+
+  it('credits nothing for a non-credit line', () => {
+    expect(creditFromSaleSnapshot([
+      { is_credit_product: false, credit_amount_rappen: 0, quantity: 1 },
+    ])).toBe(0)
+  })
+})
+
+describe('payment provider domain', () => {
+  it('stores wallee only for online and null for cash, invoice, and deferred', () => {
+    expect(staffPosPaymentProvider('wallee')).toBe('wallee')
+    expect(staffPosPaymentProvider('cash')).toBeNull()
+    expect(staffPosPaymentProvider('invoice')).toBeNull()
+    expect(staffPosPaymentProvider('invoice_send')).toBeNull()
+    expect(staffPosPaymentProvider('deferred')).toBeNull()
+  })
+})
+
+describe('tenant sale matrix', () => {
+  const productA = catalog()
+  const customerB = { ...activeClient, tenant_id: other }
+  const productB = catalog({ tenant_id: other })
+
+  it('accepts staff tenant A with customer A and product A', () => {
+    expect(isEligiblePosCustomer(activeClient, tenant)).toBe(true)
+    expect(isEligiblePosProduct(productA, tenant)).toBe(true)
+  })
+
+  it('rejects tenant B customer and tenant B product for tenant A staff', () => {
+    expect(isEligiblePosCustomer(customerB, tenant)).toBe(false)
+    expect(isEligiblePosProduct(productB, tenant)).toBe(false)
+    expect(isEligiblePosCustomer(activeClient, other)).toBe(false)
+    expect(isEligiblePosProduct(productA, other)).toBe(false)
+  })
+})
+
 describe('method alias', () => {
   it('maps the email link to wallee', () => {
     expect(parseStaffPosMethod('online')).toBe('wallee')
@@ -763,5 +819,58 @@ describe('VAT replay and Wallee gate', () => {
     expect(startWallee).not.toHaveBeenCalled()
     expect(result.payment_url).toBeNull()
     expect(result.warning).toBe('MwSt-Satz des Verkaufs fehlt')
+  })
+
+  it('treats a zero credit snapshot as a failed credit, not a silent success', async () => {
+    await expect(executeStaffProductSale({
+      rpc: async () => {
+        throw new Error('zero_credit_snapshot')
+      },
+      actor,
+      body,
+    })).rejects.toMatchObject({ code: 'zero_credit_snapshot', statusCode: 409 })
+  })
+})
+
+describe('remediation SQL contract', () => {
+  const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8')
+  const sql = read('migrations/20261003_staff_pos_credit_remediation.sql')
+  const applyCredit = sql.slice(sql.indexOf('apply_credit uses the sale snapshot only'))
+
+  it('requires an active client in the sale tenant', () => {
+    expect(sql).toContain('AND role = \'client\'')
+    expect(sql).toContain('AND deleted_at IS NULL')
+    expect(sql).toContain('AND is_active IS TRUE')
+    expect(sql).toContain('AND tenant_id = v_tenant')
+  })
+
+  it('credits later payments from the snapshot and rejects a zero credit product snapshot', () => {
+    expect(applyCredit).toContain("v_item->>'credit_amount_rappen'")
+    expect(applyCredit).toContain("RAISE EXCEPTION 'zero_credit_snapshot'")
+    expect(applyCredit).not.toContain('FROM public.products')
+  })
+
+  it('stores wallee only for online sales', () => {
+    expect(sql).toContain("CASE WHEN p_method = 'wallee' THEN 'wallee' ELSE NULL END")
+    expect(sql).not.toContain("'deferred'::")
+  })
+
+  it('books staff product sales as Produkte & Materialien and leaves appointments as Termine', () => {
+    expect(sql).toContain("WHEN NEW.metadata->>'source' = 'staff_product_sale' THEN 'Produkte & Materialien'")
+    expect(sql).toContain("ELSE 'Termine'")
+    expect(sql).toContain('WHERE NOT EXISTS')
+  })
+
+  it('keeps idempotency locks and closes client writes', () => {
+    expect(sql).toContain('pg_advisory_xact_lock')
+    expect(sql).toContain('unique_violation')
+    expect(sql).toContain('DROP POLICY IF EXISTS "products_public_read"')
+    expect(sql).toContain('show_in_shop IS TRUE')
+    expect(sql).toContain('DROP POLICY IF EXISTS "credit_transactions_update_staff"')
+    expect(sql).toContain('DROP POLICY IF EXISTS "sc_update_staff"')
+    expect(sql).toContain('REVOKE ALL ON TABLE public.student_credits FROM anon')
+    expect(sql).toContain('REVOKE ALL ON TABLE public.credit_transactions FROM authenticated')
+    expect(sql).toContain('GRANT SELECT ON TABLE public.student_credits TO authenticated')
+    expect(sql).not.toContain('GRANT ALL')
   })
 })
