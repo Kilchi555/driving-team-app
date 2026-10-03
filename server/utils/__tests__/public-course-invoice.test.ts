@@ -1155,6 +1155,33 @@ describe('runPublicCourseInvoiceBilling', () => {
     expect(db.tables.course_registrations[0].invoice_id).toBe('inv-winner')
   })
 
+  it('a throw after a successful stamp still reports the newly linked invoice', async () => {
+    const db = createMemorySupabase(baseTables(), { throwOn: 'invoice_items' })
+    const result = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
+    const invoiceId = db.tables.invoices[0]?.id
+    expect(invoiceId).toBeTruthy()
+    expect(result.status).not.toBe('failed')
+    expect(result).toMatchObject({ status: 'created', invoiceId, emailed: false })
+    expect(result.invoiceId).toBe(invoiceId)
+    expect(publicCourseEnrollmentMessage('invoice', result)).not.toContain('konnte nicht erstellt')
+    expect(publicCourseEnrollmentMessage('invoice', result)).toContain('nicht per E-Mail zugestellt')
+    expect(db.tables.invoices).toHaveLength(1)
+    expect(db.tables.course_registrations[0].invoice_id).toBe(invoiceId)
+    expect(db.tables.payments).toHaveLength(1)
+    expect(sendTenantEmail).not.toHaveBeenCalled()
+  })
+
+  it('a failure before the invoice stamp still reports that no invoice was created', async () => {
+    const db = createMemorySupabase(baseTables(), { throwOn: 'payments' })
+    const result = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
+    expect(result).toMatchObject({ status: 'failed', emailed: false })
+    expect(result.invoiceId).toBeUndefined()
+    expect(publicCourseEnrollmentMessage('invoice', result)).toContain('konnte nicht erstellt')
+    expect(db.tables.invoices).toEqual([])
+    expect(db.tables.course_registrations[0].invoice_id).toBeNull()
+    expect(sendTenantEmail).not.toHaveBeenCalled()
+  })
+
   it('same-process parallel calls share one orchestration', async () => {
     const db = createMemorySupabase(baseTables())
     const [first, second] = await Promise.all([

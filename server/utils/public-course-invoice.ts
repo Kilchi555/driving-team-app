@@ -243,12 +243,16 @@ async function runPublicCourseInvoiceBillingInner(opts: {
         invoiceId: issued.invoiceId,
       })
       if (stamped.error) return invoiceCreated(issued.invoiceId, 'billing_error', amounts.agreed_gross_rappen)
+      if (stamped.stamped) {
+        seenRegistration = { ...registration, invoice_id: issued.invoiceId }
+      }
       const refreshed = await loadRegistration(opts.supabase, registrationId)
       if (refreshed.error || !refreshed.row) return invoiceCreated(issued.invoiceId, 'billing_error', amounts.agreed_gross_rappen)
       if (refreshed.row.invoice_id !== issued.invoiceId) {
         return invoiceCreated(issued.invoiceId, 'stamp_mismatch', amounts.agreed_gross_rappen)
       }
       registration = refreshed.row
+      seenRegistration = registration
     }
 
     const payment = await ensurePayment(opts.supabase, {
