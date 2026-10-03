@@ -206,11 +206,20 @@ CREATE POLICY "courses_anonymous_read"
   ON courses FOR SELECT TO public
   USING (is_public = true);
 
--- course_sessions table
+-- course_sessions: only sessions whose parent course is public
+-- (Do NOT use USING (true) — that exposed every tenant’s sessions.)
 CREATE POLICY "course_sessions_public_read"
   ON course_sessions FOR SELECT TO public
-  USING (true);
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.courses c
+      WHERE c.id = course_sessions.course_id
+        AND c.is_public = true
+    )
+  );
 ```
+
+**Ops note (Sep 2026, #208 / #209):** Anon table `SELECT` on `course_sessions` is also **revoked**. Public session data must come from Nitro APIs that use service_role (`/api/courses/public`, `available-sessions`, enroll-cash/wallee), not from browser PostgREST embeds. See `docs/COURSE_SESSIONS_PUBLIC_READ.md`.
 
 ### Middleware-Config:
 ```typescript
@@ -316,13 +325,13 @@ CREATE POLICY "courses_anonymous_read"
 ```
 
 ### ❌ "Keine Sessions sichtbar"
-**Ursache:** course_sessions RLS policy zu restriktiv
-**Fix:**
-```sql
-CREATE POLICY "course_sessions_public_read"
-  ON course_sessions FOR SELECT TO public
-  USING (true);
-```
+**Ursache (historisch):** fehlende/zu restriktive RLS — **nicht** mit `USING (true)` “fixen” (cross-tenant leak).
+**Aktuell (#208 / #209):** Anon darf `course_sessions` nicht mehr direkt lesen; Browser-Embeds schlagen fehl.
+**Fix:** Sessions über service_role-APIs laden (`GET /api/courses/public`, `available-sessions`) oder als authentifizierter Staff. Details: `docs/COURSE_SESSIONS_PUBLIC_READ.md`.
+
+### ❌ `POST /api/courses/enroll` returns 410
+**Ursache:** Route retired (#205 / #207). Nitro binds `enroll.post.ts`, not `enroll/post.ts`.
+**Fix:** Call `enroll-wallee` / `enroll-cash` / admin enrollment. See `docs/COURSE_ENROLL_NITRO_410.md`.
 
 ---
 
