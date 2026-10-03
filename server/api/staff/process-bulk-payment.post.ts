@@ -3,6 +3,7 @@ import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { createClient } from '@supabase/supabase-js'
 import logger from '~/utils/logger'
 import { applyStudentCreditToPayments } from '~/server/utils/apply-student-credit'
+import { isStaffProductSalePayment } from '~/utils/staff-product-sale-display'
 
 /**
  * ✅ POST /api/staff/process-bulk-payment
@@ -112,6 +113,13 @@ export default defineEventHandler(async (event) => {
 
     if (loadAllError || !allPayments) {
       throw createError({ statusCode: 500, statusMessage: 'Failed to load payments' })
+    }
+
+    if ((allPayments as any[]).some((payment) => isStaffProductSalePayment(payment))) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Staff-POS-Zahlungen können nicht über die Sammelzahlung abgeschlossen werden.',
+      })
     }
 
     // Calculate remaining due per payment (total - credit - already paid via earlier partial payments)
