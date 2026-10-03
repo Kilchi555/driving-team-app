@@ -185,10 +185,11 @@
             Seats upgraden →
           </NuxtLink>
         </template>
-            <template v-else-if="activeTab === 'admins'">
-              <p class="max-w-md text-sm text-gray-600">
-                Weitere Administratoren werden per Einladung in der Administrator-Verwaltung angelegt. Es entsteht kein Profil ohne Login.
-              </p>
+            <template v-else-if="activeTab === 'admins' && authStore.isAdmin">
+              <AdminInviteDialog
+                button-class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-green-600 hover:bg-green-700 shadow-sm transition-all whitespace-nowrap"
+                @invited="loadUsers"
+              />
             </template>
           </div>
     </div>
@@ -1078,9 +1079,7 @@ import { getSupabase } from '~/utils/supabase'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 
 const { primaryColor } = useTenantBranding()
-import StaffTab from '~/components/users/StaffTab.vue'
-import AdminsTab from '~/components/users/AdminsTab.vue'
-import CustomersTab from '~/components/users/CustomersTab.vue'
+import AdminInviteDialog from '~/components/users/AdminInviteDialog.vue'
 import { useTerminology } from '~/composables/useTerminology'
 
 const { t } = useTerminology()
@@ -1178,10 +1177,10 @@ const totalSeats = computed(() => {
   return included + addonSeats
 })
 
-// Seats = staff (+ pending invites). Admin is always included free (required account).
+// Seats = staff (+ pending staff invites). Admin accounts and admin invites are free.
 const usedSeats = computed(() => {
   return users.value.filter(u =>
-    (u.role === 'staff' || u.is_invitation) &&
+    (u.role === 'staff' || (u.is_invitation && u.role !== 'admin')) &&
     (u.is_active !== false || u.is_invitation)
   ).length
 })
@@ -1730,7 +1729,7 @@ const loadUsers = async () => {
     users.value = response.data || []
     logger.debug('✅ Users loaded from API:', users.value.length)
 
-    // Load pending staff invitations (only for staff tab)
+    // Pending staff and admin invitations. Role comes from the invitation row.
     if (!tenantId || activeTab.value === 'customers') {
       return
     }
@@ -1754,7 +1753,7 @@ const loadUsers = async () => {
         last_name: invitation.last_name,
         email: invitation.email,
         phone: invitation.phone,
-        role: 'staff',
+        role: invitation.role === 'admin' ? 'admin' : 'staff',
         is_active: false,
         created_at: invitation.created_at,
         is_invitation: true,
