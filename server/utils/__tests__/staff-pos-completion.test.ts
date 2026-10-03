@@ -82,7 +82,7 @@ describe('deferred completion guard', () => {
 
 describe('deferred completion call', () => {
   it('completes once and returns the snapshot credit', async () => {
-    const rpc = vi.fn(async () => ({
+    const rpc = vi.fn(async (_args: Record<string, unknown>) => ({
       ok: true,
       payment_status: 'completed',
       credit_applied: true,
@@ -188,7 +188,7 @@ describe('invoice payment credit', () => {
   })
 
   it('credits a fully paid staff-pos invoice once from the caller', async () => {
-    const rpc = vi.fn(async () => ({ ok: true, credit_applied: true, replayed: false, credit_rappen: 95000 }))
+    const rpc = vi.fn(async (_args: Record<string, unknown>) => ({ ok: true, credit_applied: true, replayed: false, credit_rappen: 95000 }))
     const result = await applyStaffPosCreditsForPaidInvoice({
       payments: [staffPayment, appointmentPayment, { ...staffPayment, id: 'foreign', tenant_id: tenantB }],
       tenantId: tenantA,
@@ -345,6 +345,63 @@ describe('completion SQL contract', () => {
     expect(sql).toContain("pg_advisory_xact_lock(hashtext('staff-pos-credit')")
     expect(sql).toContain('amount_paid_rappen = v_payment.total_amount_rappen')
     expect(sql).toContain('paid_at = v_now')
+  })
+
+  function creditException(source: string): string {
+    const marker = 'WHEN unique_violation THEN'
+    const start = source.lastIndexOf(marker)
+    const end = source.indexOf('\n  END;', start)
+    return source.slice(start, end)
+  }
+
+  it('replays only an existing credit row for this payment index', () => {
+    const block = creditException(sql)
+    const preflight = read('migrations/20261001_bar_product_sale_schema_preflight.sql')
+    const gate = block.indexOf("v_constraint_name = 'credit_transactions_credit_product_purchase_payment_uidx'")
+    const ledger = block.indexOf('reference_id = v_payment_id', gate)
+    const replay = block.indexOf("'replayed', true", ledger)
+    const endIf = block.indexOf('END IF;', replay)
+    expect(block).toContain('GET STACKED DIAGNOSTICS v_constraint_name = CONSTRAINT_NAME')
+    expect(block).toContain("reference_type = 'payment'")
+    expect(block).toContain("transaction_type = 'credit_product_purchase'")
+    expect(preflight).toContain('CREATE UNIQUE INDEX IF NOT EXISTS credit_transactions_credit_product_purchase_payment_uidx')
+    expect(preflight).toContain("WHERE reference_type = 'payment'")
+    expect(preflight).toContain("AND transaction_type = 'credit_product_purchase'")
+    expect(gate).toBeGreaterThan(0)
+    expect(ledger).toBeGreaterThan(gate)
+    expect(replay).toBeGreaterThan(ledger)
+    expect(endIf).toBeGreaterThan(replay)
+    expect(block.slice(gate, endIf)).toContain("'credit_applied', true")
+  })
+
+  it('re-raises a unique violation that is not the payment credit index', () => {
+    const block = creditException(sql)
+    const endIf = block.indexOf('END IF;')
+    const raise = block.indexOf('RAISE;', endIf)
+    expect(block.split('RETURN').length - 1).toBe(1)
+    expect(raise).toBeGreaterThan(endIf)
+    expect(block).not.toMatch(/WHEN unique_violation THEN\s+RETURN/)
+  })
+
+  it('rolls a deferred completion back when the credit insert raises', () => {
+    const update = sql.indexOf("SET payment_status = 'completed'")
+    const creditBegin = sql.indexOf('\n  BEGIN', update)
+    const block = creditException(sql)
+    const between = sql.slice(update, creditBegin)
+    expect(update).toBeGreaterThan(sql.indexOf("IF p_action = 'complete' THEN"))
+    expect(creditBegin).toBeGreaterThan(update)
+    expect(between).not.toMatch(/^\s*EXCEPTION\s*$/m)
+    expect(block.indexOf('RAISE;')).toBeGreaterThan(block.indexOf('END IF;'))
+    expect(sql.slice(creditBegin, sql.indexOf('END;\n$fn$'))).toContain('RAISE;')
+  })
+
+  it('does not treat the student wallet unique constraint as a credit replay', () => {
+    const block = creditException(sql)
+    const wallet = read('cleanup_duplicate_student_credits.sql')
+    const names = [...block.matchAll(/v_constraint_name = '([^']+)'/g)].map((match) => match[1])
+    expect(wallet).toContain('ADD CONSTRAINT student_credits_user_id_unique UNIQUE (user_id)')
+    expect(names).toEqual(['credit_transactions_credit_product_purchase_payment_uidx'])
+    expect(names).not.toContain('student_credits_user_id_unique')
   })
 
   it('does not grant the function to browser roles or add schema objects', () => {

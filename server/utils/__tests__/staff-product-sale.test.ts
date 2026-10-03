@@ -264,7 +264,7 @@ describe('orchestrator', () => {
   })
 
   it('replays the same idempotency key without a second create', async () => {
-    const rpc = vi.fn(async () => ({
+    const rpc = vi.fn(async (_args: Record<string, unknown>) => ({
       ok: true,
       replayed: true,
       payment_id: 'pay-1',
@@ -276,8 +276,11 @@ describe('orchestrator', () => {
     await executeStaffProductSale({ rpc, actor, body: { ...body, payment_method: 'cash' } })
     await executeStaffProductSale({ rpc, actor, body: { ...body, payment_method: 'cash' } })
     expect(rpc).toHaveBeenCalledTimes(2)
-    expect(rpc.mock.calls[0][0].p_idempotency_key).toBe(key)
-    expect(rpc.mock.calls[1][0].p_idempotency_key).toBe(key)
+    const firstCall = rpc.mock.calls[0]
+    const secondCall = rpc.mock.calls[1]
+    if (!firstCall || !secondCall) throw new Error('missing rpc call')
+    expect(firstCall[0].p_idempotency_key).toBe(key)
+    expect(secondCall[0].p_idempotency_key).toBe(key)
   })
 
   it('creates deferred pending without credit and without an invoice', async () => {
@@ -321,7 +324,7 @@ describe('orchestrator', () => {
     const sendInvoice = vi.fn(async () => ({ sent: true }))
     const actions: string[] = []
     const { run } = harness(async (args) => {
-      actions.push(args.p_action)
+      if (typeof args.p_action === 'string') actions.push(args.p_action)
       if (args.p_action === 'create') {
         return { ok: true, payment_id: 'pay-4', payment_status: 'pending', invoice_id: 'inv-2', credit_applied: false, total_rappen: 1000 }
       }
@@ -345,7 +348,7 @@ describe('orchestrator', () => {
     const sendInvoice = vi.fn(async () => ({ sent: false, reason: 'send_failed' }))
     const actions: string[] = []
     const { run } = harness(async (args) => {
-      actions.push(args.p_action)
+      if (typeof args.p_action === 'string') actions.push(args.p_action)
       if (args.p_action === 'create') {
         return { ok: true, payment_id: 'pay-5', invoice_id: 'inv-3', credit_applied: false, payment_status: 'pending', total_rappen: 1000 }
       }
@@ -367,7 +370,7 @@ describe('orchestrator', () => {
     const sendInvoice = vi.fn()
     const actions: string[] = []
     const { run } = harness(async (args) => {
-      actions.push(args.p_action)
+      if (typeof args.p_action === 'string') actions.push(args.p_action)
       if (args.p_action === 'create') {
         return { ok: true, replayed: true, payment_id: 'pay-5', invoice_id: 'inv-3', credit_applied: false, payment_status: 'pending', total_rappen: 1000 }
       }
@@ -392,7 +395,7 @@ describe('orchestrator', () => {
     })
     const actions: string[] = []
     const { run } = harness(async (args) => {
-      actions.push(args.p_action)
+      if (typeof args.p_action === 'string') actions.push(args.p_action)
       if (args.p_action === 'create') {
         return {
           ok: true,
@@ -469,11 +472,13 @@ describe('webhook credit', () => {
   })
 
   it('calls the payment credit RPC once per confirmed staff sale', async () => {
-    const rpc = vi.fn(async () => ({ data: { ok: true, credit_applied: true, replayed: false }, error: null }))
+    const rpc = vi.fn(async (_fn: string, _args: Record<string, unknown>) => ({ data: { ok: true, credit_applied: true, replayed: false }, error: null }))
     await applyStaffProductSaleCredits({ rpc }, [sale, { id: 'lesson', metadata: {} }], 'completed')
     expect(rpc).toHaveBeenCalledTimes(1)
-    expect(rpc.mock.calls[0][0]).toBe('staff_pos_sale')
-    expect(rpc.mock.calls[0][1]).toMatchObject({
+    const creditCall = rpc.mock.calls[0]
+    if (!creditCall) throw new Error('missing rpc call')
+    expect(creditCall[0]).toBe('staff_pos_sale')
+    expect(creditCall[1]).toMatchObject({
       p_action: 'apply_credit',
       p_payment_id: 'pay-6',
       p_actor_user_id: null,

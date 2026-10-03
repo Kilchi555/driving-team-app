@@ -9,6 +9,10 @@
 -- including zero_credit_snapshot, rolls the status change back.
 -- A second complete finds the payment already completed and does not insert
 -- a second credit_product_purchase row.
+-- A unique_violation is a credit replay only for
+-- credit_transactions_credit_product_purchase_payment_uidx on this payment.
+-- Any other unique violation aborts the function, so a deferred completion
+-- rolls the pending payment back with the failed credit.
 
 CREATE OR REPLACE FUNCTION public.staff_pos_sale(
   p_actor_user_id uuid,
@@ -67,6 +71,7 @@ DECLARE
   v_sent timestamptz;
   v_claim_at timestamptz;
   v_token text;
+  v_constraint_name text;
   v_now timestamptz := pg_catalog.now();
   v_idx integer := 0;
   v_line_count integer := 0;
@@ -812,10 +817,23 @@ BEGIN
     );
   EXCEPTION
     WHEN unique_violation THEN
-      RETURN jsonb_build_object(
-        'ok', true, 'credit_applied', true, 'replayed', true,
-        'payment_id', v_payment_id, 'payment_status', v_payment.payment_status, 'credit_rappen', 0
-      );
+      -- Replay only the payment credit index from 20261001. A wallet unique
+      -- violation such as student_credits_user_id_unique must abort.
+      GET STACKED DIAGNOSTICS v_constraint_name = CONSTRAINT_NAME;
+      IF v_constraint_name = 'credit_transactions_credit_product_purchase_payment_uidx'
+        AND EXISTS (
+          SELECT 1 FROM public.credit_transactions
+          WHERE reference_id = v_payment_id
+            AND reference_type = 'payment'
+            AND transaction_type = 'credit_product_purchase'
+        )
+      THEN
+        RETURN jsonb_build_object(
+          'ok', true, 'credit_applied', true, 'replayed', true,
+          'payment_id', v_payment_id, 'payment_status', v_payment.payment_status, 'credit_rappen', 0
+        );
+      END IF;
+      RAISE;
   END;
 
   RETURN jsonb_build_object(
