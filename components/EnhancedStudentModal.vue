@@ -1781,15 +1781,28 @@
 
           <div class="space-y-1">
             <p class="text-sm text-gray-500">
-              {{ selectedPayments.length }} Zahlung{{ selectedPayments.length > 1 ? 'en' : '' }} · Offen
-              <span class="font-semibold text-gray-900">{{ formatCurrency(totalSelectedAmount) }}</span>
+              Diese Bestätigung verbucht
+              <span class="font-semibold text-gray-900">{{ formatCurrency(cashAccounting.accountedRappen) }}</span>
+            </p>
+            <p v-if="cashExcludedRappen > 0" class="text-xs text-amber-800">
+              Nicht in dieser Barzahlung: {{ formatCurrency(cashExcludedRappen) }}
             </p>
             <p v-if="totalCreditUsedInSelection > 0" class="text-xs text-green-700 font-medium flex items-center gap-1">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               CHF {{ (totalCreditUsedInSelection / 100).toFixed(2) }} Guthaben bereits angerechnet
             </p>
             <p class="text-xs text-gray-500">
-              Beliebigen erhaltenen Betrag eingeben — muss nicht exakt sein.
+              Es wird nur der Betrag verbucht, der als Barzahlung angezeigt wird.
+            </p>
+          </div>
+
+          <div v-if="cashAccountingNotices.length" class="space-y-1">
+            <p
+              v-for="notice in cashAccountingNotices"
+              :key="notice"
+              class="text-xs text-amber-800 bg-amber-50 rounded-lg px-3 py-2"
+            >
+              {{ notice }}
             </p>
           </div>
 
@@ -1800,9 +1813,9 @@
                 type="button"
                 class="text-xs font-medium hover:underline"
                 :style="{ color: primaryColor }"
-                @click="partialPaymentInput = (totalSelectedAmount / 100).toFixed(2)"
+                @click="partialPaymentInput = (cashBookableRappen / 100).toFixed(2)"
               >
-                Exakt offen
+                Verbuchbarer Betrag
               </button>
             </div>
             <input
@@ -1812,14 +1825,18 @@
               step="0.05"
               inputmode="decimal"
               class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors"
-              :class="partialInputOverMax ? 'border-amber-400 bg-amber-50' : partialInputUnderMax ? 'border-yellow-400 bg-yellow-50' : 'border-gray-300'"
+              :class="cashAccounting.unaccountedRappen > 0 ? 'border-amber-400 bg-amber-50' : cashAccounting.overpaymentRappen > 0 ? 'border-amber-400 bg-amber-50' : cashPartialAppointment ? 'border-yellow-400 bg-yellow-50' : 'border-gray-300'"
               :style="{ '--tw-ring-color': primaryColor }"
               @keydown.enter="confirmPartialPayment"
             />
-            <p v-if="partialInputOverMax" class="mt-1.5 text-xs text-green-700 font-medium">
-              Überzahlung CHF {{ (parsePartialInput() - totalSelectedAmount / 100).toFixed(2) }} → wird dem Guthaben gutgeschrieben.
+            <p v-if="cashAccounting.unaccountedRappen > 0" class="mt-1.5 text-xs text-amber-700 font-medium">
+              CHF {{ (cashAccounting.unaccountedRappen / 100).toFixed(2) }} würden nicht verbucht.
+              Diese Barzahlung erfasst CHF {{ (cashAccounting.accountedRappen / 100).toFixed(2) }}.
             </p>
-            <p v-else-if="partialInputUnderMax" class="mt-1.5 text-xs text-amber-700 font-medium">
+            <p v-else-if="cashAccounting.confirmable && cashAccounting.overpaymentRappen > 0" class="mt-1.5 text-xs text-green-700 font-medium">
+              Überzahlung CHF {{ (cashAccounting.overpaymentRappen / 100).toFixed(2) }} → wird dem Guthaben gutgeschrieben.
+            </p>
+            <p v-else-if="cashPartialAppointment" class="mt-1.5 text-xs text-amber-700 font-medium">
               Teilzahlung — Rest bleibt offen. Günstigste Termine werden zuerst vollständig abgerechnet.
             </p>
           </div>
@@ -1833,11 +1850,12 @@
                   <span class="text-gray-700 font-semibold">{{ item.label }}</span>
                   <span
                     class="shrink-0 font-semibold px-2 py-0.5 rounded-full text-xs"
-                    :class="item.status === 'completed' ? 'bg-green-100 text-green-700' : item.status === 'partial' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-400'"
+                    :class="item.status === 'completed' ? 'bg-green-100 text-green-700' : item.status === 'partial' ? 'bg-yellow-100 text-yellow-700' : item.status === 'excluded' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-400'"
                   >
-                    {{ item.status === 'completed' ? '✓ vollständig bezahlt' : item.status === 'partial' ? 'Teilzahlung' : 'offen' }}
+                    {{ item.status === 'completed' ? '✓ vollständig bezahlt' : item.status === 'partial' ? 'Teilzahlung' : item.status === 'excluded' ? 'nicht in dieser Barzahlung' : 'offen' }}
                   </span>
                 </div>
+                <p v-if="item.message" class="text-amber-800">{{ item.message }}</p>
                 <!-- Payment breakdown -->
                 <div class="pl-2 border-l-2 border-gray-200 space-y-0.5">
                   <!-- Tracked history entries -->
@@ -1868,6 +1886,10 @@
                 </div>
               </div>
             </template>
+            <div v-if="cashAccounting.confirmable && cashAccounting.overpaymentRappen > 0" class="flex justify-between font-semibold text-green-700">
+              <span>Guthaben</span>
+              <span>CHF {{ (cashAccounting.overpaymentRappen / 100).toFixed(2) }}</span>
+            </div>
           </div>
 
           <div class="flex gap-3 pt-1">
@@ -1879,7 +1901,7 @@
             </button>
             <button
               @click="confirmPartialPayment"
-              :disabled="isProcessingBulkAction || !partialPaymentInput || parseFloat(String(partialPaymentInput).replace(',', '.')) <= 0"
+              :disabled="isProcessingBulkAction || !cashAccounting.confirmable"
               class="flex-1 px-4 py-2 rounded-xl text-white text-sm font-semibold transition-all disabled:opacity-50"
               :style="{ backgroundColor: secondaryColor || '#22C55E' }"
             >
@@ -1958,7 +1980,7 @@
 import { ref, computed, toRefs, watch, onUnmounted, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
 import { isStaffProductSalePayment, staffProductSaleTitle } from '~/utils/staff-product-sale-display'
-import { planStaffPosBulkRemainder, staffPosBulkKind } from '~/utils/staff-pos-bulk-split'
+import { accountStaffPosCash, staffPosBulkKind, staffPosCashBookableRappen, staffPosPermanentExclusions } from '~/utils/staff-pos-bulk-split'
 import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { openPdf } from '~/utils/openPdf'
 import { getSupabase } from '~/utils/supabase'
@@ -2862,10 +2884,25 @@ const formatCurrency = (amount: number): string => {
 }
 
 // Handle bulk payment method selection
+function selectedStaffPosBulkRows() {
+  return selectedPayments.value.map((id) => {
+    const payment = payments.value.find(p => p.id === id)
+    return {
+      id,
+      dueRappen: getPaymentDueAmountRappen(payment),
+      kind: staffPosBulkKind(payment),
+    }
+  })
+}
+
 const openCashPaymentDialog = (method: 'cash' | 'online') => {
   if (selectedPayments.value.length === 0) return
   partialPaymentMethod.value = method
-  partialPaymentInput.value = (totalSelectedAmount.value / 100).toFixed(2)
+  const bookable = staffPosCashBookableRappen({
+    method,
+    rows: selectedStaffPosBulkRows(),
+  })
+  partialPaymentInput.value = (bookable / 100).toFixed(2)
   showPartialPaymentDialog.value = true
 }
 
@@ -2880,33 +2917,18 @@ async function completeDeferredStaffPos(ids: string[]) {
 
 const handleBulkPayment = async (method: 'cash' | 'online', partialAmountRappen?: number) => {
   if (selectedPayments.value.length === 0) return
-  
+
+  const accounting = accountStaffPosCash({
+    method,
+    enteredRappen: typeof partialAmountRappen === 'number' ? partialAmountRappen : 0,
+    rows: selectedStaffPosBulkRows(),
+  })
+  if (!accounting.confirmable) return
+
   isProcessingBulkAction.value = true
   try {
-    const plan = planStaffPosBulkRemainder({
-      method,
-      enteredRappen: partialAmountRappen,
-      rows: selectedPayments.value.map((id) => {
-        const payment = payments.value.find(p => p.id === id)
-        return {
-          id,
-          dueRappen: getPaymentDueAmountRappen(payment),
-          kind: staffPosBulkKind(payment),
-        }
-      }),
-    })
-    if (plan.invoiceSaleIds.length > 0) {
-      alert('Produktverkäufe auf Rechnung werden über die Rechnung bezahlt.')
-    }
-    if (plan.walleeSaleIds.length > 0) {
-      alert('Offene Online-Produktverkäufe werden nicht über die Barzahlung abgeschlossen.')
-    }
-    if (plan.cashSaleIds.length > 0) {
-      alert('Bar-Produktverkäufe werden in dieser Sammelzahlung nicht noch einmal verbucht.')
-    }
-    if (plan.deferredIds.length > 0 && !plan.completeDeferred) {
-      alert('Produktverkäufe können nur vollständig abgeschlossen werden.')
-    } else if (plan.completeDeferred) {
+    const plan = accounting.plan
+    if (plan.completeDeferred) {
       await completeDeferredStaffPos(plan.deferredIds)
     }
     if (!plan.callBulk) {
@@ -2947,11 +2969,16 @@ const handleBulkPayment = async (method: 'cash' | 'online', partialAmountRappen?
 const confirmPartialPayment = async () => {
   const amountCHF = parsePartialInput()
   if (isNaN(amountCHF) || amountCHF <= 0) return
+  const amountRappen = Math.round(amountCHF * 100)
+  const accounting = accountStaffPosCash({
+    method: partialPaymentMethod.value,
+    enteredRappen: amountRappen,
+    rows: selectedStaffPosBulkRows(),
+  })
+  if (!accounting.confirmable) return
 
   showPartialPaymentDialog.value = false
-  const amountRappen = Math.round(amountCHF * 100)
-  // Always pass the amount so backend can detect overpayment and credit the difference
-  await handleBulkPayment(partialPaymentMethod.value, amountRappen)
+  await handleBulkPayment(partialPaymentMethod.value, accounting.enteredRappen)
 }
 
 const openCreditPaymentDialog = () => {
@@ -3018,46 +3045,75 @@ const totalCreditUsedInSelection = computed(() =>
   }, 0)
 )
 
-const partialInputOverMax = computed(() => {
+const enteredPartialRappen = computed(() => {
   const amount = parsePartialInput()
-  if (isNaN(amount) || amount <= 0) return false
-  return Math.round(amount * 100) > totalSelectedAmount.value
+  if (isNaN(amount) || amount < 0) return 0
+  return Math.round(amount * 100)
 })
 
-const partialInputUnderMax = computed(() => {
-  const amount = parsePartialInput()
-  if (isNaN(amount) || amount <= 0) return false
-  return Math.round(amount * 100) < totalSelectedAmount.value
+const cashBookableRappen = computed(() =>
+  staffPosCashBookableRappen({
+    method: partialPaymentMethod.value,
+    rows: selectedStaffPosBulkRows(),
+  })
+)
+
+const cashAccounting = computed(() =>
+  accountStaffPosCash({
+    method: partialPaymentMethod.value,
+    enteredRappen: enteredPartialRappen.value,
+    rows: selectedStaffPosBulkRows(),
+  })
+)
+
+const cashPermanentExclusions = computed(() =>
+  staffPosPermanentExclusions(selectedStaffPosBulkRows())
+)
+
+const cashExcludedRappen = computed(() =>
+  cashPermanentExclusions.value.reduce((sum, item) => sum + item.dueRappen, 0)
+)
+
+const cashAccountingNotices = computed(() => {
+  const notices: string[] = []
+  for (const line of cashAccounting.value.lines) {
+    if (line.message && !notices.includes(line.message)) notices.push(line.message)
+  }
+  return notices
 })
 
-// Preview of how a partial payment amount will be distributed across selected appointments
+const cashPartialAppointment = computed(() =>
+  cashAccounting.value.confirmable
+  && cashAccounting.value.overpaymentRappen === 0
+  && cashAccounting.value.lines.some((line) => line.kind === 'normal' && line.bookedRappen < line.dueRappen)
+)
+
+// Preview follows the same cash plan that handleBulkPayment submits.
 const partialPaymentPreview = computed(() => {
-  const amountCHF = parsePartialInput()
-  const inputRappen = isNaN(amountCHF) ? 0 : Math.round(amountCHF * 100)
-
-  const items = selectedPayments.value
-    .map(id => payments.value.find(p => p.id === id))
-    .filter(Boolean)
-    .map((p: any) => {
-      const due = getPaymentDueAmountRappen(p)
-      const alreadyPaid = p.payment_status === 'partial' ? (p.amount_paid_rappen || 0) : 0
-      const date = p.appointment?.start_time ? new Date(p.appointment.start_time).toLocaleDateString('de-CH') : 'Termin'
-      const history: { amount_rappen: number; paid_at: string }[] = p.metadata?.partial_payments || []
-      return { id: p.id, label: date, due, alreadyPaid, history }
-    })
-    .sort((a, b) => a.due - b.due)
-
-  let remaining = inputRappen
-  return items.map(item => {
-    if (remaining >= item.due) {
-      remaining -= item.due
-      return { ...item, status: 'completed' as const, amountPaid: item.due }
-    } else if (remaining > 0) {
-      const paid = remaining
-      remaining = 0
-      return { ...item, status: 'partial' as const, amountPaid: paid }
+  return cashAccounting.value.lines.map((line) => {
+    const payment: any = payments.value.find(p => p.id === line.id)
+    const alreadyPaid = payment?.payment_status === 'partial' ? (payment.amount_paid_rappen || 0) : 0
+    const date = payment?.appointment?.start_time
+      ? new Date(payment.appointment.start_time).toLocaleDateString('de-CH')
+      : (line.kind === 'normal' ? 'Termin' : 'Produkt')
+    const history: { amount_rappen: number; paid_at: string }[] = payment?.metadata?.partial_payments || []
+    const status = line.exclusion
+      ? 'excluded' as const
+      : line.bookedRappen <= 0
+        ? 'pending' as const
+        : line.bookedRappen >= line.dueRappen
+          ? 'completed' as const
+          : 'partial' as const
+    return {
+      id: line.id,
+      label: date,
+      due: line.dueRappen,
+      alreadyPaid,
+      history,
+      status,
+      amountPaid: line.bookedRappen,
+      message: line.message,
     }
-    return { ...item, status: 'pending' as const, amountPaid: 0 }
   })
 })
 
