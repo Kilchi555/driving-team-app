@@ -33,6 +33,11 @@ interface ConfirmationEmailRequest {
   courseRegistrationId: string
   paymentMethod: ConfirmationPaymentMethod
   totalAmount?: number // In CHF (optional, for cash display)
+  /**
+   * Public enroll-cash only. Omitted callers (admin) keep the default invoice sentence.
+   * none = do not promise an invoice email. sent/created describe the billing result.
+   */
+  invoiceNotice?: 'none' | 'sent' | 'created'
 }
 
 function adminPaymentMethodLabel(method: ConfirmationPaymentMethod, businessNoun = 'Unternehmen'): string {
@@ -52,7 +57,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     const body = await readBody(event) as ConfirmationEmailRequest
-    const { courseRegistrationId, paymentMethod, totalAmount } = body
+    const { courseRegistrationId, paymentMethod, totalAmount, invoiceNotice } = body
 
     logger.debug('📧 Sending course enrollment confirmation:', {
       courseRegistrationId,
@@ -251,13 +256,21 @@ export default defineEventHandler(async (event) => {
       })
       emailSubject = `Anmeldebestätigung: ${course?.name} (Barzahlung)`
     } else if (paymentMethod === 'invoice') {
+      let invoiceBody = `Sie erhalten die Rechnung über CHF ${escapeHtml(price)} in Kürze per separater E-Mail.`
+      if (invoiceNotice === 'sent') {
+        invoiceBody = `Die Rechnung über CHF ${escapeHtml(price)} wurde per E-Mail versendet.`
+      } else if (invoiceNotice === 'created') {
+        invoiceBody = `Die Rechnung über CHF ${escapeHtml(price)} wurde erstellt, konnte aber nicht per E-Mail zugestellt werden.`
+      } else if (invoiceNotice === 'none') {
+        invoiceBody = 'Ihre Anmeldung ist bestätigt. Es wurde keine Rechnung per E-Mail versendet.'
+      }
       paymentMethodNotice = emailStatusBox({
         bg: '#eff6ff',
         border: '#3b82f6',
         titleColor: '#1e40af',
         bodyColor: '#1e40af',
         title: 'Zahlungsmethode: Rechnung',
-        bodyHtml: `Sie erhalten die Rechnung über CHF ${escapeHtml(price)} in Kürze per separater E-Mail.`,
+        bodyHtml: invoiceBody,
       })
       emailSubject = `Anmeldebestätigung: ${course?.name} (Rechnung)`
     } else if (paymentMethod === 'paid') {
