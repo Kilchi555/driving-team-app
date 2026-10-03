@@ -27,6 +27,10 @@ import {
   parseSubmissionId,
   type InquiryProposalAdmin,
 } from '~/server/utils/inquiry-submission'
+import {
+  resolveAssignableInquiryStaff,
+  type InquiryStaffLookup,
+} from '~/server/utils/public-inquiry-staff'
 interface MarketingAttributionPayload {
   gclid?: string | null
   gbraid?: string | null
@@ -529,13 +533,20 @@ export default defineEventHandler(async (event) => {
     // Admin client: anon has INSERT but no SELECT on booking_proposals, so
     // insert().select() fails RLS; also needed once created_by_user_id is set.
     const supabaseAdmin = getSupabaseAdmin()
+    // Caller-supplied staff_id is kept only when the user belongs to this
+    // tenant and, if a location was sent, is actively assigned there.
+    const assignableStaffId = await resolveAssignableInquiryStaff(supabaseAdmin as unknown as InquiryStaffLookup, {
+      tenantId: tenant_id,
+      staffId: staff_id,
+      locationId: location_id,
+    })
     const submissionId = parseSubmissionId(body.submission_id)
     const proposalRow: Record<string, unknown> = {
       tenant_id,
       category_code: category_code || null,
       duration_minutes: duration_minutes || null,
       location_id: location_id || null,
-      staff_id: staff_id || null,
+      staff_id: assignableStaffId,
       preferred_time_slots: hasPreferredSlots ? preferred_time_slots : [],
       first_name: fieldValues.first_name || null,
       last_name: fieldValues.last_name || null,
