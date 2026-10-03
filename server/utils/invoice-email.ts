@@ -80,6 +80,24 @@ export interface InvoiceEmailData {
   isQuote?: boolean
 }
 
+function vatSummaryRows(data: InvoiceEmailData): string {
+  if (data.vatRate == null && data.vatRappen == null) return ''
+  const rate = Number(data.vatRate)
+  const rateLabel = Number.isFinite(rate) ? rate.toFixed(1) : '0.0'
+  const vatRappen = Number(data.vatRappen)
+  const netRappen = Number(data.subtotalRappen)
+  const cell = 'padding:8px 12px;text-align:right;font-size:13px;color:#334155;background:#f8fafc;'
+  return `
+        <tr>
+          <td colspan="3" style="${cell}">Netto</td>
+          <td style="${cell}">${formatChfEmail(Number.isFinite(netRappen) ? netRappen : 0)}</td>
+        </tr>
+        <tr>
+          <td colspan="3" style="${cell}border-top:1px solid #e2e8f0;">MwSt. (${rateLabel}%)</td>
+          <td style="${cell}border-top:1px solid #e2e8f0;">${formatChfEmail(Number.isFinite(vatRappen) ? vatRappen : 0)}</td>
+        </tr>`
+}
+
 export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
   const brand = data.primaryColor || '#1E40AF'
   const brandLight = brand + '18'
@@ -274,6 +292,7 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
       </thead>
       <tbody>${rows}</tbody>
       <tfoot>
+        ${vatSummaryRows(data)}
         <tr style="background:${brand};">
           <td colspan="3" style="padding:14px 12px;text-align:right;font-weight:700;font-size:13px;color:rgba(255,255,255,0.85);">Gesamtbetrag CHF</td>
           <td style="padding:14px 12px;text-align:right;font-weight:900;font-size:18px;color:white;">${formatChfEmail(data.totalRappen).replace('CHF ', '')}</td>

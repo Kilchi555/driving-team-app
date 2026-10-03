@@ -45,6 +45,13 @@ import {
   loadPublicCourseForEnrollment,
 } from '~/server/utils/course-custom-sessions'
 import { publicCourseSessionPrincipalId } from '~/server/utils/fulfill-course-wallee-payment'
+import {
+  publicCourseEnrollmentMessage,
+  resolvePublicEnrollmentPriceRappen,
+  runPublicCourseInvoiceBilling,
+  toPublicBillingResponse,
+  type PublicCourseBillingResult,
+} from '~/server/utils/public-course-invoice'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -828,20 +835,31 @@ const handler = defineEventHandler(async (event) => {
       })
     }
 
-    const isPartialOrd = !!(isPartialEnrollment || course.is_partial_only)
-    const isIndivSess = isPartialOrd && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
-    let effectivePrice: number
-    if (isIndivSess) {
-      const tgt = (course.course_sessions || []).find(
-        (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
-      )
-      effectivePrice = tgt?.individual_price_rappen ?? course.price_per_participant_rappen
-    } else {
-      const partialPriceRappen: number = course.course_category?.partial_price_rappen ?? 0
-      effectivePrice = (isPartialOrd && !course.is_partial_only && partialPriceRappen > 0)
-        ? partialPriceRappen
-        : course.price_per_participant_rappen
+    const effectivePrice = resolvePublicEnrollmentPriceRappen({
+      pricePerParticipantRappen: course.price_per_participant_rappen ?? null,
+      isPartialOnly: !!course.is_partial_only,
+      isPartialEnrollment: !!isPartialEnrollment,
+      individualSessionNumber: typeof individualSessionNumber === 'number' ? individualSessionNumber : null,
+      partialPriceRappen: course.course_category?.partial_price_rappen ?? null,
+      sessions: course.course_sessions || [],
+    })
+
+    let billing: PublicCourseBillingResult | null = null
+    if (finalPaymentMethod === 'invoice') {
+      try {
+        billing = await runPublicCourseInvoiceBilling({
+          supabase,
+          registrationId: enrollment.id,
+        })
+      } catch (billingError: any) {
+        logger.error('public course invoice billing failed after enrollment', billingError?.message || billingError)
+        billing = { status: 'failed', reason: 'billing_error', emailed: false }
+      }
     }
+
+    const quotedRappen = (billing?.status === 'sent' || billing?.status === 'created') && billing.grossRappen != null
+      ? billing.grossRappen
+      : effectivePrice
 
     // 11. Send confirmation email
     try {
@@ -851,7 +869,10 @@ const handler = defineEventHandler(async (event) => {
         body: {
           courseRegistrationId: enrollment.id,
           paymentMethod: finalPaymentMethod === 'invoice' ? 'invoice' : 'cash',
-          totalAmount: effectivePrice / 100 // In CHF
+          totalAmount: quotedRappen / 100, // In CHF
+          ...(finalPaymentMethod === 'invoice'
+            ? { invoiceNotice: billing?.status === 'sent' ? 'sent' : billing?.status === 'created' ? 'created' : 'none' }
+            : {}),
         }
       })
       logger.info(`📧 Confirmation email sent to ${finalEmail}`)
@@ -889,9 +910,11 @@ const handler = defineEventHandler(async (event) => {
     return {
       success: true,
       enrollmentId: enrollment.id,
-      message: finalPaymentMethod === 'invoice'
-        ? 'Anmeldung bestätigt! Sie erhalten die Rechnung in Kürze per E-Mail.'
-        : 'Anmeldung bestätigt! Bitte bringen Sie den Betrag in bar zum ersten Kurstag mit.'
+      message: publicCourseEnrollmentMessage(
+        finalPaymentMethod === 'invoice' ? 'invoice' : 'cash',
+        billing,
+      ),
+      ...(billing ? { billing: toPublicBillingResponse(billing) } : {}),
     }
 
   } catch (error: any) {
