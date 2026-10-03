@@ -1957,7 +1957,8 @@
 
 import { ref, computed, toRefs, watch, onUnmounted, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
-import { isDeferredStaffProductSale, isStaffProductSalePayment, staffProductSaleTitle } from '~/utils/staff-product-sale-display'
+import { isStaffProductSalePayment, staffProductSaleTitle } from '~/utils/staff-product-sale-display'
+import { planStaffPosBulkRemainder, staffPosBulkKind } from '~/utils/staff-pos-bulk-split'
 import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { openPdf } from '~/utils/openPdf'
 import { getSupabase } from '~/utils/supabase'
@@ -2868,19 +2869,6 @@ const openCashPaymentDialog = (method: 'cash' | 'online') => {
   showPartialPaymentDialog.value = true
 }
 
-function partitionStaffPosSelection(ids: string[]) {
-  const deferredIds: string[] = []
-  const invoiceSaleIds: string[] = []
-  const normalIds: string[] = []
-  for (const id of ids) {
-    const payment = payments.value.find(p => p.id === id)
-    if (isDeferredStaffProductSale(payment)) deferredIds.push(id)
-    else if (isStaffProductSalePayment(payment)) invoiceSaleIds.push(id)
-    else normalIds.push(id)
-  }
-  return { deferredIds, invoiceSaleIds, normalIds }
-}
-
 async function completeDeferredStaffPos(ids: string[]) {
   for (const paymentId of ids) {
     await $fetch('/api/admin/staff-pos/complete', {
@@ -2895,34 +2883,42 @@ const handleBulkPayment = async (method: 'cash' | 'online', partialAmountRappen?
   
   isProcessingBulkAction.value = true
   try {
-    const { deferredIds, invoiceSaleIds, normalIds } = partitionStaffPosSelection(selectedPayments.value)
-    if (invoiceSaleIds.length > 0) {
+    const plan = planStaffPosBulkRemainder({
+      method,
+      enteredRappen: partialAmountRappen,
+      rows: selectedPayments.value.map((id) => {
+        const payment = payments.value.find(p => p.id === id)
+        return {
+          id,
+          dueRappen: getPaymentDueAmountRappen(payment),
+          kind: staffPosBulkKind(payment),
+        }
+      }),
+    })
+    if (plan.invoiceSaleIds.length > 0) {
       alert('Produktverkäufe auf Rechnung werden über die Rechnung bezahlt.')
     }
-    let bulkPartial = partialAmountRappen
-    if (method === 'cash' && deferredIds.length > 0) {
-      const deferredDue = deferredIds.reduce((sum, id) => {
-        const payment = payments.value.find(p => p.id === id)
-        return sum + getPaymentDueAmountRappen(payment)
-      }, 0)
-      const entered = typeof partialAmountRappen === 'number' ? partialAmountRappen : deferredDue
-      if (entered < deferredDue) {
-        alert('Produktverkäufe können nur vollständig abgeschlossen werden.')
-      } else {
-        await completeDeferredStaffPos(deferredIds)
-        if (typeof bulkPartial === 'number') bulkPartial = Math.max(0, bulkPartial - deferredDue)
-      }
+    if (plan.walleeSaleIds.length > 0) {
+      alert('Offene Online-Produktverkäufe werden nicht über die Barzahlung abgeschlossen.')
     }
-    if (normalIds.length === 0 || (deferredIds.length > 0 && typeof bulkPartial === 'number' && bulkPartial <= 0)) {
+    if (plan.cashSaleIds.length > 0) {
+      alert('Bar-Produktverkäufe werden in dieser Sammelzahlung nicht noch einmal verbucht.')
+    }
+    if (plan.deferredIds.length > 0 && !plan.completeDeferred) {
+      alert('Produktverkäufe können nur vollständig abgeschlossen werden.')
+    } else if (plan.completeDeferred) {
+      await completeDeferredStaffPos(plan.deferredIds)
+    }
+    if (!plan.callBulk) {
       selectedPayments.value = []
       await loadPayments()
       return
     }
-    logger.debug(`💳 Processing ${normalIds.length} payments as ${method}`)
+    logger.debug(`💳 Processing ${plan.normalIds.length} payments as ${method}`)
     
-    const body: any = { payment_ids: normalIds, method }
-    if (typeof bulkPartial === 'number' && bulkPartial > 0) {
-      body.partial_amount_rappen = bulkPartial
+    const body: any = { payment_ids: plan.normalIds, method }
+    if (typeof plan.bulkPartialRappen === 'number' && plan.bulkPartialRappen > 0) {
+      body.partial_amount_rappen = plan.bulkPartialRappen
     }
 
     const response = await $fetch('/api/staff/process-bulk-payment', {
