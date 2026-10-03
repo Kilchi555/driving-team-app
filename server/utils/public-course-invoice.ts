@@ -221,10 +221,10 @@ async function runPublicCourseInvoiceBillingInner(opts: {
     }
 
     if (registration.invoice_id && registration.invoice_id !== issued.invoiceId) {
-      return fail('conflict', { registrationId, tenantId, detail: 'invoice_id_mismatch' })
+      return invoiceCreated(issued.invoiceId, 'invoice_id_mismatch', amounts.agreed_gross_rappen)
     }
     if (existingPayment?.invoice_id && existingPayment.invoice_id !== issued.invoiceId) {
-      return fail('conflict', { registrationId, tenantId, detail: 'payment_invoice_mismatch' })
+      return invoiceCreated(issued.invoiceId, 'payment_invoice_mismatch', amounts.agreed_gross_rappen)
     }
 
     if (!registration.invoice_id) {
@@ -235,11 +235,11 @@ async function runPublicCourseInvoiceBillingInner(opts: {
         tenantId,
         invoiceId: issued.invoiceId,
       })
-      if (stamped.error) return fail('billing_error', { registrationId, tenantId, detail: stamped.error.message })
+      if (stamped.error) return invoiceCreated(issued.invoiceId, 'billing_error', amounts.agreed_gross_rappen)
       const refreshed = await loadRegistration(opts.supabase, registrationId)
-      if (refreshed.error || !refreshed.row) return fail('billing_error', { registrationId, tenantId, detail: refreshed.error })
+      if (refreshed.error || !refreshed.row) return invoiceCreated(issued.invoiceId, 'billing_error', amounts.agreed_gross_rappen)
       if (refreshed.row.invoice_id !== issued.invoiceId) {
-        return fail('conflict', { registrationId, tenantId, detail: 'stamp_mismatch' })
+        return invoiceCreated(issued.invoiceId, 'stamp_mismatch', amounts.agreed_gross_rappen)
       }
       registration = refreshed.row
     }
@@ -254,14 +254,14 @@ async function runPublicCourseInvoiceBillingInner(opts: {
       existingPayment,
     })
     if (payment.error || !payment.paymentId) {
-      return fail(payment.reason || 'conflict', { registrationId, tenantId, detail: payment.error })
+      return invoiceCreated(issued.invoiceId, payment.reason || 'conflict', amounts.agreed_gross_rappen)
     }
 
     const linked = await linkPaymentId(opts.supabase, registration, tenantId, payment.paymentId)
-    if (linked.error) return fail(linked.reason || 'conflict', { registrationId, tenantId, detail: linked.error })
+    if (linked.error) return invoiceCreated(issued.invoiceId, linked.reason || 'conflict', amounts.agreed_gross_rappen)
 
     const invoice = await loadInvoice(opts.supabase, issued.invoiceId, tenantId)
-    if (invoice.error || !invoice.row) return fail('billing_error', { registrationId, tenantId, detail: invoice.error || 'invoice_not_found' })
+    if (invoice.error || !invoice.row) return invoiceCreated(issued.invoiceId, 'billing_error', amounts.agreed_gross_rappen)
 
     if (invoice.row.status === 'sent' || invoice.row.sent_at) {
       return {
@@ -270,6 +270,10 @@ async function runPublicCourseInvoiceBillingInner(opts: {
         emailed: true,
         grossRappen: numberOrZero(invoice.row.total_amount_rappen),
       }
+    }
+
+    if (!payment.maySend) {
+      return invoiceCreated(issued.invoiceId, 'concurrent_payment', numberOrZero(invoice.row.total_amount_rappen))
     }
 
     const recipient = firstEmail(registration.email) || firstEmail(user.row.email)
@@ -306,7 +310,10 @@ async function runPublicCourseInvoiceBillingInner(opts: {
       }
     }
 
-    await markInvoiceSent(opts.supabase, issued.invoiceId, tenantId)
+    const marked = await markInvoiceSent(opts.supabase, issued.invoiceId, tenantId)
+    if (marked !== 'sent') {
+      return invoiceCreated(issued.invoiceId, 'sent_status_unconfirmed', numberOrZero(invoice.row.total_amount_rappen))
+    }
     return {
       status: 'sent',
       invoiceId: issued.invoiceId,
@@ -320,6 +327,10 @@ async function runPublicCourseInvoiceBillingInner(opts: {
 
 function skipped(reason: string): PublicCourseBillingResult {
   return { status: 'skipped', reason, emailed: false }
+}
+
+function invoiceCreated(invoiceId: string, reason: string, grossRappen: number): PublicCourseBillingResult {
+  return { status: 'created', reason, invoiceId, emailed: false, grossRappen }
 }
 
 function fail(reason: string, context: Record<string, unknown>): PublicCourseBillingResult {
@@ -533,16 +544,9 @@ async function ensurePayment(
   },
 ) {
   if (input.existingPayment) {
-    if (input.existingPayment.invoice_id !== input.invoiceId) {
-      return { paymentId: null as string | null, error: 'existing_payment_other_invoice', reason: 'conflict' as const }
-    }
-    if (
-      Number(input.existingPayment.total_amount_rappen) !== input.grossRappen
-      || Number(input.existingPayment.lesson_price_rappen) !== input.grossRappen
-    ) {
-      return { paymentId: null as string | null, error: 'payment_amount_mismatch', reason: 'conflict' as const }
-    }
-    return { paymentId: String(input.existingPayment.id), error: null as string | null, reason: null as string | null }
+    const reused = matchingPayment(input.existingPayment, input.invoiceId, input.grossRappen)
+    if (reused.error) return { paymentId: null as string | null, maySend: false, error: reused.error, reason: 'conflict' as const }
+    return { paymentId: String(input.existingPayment.id), maySend: true, error: null as string | null, reason: null as string | null }
   }
 
   const { error } = await supabase.from('payments').insert({
@@ -562,22 +566,56 @@ async function ensurePayment(
       public_course_invoice: true,
     },
   })
-  if (error) return { paymentId: null, error: error.message, reason: 'billing_error' as const }
+  if (isUniqueViolation(error)) {
+    const raced = await reuseRacedPayment(supabase, input)
+    return raced
+  }
+  if (error) return { paymentId: null, maySend: false, error: error.message, reason: 'billing_error' as const }
 
+  const confirmed = await reuseRacedPayment(supabase, input)
+  if (confirmed.error || !confirmed.paymentId) return confirmed
+  return { ...confirmed, maySend: true }
+}
+
+function matchingPayment(payment: any, invoiceId: string, grossRappen: number) {
+  if (payment.invoice_id !== invoiceId) return { error: 'existing_payment_other_invoice' }
+  if (
+    Number(payment.total_amount_rappen) !== grossRappen
+    || Number(payment.lesson_price_rappen) !== grossRappen
+  ) {
+    return { error: 'payment_amount_mismatch' }
+  }
+  return { error: null as string | null }
+}
+
+function isUniqueViolation(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === '23505') return true
+  const message = error.message || ''
+  return message.includes('payments_public_course_invoice_registration_uidx')
+}
+
+async function reuseRacedPayment(
+  supabase: SupabaseClient,
+  input: {
+    registration: any
+    tenantId: string
+    invoiceId: string
+    grossRappen: number
+  },
+) {
   const after = await loadPayments(supabase, input.registration.id)
-  if (after.error) return { paymentId: null, error: after.error, reason: 'billing_error' as const }
+  if (after.error) return { paymentId: null as string | null, maySend: false, error: after.error, reason: 'billing_error' as const }
+  if (after.rows.some((row) => row.tenant_id !== input.tenantId)) {
+    return { paymentId: null, maySend: false, error: 'cross_tenant_payment', reason: 'conflict' as const }
+  }
   const own = after.rows.filter((row) => row.tenant_id === input.tenantId)
   if (own.length !== 1) {
-    return { paymentId: null, error: 'payment_race', reason: 'conflict' as const }
+    return { paymentId: null, maySend: false, error: 'payment_race', reason: 'conflict' as const }
   }
-  const payment = own[0]
-  if (payment.invoice_id !== input.invoiceId) {
-    return { paymentId: null, error: 'payment_invoice_changed', reason: 'conflict' as const }
-  }
-  if (Number(payment.total_amount_rappen) !== input.grossRappen || Number(payment.lesson_price_rappen) !== input.grossRappen) {
-    return { paymentId: null, error: 'payment_amount_mismatch', reason: 'conflict' as const }
-  }
-  return { paymentId: String(payment.id), error: null, reason: null }
+  const matched = matchingPayment(own[0], input.invoiceId, input.grossRappen)
+  if (matched.error) return { paymentId: null, maySend: false, error: matched.error, reason: 'conflict' as const }
+  return { paymentId: String(own[0].id), maySend: false, error: null as string | null, reason: null as string | null }
 }
 
 async function linkPaymentId(
@@ -609,9 +647,9 @@ async function linkPaymentId(
   return { error: null, reason: null }
 }
 
-async function markInvoiceSent(supabase: SupabaseClient, invoiceId: string, tenantId: string) {
+async function markInvoiceSent(supabase: SupabaseClient, invoiceId: string, tenantId: string): Promise<'sent' | 'draft'> {
   const sentAt = new Date().toISOString()
-  const write = async () => supabase
+  const { data, error } = await supabase
     .from('invoices')
     .update({ status: 'sent', sent_at: sentAt })
     .eq('id', invoiceId)
@@ -619,23 +657,17 @@ async function markInvoiceSent(supabase: SupabaseClient, invoiceId: string, tena
     .eq('status', 'draft')
     .select('id')
 
-  let { data, error } = await write()
-  let marked = Array.isArray(data) ? data.length > 0 : !!data
-  if (!marked && !error) {
-    const retry = await write()
-    data = retry.data
-    error = retry.error
-    marked = Array.isArray(data) ? data.length > 0 : !!data
-  }
-  if (error || !marked) {
-    const current = await loadInvoice(supabase, invoiceId, tenantId)
-    if (current.row?.status === 'sent' || current.row?.sent_at) return
-    logger.error('public course invoice sent status write failed', {
-      invoiceId,
-      tenantId,
-      detail: error?.message || 'not_marked',
-    })
-  }
+  const marked = !error && (Array.isArray(data) ? data.length > 0 : !!data)
+  if (marked) return 'sent'
+
+  const current = await loadInvoice(supabase, invoiceId, tenantId)
+  if (current.row?.status === 'sent' && current.row?.sent_at) return 'sent'
+  logger.error('public course invoice sent status write failed', {
+    invoiceId,
+    tenantId,
+    detail: error?.message || 'not_marked',
+  })
+  return 'draft'
 }
 
 async function sendSnapshotInvoiceEmail(opts: {
