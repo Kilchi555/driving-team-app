@@ -5,7 +5,7 @@
       <!-- Header + Progress (outside card) -->
       <div v-if="currentStep < STEP_LOADING" class="mb-6">
         <div class="text-center mb-4">
-          <h1 class="text-2xl font-bold text-gray-900">{{ labels.staff }} Registrierung</h1>
+          <h1 class="text-2xl font-bold text-gray-900">{{ isAdminInviteUi ? 'Administrator Registrierung' : labels.staff + ' Registrierung' }}</h1>
           <p class="text-sm text-gray-500 mt-1">{{ tenantName }}</p>
         </div>
         <!-- Progress bar -->
@@ -82,12 +82,12 @@
         <div v-else-if="currentStep === STEP_SUCCESS" class="p-8 space-y-6">
           <div class="text-center space-y-2">
             <div class="text-6xl">✅</div>
-            <h2 class="text-xl font-bold text-gray-900">Willkommen im Team!</h2>
+            <h2 class="text-xl font-bold text-gray-900">{{ serverRegistrationRole === 'admin' ? 'Administrator-Konto erstellt' : 'Willkommen im Team!' }}</h2>
             <p class="text-gray-500">Dein Konto wurde erfolgreich erstellt.</p>
           </div>
 
           <!-- ICS-Feed URL -->
-          <div class="rounded-lg p-4 text-left" :style="{ background: tenantColor + '14', border: `1px solid ${tenantColor}40` }">
+          <div v-if="serverRegistrationRole !== 'admin'" class="rounded-lg p-4 text-left" :style="{ background: tenantColor + '14', border: `1px solid ${tenantColor}40` }">
             <p class="text-sm font-semibold mb-2" :style="{ color: tenantColor }">📅 Kalender-Abo-Link</p>
             <p class="text-xs mb-2" :style="{ color: tenantColor }">Diesen Link in Apple/Google/Outlook als Kalenderabo eintragen, um Termine automatisch zu synchronisieren:</p>
             <div class="flex items-center gap-2">
@@ -100,7 +100,7 @@
           </div>
 
           <!-- Affiliate (wenn aktiviert) -->
-          <div v-if="affiliateEnabled && affiliateCode" class="bg-green-50 border border-green-200 rounded-lg p-4 text-left">
+          <div v-if="serverRegistrationRole !== 'admin' && affiliateEnabled && affiliateCode" class="bg-green-50 border border-green-200 rounded-lg p-4 text-left">
             <p class="text-sm font-semibold text-green-800 mb-1">🎁 Empfehlungslink</p>
             <p class="text-xs text-green-600 mb-2">Teile diesen Link und verdiene eine Prämie für jede Empfehlung:</p>
             <div class="flex items-center gap-2">
@@ -130,7 +130,7 @@
             autocomplete="on"
             class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-left space-y-3"
           >
-            <input type="hidden" name="redirect" value="/dashboard">
+            <input type="hidden" name="redirect" :value="postRegistrationPath">
             <p class="text-sm font-semibold text-gray-900">Zugangsdaten speichern</p>
             <p class="text-xs text-gray-500">
               Tippe auf den Button unten. Wenn dein Handy fragt, ob es Benutzername und Passwort speichern soll — bitte bestätigen.
@@ -162,7 +162,7 @@
               class="w-full text-white font-semibold py-3 rounded-lg transition-opacity hover:opacity-90"
               :style="{ background: tenantColor }"
             >
-              Passwort speichern &amp; zum Dashboard
+              {{ serverRegistrationRole === 'admin' ? 'Passwort speichern & zur Verwaltung' : 'Passwort speichern & zum Dashboard' }}
             </button>
           </form>
 
@@ -220,7 +220,7 @@
 
           <!-- Dual-login banner: only for the first staff member of this tenant -->
           <div
-            v-if="currentStep === 0 && showDualLoginHint"
+            v-if="currentStep === 0 && showDualLoginHint && !isAdminInviteUi"
             class="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-900"
           >
             <p class="font-semibold mb-1">Zwei getrennte Logins</p>
@@ -251,7 +251,7 @@
                 <input v-model="form.lastName" type="text" class="input" placeholder="Mustermann">
               </div>
               <div class="col-span-2">
-                <label class="label">E-Mail für {{ labels.staff }}-Login *</label>
+                <label class="label">E-Mail für {{ isAdminInviteUi ? 'Administrator' : labels.staff }}-Login *</label>
                 <input
                   v-model="form.email"
                   type="email"
@@ -272,6 +272,9 @@
                 <p v-if="emailLocked" class="text-xs text-gray-500 mt-1">
                   Diese E-Mail wurde bei der Einladung festgelegt und kann hier nicht geändert werden.
                 </p>
+                <p v-else-if="isAdminEmailChosen && isAdminInviteUi" class="text-xs text-red-600 mt-1 leading-relaxed">
+                  Diese E-Mail gehört bereits zu einem Administrator dieses Betriebs.
+                </p>
                 <p v-else-if="isAdminEmailChosen" class="text-xs text-red-600 mt-1 leading-relaxed">
                   Das ist dein <strong>Admin-Login</strong>. Für den {{ labels.staff }}-Login (Berufsalltag)
                   brauchst du eine <strong>andere E-Mail</strong> — z.B. Gmail oder iCloud.
@@ -282,15 +285,15 @@
                 </p>
                 <p v-else-if="staffEmailCheck === 'available'" class="text-xs text-green-600 mt-1 flex items-center gap-1">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                  E-Mail ist verfügbar für den {{ labels.staff }}-Login
+                  E-Mail ist verfügbar für den {{ isAdminInviteUi ? 'Administrator' : labels.staff }}-Login
                 </p>
                 <p v-else-if="staffEmailCheck === 'taken'" class="text-xs text-red-600 mt-1 leading-relaxed">
                   Diese E-Mail ist bereits registriert.
-                  <template v-if="adminEmail">
+                  <template v-if="adminEmail && !isAdminInviteUi">
                     Für den {{ labels.staff }}-Login brauchst du eine <strong>andere</strong> Adresse
                     (nicht {{ adminEmail }}).
                   </template>
-                  <template v-else>
+                  <template v-else-if="!isAdminInviteUi">
                     Bitte eine andere E-Mail für den {{ labels.staff }}-Login verwenden.
                   </template>
                 </p>
@@ -953,6 +956,11 @@ import { getWorkingDaysTemplateDefaults, workingDaysTemplateToForm } from '~/uti
 import StaffLegalAgbContent from '~/components/register/StaffLegalAgbContent.vue'
 import StaffLegalDatenschutzContent from '~/components/register/StaffLegalDatenschutzContent.vue'
 import { inspectIcsUrlShape, normalizeIcsUrl } from '~/utils/ics-url'
+import {
+  displayInvitationRole,
+  registrationHomePath,
+  registrationStepSkipped,
+} from '~/utils/staff-registration-flow'
 
 const route              = useRoute()
 const router             = useRouter()
@@ -1073,6 +1081,10 @@ const tenantExamLocations  = ref<any[]>([]) // global exam locations (tenant_id 
 const affiliateEnabled     = ref(false)
 const adminEmail           = ref<string | null>(null)
 const showDualLoginHint    = ref(false)
+const loadedInvitationRole = ref<'admin' | 'staff'>('staff')
+const serverRegistrationRole = ref<unknown>(null)
+const isAdminInviteUi = computed(() => loadedInvitationRole.value === 'admin')
+const postRegistrationPath = computed(() => registrationHomePath(serverRegistrationRole.value))
 const emailLocked          = ref(false)
 const tenantId             = ref<string | null>(null)
 const legalModal           = ref<'agb' | 'datenschutz' | null>(null)
@@ -1108,15 +1120,23 @@ const legalModalTitle = computed(() =>
 )
 
 // Categories only for driving schools with templates; Führerausweis only for driving schools.
-const allStepDefs = computed(() => [
-  { id: 0, label: 'Basisdaten', skip: false },
-  { id: 1, label: labels.value.categoriesLabel, skip: !isDrivingSchool.value || availableCategories.value.length === 0 },
-  { id: 2, label: 'Arbeitszeiten', skip: false },
-  { id: 3, label: isDrivingSchool.value ? 'Standorte' : 'Treffpunkte', skip: false },
-  { id: 4, label: 'Kalender', skip: false },
-  { id: 5, label: 'Dokumente', skip: !isDrivingSchool.value },
-  { id: 6, label: 'Passwort', skip: false },
-])
+// Admin invitations skip staff onboarding. The loaded role is display-only.
+const allStepDefs = computed(() => {
+  const stepInput = {
+    invitationRole: loadedInvitationRole.value,
+    isDrivingSchool: isDrivingSchool.value,
+    hasCategories: availableCategories.value.length > 0,
+  }
+  return [
+    { id: 0, label: 'Basisdaten', skip: registrationStepSkipped(0, stepInput) },
+    { id: 1, label: labels.value.categoriesLabel, skip: registrationStepSkipped(1, stepInput) },
+    { id: 2, label: 'Arbeitszeiten', skip: registrationStepSkipped(2, stepInput) },
+    { id: 3, label: isDrivingSchool.value ? 'Standorte' : 'Treffpunkte', skip: registrationStepSkipped(3, stepInput) },
+    { id: 4, label: 'Kalender', skip: registrationStepSkipped(4, stepInput) },
+    { id: 5, label: 'Dokumente', skip: registrationStepSkipped(5, stepInput) },
+    { id: 6, label: 'Passwort', skip: registrationStepSkipped(6, stepInput) },
+  ]
+})
 const visibleSteps = computed(() => allStepDefs.value.filter(s => !s.skip))
 const visibleStepIndex = computed(() => {
   const idx = visibleSteps.value.findIndex(s => s.id === currentStep.value)
@@ -1477,6 +1497,7 @@ const loadInvitation = async () => {
 
     // Set invitation data
     const inv = response.invitation
+    loadedInvitationRole.value = displayInvitationRole(inv.role)
     form.firstName = inv.first_name || ''
     form.lastName  = inv.last_name  || ''
     // Don't pre-fill placeholder emails generated by the system
@@ -1602,6 +1623,7 @@ const submit = async () => {
     })
 
     if (!response.success) throw new Error('Registrierung fehlgeschlagen')
+    serverRegistrationRole.value = response.role
 
     finishRegisterSubProgress()
 
@@ -1752,7 +1774,7 @@ const goToDashboard = async () => {
   if (tenantSlugRef.value) {
     await loadTenantBranding(tenantSlugRef.value).catch(() => {})
   }
-  router.push('/dashboard')
+  router.push(postRegistrationPath.value)
 }
 
 // ─── File handling ────────────────────────────────────────────────────────────

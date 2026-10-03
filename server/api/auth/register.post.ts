@@ -7,6 +7,7 @@ import { validatePassword, logPasswordValidationAttempt } from '~/server/utils/p
 import { checkPasswordPwned } from '~/server/utils/hibp-checker'
 import { logger } from '~/utils/logger'
 import { notifyTenantAdminsNewClient } from '~/server/utils/notify-new-client-registration'
+import { legacyAcceptsInvitationRole } from '~/server/utils/invitation-role'
 
 function createServiceRoleClient() {
   const supabaseUrl = process.env.SUPABASE_URL
@@ -378,7 +379,7 @@ async function registerStaff(event: any, body: RegisterRequest, supabase: Servic
   // Validate the invitation token against the database
   const { data: invitation, error: invError } = await supabase
     .from('staff_invitations')
-    .select('id, email, tenant_id, expires_at, status')
+    .select('id, email, tenant_id, expires_at, status, role')
     .eq('invitation_token', invitationToken)
     .eq('status', 'pending')
     .single()
@@ -388,6 +389,16 @@ async function registerStaff(event: any, body: RegisterRequest, supabase: Servic
     throw createError({
       statusCode: 403,
       statusMessage: 'Invitation not found, already used, or expired'
+    })
+  }
+
+  // Admin invitations are accepted only by POST /api/staff/register.
+  // Reject before password checks, Auth, profile insert, and token consumption.
+  if (!legacyAcceptsInvitationRole(invitation.role)) {
+    logger.warn('❌ [REGISTER-STAFF] Refused non-staff invitation')
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'This invitation cannot be accepted here'
     })
   }
 
