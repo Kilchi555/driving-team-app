@@ -17,6 +17,8 @@ import {
   parsePositiveSariSessionId,
   setRegistrationSariSynced,
   SariMembershipWriteError,
+  isSameConfirmedEnrollment,
+  resumeExistingConfirmedEnrollment,
 } from '~/server/utils/registration-sari-membership'
 
 export type AdminPaymentOption = 'cash' | 'invoice' | 'paid' | 'reserve' | 'online_link'
@@ -194,6 +196,160 @@ async function resolveOrCreateUser(
 
 type ConfirmedAdminSariSession = { sariSessionId: number; courseSessionId: string | null }
 
+type AdminRegistrationRow = {
+  id: string
+  tenant_id: string
+  course_id: string
+  sari_faberid: string | null
+  status: string
+  payment_method: string | null
+}
+
+export function adminConfirmedSariSessions(
+  course: { course_sessions?: Array<{ id?: string | null; sari_session_id?: unknown; session_number?: number | null }> },
+  enrollmentType: AdminEnrollmentType,
+  partialStartPosition?: number,
+): ConfirmedAdminSariSession[] {
+  let relevant = (course.course_sessions || []).filter((session) => session.sari_session_id)
+  if (enrollmentType === 'partial') {
+    const start = partialStartPosition ?? 3
+    relevant = relevant.filter((session) => (session.session_number ?? 99) >= start)
+  } else if (enrollmentType === 'individual' && partialStartPosition) {
+    relevant = relevant.filter((session) => session.session_number === partialStartPosition)
+  }
+  const sessions: ConfirmedAdminSariSession[] = []
+  for (const session of relevant) {
+    const sariSessionId = parsePositiveSariSessionId(session.sari_session_id)
+    if (sariSessionId == null) continue
+    sessions.push({ sariSessionId, courseSessionId: session.id || null })
+  }
+  return sessions
+}
+
+export async function repairExistingAdminEnrollment(args: {
+  supabase: ReturnType<typeof getSupabaseAdmin>
+  tenantId: string
+  course: { id: string; course_sessions?: Array<{ id?: string | null; sari_session_id?: unknown; session_number?: number | null }> }
+  registration: AdminRegistrationRow
+  faberid: string
+  birthdate: string
+  enrollmentType: AdminEnrollmentType
+  partialStartPosition?: number
+}): Promise<never> {
+  if (!isSameConfirmedEnrollment(args.registration, {
+    tenantId: args.tenantId,
+    courseId: args.course.id,
+    faberid: args.faberid,
+  })) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'Die bestehende Anmeldung gehört nicht zu diesem Kurs.',
+    })
+  }
+  const credentials = await getSARICredentialsSecure(args.tenantId, 'ADMIN_COURSE_ENROLL')
+  if (!credentials) {
+    throw createError({ statusCode: 500, statusMessage: 'SARI-Membership konnte nicht repariert werden' })
+  }
+  const sari = new SARIClient(credentials)
+  await resumeExistingConfirmedEnrollment({
+    supabase: args.supabase,
+    sari,
+    tenantId: args.tenantId,
+    courseId: args.course.id,
+    registration: args.registration,
+    faberid: args.faberid,
+    birthdate: args.birthdate,
+    sessions: adminConfirmedSariSessions(args.course, args.enrollmentType, args.partialStartPosition),
+    source: SARI_MEMBERSHIP_SOURCE.adminCourseEnroll,
+    duplicateStatusMessage: 'Dieser Kunde ist bereits für diesen Kurs angemeldet',
+  })
+}
+
+async function locateAdminEnrollmentDuplicate(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  args: {
+    tenantId: string
+    courseId: string
+    userId: string
+    faberid: string | null
+    email: string | null
+    sariManaged: boolean
+    paymentOption: AdminPaymentOption
+  },
+): Promise<
+  | { action: 'continue' }
+  | { action: 'reject'; statusMessage: string }
+  | { action: 'repair'; registration: AdminRegistrationRow }
+> {
+  const columns = 'id, tenant_id, course_id, sari_faberid, status, payment_method'
+  const found = new Map<string, AdminRegistrationRow>()
+  let sawEmailOnly = false
+
+  const add = (rows: AdminRegistrationRow[] | null, source: 'user' | 'faber' | 'email') => {
+    for (const row of rows || []) {
+      if (!found.has(row.id) && source === 'email') sawEmailOnly = found.size === 0
+      if (source !== 'email') sawEmailOnly = false
+      found.set(row.id, row)
+    }
+  }
+
+  const base = () => supabase
+    .from('course_registrations')
+    .select(columns)
+    .eq('tenant_id', args.tenantId)
+    .eq('course_id', args.courseId)
+    .is('deleted_at', null)
+
+  const byUser = await base()
+    .eq('user_id', args.userId)
+    .in('status', ['confirmed', 'pending', 'enrolled'])
+  if (byUser.error) {
+    throw createError({ statusCode: 500, statusMessage: 'Anmeldung konnte nicht geprüft werden' })
+  }
+  add((byUser.data || []) as AdminRegistrationRow[], 'user')
+
+  if (args.faberid) {
+    const byFaber = await base()
+      .eq('sari_faberid', args.faberid)
+      .in('status', ['confirmed', 'pending'])
+    if (byFaber.error) {
+      throw createError({ statusCode: 500, statusMessage: 'Anmeldung konnte nicht geprüft werden' })
+    }
+    add((byFaber.data || []) as AdminRegistrationRow[], 'faber')
+  }
+
+  if (args.email) {
+    const byEmail = await base()
+      .eq('email', args.email)
+      .in('status', ['confirmed', 'pending'])
+    if (byEmail.error) {
+      throw createError({ statusCode: 500, statusMessage: 'Anmeldung konnte nicht geprüft werden' })
+    }
+    add((byEmail.data || []) as AdminRegistrationRow[], 'email')
+  }
+
+  if (found.size === 0) return { action: 'continue' }
+  if (found.size > 1) {
+    return { action: 'reject', statusMessage: 'Die bestehende Anmeldung ist nicht eindeutig.' }
+  }
+  const registration = [...found.values()][0]
+  const canRepair = args.sariManaged
+    && args.paymentOption !== 'reserve'
+    && args.paymentOption !== 'online_link'
+    && isSameConfirmedEnrollment(registration, {
+      tenantId: args.tenantId,
+      courseId: args.courseId,
+      faberid: args.faberid,
+    })
+  if (canRepair) return { action: 'repair', registration }
+  return {
+    action: 'reject',
+    statusMessage: sawEmailOnly && !args.faberid
+      ? 'Diese E-Mail ist bereits für diesen Kurs angemeldet'
+      : 'Dieser Kunde ist bereits für diesen Kurs angemeldet',
+  }
+}
+
 async function trySariEnroll(opts: {
   tenantId: string
   course: any
@@ -234,30 +390,19 @@ async function trySariEnroll(opts: {
 
   try {
     const sari = new SARIClient(credentials)
-    const sessions: any[] = opts.course.course_sessions || []
-    let relevant = sessions.filter((s: any) => s.sari_session_id)
-
-    if (opts.enrollmentType === 'partial') {
-      const start = opts.partialStartPosition ?? 3
-      relevant = relevant.filter((s: any) => (s.session_number ?? 99) >= start)
-    } else if (opts.enrollmentType === 'individual' && opts.partialStartPosition) {
-      // reuse partialStartPosition slot for individual session number when set that way
-      relevant = relevant.filter((s: any) => s.session_number === opts.partialStartPosition)
-    }
+    const relevant = adminConfirmedSariSessions(opts.course, opts.enrollmentType, opts.partialStartPosition)
 
     const confirmed: ConfirmedAdminSariSession[] = []
     for (const session of relevant) {
-      const sariSessionId = parsePositiveSariSessionId(session.sari_session_id)
-      if (sariSessionId == null) continue
       try {
-        await sari.enrollStudent(sariSessionId, faberidClean, opts.birthdate)
-        confirmed.push({ sariSessionId, courseSessionId: session.id || null })
+        await sari.enrollStudent(session.sariSessionId, faberidClean, opts.birthdate)
+        confirmed.push(session)
       } catch (err: any) {
         const msg = err?.message || ''
         if (msg.includes('ALREADY_ENROLLED') || msg.includes('PERSON_ALREADY_ADDED')) {
-          confirmed.push({ sariSessionId, courseSessionId: session.id || null })
+          confirmed.push(session)
         } else {
-          logger.warn(`⚠️ Admin SARI enroll session ${sariSessionId} failed:`, msg)
+          logger.warn(`⚠️ Admin SARI enroll session ${session.sariSessionId} failed:`, msg)
         }
       }
     }
@@ -328,17 +473,15 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
     }
   }
 
-  // Capacity
+  // Capacity is enforced for a new registration. An existing confirmed row must
+  // still be able to repair a missing SARI snapshot even when it fills the course.
   const { count: activeCount } = await supabase
     .from('course_registrations')
     .select('id', { count: 'exact', head: true })
     .eq('course_id', opts.courseId)
     .neq('status', 'cancelled')
     .is('deleted_at', null)
-
-  if ((activeCount || 0) >= (course.max_participants || 0)) {
-    throw createError({ statusCode: 409, statusMessage: 'Kurs ist bereits ausgebucht' })
-  }
+  const courseIsFull = (activeCount || 0) >= (course.max_participants || 0)
 
   const { userId, user } = await resolveOrCreateUser(
     supabase,
@@ -367,41 +510,36 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
   const birthdate = opts.participant.birthdate || user.birthdate || null
   const faberid = (opts.participant.faberid || user.faberid || null)?.replace(/\./g, '') || null
 
-  // Duplicate checks
-  {
-    const { data: dupUser } = await supabase
-      .from('course_registrations')
-      .select('id')
-      .eq('course_id', opts.courseId)
-      .eq('user_id', userId)
-      .in('status', ['confirmed', 'pending', 'enrolled'])
-      .is('deleted_at', null)
-      .maybeSingle()
-    if (dupUser) {
-      throw createError({ statusCode: 409, statusMessage: 'Dieser Kunde ist bereits für diesen Kurs angemeldet' })
-    }
+  const duplicate = await locateAdminEnrollmentDuplicate(supabase, {
+    tenantId: opts.tenantId,
+    courseId: opts.courseId,
+    userId,
+    faberid,
+    email,
+    sariManaged: !!course.sari_managed,
+    paymentOption,
+  })
+  if (duplicate.action === 'repair') {
+    await repairExistingAdminEnrollment({
+      supabase,
+      tenantId: opts.tenantId,
+      course,
+      registration: duplicate.registration,
+      faberid: faberid || '',
+      birthdate: birthdate || '',
+      enrollmentType,
+      partialStartPosition: enrollmentType === 'individual' ? opts.individualSessionNumber : (
+        opts.partialStartPosition
+        || (course.course_category as any)?.partial_start_position
+        || 3
+      ),
+    })
   }
-  if (faberid) {
-    const { data: dupF } = await supabase
-      .from('course_registrations')
-      .select('id')
-      .eq('course_id', opts.courseId)
-      .eq('sari_faberid', faberid)
-      .in('status', ['confirmed', 'pending'])
-      .is('deleted_at', null)
-      .maybeSingle()
-    if (dupF) throw createError({ statusCode: 409, statusMessage: 'Dieser Kunde ist bereits für diesen Kurs angemeldet' })
+  if (duplicate.action === 'reject') {
+    throw createError({ statusCode: 409, statusMessage: duplicate.statusMessage })
   }
-  if (email) {
-    const { data: dupE } = await supabase
-      .from('course_registrations')
-      .select('id')
-      .eq('course_id', opts.courseId)
-      .eq('email', email)
-      .in('status', ['confirmed', 'pending'])
-      .is('deleted_at', null)
-      .maybeSingle()
-    if (dupE) throw createError({ statusCode: 409, statusMessage: 'Diese E-Mail ist bereits für diesen Kurs angemeldet' })
+  if (courseIsFull) {
+    throw createError({ statusCode: 409, statusMessage: 'Kurs ist bereits ausgebucht' })
   }
 
   const paymentFields = isCompanyCollective && paymentOption === 'invoice'

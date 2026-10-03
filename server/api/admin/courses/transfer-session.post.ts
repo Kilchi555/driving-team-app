@@ -29,7 +29,12 @@ import {
   isUnresolvedSariRegistration,
   listRegistrationSariMemberships,
 } from '~/server/utils/registration-sari-membership'
-import { applySariSessionTransfer } from '~/server/utils/sari-session-transfer'
+import {
+  applySariSessionTransfer,
+  assertTransferMembershipCoverage,
+  collectPositionSariIds,
+  retainedMembershipIdsForUnmovedParts,
+} from '~/server/utils/sari-session-transfer'
 import { logger } from '~/utils/logger'
 import { sendTenantEmail } from '~/server/utils/email'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
@@ -291,6 +296,19 @@ export default defineEventHandler(async (event) => {
         data: { sariSynced: false },
       })
     }
+    const idsByPosition = collectPositionSariIds(positionMap, currentCustom)
+    const retainedMembershipIds = retainedMembershipIdsForUnmovedParts({
+      memberships: existingMemberships,
+      movedPositions: prepared.map((change) => change.sessionPosition),
+      idsByPosition,
+    })
+    if (existingMemberships.length > 0) {
+      assertTransferMembershipCoverage({
+        memberships: existingMemberships,
+        changes: prepared,
+        retainedMembershipIds,
+      })
+    }
     const credentials = await getSARICredentialsSecure(profile.tenant_id, 'ADMIN_TRANSFER_SESSION')
     if (!credentials) {
       sariWarning = 'Keine SARI-Zugangsdaten — nur lokal gespeichert'
@@ -332,6 +350,7 @@ export default defineEventHandler(async (event) => {
             birthdate: birthdate || '',
             changes: prepared,
             memberships: existingMemberships,
+            retainedMembershipIds,
           })
           sariSynced = true
         }

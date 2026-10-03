@@ -18,8 +18,11 @@ import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 import {
   isConfirmedSariEnrollDuplicate,
+  isSameConfirmedEnrollment,
   parsePositiveSariSessionId,
+  persistConfirmedEnrollmentSnapshots,
   recordConfirmedSariMembershipWithRetry,
+  resumeExistingConfirmedEnrollment,
   SARI_MEMBERSHIP_SOURCE,
   setRegistrationSariSynced,
   strictSariIdsFromGroup,
@@ -60,6 +63,148 @@ const rateLimiter = createRateLimitMiddleware({
     return event.node.req.socket?.remoteAddress || 'unknown'
   }
 })
+
+type CashRegistrationRow = {
+  id: string
+  tenant_id: string
+  course_id: string
+  sari_faberid: string | null
+  status: string
+  payment_method: string | null
+}
+
+function resolveCashSariSessionIds(args: {
+  course: any
+  isPartial: boolean
+  isIndividualSess: boolean
+  individualSessionNumber?: number
+  customSessions: unknown
+}): string[] {
+  let sariSessionIds = strictSariIdsFromGroup(args.course.sari_course_id).map(String)
+  const { course, isPartial, isIndividualSess, individualSessionNumber, customSessions } = args
+
+  if (isPartial && !course.is_partial_only && !isIndividualSess && course.course_category && !course.course_category.allow_partial_enrollment) {
+    throw createError({ statusCode: 400, statusMessage: 'Teilbuchung ist für diesen Kurs nicht erlaubt.' })
+  }
+
+  if (isIndividualSess) {
+    const targetSess = (course.course_sessions || []).find(
+      (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
+    )
+    const individualSariId = parsePositiveSariSessionId(targetSess?.sari_session_id)
+    if (individualSariId != null) {
+      sariSessionIds = [String(individualSariId)]
+    } else if (sariSessionIds.length >= (individualSessionNumber || 0)) {
+      sariSessionIds = [sariSessionIds[(individualSessionNumber || 1) - 1]]
+    }
+    logger.info(`🎯 Individual session ${individualSessionNumber}: enrolling in ${sariSessionIds.join(',')}`)
+  } else {
+    const dbStartPos: number = course.course_category?.partial_start_position ?? 3
+    if (isPartial && dbStartPos > 1 && course.course_sessions?.length > 0) {
+      const startPos = dbStartPos
+      const sortedSessions = [...course.course_sessions].sort((a: any, b: any) =>
+        a.start_time.localeCompare(b.start_time)
+      )
+      let pos = 0
+      let lastDate = ''
+      const sessionPosMap: Record<string, number> = {}
+      for (const s of sortedSessions) {
+        const d = s.start_time.split('T')[0]
+        if (d !== lastDate) { pos++; lastDate = d }
+        if (s.sari_session_id) sessionPosMap[s.sari_session_id] = pos
+      }
+      sariSessionIds = sariSessionIds.filter(id => {
+        const p = sessionPosMap[id]
+        return p === undefined || p >= startPos
+      })
+      logger.info(`🎯 Partial enrollment: keeping ${sariSessionIds.length} session(s) from position ${startPos}`)
+    }
+  }
+
+  if (customSessions && typeof customSessions === 'object') {
+    logger.info('🔄 Applying custom sessions for SARI enrollment:', customSessions)
+    for (const [position, customData] of Object.entries(customSessions)) {
+      const custom = customData as any
+      const originalIds = custom?.originalSariIds || []
+      const newIds = custom?.sariSessionIds || (custom?.sariSessionId ? [custom.sariSessionId] : [])
+      logger.debug(`📍 Position ${position}: originalIds=${originalIds.join(',')}, newIds=${newIds.join(',')}`)
+      if (originalIds.length > 0 && newIds.length > 0) {
+        for (let i = 0; i < originalIds.length && i < newIds.length; i++) {
+          const origId = originalIds[i]
+          const newId = newIds[i]
+          const strictNewId = parsePositiveSariSessionId(newId)
+          const idx = sariSessionIds.findIndex((id: string) => id === origId || id === String(origId))
+          if (idx >= 0 && strictNewId != null) {
+            logger.debug(`📝 Replacing session ID ${sariSessionIds[idx]} → ${strictNewId} at index ${idx}`)
+            sariSessionIds[idx] = String(strictNewId)
+          } else {
+            logger.warn(`⚠️ Original session ID ${origId} not found in course sessions`)
+          }
+        }
+      } else if (newIds.length > 0 && originalIds.length === 0) {
+        logger.warn('⚠️ Using legacy position-based replacement (no originalSariIds)')
+        const courseSessions = course.course_sessions || []
+        const sessionsPerPosition: number[] = []
+        if (courseSessions.length > 0) {
+          const byDate: Map<string, number> = new Map()
+          for (const session of courseSessions) {
+            const date = session.start_time.split('T')[0]
+            byDate.set(date, (byDate.get(date) || 0) + 1)
+          }
+          for (const count of byDate.values()) sessionsPerPosition.push(count)
+        } else if (sariSessionIds.length === 4) {
+          sessionsPerPosition.push(2, 2)
+        } else {
+          sessionsPerPosition.push(...Array(sariSessionIds.length).fill(1))
+        }
+        const posNum = parseInt(position)
+        let startIdx = 0
+        for (let p = 0; p < posNum - 1 && p < sessionsPerPosition.length; p++) {
+          startIdx += sessionsPerPosition[p]
+        }
+        for (let i = 0; i < newIds.length && (startIdx + i) < sariSessionIds.length; i++) {
+          const strictNewId = parsePositiveSariSessionId(newIds[i])
+          if (strictNewId == null) continue
+          logger.debug(`📝 Legacy replacing session at index ${startIdx + i}: ${sariSessionIds[startIdx + i]} → ${strictNewId}`)
+          sariSessionIds[startIdx + i] = String(strictNewId)
+        }
+      }
+    }
+  }
+
+  return sariSessionIds
+}
+
+async function loadCashFaberRegistrations(
+  supabase: any,
+  tenantId: string,
+  courseId: string,
+  faberid: string,
+): Promise<CashRegistrationRow[]> {
+  const { data, error } = await supabase
+    .from('course_registrations')
+    .select('id, tenant_id, course_id, sari_faberid, status, payment_method')
+    .eq('tenant_id', tenantId)
+    .eq('course_id', courseId)
+    .eq('sari_faberid', faberid)
+    .in('status', ['confirmed', 'pending'])
+    .is('deleted_at', null)
+  if (error) {
+    throw createError({ statusCode: 500, statusMessage: 'Anmeldung konnte nicht geprüft werden.' })
+  }
+  return (data || []) as CashRegistrationRow[]
+}
+
+function cashSessionsFromIds(course: any, tenantId: string, sessionIds: string[]) {
+  return sessionIds.flatMap((id) => {
+    const sariSessionId = parsePositiveSariSessionId(id)
+    if (sariSessionId == null) return []
+    return [{
+      sariSessionId,
+      courseSessionId: uniqueLocalCourseSessionId(course.course_sessions, sariSessionId, tenantId),
+    }]
+  })
+}
 
 const handler = defineEventHandler(async (event) => {
   try {
@@ -239,18 +384,52 @@ const handler = defineEventHandler(async (event) => {
       logger.debug('✅ Non-SARI cash enrollment:', `${firstName} ${lastName}`)
     }
 
-    // 7. Duplicate check (SARI: by faberid; non-SARI: by email)
-    if (course.sari_managed && faberidClean) {
-      const { data: existingEnrollment } = await supabase
-        .from('course_registrations')
-        .select('id')
-        .eq('course_id', courseId)
-        .eq('sari_faberid', faberidClean)
-        .in('status', ['confirmed', 'pending'])
-        .maybeSingle()
+    const isPartial = !!(isPartialEnrollment || course.is_partial_only)
+    const isIndividualSess =
+      isPartial && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
 
-      if (existingEnrollment) {
+    // 7. Duplicate check (SARI: by faberid; non-SARI: by email).
+    // A confirmed same-tenant/course/Faber row with a missing snapshot is repaired
+    // from this attempt's strict session ids, then the duplicate response is returned.
+    if (course.sari_managed && faberidClean) {
+      const existingRows = await loadCashFaberRegistrations(supabase, tenantId, courseId, faberidClean)
+      if (existingRows.length > 1) {
+        throw createError({ statusCode: 409, statusMessage: 'Die bestehende Anmeldung ist nicht eindeutig.' })
+      }
+      const existingEnrollment = existingRows[0]
+      if (existingEnrollment && !course.sari_course_id) {
         throw createError({ statusCode: 409, statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.' })
+      }
+      if (existingEnrollment && !isSameConfirmedEnrollment(existingEnrollment, {
+        tenantId,
+        courseId,
+        faberid: faberidClean,
+      })) {
+        throw createError({ statusCode: 409, statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.' })
+      }
+      if (existingEnrollment && course.sari_course_id) {
+        const sessionIds = resolveCashSariSessionIds({
+          course,
+          isPartial,
+          isIndividualSess,
+          individualSessionNumber,
+          customSessions,
+        })
+        if (sessionIds.length === 0) {
+          throw createError({ statusCode: 400, statusMessage: 'Ungültiges Kursformat. Bitte kontaktieren Sie uns.' })
+        }
+        await resumeExistingConfirmedEnrollment({
+          supabase,
+          sari,
+          tenantId,
+          courseId,
+          registration: existingEnrollment,
+          faberid: faberidClean,
+          birthdate,
+          sessions: cashSessionsFromIds(course, tenantId, sessionIds),
+          source: SARI_MEMBERSHIP_SOURCE.cashEnrollment,
+          duplicateStatusMessage: 'Sie sind bereits für diesen Kurs angemeldet.',
+        })
       }
     }
 
@@ -375,67 +554,22 @@ const handler = defineEventHandler(async (event) => {
       }
     }
 
-    // Partial / individual flags are needed for the registration insert even when
-    // the course is NOT SARI-managed. Previously these lived only inside the SARI
-    // block → ReferenceError on every non-SARI cash enroll (Gemperli VKU etc.).
-    const isPartial = !!(isPartialEnrollment || course.is_partial_only)
-    const isIndividualSess =
-      isPartial && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
+    // Flags are computed before the duplicate check so a retry can repair snapshots
+    // without creating a second registration. They stay in this scope for the insert.
     const confirmedSariSessions: Array<{ sariSessionId: number; courseSessionId: string | null }> = []
     let sariErrorCount = 0
 
     // 9. SARI sync FIRST (before DB save) - if managed
     // Enroll in ALL sessions (GROUP_2159157_2159158_2159159 → [2159157, 2159158, 2159159])
     if (course.sari_managed && course.sari_course_id && faberidClean) {
-      // Extract ALL session IDs from the group
-      let sariSessionIds = strictSariIdsFromGroup(course.sari_course_id).map(String)
+      const sariSessionIds = resolveCashSariSessionIds({
+        course,
+        isPartial,
+        isIndividualSess,
+        individualSessionNumber,
+        customSessions,
+      })
 
-      // For partial enrollment, only keep session IDs from partial_start_position onwards.
-      // Session IDs are ordered, so we resolve position from course_sessions by date grouping.
-
-      // Validate: partial enrollment is blocked only when a category IS linked and explicitly
-      // disallows it. Courses without a category have no restriction.
-      if (isPartial && !course.is_partial_only && !isIndividualSess && course.course_category && !course.course_category.allow_partial_enrollment) {
-        throw createError({ statusCode: 400, statusMessage: 'Teilbuchung ist für diesen Kurs nicht erlaubt.' })
-      }
-
-      if (isIndividualSess) {
-        // Individual session booking: only enroll in the specific session
-        const targetSess = (course.course_sessions || []).find(
-          (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
-        )
-        const individualSariId = parsePositiveSariSessionId(targetSess?.sari_session_id)
-        if (individualSariId != null) {
-          sariSessionIds = [String(individualSariId)]
-        } else if (sariSessionIds.length >= individualSessionNumber) {
-          sariSessionIds = [sariSessionIds[individualSessionNumber - 1]]
-        }
-        logger.info(`🎯 Individual session ${individualSessionNumber}: enrolling in ${sariSessionIds.join(',')}`)
-      } else {
-      const dbStartPos: number = course.course_category?.partial_start_position ?? 3
-
-      if (isPartial && dbStartPos > 1 && course.course_sessions?.length > 0) {
-        const startPos = dbStartPos
-        const sortedSessions = [...course.course_sessions].sort((a: any, b: any) =>
-          a.start_time.localeCompare(b.start_time)
-        )
-        // Map date → position
-        let pos = 0
-        let lastDate = ''
-        const sessionPosMap: Record<string, number> = {}
-        for (const s of sortedSessions) {
-          const d = s.start_time.split('T')[0]
-          if (d !== lastDate) { pos++; lastDate = d }
-          if (s.sari_session_id) sessionPosMap[s.sari_session_id] = pos
-        }
-        sariSessionIds = sariSessionIds.filter(id => {
-          const p = sessionPosMap[id]
-          return p === undefined || p >= startPos
-        })
-        logger.info(`🎯 Partial enrollment: keeping ${sariSessionIds.length} session(s) from position ${startPos}`)
-      }
-      } // end else (not individual session)
-      
       if (sariSessionIds.length === 0) {
         logger.error('❌ Invalid SARI course ID format:', course.sari_course_id)
         throw createError({
@@ -443,74 +577,7 @@ const handler = defineEventHandler(async (event) => {
           statusMessage: 'Ungültiges Kursformat. Bitte kontaktieren Sie uns.'
         })
       }
-      
-      // Apply custom sessions if any were selected (same logic as Wallee webhook)
-      if (customSessions && typeof customSessions === 'object') {
-        logger.info('🔄 Applying custom sessions for SARI enrollment:', customSessions)
-        
-        for (const [position, customData] of Object.entries(customSessions)) {
-          const custom = customData as any
-          
-          // Get original IDs to replace and new IDs
-          const originalIds = custom?.originalSariIds || []
-          const newIds = custom?.sariSessionIds || (custom?.sariSessionId ? [custom.sariSessionId] : [])
-          
-          logger.debug(`📍 Position ${position}: originalIds=${originalIds.join(',')}, newIds=${newIds.join(',')}`)
-          
-          if (originalIds.length > 0 && newIds.length > 0) {
-            // Replace each original ID with corresponding new ID
-            for (let i = 0; i < originalIds.length && i < newIds.length; i++) {
-              const origId = originalIds[i]
-              const newId = newIds[i]
-              
-              const strictNewId = parsePositiveSariSessionId(newId)
-              const idx = sariSessionIds.findIndex((id: string) => id === origId || id === String(origId))
-              if (idx >= 0 && strictNewId != null) {
-                logger.debug(`📝 Replacing session ID ${sariSessionIds[idx]} → ${strictNewId} at index ${idx}`)
-                sariSessionIds[idx] = String(strictNewId)
-              } else {
-                logger.warn(`⚠️ Original session ID ${origId} not found in course sessions`)
-              }
-            }
-          } else if (newIds.length > 0 && originalIds.length === 0) {
-            // Legacy fallback: Position-based replacement
-            logger.warn('⚠️ Using legacy position-based replacement (no originalSariIds)')
-            
-            // Group sessions by date to understand position mapping
-            const courseSessions = course.course_sessions || []
-            const sessionsPerPosition: number[] = []
-            
-            if (courseSessions.length > 0) {
-              const byDate: Map<string, number> = new Map()
-              for (const session of courseSessions) {
-                const date = session.start_time.split('T')[0]
-                byDate.set(date, (byDate.get(date) || 0) + 1)
-              }
-              for (const count of byDate.values()) {
-                sessionsPerPosition.push(count)
-              }
-            } else if (sariSessionIds.length === 4) {
-              sessionsPerPosition.push(2, 2) // Assume VKU pattern
-            } else {
-              sessionsPerPosition.push(...Array(sariSessionIds.length).fill(1))
-            }
-            
-            const posNum = parseInt(position)
-            let startIdx = 0
-            for (let p = 0; p < posNum - 1 && p < sessionsPerPosition.length; p++) {
-              startIdx += sessionsPerPosition[p]
-            }
-            
-            for (let i = 0; i < newIds.length && (startIdx + i) < sariSessionIds.length; i++) {
-              const strictNewId = parsePositiveSariSessionId(newIds[i])
-              if (strictNewId == null) continue
-              logger.debug(`📝 Legacy replacing session at index ${startIdx + i}: ${sariSessionIds[startIdx + i]} → ${strictNewId}`)
-              sariSessionIds[startIdx + i] = String(strictNewId)
-            }
-          }
-        }
-      }
-      
+
       logger.info(`🎯 Enrolling in SARI for ${sariSessionIds.length} sessions: ${sariSessionIds.join(', ')}`)
       
       // Enroll in ALL sessions. Membership rows are written only for ids SARI confirmed,
@@ -626,21 +693,39 @@ const handler = defineEventHandler(async (event) => {
       // Provide clearer error messages
       if (enrollmentError?.message?.includes('duplicate key')) {
         if (
+          faberidClean
+          && (
+            enrollmentError.message.includes('course_id_sari_faberid')
+            || enrollmentError.message.includes('unique_faberid')
+          )
+        ) {
+          const raced = await loadCashFaberRegistrations(supabase, tenantId, courseId, faberidClean)
+          if (raced.length === 1 && isSameConfirmedEnrollment(raced[0], {
+            tenantId,
+            courseId,
+            faberid: faberidClean,
+          })) {
+            await persistConfirmedEnrollmentSnapshots({
+              supabase,
+              tenantId,
+              registrationId: raced[0].id,
+              sessions: confirmedSariSessions,
+              source: SARI_MEMBERSHIP_SOURCE.cashEnrollment,
+              markSynced: sariErrorCount === 0 && confirmedSariSessions.length > 0,
+            })
+          }
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.'
+          })
+        }
+        if (
           enrollmentError.message.includes('course_id_email_key') ||
           enrollmentError.message.includes('unique_email')
         ) {
           throw createError({
             statusCode: 409,
             statusMessage: 'Diese E-Mail-Adresse ist bereits für diesen Kurs angemeldet.'
-          })
-        }
-        if (
-          enrollmentError.message.includes('course_id_sari_faberid') ||
-          enrollmentError.message.includes('unique_faberid')
-        ) {
-          throw createError({
-            statusCode: 409,
-            statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.'
           })
         }
       }

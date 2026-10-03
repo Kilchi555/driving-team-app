@@ -18,6 +18,7 @@ function memoryDb() {
     payments: [],
   }
   let failMembershipInsert = false
+  let failMembershipDelete = false
 
   function from(table: string) {
     const filters: Array<(row: Row) => boolean> = []
@@ -47,6 +48,9 @@ function memoryDb() {
         return { data: null, error: null }
       }
       if (op === 'delete') {
+        if (table === 'registration_sari_memberships' && failMembershipDelete) {
+          return { data: null, error: { code: 'XX000', message: 'membership delete failed' } }
+        }
         tables[table] = rows.filter((row) => !filters.every((match) => match(row)))
         return { data: null, error: null }
       }
@@ -103,6 +107,9 @@ function memoryDb() {
     tables,
     setFailMembershipInsert(value: boolean) {
       failMembershipInsert = value
+    },
+    setFailMembershipDelete(value: boolean) {
+      failMembershipDelete = value
     },
   }
 }
@@ -306,5 +313,120 @@ describe('transfer-session membership order', () => {
     expect(events[0]).toBe('insert:2110099')
     expect(events.at(-1)).toBe('delete-old')
     expect(db.tables.registration_sari_memberships.map((row) => row.sari_session_id)).toEqual([2110099])
+  })
+
+  it('keeps a membership that belongs only to a part that is not moving', async () => {
+    const db = dbWithMembership()
+    const retained = {
+      ...membership,
+      id: 'm2',
+      sari_session_id: 2110028,
+    }
+    db.tables.registration_sari_memberships.push({ ...retained })
+    const sari = {
+      unenrollStudent: vi.fn(async () => undefined),
+      enrollStudent: vi.fn(async () => undefined),
+    }
+    await applySariSessionTransfer({
+      supabase: db as never,
+      sari,
+      tenantId: TENANT,
+      registrationId: REG,
+      faberid: '7181751',
+      birthdate: '2000-01-02',
+      changes: [{ oldSariIds: ['2110027'], targetSariSessionIds: ['2110099'] }],
+      memberships: [membership, retained],
+      retainedMembershipIds: [2110028],
+    })
+    expect(db.tables.registration_sari_memberships.map((row) => row.sari_session_id).sort()).toEqual([2110028, 2110099])
+  })
+
+  it('fails closed when a relevant membership is missing from oldSariIds', async () => {
+    const db = dbWithMembership()
+    const extra = { ...membership, id: 'm-extra', sari_session_id: 2110088 }
+    db.tables.registration_sari_memberships.push({ ...extra })
+    const sari = {
+      unenrollStudent: vi.fn(async () => undefined),
+      enrollStudent: vi.fn(async () => undefined),
+    }
+    let customSessionsSaved = false
+    await expect(applySariSessionTransfer({
+      supabase: db as never,
+      sari,
+      tenantId: TENANT,
+      registrationId: REG,
+      faberid: '7181751',
+      birthdate: '2000-01-02',
+      changes: [{ oldSariIds: ['2110027'], targetSariSessionIds: ['2110099'] }],
+      memberships: [membership, extra],
+    }).then(() => {
+      customSessionsSaved = true
+    })).rejects.toMatchObject({ statusCode: 409 })
+    expect(customSessionsSaved).toBe(false)
+    expect(sari.unenrollStudent).not.toHaveBeenCalled()
+    expect(sari.enrollStudent).not.toHaveBeenCalled()
+    expect(db.tables.registration_sari_memberships.map((row) => row.sari_session_id).sort()).toEqual([2110027, 2110088])
+  })
+
+  it('fails closed when oldSariIds are empty but a relevant membership exists', async () => {
+    const db = dbWithMembership()
+    const sari = {
+      unenrollStudent: vi.fn(async () => undefined),
+      enrollStudent: vi.fn(async () => undefined),
+    }
+    await expect(applySariSessionTransfer({
+      supabase: db as never,
+      sari,
+      tenantId: TENANT,
+      registrationId: REG,
+      faberid: '7181751',
+      birthdate: '2000-01-02',
+      changes: [{ oldSariIds: [], targetSariSessionIds: ['2110099'] }],
+      memberships: [membership],
+    })).rejects.toMatchObject({ statusCode: 409 })
+    expect(sari.unenrollStudent).not.toHaveBeenCalled()
+    expect(sari.enrollStudent).not.toHaveBeenCalled()
+    expect(db.tables.registration_sari_memberships.map((row) => row.sari_session_id)).toEqual([2110027])
+  })
+
+  it('keeps the old membership when the target snapshot cannot be written', async () => {
+    const db = dbWithMembership()
+    db.setFailMembershipInsert(true)
+    const sari = {
+      unenrollStudent: vi.fn(async () => undefined),
+      enrollStudent: vi.fn(async () => undefined),
+    }
+    await expect(applySariSessionTransfer({
+      supabase: db as never,
+      sari,
+      tenantId: TENANT,
+      registrationId: REG,
+      faberid: '7181751',
+      birthdate: '2000-01-02',
+      changes: [{ oldSariIds: ['2110027'], targetSariSessionIds: ['2110099'] }],
+      memberships: [membership],
+    })).rejects.toMatchObject({ code: 'persist_failed' })
+    expect(sari.enrollStudent).toHaveBeenCalledWith(2110099, '7181751', '2000-01-02')
+    expect(db.tables.registration_sari_memberships.map((row) => row.sari_session_id)).toEqual([2110027])
+  })
+
+  it('does not report success when deleting the old membership fails', async () => {
+    const db = dbWithMembership()
+    db.setFailMembershipDelete(true)
+    const sari = {
+      unenrollStudent: vi.fn(async () => undefined),
+      enrollStudent: vi.fn(async () => undefined),
+    }
+    await expect(applySariSessionTransfer({
+      supabase: db as never,
+      sari,
+      tenantId: TENANT,
+      registrationId: REG,
+      faberid: '7181751',
+      birthdate: '2000-01-02',
+      changes: [{ oldSariIds: ['2110027'], targetSariSessionIds: ['2110099'] }],
+      memberships: [membership],
+    })).rejects.toMatchObject({ code: 'delete_failed' })
+    expect(db.tables.registration_sari_memberships.map((row) => row.sari_session_id).sort()).toEqual([2110027, 2110099])
   })
 })

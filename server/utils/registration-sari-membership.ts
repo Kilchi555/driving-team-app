@@ -1,3 +1,4 @@
+import { createError } from 'h3'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
@@ -98,6 +99,148 @@ export function strictSariIdsFromGroup(value: unknown): number[] {
 export function isConfirmedSariEnrollDuplicate(message: string | undefined | null): boolean {
   const text = message || ''
   return text.includes('ALREADY_ENROLLED') || text.includes('PERSON_ALREADY_ADDED')
+}
+
+export function normalizeFaberid(value: unknown): string {
+  return String(value || '').replace(/\./g, '').trim()
+}
+
+/** Same tenant, same course, same Faber-ID, confirmed, and not a reserved seat. */
+export function isSameConfirmedEnrollment(
+  row: {
+    tenant_id?: unknown
+    course_id?: unknown
+    sari_faberid?: unknown
+    status?: unknown
+    payment_method?: unknown
+  },
+  expected: { tenantId: string; courseId: string; faberid: unknown },
+): boolean {
+  const faberid = normalizeFaberid(expected.faberid)
+  return row.tenant_id === expected.tenantId
+    && row.course_id === expected.courseId
+    && faberid.length > 0
+    && normalizeFaberid(row.sari_faberid) === faberid
+    && row.status === 'confirmed'
+    && row.payment_method !== 'reserved'
+}
+
+export async function persistConfirmedEnrollmentSnapshots(args: {
+  supabase: MembershipDb
+  tenantId: string
+  registrationId: string
+  sessions: Array<{ sariSessionId: number; courseSessionId: string | null }>
+  source: string
+  markSynced: boolean
+}): Promise<void> {
+  for (const session of args.sessions) {
+    await recordConfirmedSariMembershipWithRetry({
+      supabase: args.supabase,
+      tenantId: args.tenantId,
+      registrationId: args.registrationId,
+      sariSessionId: session.sariSessionId,
+      courseSessionId: session.courseSessionId,
+      source: args.source,
+    })
+  }
+  if (!args.markSynced || args.sessions.length === 0) return
+  const rows = await listRegistrationSariMemberships(args.supabase, args.tenantId, args.registrationId)
+  const have = new Set(rows.map((row) => row.sari_session_id))
+  if (args.sessions.every((session) => have.has(session.sariSessionId))) {
+    await setRegistrationSariSynced(args.supabase, args.tenantId, args.registrationId, true)
+  }
+}
+
+/**
+ * Repair snapshots on one existing registration after SARI confirms the same ids.
+ * Ids that already have a row are not sent to SARI again. Always ends by throwing
+ * the duplicate response, or a hard failure when the snapshot is still incomplete.
+ */
+export async function resumeExistingConfirmedEnrollment(args: {
+  supabase: MembershipDb
+  sari: { enrollStudent: (courseId: number, faberid: string, birthdate: string) => Promise<void> }
+  tenantId: string
+  courseId: string
+  registration: {
+    id: string
+    tenant_id?: unknown
+    course_id?: unknown
+    sari_faberid?: unknown
+    status?: unknown
+    payment_method?: unknown
+  }
+  faberid: string
+  birthdate: string
+  sessions: Array<{ sariSessionId: number; courseSessionId: string | null }>
+  source: string
+  duplicateStatusMessage: string
+}): Promise<never> {
+  if (!isSameConfirmedEnrollment(args.registration, {
+    tenantId: args.tenantId,
+    courseId: args.courseId,
+    faberid: args.faberid,
+  })) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'Die bestehende Anmeldung gehört nicht zu diesem Kurs.',
+    })
+  }
+
+  if (args.sessions.length === 0) {
+    throw createError({ statusCode: 409, statusMessage: args.duplicateStatusMessage })
+  }
+
+  const memberships = await listRegistrationSariMemberships(
+    args.supabase,
+    args.tenantId,
+    args.registration.id,
+  )
+  const have = new Set(memberships.map((row) => row.sari_session_id))
+  const missing = args.sessions.filter((session) => !have.has(session.sariSessionId))
+
+  if (missing.length === 0) {
+    await setRegistrationSariSynced(args.supabase, args.tenantId, args.registration.id, true)
+    throw createError({ statusCode: 409, statusMessage: args.duplicateStatusMessage })
+  }
+
+  const confirmed: Array<{ sariSessionId: number; courseSessionId: string | null }> = []
+  for (const session of missing) {
+    try {
+      await args.sari.enrollStudent(session.sariSessionId, args.faberid, args.birthdate)
+      confirmed.push(session)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : ''
+      if (isConfirmedSariEnrollDuplicate(message)) confirmed.push(session)
+    }
+  }
+
+  try {
+    await persistConfirmedEnrollmentSnapshots({
+      supabase: args.supabase,
+      tenantId: args.tenantId,
+      registrationId: args.registration.id,
+      sessions: confirmed,
+      source: args.source,
+      markSynced: false,
+    })
+  } catch {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'SARI enrollment succeeded, but the membership could not be saved',
+    })
+  }
+
+  const after = await listRegistrationSariMemberships(args.supabase, args.tenantId, args.registration.id)
+  const afterIds = new Set(after.map((row) => row.sari_session_id))
+  const complete = args.sessions.every((session) => afterIds.has(session.sariSessionId))
+  if (!complete) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'SARI enrollment succeeded, but the membership could not be saved',
+    })
+  }
+  await setRegistrationSariSynced(args.supabase, args.tenantId, args.registration.id, true)
+  throw createError({ statusCode: 409, statusMessage: args.duplicateStatusMessage })
 }
 
 /**
