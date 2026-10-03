@@ -10,6 +10,7 @@ import { applyMissingInvoiceBilling } from '~/server/utils/invoice-billing-snaps
 import { applyStudentCreditToPayments } from '~/server/utils/apply-student-credit'
 import { resolveInvoiceLineCreditRappen } from '~/server/utils/invoice-credit'
 import { snapshotBillingCompanyName } from '~/utils/billing-address-map'
+import { isInvoiceSourceTable, stampInvoiceSourceRow } from '~/server/utils/invoice-tenant-guards'
 
 export default defineEventHandler(async (event) => {
   // ✅ Use authenticated user
@@ -330,22 +331,31 @@ export default defineEventHandler(async (event) => {
           if (payErr) {
             console.warn('[invoice/create] Could not stamp invoice_id on payment:', payErr)
           } else if (paymentRow?.course_registration_id) {
-            const { error: regErr } = await supabaseAdmin
-              .from('course_registrations')
-              .update({ invoice_id: invoice.id })
-              .eq('id', paymentRow.course_registration_id)
-              .eq('tenant_id', userProfile.tenant_id)
-            if (regErr) console.warn('[invoice/create] Could not stamp invoice_id on course_registration:', regErr)
+            const stamped = await stampInvoiceSourceRow({
+              supabase: supabaseAdmin,
+              table: 'course_registrations',
+              sourceId: paymentRow.course_registration_id,
+              tenantId: userProfile.tenant_id,
+              invoiceId: invoice.id,
+            })
+            if (stamped.error || !stamped.stamped) {
+              console.warn('[invoice/create] Could not stamp invoice_id on course_registration:', stamped.error?.message || 'not in tenant or already linked')
+            }
           }
           continue
         }
 
-        if (!['course_registrations', 'room_bookings', 'vehicle_bookings'].includes(table)) continue
-        const { error: stampErr } = await supabaseAdmin
-          .from(table)
-          .update({ invoice_id: invoice.id })
-          .eq('id', sourceId)
-        if (stampErr) console.warn(`[invoice/create] Could not stamp invoice_id on ${table}:`, stampErr)
+        if (!isInvoiceSourceTable(table)) continue
+        const stamped = await stampInvoiceSourceRow({
+          supabase: supabaseAdmin,
+          table,
+          sourceId,
+          tenantId: userProfile.tenant_id,
+          invoiceId: invoice.id,
+        })
+        if (stamped.error || !stamped.stamped) {
+          console.warn(`[invoice/create] Could not stamp invoice_id on ${table}:`, stamped.error?.message || 'not in tenant or already linked')
+        }
       }
     }
 
