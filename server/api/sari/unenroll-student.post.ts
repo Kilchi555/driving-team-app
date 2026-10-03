@@ -60,8 +60,11 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Layer 3: Input Sanitization
-    const { registrationId, courseSessionId, studentId } = sanitizeSARIInput(raw)
+    // Layer 3: Input Sanitization.
+    // sanitizeSARIInput does not return registrationId, so keep the already
+    // validated raw value here. Otherwise this branch is never reached.
+    const { courseSessionId, studentId } = sanitizeSARIInput(raw)
+    const registrationId = typeof raw.registrationId === 'string' ? raw.registrationId.trim() : raw.registrationId
 
     // Layer 2: Rate Limiting
     const rateLimitCheck = await checkSARIRateLimit(user.id, 'unenroll_student')
@@ -108,20 +111,24 @@ export default defineEventHandler(async (event) => {
     let courseId, sariCourseId
 
     if (registrationId) {
-      // Get course from registration
+      // Service role bypasses RLS. The registration tenant filter is not enough:
+      // the joined course must belong to the same tenant before any SARI call.
       const { data: registration, error: regError } = await supabase
         .from('course_registrations')
-        .select('course_id, courses(sari_managed, sari_course_id), course_sessions(sari_session_id)')
+        .select('course_id, courses(tenant_id, sari_managed, sari_course_id), course_sessions(sari_session_id)')
         .eq('id', registrationId)
         .eq('tenant_id', userProfile.tenant_id)
         .single()
 
-      if (regError || !registration) {
+      const registrationCourse = (Array.isArray(registration?.courses) ? registration.courses[0] : registration?.courses) as { tenant_id?: string; sari_course_id?: string } | null
+
+      // A missing registration and a registration whose course belongs to another tenant share one response.
+      if (regError || !registration || !registrationCourse || registrationCourse.tenant_id !== userProfile.tenant_id) {
         throw createError({ statusCode: 404, statusMessage: 'Registration not found' })
       }
 
       courseId = registration.course_id
-      sariCourseId = parseInt((registration.courses as any)?.sari_course_id || '0')
+      sariCourseId = parseInt(registrationCourse.sari_course_id || '0')
     } else {
       // Service role bypasses RLS, so the joined course tenant is the boundary.
       const { data: session, error: sessionError } = await supabase
