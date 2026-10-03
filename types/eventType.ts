@@ -11,4 +11,5 @@ export interface EventType {
   default_price_rappen?: number // New field for default price in rappen
   default_fee_rappen?: number // New field for default fee in rappen
   require_payment?: boolean
+  payment_method?: 'wallee' | 'cash' | 'invoice' | null
 }
