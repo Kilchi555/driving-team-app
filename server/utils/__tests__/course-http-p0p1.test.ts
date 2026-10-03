@@ -502,8 +502,20 @@ describe('source contracts — P0/P1 gates', () => {
 })
 
 describe('unenroll-student remains out of this slice', () => {
-  it('is unchanged as a SARI path (not part of Course HTTP P0/P1)', () => {
+  it('reads SARI ids from membership rows', () => {
     const unenroll = src('server/api/sari/unenroll-student.post.ts')
-    expect(unenroll).toContain("course_sessions(sari_session_id)")
+    expect(unenroll).toContain('registration_sari_memberships')
+    expect(unenroll).toContain('listRegistrationSariMemberships')
+  })
+
+  it('restores a registration when a SARI membership remains after course cancel', () => {
+    const cancel = src('server/api/admin/courses/cancel-course.post.ts')
+    const unenrollAt = cancel.indexOf('sariClient.unenrollStudent')
+    const deleteAt = cancel.indexOf('await deleteConfirmedSariMembership')
+    expect(unenrollAt).toBeGreaterThan(0)
+    expect(deleteAt).toBeGreaterThan(unenrollAt)
+    expect(cancel).toContain("status: 'confirmed'")
+    expect(cancel).toContain('cancelled_at: null')
+    expect(cancel).toContain('restoreRegistrationsThatStillHaveMemberships')
   })
 })

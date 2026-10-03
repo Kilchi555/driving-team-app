@@ -4,6 +4,8 @@
  * https://vku-pgs.asa.ch/ (Production) or sari-vku-test.ky2help.com (Test)
  */
 
+import { parsePositiveSariSessionId } from '~/server/utils/registration-sari-membership'
+
 export interface SARIConfig {
   environment: 'test' | 'production'
   clientId: string
@@ -343,12 +345,16 @@ export class SARIClient {
     faberid: string,
     birthdate: string
   ): Promise<void> {
+    const numericCourseId = parsePositiveSariSessionId(courseId)
+    if (numericCourseId == null) {
+      throw new Error('Invalid SARI course ID')
+    }
     const token = await this.authenticate()
 
     const url = `${this.baseUrl}/api/courseregistration/personcourse`
 
     const body = new URLSearchParams({
-      courseid: courseId.toString(),
+      courseid: numericCourseId.toString(),
       faberid,
       birthdate
     })
@@ -469,9 +475,9 @@ export class SARIClient {
     const enrolledSessions: string[] = []
     const normFid = (v: string) => String(v || '').replace(/^0+/, '') || String(v || '')
 
-    const isMember = async (sessionId: string): Promise<boolean | null> => {
+    const isMember = async (numericId: number): Promise<boolean | null> => {
       try {
-        const members = await this.getCourseDetail(parseInt(sessionId))
+        const members = await this.getCourseDetail(numericId)
         return members.some(m => normFid(m.faberid) === normFid(faberid))
       } catch {
         return null // unknown — caller may try enroll
@@ -480,9 +486,16 @@ export class SARIClient {
 
     try {
       for (const sessionId of sessionIds) {
-        const numericId = parseInt(sessionId)
+        const numericId = parsePositiveSariSessionId(sessionId)
+        if (numericId == null) {
+          return {
+            canEnroll: false,
+            reason: `Ungültige SARI-Session-ID: ${sessionId}`,
+            failedSessionId: sessionId,
+          }
+        }
 
-        const membership = await isMember(sessionId)
+        const membership = await isMember(numericId)
         if (membership === true) {
           console.log(`⏭️ Session ${sessionId}: Already enrolled (OK for validation)`)
           continue
@@ -571,13 +584,21 @@ export class SARIClient {
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
           console.log(`🔄 Rolling back test enrollment for session ${sessionId} (attempt ${attempt})...`)
-          await this.unenrollStudent(parseInt(sessionId), faberid)
+          const numericId = parsePositiveSariSessionId(sessionId)
+          if (numericId == null) {
+            return { ok: false, leftoverSessionId: sessionId }
+          }
+          await this.unenrollStudent(numericId, faberid)
         } catch (e: any) {
           console.warn(`⚠️ Unenroll session ${sessionId} attempt ${attempt}: ${e.message}`)
         }
 
         try {
-          const members = await this.getCourseDetail(parseInt(sessionId))
+          const numericId = parsePositiveSariSessionId(sessionId)
+          if (numericId == null) {
+            return { ok: false, leftoverSessionId: sessionId }
+          }
+          const members = await this.getCourseDetail(numericId)
           stillThere = members.some(m => normFid(m.faberid) === faberNorm)
         } catch (e: any) {
           // If we cannot verify, assume not cleaned
@@ -604,15 +625,11 @@ export class SARIClient {
   }
 
   /**
-   * Helper: Extract numeric SARI course ID from a potential group string
-   * e.g., "GROUP_2110023_..." → 2110023
+   * Accept only a whole positive SARI course id.
+   * GROUP_ catalog strings and partial digit runs are not SARI ids.
    */
   private getNumericSariCourseId(courseSariId: number | string): number | null {
-    if (typeof courseSariId === 'number') {
-      return courseSariId
-    }
-    const match = String(courseSariId).match(/(\d+)/)
-    return match ? parseInt(match[1]) : null
+    return parsePositiveSariSessionId(courseSariId)
   }
 }
 

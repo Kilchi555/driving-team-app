@@ -20,6 +20,13 @@ import {
 import { getTenantDefaultPaymentMethod } from '~/server/utils/tenant-default-payment-method'
 import { mapTenantDefaultToCoursePaymentMethod, type CoursePaymentMethod } from '~/utils/courseLocationUtils'
 import { sariCourseDisplayName } from '~/server/utils/sari-course-title'
+import {
+  parsePositiveSariSessionId,
+  recordConfirmedSariMembership,
+  SARI_MEMBERSHIP_SOURCE,
+  SariMembershipWriteError,
+  uniqueCourseSessionIdForSari,
+} from '~/server/utils/registration-sari-membership'
 
 export interface SyncResult {
   success: boolean
@@ -634,6 +641,7 @@ export class SARISyncEngine {
         participantsSynced += syncedCount
       } catch (err: any) {
         logger.error(`Failed to sync participants for session ${sariSession.id}: ${err.message}`)
+        if (err instanceof SariMembershipWriteError) throw err
       }
     }
 
@@ -855,11 +863,15 @@ export class SARISyncEngine {
    * Creates course_participants if they don't exist and creates course registrations
    */
   async syncCourseParticipants(simyCourseId: string, sariCourseId: number, courseType: 'VKU' | 'PGS' = 'PGS'): Promise<number> {
+    const sariSessionId = parsePositiveSariSessionId(sariCourseId)
+    if (sariSessionId == null) {
+      throw new SariMembershipWriteError('invalid_sari_session_id', `Invalid SARI session id: ${sariCourseId}`)
+    }
     try {
-      logger.debug(`📥 Syncing participants for SARI course ${sariCourseId}...`)
+      logger.debug(`📥 Syncing participants for SARI course ${sariSessionId}...`)
       
-      // Get participants from SARI
-      const participants = await this.sari.getCourseDetail(sariCourseId)
+      // The id passed to getCourseDetail is the membership id. Do not collapse people across sessions.
+      const participants = await this.sari.getCourseDetail(sariSessionId)
       
       if (!participants || participants.length === 0) {
         logger.debug(`No participants found for SARI course ${sariCourseId}`)
@@ -1017,8 +1029,8 @@ export class SARISyncEngine {
                 synced_at: new Date().toISOString()
               } : null,
               
-              sari_synced: true,
-              sari_synced_at: new Date().toISOString(),
+              sari_synced: false,
+              sari_synced_at: null,
               notes: pendingPayment
                 ? `Auto-imported from SARI on ${new Date().toLocaleDateString('de-CH')} | SARI ID: ${canonicalFaberid} | Linked open Wallee payment ${pendingPayment.id}`
                 : `Auto-imported from SARI on ${new Date().toLocaleDateString('de-CH')} | SARI ID: ${canonicalFaberid}`,
@@ -1031,10 +1043,11 @@ export class SARISyncEngine {
               .select('id')
               .single()
 
-            if (regError) {
-              const errDetail = regError.message || regError.details || regError.hint || regError.code || JSON.stringify(regError)
+            if (regError || !insertedReg?.id) {
+              const errDetail = regError?.message || regError?.details || regError?.hint || regError?.code || JSON.stringify(regError)
               logger.error(`Error creating registration for ${canonicalFaberid}: ${errDetail}`)
             } else {
+              await this.persistImportedMembership(simyCourseId, insertedReg.id, sariSessionId)
               syncedCount++
               logger.debug(`✅ Created registration for ${canonicalFaberid}: ${registrationData.first_name} ${registrationData.last_name}`)
 
@@ -1101,17 +1114,42 @@ export class SARISyncEngine {
             } catch (enrichErr: any) {
               logger.warn(`Could not enrich existing SARI registration for ${canonicalFaberid}: ${enrichErr.message}`)
             }
+            await this.persistImportedMembership(simyCourseId, existingByFaberid.id, sariSessionId)
           }
         } catch (err: any) {
+          if (err instanceof SariMembershipWriteError) throw err
           logger.error(`Error processing participant ${participant.faberid}: ${err.message}`)
         }
       }
 
       return syncedCount
     } catch (err: any) {
-      logger.error(`Failed to sync participants for SARI course ${sariCourseId}: ${err.message}`)
+      logger.error(`Failed to sync participants for SARI course ${sariSessionId}: ${err.message}`)
+      if (err instanceof SariMembershipWriteError) throw err
       return 0
     }
+  }
+
+  /** Membership id is the SARI id just read via getCourseDetail. Never guessed from GROUP_ or latest session. */
+  private async persistImportedMembership(simyCourseId: string, registrationId: string, sariSessionId: number): Promise<void> {
+    const courseSessionId = await uniqueCourseSessionIdForSari(this.supabase, this.tenantId, simyCourseId, sariSessionId)
+    await recordConfirmedSariMembership({
+      supabase: this.supabase,
+      tenantId: this.tenantId,
+      registrationId,
+      sariSessionId,
+      courseSessionId,
+      source: SARI_MEMBERSHIP_SOURCE.syncEngine,
+    })
+    const { error } = await this.supabase
+      .from('course_registrations')
+      .update({
+        sari_synced: true,
+        sari_synced_at: new Date().toISOString(),
+      })
+      .eq('id', registrationId)
+      .eq('tenant_id', this.tenantId)
+    if (error) throw new SariMembershipWriteError('persist_failed', error.message)
   }
 
   /**
