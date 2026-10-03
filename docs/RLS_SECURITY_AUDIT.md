@@ -137,6 +137,8 @@ await supabase.from('student_credits').update({ balance: 999999 }).eq('user_id',
 
 `anon_insert_shop_payment` gedroppt. Shop-Zahlungen laufen ausschliesslich über `getSupabaseAdmin()` im Backend. ✅ Angewendet
 
+**Follow-up (Sep 2026, #232):** Slice A also revokes **authenticated** JWT/PostgREST `INSERT`/`UPDATE`/`DELETE` on `payments` and drops remaining staff/customer/super-admin write policies. Ops runbook: [`PAYMENTS_JWT_POSTGREST_SLICE_A.md`](./PAYMENTS_JWT_POSTGREST_SLICE_A.md). Migration `migrations/20260917_payments_jwt_postgrest_slice_a.sql` is create-only (manual apply).
+
 ### 🟠 ~~HOCH-02~~ ✅ BEHOBEN: `users` – Anonyme INSERT/SELECT/UPDATE ohne WITH CHECK
 
 `anon_insert_guest_user`, `anon_select_guest_user`, `anon_update_guest_user` gedroppt. Guest-User-Erstellung läuft ausschliesslich über `getSupabaseAdmin()` in `find-or-create-guest-user.post.ts`. ✅ Angewendet
