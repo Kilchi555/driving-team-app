@@ -22,6 +22,27 @@ import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { parsePositiveSariSessionId, recordConfirmedSariMembershipWithRetry, SARI_MEMBERSHIP_SOURCE, setRegistrationSariSynced } from '~/server/utils/registration-sari-membership'
+
+async function findConfirmedRegistrationId(
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string,
+  courseId: string,
+  studentId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('course_registrations')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('course_id', courseId)
+    .eq('user_id', studentId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error || !data?.id) return null
+  return data.id
+}
 
 export default defineEventHandler(async (event) => {
   try {
@@ -151,7 +172,13 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const sariCourseId = parseInt(session.sari_session_id)
+    const sariCourseId = parsePositiveSariSessionId(session.sari_session_id)
+    if (sariCourseId == null) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Course session has no numeric SARI ID. Cannot enroll via SARI.',
+      })
+    }
 
     // Get tenant SARI settings and check if enabled
     const { data: tenantSettings, error: tenantError } = await supabase
@@ -199,9 +226,19 @@ export default defineEventHandler(async (event) => {
     // Enroll student in SARI
     console.log(`📝 [${userProfile.auth_user_id}] Enrolling student ${student.id} in SARI course ${sariCourseId}`)
     
-    await sariClient.enrollStudent(sariCourseId, student.faberid, birthdate)
+    let alreadyEnrolled = false
+    try {
+      await sariClient.enrollStudent(sariCourseId, student.faberid, birthdate)
+    } catch (enrollErr: any) {
+      const message = enrollErr?.message || ''
+      if (message.includes('PERSON_ALREADY_ADDED') || message.includes('ALREADY_ENROLLED')) {
+        alreadyEnrolled = true
+      } else {
+        throw enrollErr
+      }
+    }
 
-    console.log(`✅ [${userProfile.auth_user_id}] Successfully enrolled student in SARI course ${sariCourseId}`)
+    console.log(`✅ [${userProfile.auth_user_id}] SARI enrollment confirmed for course ${sariCourseId}`)
 
     // Get full customer data from SARI for enriched registration (TIER 1 enhancement)
     let sariCustomerData = null
@@ -261,21 +298,55 @@ export default defineEventHandler(async (event) => {
       } : null,
       
       // Metadata
-      sari_synced: true,
-      sari_synced_at: new Date().toISOString(),
+      sari_synced: false,
+      sari_synced_at: null,
       registered_by: user.id,
       notes: `Manually enrolled by admin on ${new Date().toLocaleDateString('de-CH')} | SARI ID: ${student.faberid}`
+    }
+
+    const existingRegistrationId = alreadyEnrolled
+      ? await findConfirmedRegistrationId(supabase, userProfile.tenant_id, course.id, studentId)
+      : null
+
+    if (existingRegistrationId) {
+      await recordConfirmedSariMembershipWithRetry({
+        supabase,
+        tenantId: userProfile.tenant_id,
+        registrationId: existingRegistrationId,
+        sariSessionId: sariCourseId,
+        courseSessionId: session.id,
+        source: SARI_MEMBERSHIP_SOURCE.manualEnrollment,
+      })
+      await setRegistrationSariSynced(supabase, userProfile.tenant_id, existingRegistrationId, true)
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Student is already enrolled in this course',
+      })
     }
 
     const { data: registration, error: regError } = await supabase
       .from('course_registrations')
       .insert(registrationData)
-      .select()
+      .select('id')
       .single()
 
-    if (regError) {
+    if (regError || !registration?.id) {
       console.error('Failed to create local registration:', regError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'SARI enrollment succeeded, but the local registration could not be saved',
+      })
     }
+
+    await recordConfirmedSariMembershipWithRetry({
+      supabase,
+      tenantId: userProfile.tenant_id,
+      registrationId: registration.id,
+      sariSessionId: sariCourseId,
+      courseSessionId: session.id,
+      source: SARI_MEMBERSHIP_SOURCE.manualEnrollment,
+    })
+    await setRegistrationSariSynced(supabase, userProfile.tenant_id, registration.id, true)
 
     // Layer 5: Audit Logging - Log successful enrollment
     await logAudit({

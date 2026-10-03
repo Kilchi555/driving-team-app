@@ -22,6 +22,19 @@ import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import {
+  deleteConfirmedSariMembership,
+  listRegistrationSariMemberships,
+  listStudentMembershipsForCourseSession,
+  type RegistrationSariMembership,
+} from '~/server/utils/registration-sari-membership'
+
+type RegistrationCourse = {
+  id?: string
+  tenant_id?: string
+  sari_managed?: boolean
+  sari_course_id?: string | null
+}
 
 export default defineEventHandler(async (event) => {
   try {
@@ -60,8 +73,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Layer 3: Input Sanitization
-    const { registrationId, courseSessionId, studentId } = sanitizeSARIInput(raw)
+    // sanitizeSARIInput does not return registrationId. Keep the validated raw value.
+    const { courseSessionId, studentId } = sanitizeSARIInput(raw)
+    const registrationId = typeof raw.registrationId === 'string' ? raw.registrationId.trim() : raw.registrationId
 
     // Layer 2: Rate Limiting
     const rateLimitCheck = await checkSARIRateLimit(user.id, 'unenroll_student')
@@ -104,29 +118,41 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Determine course ID and session ID
-    let courseId, sariCourseId
+    // SARI ids come only from registration_sari_memberships. course_sessions(sari_session_id)
+    // and GROUP_ course ids are not an unenroll source.
+    let courseId: string | undefined
+    let memberships: RegistrationSariMembership[] = []
 
     if (registrationId) {
-      // Get course from registration
+      // Service role bypasses RLS. Hint the course FK: unhinted courses(...) is
+      // ambiguous where a second course relationship exists, and course_sessions
+      // is not a foreign key of course_registrations.
       const { data: registration, error: regError } = await supabase
         .from('course_registrations')
-        .select('course_id, courses(sari_managed, sari_course_id), course_sessions(sari_session_id)')
+        .select('course_id, courses!course_registrations_course_id_fkey(id, tenant_id, sari_managed, sari_course_id)')
         .eq('id', registrationId)
         .eq('tenant_id', userProfile.tenant_id)
         .single()
 
-      if (regError || !registration) {
+      const registrationCourse = (Array.isArray(registration?.courses) ? registration.courses[0] : registration?.courses) as RegistrationCourse | null
+      if (regError || !registration || !registrationCourse?.id || registrationCourse.tenant_id !== userProfile.tenant_id) {
         throw createError({ statusCode: 404, statusMessage: 'Registration not found' })
       }
 
-      courseId = registration.course_id
-      sariCourseId = parseInt((registration.courses as any)?.sari_course_id || '0')
+      memberships = await listRegistrationSariMemberships(supabase, userProfile.tenant_id, registrationId)
+      if (memberships.length === 0) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'No confirmed SARI membership for this registration',
+        })
+      }
+
+      courseId = registrationCourse.id
     } else {
       // Service role bypasses RLS, so the joined course tenant is the boundary.
       const { data: session, error: sessionError } = await supabase
         .from('course_sessions')
-        .select('course_id, sari_session_id, course:courses(id, tenant_id)')
+        .select('course_id, course:courses!course_sessions_course_id_fkey(id, tenant_id)')
         .eq('id', courseSessionId)
         .single()
 
@@ -137,8 +163,27 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 404, statusMessage: 'Course session not found' })
       }
 
+      memberships = await listStudentMembershipsForCourseSession(
+        supabase,
+        userProfile.tenant_id,
+        courseSessionId,
+        studentId,
+      )
+      if (memberships.length === 0) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'No confirmed SARI membership for this session',
+        })
+      }
+
       courseId = session.course_id
-      sariCourseId = parseInt(session.sari_session_id || '0')
+    }
+
+    if (!courseId) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: registrationId ? 'Registration not found' : 'Course session not found',
+      })
     }
 
     // Get tenant SARI settings
@@ -178,40 +223,56 @@ export default defineEventHandler(async (event) => {
       password: sariSecrets.SARI_PASSWORD
     })
 
-    // Unenroll student from SARI
-    console.log(`📝 [${userProfile.auth_user_id}] Unenrolling student ${student.id} from SARI course ${sariCourseId}`)
+    // One SARI call per stored membership. The row is deleted only after SARI
+    // confirms the seat is gone. A failure leaves that row in place.
+    const sariCourseIds = memberships.map((membership) => membership.sari_session_id)
+    console.log(`📝 [${userProfile.auth_user_id}] Unenrolling student ${student.id} from SARI sessions ${sariCourseIds.join(',')}`)
 
-    let alreadyUnenrolled = false
-    try {
-      await sariClient.unenrollStudent(sariCourseId, student.faberid)
-      console.log(`✅ [${userProfile.auth_user_id}] Successfully unenrolled student from SARI course ${sariCourseId}`)
-    } catch (unenrollErr: any) {
-      if (isSariUnenrollIdempotent(unenrollErr.message)) {
-        // Already in the desired end state — not an error from the caller's perspective.
-        alreadyUnenrolled = true
-        console.log(`ℹ️ [${userProfile.auth_user_id}] Student already unenrolled from SARI course ${sariCourseId}`)
-      } else {
-        throw unenrollErr
+    let alreadyUnenrolled = memberships.length > 0
+    for (const membership of memberships) {
+      try {
+        await sariClient.unenrollStudent(membership.sari_session_id, student.faberid)
+        alreadyUnenrolled = false
+        console.log(`✅ [${userProfile.auth_user_id}] Successfully unenrolled student from SARI session ${membership.sari_session_id}`)
+      } catch (unenrollErr: any) {
+        if (!isSariUnenrollIdempotent(unenrollErr.message)) {
+          throw unenrollErr
+        }
+        console.log(`ℹ️ [${userProfile.auth_user_id}] Student already unenrolled from SARI session ${membership.sari_session_id}`)
       }
+
+      await deleteConfirmedSariMembership({
+        supabase,
+        tenantId: userProfile.tenant_id,
+        registrationId: membership.registration_id,
+        sariSessionId: membership.sari_session_id,
+      })
     }
 
-    // Update local registration (soft delete)
-    const { error: updateError } = await supabase
-      .from('course_registrations')
-      .update({
-        status: 'cancelled',
-        deleted_at: new Date().toISOString(),
-        deleted_by: user.id,
-        sari_synced: true,
-        sari_synced_at: new Date().toISOString()
-      })
-      .eq('course_id', courseId)
-      .eq('user_id', studentId)
-      .eq('tenant_id', userProfile.tenant_id)
-      .is('deleted_at', null)
+    // Update only the registrations whose membership rows were removed.
+    const registrationIds = [...new Set(memberships.map((membership) => membership.registration_id))]
+    for (const registrationId of registrationIds) {
+      const remaining = await listRegistrationSariMemberships(supabase, userProfile.tenant_id, registrationId)
+      if (remaining.length > 0) continue
+      const { error: updateError } = await supabase
+        .from('course_registrations')
+        .update({
+          status: 'cancelled',
+          deleted_at: new Date().toISOString(),
+          deleted_by: user.id,
+          sari_synced: true,
+          sari_synced_at: new Date().toISOString()
+        })
+        .eq('id', registrationId)
+        .eq('tenant_id', userProfile.tenant_id)
+        .is('deleted_at', null)
 
-    if (updateError) {
-      console.error('Failed to update local registration:', updateError)
+      if (updateError) {
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'SARI membership was removed, but the local registration could not be updated',
+        })
+      }
     }
 
     // Layer 5: Audit Logging
@@ -223,7 +284,7 @@ export default defineEventHandler(async (event) => {
       details: {
         student_id: studentId,
         course_id: courseId,
-        sari_course_id: sariCourseId,
+        sari_course_id: sariCourseIds.length === 1 ? sariCourseIds[0] : sariCourseIds,
       },
       ip_address: getClientIP(event),
     })
@@ -234,7 +295,7 @@ export default defineEventHandler(async (event) => {
       message: alreadyUnenrolled
         ? `Student ${student.first_name} ${student.last_name} was already unenrolled from SARI course`
         : `Student ${student.first_name} ${student.last_name} unenrolled from SARI course`,
-      sariCourseId
+      sariCourseId: sariCourseIds.length === 1 ? sariCourseIds[0] : sariCourseIds
     }
 
   } catch (error: any) {

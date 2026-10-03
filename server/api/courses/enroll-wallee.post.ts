@@ -15,6 +15,16 @@ import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { SARIClient } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
+import {
+  isConfirmedSariEnrollDuplicate,
+  parsePositiveSariSessionId,
+  recordConfirmedSariMembershipWithRetry,
+  SARI_MEMBERSHIP_SOURCE,
+  setRegistrationSariSynced,
+  strictSariIdsFromGroup,
+  uniqueLocalCourseSessionId,
+  SariMembershipWriteError,
+} from '~/server/utils/registration-sari-membership'
 import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 import { findExistingUserByContact, findStaffOrAdminByEmail, findStaffOrAdminByPhone } from '~/server/utils/user-matching'
@@ -327,8 +337,7 @@ const handler = defineEventHandler(async (event) => {
         logger.info(`🔍 Validating SARI enrollment possibility for course ${course.sari_course_id}`)
         
         // Build the base list of session IDs
-        const sariCourseIdParts = course.sari_course_id.split('_')
-        let allSessionIds = sariCourseIdParts.slice(1).filter((id: string) => id && !isNaN(parseInt(id)))
+        let allSessionIds = strictSariIdsFromGroup(course.sari_course_id).map(String)
 
         // ── Partial-enrollment session filtering ─────────────────────────────
         // For is_partial_only courses the sessions stored in sari_course_id ARE
@@ -341,8 +350,9 @@ const handler = defineEventHandler(async (event) => {
           const targetSess = (course.course_sessions || []).find(
             (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
           )
-          if (targetSess?.sari_session_id) {
-            allSessionIds = [String(targetSess.sari_session_id)]
+          const individualSariId = parsePositiveSariSessionId(targetSess?.sari_session_id)
+          if (individualSariId != null) {
+            allSessionIds = [String(individualSariId)]
           } else if (allSessionIds.length >= individualSessionNumber) {
             allSessionIds = [allSessionIds[individualSessionNumber - 1]]
           }
@@ -381,13 +391,15 @@ const handler = defineEventHandler(async (event) => {
             
             if (originalIds.length > 0 && newIds.length > 0) {
               for (let i = 0; i < originalIds.length && i < newIds.length; i++) {
-                const idx = allSessionIds.findIndex((id: string) => id === originalIds[i] || id === originalIds[i].toString())
-                if (idx >= 0) allSessionIds[idx] = newIds[i]
+                const strictNewId = parsePositiveSariSessionId(newIds[i])
+                const idx = allSessionIds.findIndex((id: string) => id === originalIds[i] || id === String(originalIds[i]))
+                if (idx >= 0 && strictNewId != null) allSessionIds[idx] = String(strictNewId)
               }
             } else if (newIds.length > 0) {
               const posNum = parseInt(position)
-              if (posNum > 0 && posNum <= allSessionIds.length) {
-                allSessionIds[posNum - 1] = newIds[0]
+              const strictNewId = parsePositiveSariSessionId(newIds[0])
+              if (posNum > 0 && posNum <= allSessionIds.length && strictNewId != null) {
+                allSessionIds[posNum - 1] = String(strictNewId)
               }
             }
           }
@@ -649,7 +661,7 @@ const handler = defineEventHandler(async (event) => {
             partial_start_session: (!isIndividualSession && isPartialOrder)
               ? (course.course_category?.partial_start_position ?? 3)
               : null,
-            sari_synced: Boolean(course.sari_managed),
+            sari_synced: false,
             vehicle_id: vehicleId || null,
             ledger_notes: `Guthaben für Kurs verwendet: ${course.name}`,
           },
@@ -659,16 +671,16 @@ const handler = defineEventHandler(async (event) => {
 
         // Enroll in SARI (per-session, partial-subset aware)
         try {
-          const sariCourseIdParts = String(course.sari_course_id || '').split('_')
-          let creditSariSessionIds = sariCourseIdParts.slice(1).filter((id: string) => id && !isNaN(parseInt(id)))
+          let creditSariSessionIds = strictSariIdsFromGroup(course.sari_course_id).map(String)
 
           // Apply same filtering as main path
           if (isIndividualSession) {
             const targetSess = (course.course_sessions || []).find(
               (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
             )
-            if (targetSess?.sari_session_id) {
-              creditSariSessionIds = [String(targetSess.sari_session_id)]
+            const individualSariId = parsePositiveSariSessionId(targetSess?.sari_session_id)
+            if (individualSariId != null) {
+              creditSariSessionIds = [String(individualSariId)]
             } else if (creditSariSessionIds.length >= individualSessionNumber) {
               creditSariSessionIds = [creditSariSessionIds[individualSessionNumber - 1]]
             }
@@ -692,20 +704,45 @@ const handler = defineEventHandler(async (event) => {
             }
           }
 
+          let creditConfirmed = 0
+          let creditFailed = 0
           for (const sessionId of creditSariSessionIds) {
+            const numericId = parsePositiveSariSessionId(sessionId)
+            if (numericId == null) {
+              creditFailed++
+              continue
+            }
+            let sariConfirmed = false
             try {
-              await sari.enrollStudent(parseInt(sessionId), faberidClean, birthdate)
+              await sari.enrollStudent(numericId, faberidClean, birthdate)
+              sariConfirmed = true
               logger.debug(`✅ SARI session ${sessionId} enrolled (credit path)`)
             } catch (sErr: any) {
-              if (sErr.message?.includes('ALREADY_ENROLLED') || sErr.message?.includes('PERSON_ALREADY_ADDED')) {
+              if (isConfirmedSariEnrollDuplicate(sErr.message)) {
+                sariConfirmed = true
                 logger.debug(`⏭️ Session ${sessionId}: Already enrolled (OK)`)
               } else {
+                creditFailed++
                 logger.warn(`⚠️ SARI session ${sessionId} failed (credit path, non-fatal):`, sErr.message)
               }
             }
+            if (!sariConfirmed) continue
+            await recordConfirmedSariMembershipWithRetry({
+              supabase,
+              tenantId,
+              registrationId: creditRegistration.id,
+              sariSessionId: numericId,
+              courseSessionId: uniqueLocalCourseSessionId(course.course_sessions, numericId, tenantId),
+              source: SARI_MEMBERSHIP_SOURCE.walleeEnrollment,
+            })
+            creditConfirmed++
           }
-          logger.info(`✅ SARI enrollment done (credit path, ${creditSariSessionIds.length} sessions)`)
+          if (creditSariSessionIds.length > 0 && creditFailed === 0 && creditConfirmed === creditSariSessionIds.length) {
+            await setRegistrationSariSynced(supabase, tenantId, creditRegistration.id, true)
+          }
+          logger.info(`✅ SARI enrollment done (credit path, ${creditConfirmed}/${creditSariSessionIds.length} sessions)`)
         } catch (sariErr: any) {
+          if (sariErr instanceof SariMembershipWriteError) throw sariErr
           logger.warn('⚠️ SARI enrollment failed (credit path, non-fatal):', sariErr.message)
         }
 

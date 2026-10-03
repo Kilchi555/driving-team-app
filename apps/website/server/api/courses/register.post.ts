@@ -4,6 +4,7 @@ import { formatResendFrom } from '~/server/utils/format-resend-from'
 import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import { uploadInquiryConversionViaSimy, type WebsiteMarketingAttributionPayload } from '~/server/utils/google-ads-inquiry-upload'
 import { isCourseCapacityExceeded } from '~/server/utils/course-capacity'
+import { assertRegistrationsDeletable } from '~/server/utils/registration-sari-membership'
 
 const COURSE_TYPE_LABELS: Record<string, string> = {
   czv_grundkurs: 'CZV Grundkurs',
@@ -104,7 +105,9 @@ async function deleteCourseRegistrationsByIds(
   ids: string[],
 ): Promise<void> {
   if (ids.length === 0) return
-  await supabase.from('course_registrations').delete().in('id', ids)
+  await assertRegistrationsDeletable(supabase, ids)
+  const { error } = await supabase.from('course_registrations').delete().in('id', ids)
+  if (error) throw error
 }
 
 async function decrementCourseParticipantCount(
