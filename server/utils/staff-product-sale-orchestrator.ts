@@ -64,7 +64,7 @@ export interface StaffPosSaleResult {
 
 type RpcFn = (args: Record<string, unknown>) => Promise<StaffPosRpcResult>
 
-function mapRpcError(error: any): StaffProductSaleError {
+export function mapRpcError(error: any): StaffProductSaleError {
   const text = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`
   const known: Array<[string, number, string]> = [
     ['forbidden_role', 403, 'Keine Berechtigung'],
@@ -83,6 +83,8 @@ function mapRpcError(error: any): StaffProductSaleError {
     ['invalid_vat_rate', 400, 'MwSt-Satz ist ungültig'],
     ['no_exact_net', 400, 'Für diesen Preis gibt es keinen passenden Nettobetrag'],
     ['zero_credit_snapshot', 409, 'Guthaben-Snapshot ist ungültig'],
+    ['invalid_transition', 409, 'Zahlung kann nicht abgeschlossen werden'],
+    ['invalid_fulfillment', 409, 'Zahlungsart passt nicht zum Abschluss'],
     ['invoice_total_mismatch', 409, 'Rechnungsbetrag stimmt nicht mit dem Katalogpreis überein'],
     ['vat_allocation_failed', 409, 'MwSt-Aufteilung ist ungültig'],
   ]
@@ -193,17 +195,12 @@ async function finishInvoiceSend(
   })
 
   if (claim.already_sent) {
-    const credit = await callRpc(opts.rpc, {
-      ...baseArgs(opts.actor.id, method, customerId, items, idempotencyKey),
-      p_action: 'apply_credit',
-      p_payment_id: result.payment_id,
-    })
     return {
       ...result,
       invoice_id: claim.invoice_id || result.invoice_id,
       invoice_sent: true,
-      credit_applied: credit.credit_applied === true,
-      retry_same_key: credit.credit_applied !== true,
+      credit_applied: false,
+      retry_same_key: false,
     }
   }
 
@@ -248,18 +245,12 @@ async function finishInvoiceSend(
     }
   }
 
-  const credit = await callRpc(opts.rpc, {
-    ...baseArgs(opts.actor.id, method, customerId, items, idempotencyKey),
-    p_action: 'apply_credit',
-    p_payment_id: result.payment_id,
-  })
-
   return {
     ...result,
     invoice_id: claim.invoice_id || result.invoice_id,
     invoice_sent: true,
-    credit_applied: credit.credit_applied === true,
-    retry_same_key: credit.credit_applied !== true,
+    credit_applied: false,
+    retry_same_key: false,
   }
 }
 

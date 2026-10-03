@@ -1957,7 +1957,7 @@
 
 import { ref, computed, toRefs, watch, onUnmounted, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
-import { staffProductSaleTitle } from '~/utils/staff-product-sale-display'
+import { isDeferredStaffProductSale, isStaffProductSalePayment, staffProductSaleTitle } from '~/utils/staff-product-sale-display'
 import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { openPdf } from '~/utils/openPdf'
 import { getSupabase } from '~/utils/supabase'
@@ -2868,16 +2868,61 @@ const openCashPaymentDialog = (method: 'cash' | 'online') => {
   showPartialPaymentDialog.value = true
 }
 
+function partitionStaffPosSelection(ids: string[]) {
+  const deferredIds: string[] = []
+  const invoiceSaleIds: string[] = []
+  const normalIds: string[] = []
+  for (const id of ids) {
+    const payment = payments.value.find(p => p.id === id)
+    if (isDeferredStaffProductSale(payment)) deferredIds.push(id)
+    else if (isStaffProductSalePayment(payment)) invoiceSaleIds.push(id)
+    else normalIds.push(id)
+  }
+  return { deferredIds, invoiceSaleIds, normalIds }
+}
+
+async function completeDeferredStaffPos(ids: string[]) {
+  for (const paymentId of ids) {
+    await $fetch('/api/admin/staff-pos/complete', {
+      method: 'POST',
+      body: { payment_id: paymentId },
+    })
+  }
+}
+
 const handleBulkPayment = async (method: 'cash' | 'online', partialAmountRappen?: number) => {
   if (selectedPayments.value.length === 0) return
   
   isProcessingBulkAction.value = true
   try {
-    logger.debug(`💳 Processing ${selectedPayments.value.length} payments as ${method}`)
+    const { deferredIds, invoiceSaleIds, normalIds } = partitionStaffPosSelection(selectedPayments.value)
+    if (invoiceSaleIds.length > 0) {
+      alert('Produktverkäufe auf Rechnung werden über die Rechnung bezahlt.')
+    }
+    let bulkPartial = partialAmountRappen
+    if (method === 'cash' && deferredIds.length > 0) {
+      const deferredDue = deferredIds.reduce((sum, id) => {
+        const payment = payments.value.find(p => p.id === id)
+        return sum + getPaymentDueAmountRappen(payment)
+      }, 0)
+      const entered = typeof partialAmountRappen === 'number' ? partialAmountRappen : deferredDue
+      if (entered < deferredDue) {
+        alert('Produktverkäufe können nur vollständig abgeschlossen werden.')
+      } else {
+        await completeDeferredStaffPos(deferredIds)
+        if (typeof bulkPartial === 'number') bulkPartial = Math.max(0, bulkPartial - deferredDue)
+      }
+    }
+    if (normalIds.length === 0 || (deferredIds.length > 0 && typeof bulkPartial === 'number' && bulkPartial <= 0)) {
+      selectedPayments.value = []
+      await loadPayments()
+      return
+    }
+    logger.debug(`💳 Processing ${normalIds.length} payments as ${method}`)
     
-    const body: any = { payment_ids: selectedPayments.value, method }
-    if (typeof partialAmountRappen === 'number' && partialAmountRappen > 0) {
-      body.partial_amount_rappen = partialAmountRappen
+    const body: any = { payment_ids: normalIds, method }
+    if (typeof bulkPartial === 'number' && bulkPartial > 0) {
+      body.partial_amount_rappen = bulkPartial
     }
 
     const response = await $fetch('/api/staff/process-bulk-payment', {
@@ -2895,8 +2940,9 @@ const handleBulkPayment = async (method: 'cash' | 'online', partialAmountRappen?
     await loadLessons()
     selectedPayments.value = []
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error processing bulk payment:', error)
+    alert(error?.data?.statusMessage || error?.message || 'Zahlung konnte nicht abgeschlossen werden')
   } finally {
     isProcessingBulkAction.value = false
   }
@@ -2922,10 +2968,15 @@ const confirmCreditPayment = async () => {
 
   isProcessingBulkAction.value = true
   try {
+    const selectedRows = selectedPayments.value.map(id => payments.value.find(p => p.id === id))
+    if (selectedRows.some(payment => isStaffProductSalePayment(payment))) {
+      alert('Produktverkäufe werden nicht über das Schülerguthaben abgeschlossen.')
+    }
     const openIds = selectedPayments.value.filter(id => {
       const p = payments.value.find(p => p.id === id)
-      return p && !isInvoicedPayment(p) && p.payment_status !== 'completed'
+      return p && !isInvoicedPayment(p) && p.payment_status !== 'completed' && !isStaffProductSalePayment(p)
     })
+    if (openIds.length === 0) return
 
     const response = await $fetch('/api/staff/process-bulk-payment', {
       method: 'POST',
@@ -4116,7 +4167,7 @@ async function handleBulkInvoice() {
 
   // Offene Restbeträge inkl. Teilzahlung — nur noch nicht verrechnete Positionen
   const pendingIds = payments.value
-    .filter(p => selectedPayments.value.includes(p.id) && isInvoiceableOpenPayment(p))
+    .filter(p => selectedPayments.value.includes(p.id) && isInvoiceableOpenPayment(p) && !isStaffProductSalePayment(p))
     .map(p => p.id)
 
   if (pendingIds.length === 0) {

@@ -317,7 +317,7 @@ export function creditRappenForProduct(product: {
 }
 
 export function creditsImmediately(method: StaffPosMethod): boolean {
-  return method === 'cash' || method === 'deferred' || method === 'invoice'
+  return method === 'cash'
 }
 
 export function paymentStatusFor(method: StaffPosMethod): 'completed' | 'pending' {
@@ -598,13 +598,13 @@ export interface SendClaimState {
 }
 
 export type InvoiceSendPlan =
-  | { action: 'skip_send_apply_credit' }
+  | { action: 'skip_send' }
   | { action: 'wait' }
   | { action: 'send' }
 
 /** Mail is sent only while the invoice has no sent_at and no fresh claim. */
 export function planInvoiceSend(state: SendClaimState): InvoiceSendPlan {
-  if (state.sentAt) return { action: 'skip_send_apply_credit' }
+  if (state.sentAt) return { action: 'skip_send' }
   if (state.claimAt) {
     const claimMs = Date.parse(state.claimAt)
     if (Number.isFinite(claimMs) && state.nowMs - claimMs < SEND_CLAIM_TTL_MS) {

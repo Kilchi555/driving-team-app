@@ -4,6 +4,7 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { applyInvoiceCreditOnPaid } from '~/server/utils/invoice-credit'
+import { applyStaffPosCreditsForPaidInvoice } from '~/server/utils/staff-pos-completion'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -121,6 +122,7 @@ export default defineEventHandler(async (event) => {
       .from('payments')
       .update({ payment_status: 'completed', paid_at: paidAt, updated_at: now })
       .eq('invoice_id', invoice_id)
+      .eq('tenant_id', invoice.tenant_id)
       .in('payment_status', ['invoice', 'invoiced', 'pending', 'open', 'failed', 'partial'])
 
     // Fallback: Payments über Invoice-Items → appointment_ids aktualisieren
@@ -136,8 +138,38 @@ export default defineEventHandler(async (event) => {
         .from('payments')
         .update({ payment_status: 'completed', invoice_id, paid_at: paidAt, updated_at: now })
         .eq('user_id', invoice.user_id ?? '')
+        .eq('tenant_id', invoice.tenant_id)
         .in('appointment_id', appointmentIds)
         .in('payment_status', ['invoice', 'invoiced', 'pending', 'open', 'failed', 'partial'])
+    }
+
+    const { data: invoicePayments, error: staffPosLoadError } = await supabase
+      .from('payments')
+      .select('id, tenant_id, metadata')
+      .eq('invoice_id', invoice_id)
+      .eq('tenant_id', invoice.tenant_id)
+
+    if (staffPosLoadError) {
+      throw createError({ statusCode: 500, statusMessage: 'Staff-POS-Zahlungen konnten nicht geladen werden' })
+    }
+
+    try {
+      await applyStaffPosCreditsForPaidInvoice({
+        payments: invoicePayments || [],
+        tenantId: invoice.tenant_id,
+        actorUserId: staffUser.id,
+        isPartial: false,
+        rpc: async (args) => {
+          const { data, error: rpcError } = await supabase.rpc('staff_pos_sale', args)
+          if (rpcError) throw rpcError
+          return data
+        },
+      })
+    } catch (staffPosErr: any) {
+      throw createError({
+        statusCode: staffPosErr?.statusCode || 500,
+        statusMessage: staffPosErr?.message || 'Staff-POS-Guthaben konnte nicht gebucht werden',
+      })
     }
   }
 

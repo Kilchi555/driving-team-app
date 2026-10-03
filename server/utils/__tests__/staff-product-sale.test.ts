@@ -147,14 +147,14 @@ describe('payment and credit matrix', () => {
     expect(creditsImmediately('cash')).toBe(true)
   })
 
-  it('keeps deferred pending, without invoice, and credits immediately', () => {
+  it('keeps deferred pending and withholds credit until completion', () => {
     expect(paymentStatusFor('deferred')).toBe('pending')
-    expect(creditsImmediately('deferred')).toBe(true)
+    expect(creditsImmediately('deferred')).toBe(false)
   })
 
-  it('keeps invoice pending and credits immediately', () => {
+  it('keeps invoice pending and withholds credit until the invoice is paid', () => {
     expect(paymentStatusFor('invoice')).toBe('pending')
-    expect(creditsImmediately('invoice')).toBe(true)
+    expect(creditsImmediately('invoice')).toBe(false)
   })
 
   it('does not credit invoice-send or online before confirmation', () => {
@@ -201,9 +201,9 @@ describe('invoice send plan', () => {
     expect(planInvoiceSend({ sentAt: null, claimAt: null, nowMs: now }).action).toBe('send')
   })
 
-  it('skips a second mail after a confirmed send and still allows credit', () => {
+  it('skips a second mail after a confirmed send without treating send as payment', () => {
     expect(planInvoiceSend({ sentAt: '2026-10-01T11:00:00.000Z', claimAt: null, nowMs: now }).action)
-      .toBe('skip_send_apply_credit')
+      .toBe('skip_send')
   })
 
   it('waits on a fresh claim so two retries do not both send', () => {
@@ -280,24 +280,25 @@ describe('orchestrator', () => {
     expect(rpc.mock.calls[1][0].p_idempotency_key).toBe(key)
   })
 
-  it('creates deferred pending with credit and without an invoice', async () => {
+  it('creates deferred pending without credit and without an invoice', async () => {
     const { rpc, run } = harness(async () => ({
       ok: true,
       payment_id: 'pay-2',
       payment_status: 'pending',
       payment_method: 'deferred',
-      credit_applied: true,
+      credit_applied: false,
       invoice_id: null,
       total_rappen: 1000,
     }))
     const result = await run({ ...body, payment_method: 'deferred' })
     expect(result.payment_status).toBe('pending')
     expect(result.invoice_id).toBeNull()
-    expect(result.credit_applied).toBe(true)
+    expect(result.credit_applied).toBe(false)
     expect(rpc.mock.calls[0][0].p_method).toBe('deferred')
+    expect(rpc.mock.calls.map((call) => call[0].p_action)).toEqual(['create'])
   })
 
-  it('creates an unsent invoice and credits inside the sale', async () => {
+  it('creates an unsent invoice without credit', async () => {
     const sendInvoice = vi.fn()
     const { rpc, run } = harness(async () => ({
       ok: true,
@@ -305,18 +306,18 @@ describe('orchestrator', () => {
       payment_status: 'pending',
       payment_method: 'invoice',
       invoice_id: 'inv-1',
-      credit_applied: true,
+      credit_applied: false,
       total_rappen: 1000,
     }), { sendInvoice })
     const result = await run({ ...body, payment_method: 'invoice' })
     expect(result.invoice_id).toBe('inv-1')
     expect(result.invoice_sent).toBe(false)
-    expect(result.credit_applied).toBe(true)
+    expect(result.credit_applied).toBe(false)
     expect(sendInvoice).not.toHaveBeenCalled()
     expect(rpc).toHaveBeenCalledTimes(1)
   })
 
-  it('credits invoice-send only after the send succeeds', async () => {
+  it('sends an invoice without applying credit', async () => {
     const sendInvoice = vi.fn(async () => ({ sent: true }))
     const actions: string[] = []
     const { run } = harness(async (args) => {
@@ -335,8 +336,9 @@ describe('orchestrator', () => {
     const result = await run({ ...body, payment_method: 'invoice_send' })
     expect(sendInvoice).toHaveBeenCalledTimes(1)
     expect(result.invoice_sent).toBe(true)
-    expect(result.credit_applied).toBe(true)
-    expect(actions.filter((action) => action === 'apply_credit')).toHaveLength(1)
+    expect(result.payment_status).toBe('pending')
+    expect(result.credit_applied).toBe(false)
+    expect(actions).not.toContain('apply_credit')
   })
 
   it('keeps the invoice and withholds credit when send fails', async () => {
@@ -361,7 +363,7 @@ describe('orchestrator', () => {
     expect(actions).not.toContain('apply_credit')
   })
 
-  it('retries a sent invoice without a second mail or a second credit call beyond the idempotent apply', async () => {
+  it('retries a sent invoice without a second mail or a credit call', async () => {
     const sendInvoice = vi.fn()
     const actions: string[] = []
     const { run } = harness(async (args) => {
@@ -377,8 +379,8 @@ describe('orchestrator', () => {
     const result = await run({ ...body, payment_method: 'invoice_send' })
     expect(sendInvoice).not.toHaveBeenCalled()
     expect(result.invoice_sent).toBe(true)
-    expect(result.credit_applied).toBe(true)
-    expect(actions.filter((action) => action === 'apply_credit')).toHaveLength(1)
+    expect(result.credit_applied).toBe(false)
+    expect(actions).not.toContain('apply_credit')
   })
 
   it('starts online payment without credit', async () => {
