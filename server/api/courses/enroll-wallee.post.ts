@@ -15,6 +15,7 @@ import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { SARIClient } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
+import { recordConfirmedSariMembership, SARI_MEMBERSHIP_SOURCE, SariMembershipWriteError } from '~/server/utils/registration-sari-membership'
 import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 import { findExistingUserByContact, findStaffOrAdminByEmail, findStaffOrAdminByPhone } from '~/server/utils/user-matching'
@@ -693,19 +694,36 @@ const handler = defineEventHandler(async (event) => {
           }
 
           for (const sessionId of creditSariSessionIds) {
+            const numericId = parseInt(sessionId, 10)
+            if (!Number.isInteger(numericId) || numericId <= 0) continue
+            let sariConfirmed = false
             try {
-              await sari.enrollStudent(parseInt(sessionId), faberidClean, birthdate)
+              await sari.enrollStudent(numericId, faberidClean, birthdate)
+              sariConfirmed = true
               logger.debug(`✅ SARI session ${sessionId} enrolled (credit path)`)
             } catch (sErr: any) {
               if (sErr.message?.includes('ALREADY_ENROLLED') || sErr.message?.includes('PERSON_ALREADY_ADDED')) {
+                sariConfirmed = true
                 logger.debug(`⏭️ Session ${sessionId}: Already enrolled (OK)`)
               } else {
                 logger.warn(`⚠️ SARI session ${sessionId} failed (credit path, non-fatal):`, sErr.message)
               }
             }
+            if (!sariConfirmed) continue
+            const sessionRows = (course.course_sessions || []) as Array<{ id?: string; sari_session_id?: string | number | null }>
+            const matches = sessionRows.filter((row) => String(row.sari_session_id) === String(numericId))
+            await recordConfirmedSariMembership({
+              supabase,
+              tenantId,
+              registrationId: creditRegistration.id,
+              sariSessionId: numericId,
+              courseSessionId: matches.length === 1 ? matches[0]?.id || null : null,
+              source: SARI_MEMBERSHIP_SOURCE.walleeEnrollment,
+            })
           }
           logger.info(`✅ SARI enrollment done (credit path, ${creditSariSessionIds.length} sessions)`)
         } catch (sariErr: any) {
+          if (sariErr instanceof SariMembershipWriteError) throw sariErr
           logger.warn('⚠️ SARI enrollment failed (credit path, non-fatal):', sariErr.message)
         }
 

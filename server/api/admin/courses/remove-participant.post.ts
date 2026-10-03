@@ -10,6 +10,10 @@ import { sendEmail } from '~/server/utils/email'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
 import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import {
+  deleteConfirmedSariMembership,
+  listRegistrationSariMemberships,
+} from '~/server/utils/registration-sari-membership'
 
 /** Outcome of the SARI de-enrollment attempt, returned to the admin UI so a failure is never silent. */
 interface SariSyncResult {
@@ -107,7 +111,9 @@ export default defineEventHandler(async (event) => {
 
   const sariSync: SariSyncResult = { attempted: false, success: true, blocked: false }
 
-  if (course?.sari_managed && course?.sari_course_id && faberid) {
+  const memberships = await listRegistrationSariMemberships(supabase, profile.tenant_id, enrollmentId)
+
+  if (course?.sari_managed && faberid && memberships.length > 0) {
     sariSync.attempted = true
     const failedSessions: string[] = []
     let blockedByConfirmed = false
@@ -117,48 +123,37 @@ export default defineEventHandler(async (event) => {
       if (!credentials) {
         logger.warn('⚠️ SARI unenroll skipped — no credentials for tenant', profile.tenant_id)
         sariSync.attempted = true
-        sariSync.success = true // local-only / no credentials is OK — don't block removal
-        sariSync.message = 'SARI-Zugangsdaten fehlen — nur lokal abgemeldet'
+        sariSync.success = false
+        sariSync.message = 'SARI-Zugangsdaten fehlen — Membership bleibt bestehen'
       } else {
         const sari = new SARIClient(credentials)
-        const sessions: any[] = course.course_sessions || []
 
-        // For partial enrollments only de-enroll from sessions the user was enrolled in.
-        // We use the category's partial_start_position from DB to determine this.
-        let relevantSessions = sessions
-        if (reg.is_partial_enrollment) {
-          // Fetch partial_start_position from category
-          const { data: courseWithCategory } = await supabase
-            .from('courses')
-            .select('course_category_id, course_categories(partial_start_position)')
-            .eq('id', course.id)
-            .single()
-          const startPos = (courseWithCategory?.course_categories as any)?.partial_start_position ?? 3
-          relevantSessions = sessions.filter(s => (s.session_number ?? 99) >= startPos)
-        }
-
-        // Unenroll from each session individually
-        for (const session of relevantSessions) {
-          const sessionId = session.sari_session_id
-          if (!sessionId) continue
-          const numericId = typeof sessionId === 'string'
-            ? parseInt(sessionId.replace(/\D/g, ''), 10)
-            : sessionId
-          if (!numericId || isNaN(numericId)) continue
+        for (const membership of memberships) {
           try {
-            await sari.unenrollStudent(numericId, faberid)
-            logger.debug(`✅ SARI unenrolled session ${numericId} for ${faberid}`)
+            await sari.unenrollStudent(membership.sari_session_id, faberid)
+            await deleteConfirmedSariMembership({
+              supabase,
+              tenantId: profile.tenant_id,
+              registrationId: enrollmentId,
+              sariSessionId: membership.sari_session_id,
+            })
+            logger.debug(`✅ SARI unenrolled session ${membership.sari_session_id} for ${faberid}`)
           } catch (sessionErr: any) {
             if (isSariUnenrollIdempotent(sessionErr.message)) {
-              // Already not enrolled — this is the goal state, not a failure.
-              logger.debug(`ℹ️ SARI session ${numericId} already unenrolled for ${faberid}`)
+              await deleteConfirmedSariMembership({
+                supabase,
+                tenantId: profile.tenant_id,
+                registrationId: enrollmentId,
+                sariSessionId: membership.sari_session_id,
+              })
+              logger.debug(`ℹ️ SARI session ${membership.sari_session_id} already unenrolled for ${faberid}`)
               continue
             }
             if (isSariUnenrollBlocked(sessionErr.message)) {
               blockedByConfirmed = true
             }
-            failedSessions.push(`${numericId}: ${sessionErr.message}`)
-            logger.warn(`⚠️ SARI unenroll failed for session ${numericId}:`, sessionErr.message)
+            failedSessions.push(`${membership.sari_session_id}: ${sessionErr.message}`)
+            logger.warn(`⚠️ SARI unenroll failed for session ${membership.sari_session_id}:`, sessionErr.message)
           }
         }
 
@@ -195,6 +190,14 @@ export default defineEventHandler(async (event) => {
       .eq('id', enrollmentId)
   } else if (course?.sari_managed && !faberid) {
     logger.warn('⚠️ SARI-managed course but user has no faberid – skipping SARI de-enrollment')
+  }
+
+  const remainingMemberships = await listRegistrationSariMemberships(supabase, profile.tenant_id, enrollmentId)
+  if (remainingMemberships.length > 0) {
+    throw createError({
+      statusCode: sariSync.blocked ? 409 : 502,
+      statusMessage: sariSync.message || 'SARI-Abmeldung fehlgeschlagen — Membership bleibt bestehen',
+    })
   }
 
   // ── 2. Soft-delete the registration ───────────────────────────────────────

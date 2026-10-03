@@ -24,7 +24,14 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
-import { SARIClient } from '~/utils/sariClient'
+import { SARIClient, isSariUnenrollBlocked, isSariUnenrollIdempotent } from '~/utils/sariClient'
+import {
+  deleteConfirmedSariMembership,
+  listRegistrationSariMemberships,
+  recordConfirmedSariMembership,
+  SARI_MEMBERSHIP_SOURCE,
+  parsePositiveSariSessionId,
+} from '~/server/utils/registration-sari-membership'
 import { logger } from '~/utils/logger'
 import { sendTenantEmail } from '~/server/utils/email'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
@@ -301,24 +308,60 @@ export default defineEventHandler(async (event) => {
 
       // ── Apply SARI changes ──────────────────────────────────────────────
       try {
-        for (const ch of prepared) {
+        const memberships = await listRegistrationSariMemberships(supabase, profile.tenant_id, reg.id)
+        const membershipIds = new Set(memberships.map((membership) => membership.sari_session_id))
+        if (memberships.length === 0) {
+          sariWarning = 'Keine bestätigte SARI-Membership — nur lokal gespeichert'
+        } else {
+          for (const ch of prepared) {
           for (const sid of ch.oldSariIds) {
             if (ch.targetSariSessionIds.includes(sid)) continue // unchanged id
+            const numericId = parsePositiveSariSessionId(sid)
+            if (numericId == null || !membershipIds.has(numericId)) continue
+            let confirmedAbsent = false
             try {
-              await sari.unenrollStudent(parseInt(sid, 10), faberid)
+              await sari.unenrollStudent(numericId, faberid)
+              confirmedAbsent = true
             } catch (err: any) {
-              const msg = err?.message || ''
-              if (msg.includes('NOT_FOUND') || msg.includes('NOT_ENROLLED') || msg.includes('PERSON_NOT_FOUND')) continue
-              logger.warn(`⚠️ SARI unenroll ${sid}:`, msg)
+              if (isSariUnenrollIdempotent(err?.message)) {
+                confirmedAbsent = true
+              } else {
+                throw createError({
+                  statusCode: isSariUnenrollBlocked(err?.message) ? 409 : 502,
+                  statusMessage: err?.message || `SARI-Abmeldung für ${numericId} fehlgeschlagen`,
+                })
+              }
             }
+            if (!confirmedAbsent) continue
+            await deleteConfirmedSariMembership({
+              supabase,
+              tenantId: profile.tenant_id,
+              registrationId: reg.id,
+              sariSessionId: numericId,
+            })
+            membershipIds.delete(numericId)
           }
           for (const sid of ch.targetSariSessionIds) {
             if (ch.oldSariIds.includes(sid)) continue
-            await sari.enrollStudent(parseInt(sid, 10), faberid, birthdate || '')
+            const numericId = parsePositiveSariSessionId(sid)
+            if (numericId == null) {
+              throw createError({ statusCode: 400, statusMessage: `Ungültige SARI-Session-ID: ${sid}` })
+            }
+            await sari.enrollStudent(numericId, faberid, birthdate || '')
+            await recordConfirmedSariMembership({
+              supabase,
+              tenantId: profile.tenant_id,
+              registrationId: reg.id,
+              sariSessionId: numericId,
+              courseSessionId: null,
+              source: SARI_MEMBERSHIP_SOURCE.transferSession,
+            })
           }
         }
-        sariSynced = true
+        }
+        if (memberships.length > 0) sariSynced = true
       } catch (err: any) {
+        if (err?.statusCode) throw err
         logger.error('❌ SARI apply after successful test failed:', err?.message)
         throw createError({
           statusCode: 502,
@@ -330,6 +373,16 @@ export default defineEventHandler(async (event) => {
     sariWarning = 'Keine Faber-ID — nur lokal gespeichert (kein SARI-Test)'
   } else if (course.sari_managed && !sariSyncActive) {
     sariWarning = 'SARI Sync deaktiviert — nur lokal gespeichert'
+  }
+
+  if (!sariSynced) {
+    const remainingMemberships = await listRegistrationSariMemberships(supabase, profile.tenant_id, reg.id)
+    if (remainingMemberships.length > 0) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: sariWarning || 'Verschiebung abgebrochen: die SARI-Membership wurde nicht entfernt',
+      })
+    }
   }
 
   const now = new Date().toISOString()

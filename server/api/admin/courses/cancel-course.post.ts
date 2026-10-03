@@ -11,6 +11,10 @@ import {
 import { logger } from '~/utils/logger'
 import { sendEmail } from '~/server/utils/email'
 import { emailAppointmentAppStoreBlock } from '~/server/utils/branded-email'
+import {
+  deleteConfirmedSariMembership,
+  listRegistrationSariMemberships,
+} from '~/server/utils/registration-sari-membership'
 
 /**
  * POST /api/admin/courses/cancel-course
@@ -141,6 +145,7 @@ export default defineEventHandler(async (event) => {
   let sariError: string | null = null
   let sariFailedCount = 0
   let sariBlockedCount = 0
+  let restoredUserIds = new Set<string>()
   const isSariManaged = !!(course as any).sari_managed && !!tenant?.sari_enabled
 
   if (isSariManaged) {
@@ -160,18 +165,13 @@ export default defineEventHandler(async (event) => {
         password: sariSecrets.SARI_PASSWORD,
       })
 
-      // Extract all numeric SARI session IDs from the group id (GROUP_111_222_333)
-      const sariIdStr: string = (course as any).sari_course_id || ''
-      const sariSessionIds = sariIdStr
-        .split('_')
-        .filter((p: string) => p && !isNaN(parseInt(p)))
-        .map((p: string) => parseInt(p))
-
-      // Fetch confirmed registrations with user faberid
+      // Fetch confirmed registrations with user faberid. SARI ids come from
+      // membership rows, not from courses.sari_course_id.
       const { data: regs } = await supabase
         .from('course_registrations')
         .select('id, user_id, users!inner(id, faberid, first_name, last_name)')
         .eq('course_id', courseId)
+        .eq('tenant_id', profile.tenant_id)
         .eq('status', 'cancelled') // already cancelled above
         .not('users.faberid', 'is', null)
 
@@ -181,31 +181,57 @@ export default defineEventHandler(async (event) => {
       for (const reg of regs || []) {
         const faberid = (reg as any).users?.faberid
         if (!faberid) continue
+        const memberships = await listRegistrationSariMemberships(supabase, profile.tenant_id, reg.id)
+        if (memberships.length === 0) continue
         let regFailed = false
-        for (const sariSessionId of sariSessionIds) {
+        for (const membership of memberships) {
           try {
-            await sariClient.unenrollStudent(sariSessionId, faberid)
+            await sariClient.unenrollStudent(membership.sari_session_id, faberid)
+            await deleteConfirmedSariMembership({
+              supabase,
+              tenantId: profile.tenant_id,
+              registrationId: reg.id,
+              sariSessionId: membership.sari_session_id,
+            })
             unenrolled++
           } catch (err: any) {
             if (isSariUnenrollIdempotent(err.message)) {
-              // Already not enrolled — this is the goal state, not a failure.
+              await deleteConfirmedSariMembership({
+                supabase,
+                tenantId: profile.tenant_id,
+                registrationId: reg.id,
+                sariSessionId: membership.sari_session_id,
+              })
               continue
             }
             regFailed = true
             if (isSariUnenrollBlocked(err.message)) sariBlockedCount++
-            failuresForLog.push({ faberid, sessionId: sariSessionId, error: err.message })
-            logger.warn(`⚠️ SARI unenroll failed for faberid ${faberid} / session ${sariSessionId}: ${err.message}`)
+            failuresForLog.push({ faberid, sessionId: membership.sari_session_id, error: err.message })
+            logger.warn(`⚠️ SARI unenroll failed for faberid ${faberid} / session ${membership.sari_session_id}: ${err.message}`)
           }
         }
         if (regFailed) sariFailedCount++
-        // Only mark as synced if every session for this registration actually succeeded
-        // (or was already unenrolled) — previously this was set unconditionally, which
-        // masked real de-enrollment failures (e.g. COURSEMEMBER_ALREADY_CONFIRMED).
-        await supabase
-          .from('course_registrations')
-          .update({ sari_synced: !regFailed, sari_synced_at: regFailed ? null : now })
-          .eq('id', reg.id)
+        else {
+          // Every stored membership for this registration was removed.
+          const { error: syncError } = await supabase
+            .from('course_registrations')
+            .update({ sari_synced: true, sari_synced_at: now })
+            .eq('id', reg.id)
+            .eq('tenant_id', profile.tenant_id)
+          if (syncError) {
+            logger.error('❌ Could not mark registration SARI-synced after unenroll:', syncError)
+            throw createError({ statusCode: 500, statusMessage: syncError.message })
+          }
+        }
       }
+
+      const restored = await restoreRegistrationsThatStillHaveMemberships(
+        supabase,
+        profile.tenant_id,
+        courseId,
+      )
+      restoredUserIds = restored.userIds
+      if (restored.count > 0) sariFailedCount = Math.max(sariFailedCount, restored.count)
 
       if (failuresForLog.length > 0) {
         await supabase.from('sari_sync_logs').insert({
@@ -221,14 +247,30 @@ export default defineEventHandler(async (event) => {
       logger.info(`✅ SARI: unenrolled ${unenrolled} participant-session(s) for cancelled course ${courseId} (${sariFailedCount} participant(s) failed)`)
       sariUnenrolled = (regs || []).filter((r: any) => r.users?.faberid).length - sariFailedCount
     } catch (sariErr: any) {
-      // Non-fatal: log but don't fail the overall cancellation
       logger.error(`⚠️ SARI unenrollment failed during course cancellation: ${sariErr.message}`)
       sariError = sariErr.message
+      try {
+        const restored = await restoreRegistrationsThatStillHaveMemberships(
+          supabase,
+          profile.tenant_id,
+          courseId,
+        )
+        restoredUserIds = restored.userIds
+        if (restored.count > 0) sariFailedCount = Math.max(sariFailedCount, restored.count)
+      } catch (restoreErr: any) {
+        logger.error('❌ Could not restore registrations after failed SARI unenroll:', restoreErr?.message)
+        throw createError({
+          statusCode: restoreErr?.statusCode || 500,
+          statusMessage: restoreErr?.statusMessage || restoreErr?.message || 'Anmeldung konnte nach fehlgeschlagener SARI-Abmeldung nicht wiederhergestellt werden',
+        })
+      }
     }
   }
 
-  // Send cancellation emails if requested
-  if (notifyByEmail && participants && participants.length > 0) {
+  // Send cancellation emails if requested. Skip participants whose registration
+  // was restored because a SARI membership is still active.
+  const emailParticipants = (participants || []).filter((p) => !restoredUserIds.has(p.user_id))
+  if (notifyByEmail && emailParticipants.length > 0) {
     const sessions: any[] = (course as any).course_sessions || []
 
     const sortedSessions = [...sessions].sort(
@@ -245,7 +287,7 @@ export default defineEventHandler(async (event) => {
       }
 
       let sent = 0
-      for (const p of participants) {
+      for (const p of emailParticipants) {
         if (!p.email) continue
         const firstName = p.first_name || 'Teilnehmer'
 
@@ -273,7 +315,7 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      logger.debug(`✅ Sent ${sent}/${participants.length} cancellation emails`)
+      logger.debug(`✅ Sent ${sent}/${emailParticipants.length} cancellation emails`)
     } catch (err: any) {
       // Non-fatal: log but don't fail the cancellation
       logger.error('⚠️ Email sending failed for course cancellation:', err.message)
@@ -292,11 +334,59 @@ export default defineEventHandler(async (event) => {
           error: sariError,
           failedCount: sariFailedCount,
           blockedCount: sariBlockedCount,
+          restoredCount: restoredUserIds.size,
           blockedMessage: sariBlockedCount > 0 ? getSariUnenrollBlockedMessage() : undefined,
         }
       : null,
   }
 })
+
+/** A remaining membership row means the SARI seat is still active. */
+async function restoreRegistrationsThatStillHaveMemberships(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  tenantId: string,
+  courseId: string,
+): Promise<{ count: number; userIds: Set<string> }> {
+  const { data: regs, error } = await supabase
+    .from('course_registrations')
+    .select('id, user_id')
+    .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'cancelled')
+    .is('deleted_at', null)
+
+  if (error) {
+    logger.error('❌ Could not load registrations to restore after SARI failure:', error)
+    throw createError({ statusCode: 500, statusMessage: error.message })
+  }
+
+  const userIds = new Set<string>()
+  let count = 0
+  for (const reg of regs || []) {
+    const memberships = await listRegistrationSariMemberships(supabase, tenantId, reg.id)
+    if (memberships.length === 0) continue
+    const { error: revertError } = await supabase
+      .from('course_registrations')
+      .update({
+        status: 'confirmed',
+        cancelled_at: null,
+        sari_synced: false,
+        sari_synced_at: null,
+      })
+      .eq('id', reg.id)
+      .eq('tenant_id', tenantId)
+    if (revertError) {
+      logger.error('❌ Could not restore registration after failed SARI unenroll:', revertError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'SARI-Abmeldung fehlgeschlagen und die Anmeldung konnte nicht wiederhergestellt werden',
+      })
+    }
+    count++
+    if (reg.user_id) userIds.add(reg.user_id)
+  }
+  return { count, userIds }
+}
 
 function buildCancellationEmail({
   firstName,

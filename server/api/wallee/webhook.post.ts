@@ -27,6 +27,7 @@ import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
 import { mergePaymentMetadata, normalizePaymentMetadata } from '~/server/utils/payment-metadata'
 import { applyCapturedWalleeTopupCredits } from '~/server/utils/topup-credit'
 import { isCourseCapacityExceeded } from '~/server/utils/course-capacity'
+import { recordConfirmedSariMembership, SARI_MEMBERSHIP_SOURCE } from '~/server/utils/registration-sari-membership'
 import {
   ensureGuestUserForCoursePayment,
   fulfillCourseWalleePayment,
@@ -2764,16 +2765,22 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
     let errorCount = 0
     
     for (const sessionId of sariCourseIds) {
+      const numericId = parseInt(sessionId, 10)
+      if (!Number.isInteger(numericId) || numericId <= 0) {
+        errorCount++
+        continue
+      }
+      let sariConfirmed = false
       try {
-        logger.debug(`📝 Enrolling in session ${sessionId} (type: ${typeof sessionId}, parsed: ${parseInt(sessionId)})...`)
-        const result = await sari.enrollStudent(parseInt(sessionId), registration.sari_faberid, birthdateFormatted)
-        successCount++
+        logger.debug(`📝 Enrolling in session ${sessionId} (type: ${typeof sessionId}, parsed: ${numericId})...`)
+        const result = await sari.enrollStudent(numericId, registration.sari_faberid, birthdateFormatted)
+        sariConfirmed = true
         logger.debug(`✅ Session ${sessionId} enrolled, result:`, result)
       } catch (sessionError: any) {
         // If already enrolled, that's OK - count as success
         if (sessionError.message?.includes('ALREADY_ENROLLED') || sessionError.message?.includes('PERSON_ALREADY_ADDED')) {
           logger.debug(`⏭️ Session ${sessionId}: Already enrolled (OK)`)
-          successCount++
+          sariConfirmed = true
         } else {
           logger.warn(`⚠️ Session ${sessionId} enrollment failed:`, {
             message: sessionError.message,
@@ -2782,6 +2789,23 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
           })
           errorCount++
         }
+      }
+      if (!sariConfirmed) continue
+      try {
+        const sessionRows = (course.course_sessions || []) as Array<{ id?: string; sari_session_id?: string | number | null }>
+        const matches = sessionRows.filter((row) => String(row.sari_session_id) === String(numericId))
+        await recordConfirmedSariMembership({
+          supabase,
+          tenantId: registration.tenant_id,
+          registrationId,
+          sariSessionId: numericId,
+          courseSessionId: matches.length === 1 ? matches[0]?.id || null : null,
+          source: SARI_MEMBERSHIP_SOURCE.webhookEnrollment,
+        })
+        successCount++
+      } catch (persistErr: any) {
+        errorCount++
+        logger.error(`❌ SARI confirmed session ${numericId}, but membership was not saved:`, persistErr?.message)
       }
     }
     

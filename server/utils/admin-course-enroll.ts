@@ -11,6 +11,11 @@ import { logger } from '~/utils/logger'
 import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
+import {
+  recordConfirmedSariMembership,
+  SARI_MEMBERSHIP_SOURCE,
+  parsePositiveSariSessionId,
+} from '~/server/utils/registration-sari-membership'
 
 export type AdminPaymentOption = 'cash' | 'invoice' | 'paid' | 'reserve' | 'online_link'
 export type AdminEnrollmentType = 'full' | 'partial' | 'individual'
@@ -185,6 +190,8 @@ async function resolveOrCreateUser(
   return { userId: newUser.id, user: newUser }
 }
 
+type ConfirmedAdminSariSession = { sariSessionId: number; courseSessionId: string | null }
+
 async function trySariEnroll(opts: {
   tenantId: string
   course: any
@@ -193,12 +200,12 @@ async function trySariEnroll(opts: {
   paymentOption: AdminPaymentOption
   enrollmentType: AdminEnrollmentType
   partialStartPosition?: number
-}): Promise<AdminEnrollResult['sari']> {
+}): Promise<AdminEnrollResult['sari'] & { confirmed: ConfirmedAdminSariSession[] }> {
   if (opts.paymentOption === 'reserve') {
-    return { attempted: false, synced: false, skippedReason: 'reserve', message: 'Platz reserviert — nicht in SARI eingetragen' }
+    return { attempted: false, synced: false, skippedReason: 'reserve', message: 'Platz reserviert — nicht in SARI eingetragen', confirmed: [] }
   }
   if (!opts.course?.sari_managed) {
-    return { attempted: false, synced: false, skippedReason: 'not_sari_course' }
+    return { attempted: false, synced: false, skippedReason: 'not_sari_course', confirmed: [] }
   }
 
   const faberidClean = (opts.faberid || '').replace(/\./g, '')
@@ -208,6 +215,7 @@ async function trySariEnroll(opts: {
       synced: false,
       skippedReason: 'missing_data',
       message: 'Keine Faber-ID/Geburtsdatum — lokal angemeldet, nicht in SARI',
+      confirmed: [],
     }
   }
 
@@ -218,6 +226,7 @@ async function trySariEnroll(opts: {
       synced: false,
       skippedReason: 'no_credentials',
       message: 'Keine SARI-Zugangsdaten — lokal angemeldet, Sync später möglich',
+      confirmed: [],
     }
   }
 
@@ -234,52 +243,34 @@ async function trySariEnroll(opts: {
       relevant = relevant.filter((s: any) => s.session_number === opts.partialStartPosition)
     }
 
-    // Fallback: parse group course id sessions from sari_course_id if no per-session ids
-    let sessionIds = relevant
-      .map((s: any) => String(s.sari_session_id).replace(/\D/g, ''))
-      .filter(Boolean)
-      .map((id: string) => parseInt(id, 10))
-      .filter((n: number) => !isNaN(n) && n > 0)
-
-    if (sessionIds.length === 0 && opts.course.sari_course_id) {
-      const groupId = parseInt(String(opts.course.sari_course_id).replace(/\D/g, ''), 10)
-      if (!isNaN(groupId) && groupId > 0) sessionIds = [groupId]
+    const confirmed: ConfirmedAdminSariSession[] = []
+    for (const session of relevant) {
+      const sariSessionId = parsePositiveSariSessionId(session.sari_session_id)
+      if (sariSessionId == null) continue
+      try {
+        await sari.enrollStudent(sariSessionId, faberidClean, opts.birthdate)
+        confirmed.push({ sariSessionId, courseSessionId: session.id || null })
+      } catch (err: any) {
+        const msg = err?.message || ''
+        if (msg.includes('ALREADY_ENROLLED') || msg.includes('PERSON_ALREADY_ADDED')) {
+          confirmed.push({ sariSessionId, courseSessionId: session.id || null })
+        } else {
+          logger.warn(`⚠️ Admin SARI enroll session ${sariSessionId} failed:`, msg)
+        }
+      }
     }
 
-    if (sessionIds.length === 0) {
+    if (confirmed.length === 0) {
       return {
         attempted: true,
         synced: false,
         skippedReason: 'error',
         message: 'Keine SARI-Session-IDs am Kurs — lokal angemeldet',
+        confirmed,
       }
     }
 
-    let successCount = 0
-    for (const sessionId of sessionIds) {
-      try {
-        await sari.enrollStudent(sessionId, faberidClean, opts.birthdate)
-        successCount++
-      } catch (err: any) {
-        const msg = err?.message || ''
-        if (msg.includes('ALREADY_ENROLLED') || msg.includes('PERSON_ALREADY_ADDED')) {
-          successCount++
-        } else {
-          logger.warn(`⚠️ Admin SARI enroll session ${sessionId} failed:`, msg)
-        }
-      }
-    }
-
-    if (successCount === 0) {
-      return {
-        attempted: true,
-        synced: false,
-        skippedReason: 'error',
-        message: 'SARI-Anmeldung fehlgeschlagen — lokal trotzdem angemeldet',
-      }
-    }
-
-    return { attempted: true, synced: true }
+    return { attempted: true, synced: true, confirmed }
   } catch (err: any) {
     logger.warn('⚠️ Admin SARI enroll failed (non-fatal):', err?.message)
     return {
@@ -287,6 +278,7 @@ async function trySariEnroll(opts: {
       synced: false,
       skippedReason: 'error',
       message: err?.message || 'SARI-Fehler — lokal angemeldet',
+      confirmed: [],
     }
   }
 }
@@ -445,6 +437,7 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
           synced: false,
           skippedReason: 'reserve' as const,
           message: 'SARI nach Zahlung (Online-Link)',
+          confirmed: [] as ConfirmedAdminSariSession[],
         }
       : await trySariEnroll({
           tenantId: opts.tenantId,
@@ -508,6 +501,17 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
     throw createError({
       statusCode: 500,
       statusMessage: `Anmeldung konnte nicht erstellt werden: ${msg}`,
+    })
+  }
+
+  for (const confirmed of sariResult.confirmed) {
+    await recordConfirmedSariMembership({
+      supabase,
+      tenantId: opts.tenantId,
+      registrationId: enrollment.id,
+      sariSessionId: confirmed.sariSessionId,
+      courseSessionId: confirmed.courseSessionId,
+      source: SARI_MEMBERSHIP_SOURCE.adminCourseEnroll,
     })
   }
 

@@ -16,6 +16,7 @@ import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
+import { recordConfirmedSariMembership, SARI_MEMBERSHIP_SOURCE } from '~/server/utils/registration-sari-membership'
 import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 import { findExistingUserByContact, findStaffOrAdminByEmail, findStaffOrAdminByPhone } from '~/server/utils/user-matching'
@@ -365,6 +366,7 @@ const handler = defineEventHandler(async (event) => {
     const isPartial = !!(isPartialEnrollment || course.is_partial_only)
     const isIndividualSess =
       isPartial && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
+    const confirmedSariSessions: Array<{ sariSessionId: number; courseSessionId: string | null }> = []
 
     // 9. SARI sync FIRST (before DB save) - if managed
     // Enroll in ALL sessions (GROUP_2159157_2159158_2159159 → [2159157, 2159158, 2159159])
@@ -492,16 +494,26 @@ const handler = defineEventHandler(async (event) => {
       
       logger.info(`🎯 Enrolling in SARI for ${sariSessionIds.length} sessions: ${sariSessionIds.join(', ')}`)
       
-      // Enroll in ALL sessions
+      // Enroll in ALL sessions. Membership rows are written only for ids SARI confirmed,
+      // and only after the registration row exists.
       let successCount = 0
       let errorCount = 0
       let lastError: any = null
-      
+
       for (const sessionId of sariSessionIds) {
+        const numericId = parseInt(sessionId, 10)
+        if (!Number.isInteger(numericId) || numericId <= 0) {
+          errorCount++
+          continue
+        }
         try {
           logger.debug(`📝 Enrolling in session ${sessionId}...`)
-          await sari.enrollStudent(parseInt(sessionId), faberidClean, birthdate)
+          await sari.enrollStudent(numericId, faberidClean, birthdate)
           successCount++
+          confirmedSariSessions.push({
+            sariSessionId: numericId,
+            courseSessionId: courseSessionIdForConfirmedSari(course.course_sessions, numericId),
+          })
           logger.debug(`✅ Session ${sessionId} enrolled`)
         } catch (error: any) {
           const errorMessage = error.message || ''
@@ -510,6 +522,10 @@ const handler = defineEventHandler(async (event) => {
           if (errorMessage.includes('ALREADY_ENROLLED') || errorMessage.includes('PERSON_ALREADY_ADDED')) {
             logger.debug(`⏭️ Session ${sessionId}: Already enrolled (OK)`)
             successCount++
+            confirmedSariSessions.push({
+              sariSessionId: numericId,
+              courseSessionId: courseSessionIdForConfirmedSari(course.course_sessions, numericId),
+            })
           } else {
             lastError = error
             errorCount++
@@ -618,6 +634,17 @@ const handler = defineEventHandler(async (event) => {
     }
 
     logger.info('✅ Confirmed enrollment created:', enrollment.id)
+
+    for (const confirmed of confirmedSariSessions) {
+      await recordConfirmedSariMembership({
+        supabase,
+        tenantId,
+        registrationId: enrollment.id,
+        sariSessionId: confirmed.sariSessionId,
+        courseSessionId: confirmed.courseSessionId,
+        source: SARI_MEMBERSHIP_SOURCE.cashEnrollment,
+      })
+    }
 
     upsertMarketingLeadSafe({
       tenantId,
@@ -774,6 +801,11 @@ const handler = defineEventHandler(async (event) => {
     })
   }
 })
+
+function courseSessionIdForConfirmedSari(sessions: Array<{ id?: string; sari_session_id?: string | number | null }> | null | undefined, sariSessionId: number): string | null {
+  const matches = (sessions || []).filter((session) => String(session.sari_session_id) === String(sariSessionId))
+  return matches.length === 1 && matches[0]?.id ? matches[0].id : null
+}
 
 export default defineEventHandler(async (event) => {
   // Apply rate limiting first

@@ -6643,9 +6643,15 @@ const executeCourseCancellation = async () => {
     if (sari) {
       if (sari.error) {
         msg += ` ⚠️ SARI-Abmeldung fehlgeschlagen: ${sari.error}`
+        if (sari.restoredCount > 0) {
+          msg += ` Deren Anmeldung bleibt aktiv, weil die SARI-Membership noch besteht.`
+        }
       } else if (sari.failedCount > 0) {
         msg += ` ⚠️ ${sari.failedCount} von ${sari.unenrolled + sari.failedCount} Teilnehmer(n) konnten NICHT aus SARI abgemeldet werden`
         msg += sari.blockedMessage ? ` (${sari.blockedMessage})` : '.'
+        if (sari.restoredCount > 0) {
+          msg += ` Deren Anmeldung bleibt aktiv, weil die SARI-Membership noch besteht.`
+        }
       } else {
         msg += ` ${sari.unenrolled} Teilnehmer wurden aus SARI abgemeldet.`
       }

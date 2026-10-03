@@ -6,9 +6,10 @@
  * Customers can only transfer their own registration, and only if the course
  * starts more than 7 days in the future.
  *
- * SARI is best-effort:
- * - With faberid + credentials → unenroll/enroll in SARI then update DB
- * - Without faberid / credentials → local DB transfer only (same as admin enroll soft-skip)
+ * SARI:
+ * - No confirmed membership → local DB transfer only
+ * - Confirmed membership → SARI must succeed before the source registration is cancelled
+ * - A failed SARI call leaves the membership row in place
  *
  * Existing payment_id is carried over to the new registration.
  */
@@ -17,6 +18,13 @@ import { getSupabaseServerWithSession } from '~/utils/supabase'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { SARIClient, isSariUnenrollIdempotent, isSariUnenrollBlocked, getSariUnenrollBlockedMessage } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
+import {
+  deleteConfirmedSariMembership,
+  listRegistrationSariMemberships,
+  recordConfirmedSariMembership,
+  SARI_MEMBERSHIP_SOURCE,
+  parsePositiveSariSessionId,
+} from '~/server/utils/registration-sari-membership'
 import { logger } from '~/utils/logger'
 import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
 import {
@@ -155,7 +163,10 @@ export default defineEventHandler(async (event) => {
 
   // ── SARI sync (best-effort) ──────────────────────────────────────────────
   let sariSynced = false
+  const enrolledTargetIds: number[] = []
   let sariWarning: string | undefined
+  let transferSari: SARIClient | null = null
+  let transferOldMemberships: Awaited<ReturnType<typeof listRegistrationSariMemberships>> = []
   const bothSari =
     !!(oldCourse.sari_managed && oldCourse.sari_course_id) &&
     !!(targetCourse.sari_managed && targetCourse.sari_course_id)
@@ -193,44 +204,84 @@ export default defineEventHandler(async (event) => {
         return ids.slice(partialStartPos - 1)
       }
 
-      const oldSariIds = filterSessions(extractAllSariIds(oldCourse.sari_course_id!))
+      const oldMemberships = await listRegistrationSariMemberships(
+        supabaseAdmin,
+        callerProfile.tenant_id,
+        oldReg.id,
+      )
+      transferSari = sari
+      transferOldMemberships = oldMemberships
       const targetSariIds = filterSessions(extractAllSariIds(targetCourse.sari_course_id!))
+        .map((id) => parsePositiveSariSessionId(id))
+        .filter((id): id is number => id != null)
 
-      if (oldSariIds.length === 0 || targetSariIds.length === 0) {
-        sariWarning = 'Keine gültigen SARI-Session-IDs — nur lokal umgebucht'
+      if (oldMemberships.length === 0) {
+        sariWarning = 'Keine bestätigte SARI-Membership — nur lokal umgebucht'
+      } else if (targetSariIds.length === 0) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'SARI-Umplanung nicht möglich: keine gültige Ziel-Session bei bestehender Membership',
+        })
       } else {
         try {
           logger.info(`🔍 Validating ${targetSariIds.length} target sessions for ${faberid}`)
-          const validation = await sari.validateAllSessions(targetSariIds, faberid, birthdate ?? '')
+          const validation = await sari.validateAllSessions(targetSariIds.map(String), faberid, birthdate ?? '')
           if (!validation.canEnroll) {
             throw createError({ statusCode: 409, statusMessage: validation.reason || 'Anmeldung im Ziel-Kurs nicht möglich' })
           }
 
-          logger.info(`🔄 Transfer ${faberid}: unenroll [${oldSariIds}] → enroll [${targetSariIds}]`)
+          logger.info(`🔄 Transfer ${faberid}: unenroll [${oldMemberships.map((row) => row.sari_session_id)}] → enroll [${targetSariIds}]`)
 
-          for (const sessionId of oldSariIds) {
+          for (const membership of oldMemberships) {
             try {
-              await sari.unenrollStudent(parseInt(sessionId), faberid)
+              await sari.unenrollStudent(membership.sari_session_id, faberid)
             } catch (err: any) {
-              if (isSariUnenrollIdempotent(err.message)) continue
-              if (isSariUnenrollBlocked(err.message)) {
+              if (isSariUnenrollIdempotent(err.message)) {
+                // SARI already has no seat. The local row is removed below.
+              } else if (isSariUnenrollBlocked(err.message)) {
                 throw createError({ statusCode: 409, statusMessage: getSariUnenrollBlockedMessage() })
+              } else {
+                throw createError({ statusCode: 502, statusMessage: `SARI-Abmeldung (Session ${membership.sari_session_id}) fehlgeschlagen: ${err.message}` })
               }
-              throw createError({ statusCode: 502, statusMessage: `SARI-Abmeldung (Session ${sessionId}) fehlgeschlagen: ${err.message}` })
             }
+            await deleteConfirmedSariMembership({
+              supabase: supabaseAdmin,
+              tenantId: callerProfile.tenant_id,
+              registrationId: oldReg.id,
+              sariSessionId: membership.sari_session_id,
+            })
           }
 
-          const enrolledSessions: string[] = []
           for (const sessionId of targetSariIds) {
             try {
-              await sari.enrollStudent(parseInt(sessionId), faberid, birthdate ?? '')
-              enrolledSessions.push(sessionId)
+              await sari.enrollStudent(sessionId, faberid, birthdate ?? '')
+              enrolledTargetIds.push(sessionId)
             } catch (err: any) {
-              for (const sid of enrolledSessions) {
-                try { await sari.unenrollStudent(parseInt(sid), faberid) } catch {}
+              for (const sid of enrolledTargetIds) {
+                try {
+                  await sari.unenrollStudent(sid, faberid)
+                } catch (rollbackErr: any) {
+                  logger.error(`SARI rollback unenroll failed for ${sid}: ${rollbackErr?.message}`)
+                }
               }
-              for (const sid of oldSariIds) {
-                try { await sari.enrollStudent(parseInt(sid), faberid, birthdate ?? '') } catch {}
+              for (const membership of oldMemberships) {
+                try {
+                  await sari.enrollStudent(membership.sari_session_id, faberid, birthdate ?? '')
+                  await recordConfirmedSariMembership({
+                    supabase: supabaseAdmin,
+                    tenantId: callerProfile.tenant_id,
+                    registrationId: oldReg.id,
+                    sariSessionId: membership.sari_session_id,
+                    courseSessionId: membership.course_session_id,
+                    source: membership.source,
+                  })
+                } catch (restoreErr: any) {
+                  logger.error(`SARI membership restore failed for ${membership.sari_session_id}: ${restoreErr?.message}`)
+                  throw createError({
+                    statusCode: 502,
+                    statusMessage: `SARI-Anmeldung fehlgeschlagen und die bisherige Membership konnte nicht wiederhergestellt werden: ${restoreErr?.message || err.message}`,
+                  })
+                }
               }
               if (err.message?.includes('PERSON_ALREADY_ADDED')) {
                 throw createError({ statusCode: 409, statusMessage: 'Teilnehmer ist bereits im Ziel-Kurs angemeldet' })
@@ -241,13 +292,30 @@ export default defineEventHandler(async (event) => {
           sariSynced = true
         } catch (err: any) {
           if (err?.statusCode) throw err
-          logger.warn('⚠️ SARI transfer failed, continuing locally:', err?.message)
-          sariWarning = err?.message || 'SARI-Umplanung fehlgeschlagen — nur lokal umgebucht'
+          throw createError({
+            statusCode: 502,
+            statusMessage: err?.message || 'SARI-Umplanung fehlgeschlagen',
+          })
         }
       }
     }
   } else if (bothSari && !faberid) {
     sariWarning = 'Keine Faber-ID — nur lokal umgebucht (nicht in SARI)'
+  }
+
+  // A leftover membership means SARI was not confirmed clear. Do not cancel locally.
+  if (!sariSynced) {
+    const remainingMemberships = await listRegistrationSariMemberships(
+      supabaseAdmin,
+      callerProfile.tenant_id,
+      oldReg.id,
+    )
+    if (remainingMemberships.length > 0) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: sariWarning || 'Umplanung abgebrochen: die SARI-Membership wurde nicht entfernt',
+      })
+    }
   }
 
   // ── DB changes ───────────────────────────────────────────────────────────
@@ -321,7 +389,47 @@ export default defineEventHandler(async (event) => {
     .select('id')
     .single()
 
+  if (!newRegError && newReg?.id && sariSynced) {
+    for (const sariSessionId of enrolledTargetIds) {
+      await recordConfirmedSariMembership({
+        supabase: supabaseAdmin,
+        tenantId: callerProfile.tenant_id,
+        registrationId: newReg.id,
+        sariSessionId,
+        courseSessionId: null,
+        source: SARI_MEMBERSHIP_SOURCE.transferEnrollment,
+      })
+    }
+  }
+
   if (newRegError) {
+    let membershipRestoreError: string | null = null
+    if (sariSynced && transferSari && faberid) {
+      try {
+        for (const sid of enrolledTargetIds) {
+          try {
+            await transferSari.unenrollStudent(sid, faberid)
+          } catch (rollbackErr: any) {
+            if (!isSariUnenrollIdempotent(rollbackErr?.message)) throw rollbackErr
+          }
+        }
+        for (const membership of transferOldMemberships) {
+          await transferSari.enrollStudent(membership.sari_session_id, faberid, birthdate ?? '')
+          await recordConfirmedSariMembership({
+            supabase: supabaseAdmin,
+            tenantId: callerProfile.tenant_id,
+            registrationId: oldReg.id,
+            sariSessionId: membership.sari_session_id,
+            courseSessionId: membership.course_session_id,
+            source: membership.source,
+          })
+        }
+      } catch (restoreErr: any) {
+        membershipRestoreError = restoreErr?.message || 'SARI-Membership konnte nicht wiederhergestellt werden'
+        logger.error(`SARI membership restore after failed transfer insert: ${membershipRestoreError}`)
+      }
+    }
+
     const restored = await restoreTransferredSource({
       supabase: supabaseAdmin,
       snapshot: sourceSnapshot,
@@ -331,7 +439,15 @@ export default defineEventHandler(async (event) => {
       logger.error(`Failed to restore source registration ${oldReg.id} after transfer insert error (${restored.reason}): ${newRegError.message}`)
       throw createError({
         statusCode: 500,
-        statusMessage: TRANSFER_SOURCE_RESTORE_FATAL,
+        statusMessage: membershipRestoreError
+          ? `${TRANSFER_SOURCE_RESTORE_FATAL} ${membershipRestoreError}`
+          : TRANSFER_SOURCE_RESTORE_FATAL,
+      })
+    }
+    if (membershipRestoreError) {
+      throw createError({
+        statusCode: 502,
+        statusMessage: `Neue Anmeldung konnte nicht erstellt werden und die bisherige SARI-Membership konnte nicht wiederhergestellt werden: ${membershipRestoreError}`,
       })
     }
     throwIfCourseCapacityExceeded(newRegError)
