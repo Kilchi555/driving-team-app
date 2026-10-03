@@ -28,6 +28,23 @@ export function roleFromInvitation(role: unknown): InvitationRole {
 }
 
 /**
+ * Legacy POST /api/auth/register action=register-staff.
+ * Only an invitation whose stored role is exactly `staff` may continue.
+ * Admin invitations must not be accepted or consumed on this path.
+ */
+export function legacyAcceptsInvitationRole(role: unknown): boolean {
+  return role === 'staff'
+}
+
+/**
+ * Staff operational rows (hours, locations, calendar, availability)
+ * belong to staff invitations only.
+ */
+export function createsStaffOperationalRecords(role: InvitationRole): boolean {
+  return role === 'staff'
+}
+
+/**
  * Whitelist for POST /api/staff/invite.
  * Accepts the existing staff-form aliases firstName / lastName.
  * tenant_id and every other privileged field are dropped, including nested copies.

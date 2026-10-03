@@ -12,7 +12,7 @@ import {
   consumePendingStaffInvitation,
   releaseStaffInvitationClaim,
 } from '~/server/utils/consume-staff-invitation'
-import { roleFromInvitation } from '~/server/utils/invitation-role'
+import { createsStaffOperationalRecords, roleFromInvitation } from '~/server/utils/invitation-role'
 import { verifyStaffRegistrationLocations } from '~/server/utils/verify-staff-locations'
 
 const INVITATION_TOKEN_MAX_LENGTH = 128
@@ -338,7 +338,7 @@ export default defineEventHandler(async (event) => {
         city: sanitizedCity,
         language: language || 'de',
         accepted_terms_at: acceptedTerms ? new Date().toISOString() : null,
-        category: Array.isArray(selectedCategories) && selectedCategories.length > 0
+        category: registeredRole === 'staff' && Array.isArray(selectedCategories) && selectedCategories.length > 0
           ? selectedCategories
           : null,
         linked_admin_user_id: registeredRole === 'staff' ? linkedAdminId : null,
@@ -382,6 +382,8 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Categories stored in users.category:', selectedCategories?.length ?? 0)
 
+    // Staff operational records. Admin invitations stop after the users row.
+    if (createsStaffOperationalRecords(registeredRole)) {
     // 5. Setup working hours (service role)
     const hoursToInsert = Array.isArray(workingHours) ? workingHours : []
     if (hoursToInsert.length > 0) {
@@ -589,10 +591,12 @@ export default defineEventHandler(async (event) => {
       }
       logger.debug('✅ Exam locations assigned:', verifiedExamLocationIds.length)
     }
+    }
 
     // Invitation was already consumed atomically before Auth/profile creation.
 
     // 9. Auto-generate calendar token so it's immediately available in StaffSettings
+    if (createsStaffOperationalRecords(registeredRole)) {
     try {
       const calendarToken = Math.random().toString(36).substring(2, 15) +
         Math.random().toString(36).substring(2, 15)
@@ -604,6 +608,7 @@ export default defineEventHandler(async (event) => {
       logger.debug('✅ Calendar token auto-generated for new staff member')
     } catch (calErr: any) {
       logger.warn('⚠️ Calendar token generation failed (non-critical):', calErr.message)
+    }
     }
 
     // 10. Send welcome email (non-blocking — don't hold the registration response)
@@ -638,6 +643,7 @@ export default defineEventHandler(async (event) => {
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
     // 11. Queue availability recalc so online-bookable slots appear without waiting for nightly cron
+    if (createsStaffOperationalRecords(registeredRole)) {
     try {
       await enqueueStaffAvailabilityRecalc({
         staff_id: newUser.id,
@@ -648,6 +654,7 @@ export default defineEventHandler(async (event) => {
     } catch (recalcErr: any) {
       logger.warn('⚠️ Availability recalc queue failed (non-critical):', recalcErr?.message || recalcErr)
     }
+    }
 
     // Get tenant slug for redirect
     const { data: tenantData } = await serviceSupabase
@@ -656,6 +663,7 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       userId: newUser.id,
+      role: registeredRole,
       tenantSlug: tenantData?.slug || null,
       message: 'Registrierung erfolgreich'
     }
