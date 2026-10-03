@@ -344,6 +344,22 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Operational notes for engineers (intent → contract → pitfalls → codepaths). Only files that exist on this branch are linked.
+
+| Runbook | Covers |
+|---------|--------|
+| [SALES_WORKSPACE.md](./SALES_WORKSPACE.md) | Superadmin manual sales pipeline + Weiterbildung signal (#341, #353) |
+| [REGISTRATION_SUBMISSION_IDEMPOTENCY.md](./REGISTRATION_SUBMISSION_IDEMPOTENCY.md) | Public register/inquiry idempotency, success CTA, stay-on-form (#325, fe168dcf, #307) |
+| [NITRO_SERVICE_ROLE_DEFER.md](./NITRO_SERVICE_ROLE_DEFER.md) | Defer service-role `createClient` until the request handler (#293) |
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Passkey recovery |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Session persistence |
+| [ACCESS_AND_SECRETS_POLICY.md](./ACCESS_AND_SECRETS_POLICY.md) | Access and secrets policy |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Wallee payment recovery |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
