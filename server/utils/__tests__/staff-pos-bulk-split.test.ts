@@ -289,6 +289,54 @@ describe('cash dialog accounting', () => {
     expect(partial.lines.find((line) => line.id === 'appt-2')?.bookedRappen).toBe(1000)
   })
 
+  it('persists a deferred-only overpayment in the accounted amount', () => {
+    const rows = [deferred]
+    const exact = recorded(rows, 10000)
+    expect(exact.confirmable).toBe(true)
+    expect(exact.plan.completeDeferred).toBe(true)
+    expect(exact.plan.callBulk).toBe(false)
+    expect(exact.overpaymentRappen).toBe(0)
+    expect(exact.accountedRappen).toBe(10000)
+
+    const over = recorded(rows, 12000)
+    expect(over.confirmable).toBe(true)
+    expect(over.plan.completeDeferred).toBe(true)
+    expect(over.plan.callBulk).toBe(false)
+    expect(over.bookedDeferredRappen).toBe(10000)
+    expect(over.overpaymentRappen).toBe(2000)
+    expect(over.accountedRappen).toBe(12000)
+    expect(over.unaccountedRappen).toBe(0)
+
+    const short = recorded(rows, 8000)
+    expect(short.confirmable).toBe(false)
+    expect(short.plan.completeDeferred).toBe(false)
+    expect(short.overpaymentRappen).toBe(0)
+    expect(short.accountedRappen).toBe(0)
+  })
+
+  it('keeps an appointment plus deferred overpayment on the bulk call', () => {
+    const rows = [appointment, deferred]
+    const accounting = recorded(rows, 17000)
+    expect(accounting.confirmable).toBe(true)
+    expect(accounting.plan.completeDeferred).toBe(true)
+    expect(accounting.plan.callBulk).toBe(true)
+    expect(accounting.bookedDeferredRappen).toBe(10000)
+    expect(accounting.bookedNormalRappen).toBe(7000)
+    expect(accounting.overpaymentRappen).toBe(2000)
+    expect(accounting.accountedRappen).toBe(17000)
+    expect(accounting.plan.bulkPartialRappen).toBe(7000)
+  })
+
+  it('does not turn an excluded Wallee gap into deferred overpayment', () => {
+    const rows = [deferred, wallee]
+    const accounting = recorded(rows, 14000)
+    expect(accounting.plan.callBulk).toBe(false)
+    expect(accounting.overpaymentRappen).toBe(2000)
+    expect(accounting.accountedRappen).toBe(12000)
+    expect(accounting.unaccountedRappen).toBe(2000)
+    expect(accounting.confirmable).toBe(false)
+  })
+
   it('refuses a short deferred amount instead of dropping the difference', () => {
     const rows = [deferred, appointment]
     const short = recorded(rows, 8000)
@@ -343,5 +391,12 @@ describe('cash dialog wiring', () => {
     expect(vueSource).toContain('cashAccounting.unaccountedRappen')
     expect(vueSource).not.toContain("alert('Produktverkäufe auf Rechnung werden über die Rechnung bezahlt.')")
     expect(vueSource).not.toContain("alert('Offene Online-Produktverkäufe werden nicht über die Barzahlung abgeschlossen.')")
+    const overpaymentCall = handler.indexOf("'/api/admin/staff-pos/overpayment'")
+    expect(handler.indexOf('if (!plan.callBulk && accounting.overpaymentRappen > 0)')).toBeGreaterThan(
+      handler.indexOf('completeDeferredStaffPos'),
+    )
+    expect(overpaymentCall).toBeGreaterThan(handler.indexOf('completeDeferredStaffPos'))
+    expect(overpaymentCall).toBeLessThan(handler.indexOf("'/api/staff/process-bulk-payment'"))
+    expect(handler).not.toContain('payment_ids: plan.deferredIds, method')
   })
 })

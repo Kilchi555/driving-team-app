@@ -171,11 +171,20 @@ export function accountStaffPosCash(args: {
   })
   const normalRows = args.rows.filter((row) => row.kind === 'normal')
   const normalDue = sumDue(normalRows)
+  const selectedDue = sumDue(args.rows)
   const bookedDeferredRappen = plan.completeDeferred ? plan.deferredDueRappen : 0
-  const bookedNormalRappen = plan.bulkPartialRappen === null ? normalDue : plan.bulkPartialRappen
-  const accountedRappen = bookedDeferredRappen + bookedNormalRappen
+  // bulkPartial is only persisted when the bulk call runs. A deferred-only
+  // surplus is not inside that call, so it must not be counted as booked here.
+  const bookedNormalRappen = plan.callBulk
+    ? (plan.bulkPartialRappen === null ? normalDue : plan.bulkPartialRappen)
+    : 0
+  const trueOverpayment = Math.max(0, enteredRappen - selectedDue)
+  const deferredOnlyOverpayment = !plan.callBulk && plan.completeDeferred ? trueOverpayment : 0
+  const accountedRappen = bookedDeferredRappen + bookedNormalRappen + deferredOnlyOverpayment
   const unaccountedRappen = Math.max(0, enteredRappen - accountedRappen)
-  const overpaymentRappen = Math.max(0, bookedNormalRappen - normalDue)
+  const overpaymentRappen = plan.callBulk
+    ? Math.max(0, bookedNormalRappen - normalDue)
+    : deferredOnlyOverpayment
 
   const allocation = new Map<string, number>()
   const sortedNormal = [...normalRows].sort((a, b) => a.dueRappen - b.dueRappen || a.id.localeCompare(b.id))

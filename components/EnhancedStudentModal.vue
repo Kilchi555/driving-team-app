@@ -2916,14 +2916,14 @@ async function completeDeferredStaffPos(ids: string[]) {
 }
 
 const handleBulkPayment = async (method: 'cash' | 'online', partialAmountRappen?: number) => {
-  if (selectedPayments.value.length === 0) return
+  if (selectedPayments.value.length === 0) return false
 
   const accounting = accountStaffPosCash({
     method,
     enteredRappen: typeof partialAmountRappen === 'number' ? partialAmountRappen : 0,
     rows: selectedStaffPosBulkRows(),
   })
-  if (!accounting.confirmable) return
+  if (!accounting.confirmable) return false
 
   isProcessingBulkAction.value = true
   try {
@@ -2931,10 +2931,22 @@ const handleBulkPayment = async (method: 'cash' | 'online', partialAmountRappen?
     if (plan.completeDeferred) {
       await completeDeferredStaffPos(plan.deferredIds)
     }
+    if (!plan.callBulk && accounting.overpaymentRappen > 0) {
+      const credited = await $fetch('/api/admin/staff-pos/overpayment', {
+        method: 'POST',
+        body: {
+          payment_ids: plan.deferredIds,
+          amount_rappen: accounting.overpaymentRappen,
+        },
+      }) as { creditedRappen?: number; replayed?: boolean }
+      if (!credited?.replayed && credited?.creditedRappen !== accounting.overpaymentRappen) {
+        throw new Error('Überzahlung konnte nicht verbucht werden')
+      }
+    }
     if (!plan.callBulk) {
       selectedPayments.value = []
       await loadPayments()
-      return
+      return true
     }
     logger.debug(`💳 Processing ${plan.normalIds.length} payments as ${method}`)
     
@@ -2957,10 +2969,11 @@ const handleBulkPayment = async (method: 'cash' | 'online', partialAmountRappen?
     await loadPayments()
     await loadLessons()
     selectedPayments.value = []
-    
+    return true
   } catch (error: any) {
     console.error('❌ Error processing bulk payment:', error)
     alert(error?.data?.statusMessage || error?.message || 'Zahlung konnte nicht abgeschlossen werden')
+    return false
   } finally {
     isProcessingBulkAction.value = false
   }
@@ -2977,8 +2990,8 @@ const confirmPartialPayment = async () => {
   })
   if (!accounting.confirmable) return
 
-  showPartialPaymentDialog.value = false
-  await handleBulkPayment(partialPaymentMethod.value, accounting.enteredRappen)
+  const booked = await handleBulkPayment(partialPaymentMethod.value, accounting.enteredRappen)
+  if (booked) showPartialPaymentDialog.value = false
 }
 
 const openCreditPaymentDialog = () => {
