@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     // Tenant-scoped event types with fields needed for EventModal defaults
     let query = supabase
       .from('event_types')
-      .select('code, name, emoji, default_color, default_duration_minutes, require_payment, public_bookable, is_default, is_active, display_order')
+      .select('code, name, emoji, default_color, default_duration_minutes, require_payment, public_bookable, is_default, is_active, display_order, payment_method')
       .eq('is_active', true)
       .order('display_order', { ascending: true })
 
