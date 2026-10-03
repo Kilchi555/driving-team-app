@@ -344,6 +344,17 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Concise, code-verified ops/dev notes. Prefer updating these over inventing parallel pages.
+
+| Doc | Topic |
+|-----|--------|
+| [SIMY_TEST_ENV.md](./SIMY_TEST_ENV.md) | Shared `~/.config/simy/simy-test.env` loader for local Nuxt + E2E (#312) |
+| [WEBSITE_PREVIEW_TOKENS.md](./WEBSITE_PREVIEW_TOKENS.md) | Public website tenant allowlist + hashed draft preview tokens (#299) |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
