@@ -44,6 +44,8 @@ function createMemorySupabase(tables: Record<string, Row[]>, hooks: {
   blockSentUpdate?: boolean
   paymentSelects?: number
   sentUpdates?: number
+  throwOn?: string
+  claimUnavailable?: boolean
 } = {}) {
   function matches(row: Row, filters: Filter[]) {
     return filters.every((filter) => {
@@ -150,12 +152,35 @@ function createMemorySupabase(tables: Record<string, Row[]>, hooks: {
       }
       const execute = () => {
         const rows = tables[table]
+        if (hooks.throwOn === table && state.op === 'select') {
+          throw new Error(`forced ${table} failure`)
+        }
         if (state.op === 'select' && table === 'payments' && hooks.staleFirstPaymentRead) {
           hooks.paymentSelects = (hooks.paymentSelects || 0) + 1
           if (hooks.paymentSelects === 1) return { data: [] as Row[], error: null as { code?: string; message?: string } | null }
         }
         if (state.op === 'insert') {
           const stored = { id: state.payload?.id || crypto.randomUUID(), ...(state.payload || {}) }
+          if (table === 'public_course_invoice_mail_claims' && state.op === 'insert' && hooks.claimUnavailable) {
+            return {
+              data: [] as Row[],
+              error: { code: '42P01', message: 'relation "public_course_invoice_mail_claims" does not exist' },
+            }
+          }
+          if (table === 'public_course_invoice_mail_claims') {
+            const claimClash = rows.some((row) =>
+              row.tenant_id === stored.tenant_id && row.invoice_id === stored.invoice_id,
+            )
+            if (claimClash) {
+              return {
+                data: [] as Row[],
+                error: {
+                  code: '23505',
+                  message: 'duplicate key value violates unique constraint "public_course_invoice_mail_claims_pkey"',
+                },
+              }
+            }
+          }
           if (table === 'payments' && isPublicCourseInvoicePayment(stored)) {
             const clash = rows.some((row) =>
               row.tenant_id === stored.tenant_id
@@ -304,6 +329,7 @@ function baseTables(partial: {
     invoices: [],
     invoice_items: [],
     course_invoice_bindings: [],
+    public_course_invoice_mail_claims: [],
   }
 }
 
@@ -379,6 +405,18 @@ function seedCommittedPublicInvoice(db: ReturnType<typeof createMemorySupabase>,
     credit_applied_rappen: 0,
     agreed_payment_method: 'invoice',
     price_snapshot_at: '2026-10-03T00:00:00.000Z',
+  })
+}
+
+function seedMailClaim(db: ReturnType<typeof createMemorySupabase>, partial: Partial<Row> = {}) {
+  db.tables.public_course_invoice_mail_claims.push({
+    tenant_id: TENANT,
+    invoice_id: 'inv-winner',
+    registration_id: 'reg-new',
+    claim_token: 'token-held',
+    outcome: 'claimed',
+    claimed_at: '2026-10-03T00:00:00.000Z',
+    ...partial,
   })
 }
 
@@ -744,7 +782,16 @@ describe('runPublicCourseInvoiceBilling', () => {
     expect(result).toMatchObject({ status: 'created', reason: 'mail_failed', emailed: false })
     expect(db.tables.invoices[0].status).toBe('draft')
     expect(db.tables.invoices[0].sent_at).toBeNull()
+    expect(db.tables.public_course_invoice_mail_claims[0].outcome).toBe('failed')
     expect(db.tables.course_registrations[0].id).toBe('reg-new')
+
+    const retry = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
+    expect(retry.status).toBe('sent')
+    expect(sendTenantEmail).toHaveBeenCalledTimes(2)
+    expect(db.tables.payments).toHaveLength(1)
+    expect(db.tables.invoices).toHaveLength(1)
+    expect(db.tables.public_course_invoice_mail_claims).toHaveLength(1)
+    expect(db.tables.public_course_invoice_mail_claims[0].outcome).toBe('sent')
   })
 
   it('26. a missing email leaves the invoice draft', async () => {
@@ -825,9 +872,10 @@ describe('runPublicCourseInvoiceBilling', () => {
     const hooks = { staleFirstPaymentRead: true, paymentSelects: 0 }
     const db = createMemorySupabase(baseTables(), hooks)
     seedCommittedPublicInvoice(db)
+    seedMailClaim(db, { outcome: 'claimed' })
     const result = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
     expect(hooks.paymentSelects).toBeGreaterThan(1)
-    expect(result).toMatchObject({ status: 'created', reason: 'concurrent_payment', invoiceId: 'inv-winner', emailed: false })
+    expect(result).toMatchObject({ status: 'created', reason: 'mail_claim_held', invoiceId: 'inv-winner', emailed: false })
     expect(publicCourseEnrollmentMessage('invoice', result)).not.toContain('konnte nicht erstellt')
     expect(db.tables.invoices).toHaveLength(1)
     expect(db.tables.course_invoice_bindings).toHaveLength(1)
@@ -879,6 +927,14 @@ describe('runPublicCourseInvoiceBilling', () => {
     expect(db.tables.invoices[0].sent_at).toBeNull()
     expect(hooks.sentUpdates).toBe(1)
     expect(sendTenantEmail).toHaveBeenCalledTimes(1)
+    expect(db.tables.public_course_invoice_mail_claims).toHaveLength(1)
+    expect(db.tables.public_course_invoice_mail_claims[0].outcome).toBe('unconfirmed')
+
+    const retry = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
+    expect(retry).toMatchObject({ status: 'created', reason: 'mail_claim_held', emailed: false })
+    expect(sendTenantEmail).toHaveBeenCalledTimes(1)
+    expect(db.tables.payments).toHaveLength(1)
+    expect(db.tables.invoices[0].status).toBe('draft')
   })
 
   it('reports sent only after the draft update confirms a row', async () => {
@@ -975,6 +1031,130 @@ describe('runPublicCourseInvoiceBilling', () => {
     expect(publicRows).toHaveLength(1)
   })
 
+  it('one successful run keeps a single payment and a single mail claim', async () => {
+    const db = createMemorySupabase(baseTables())
+    const result = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
+    expect(result.status).toBe('sent')
+    expect(db.tables.payments).toHaveLength(1)
+    expect(db.tables.public_course_invoice_mail_claims).toHaveLength(1)
+    expect(db.tables.public_course_invoice_mail_claims[0]).toMatchObject({
+      tenant_id: TENANT,
+      invoice_id: result.invoiceId,
+      registration_id: 'reg-new',
+      outcome: 'sent',
+    })
+    expect(sendTenantEmail).toHaveBeenCalledTimes(1)
+  })
+
+  it('a second caller seeing the same draft payment cannot take the mail claim', async () => {
+    const db = createMemorySupabase(baseTables())
+    seedCommittedPublicInvoice(db)
+    const first = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
+    expect(first.status).toBe('sent')
+    expect(sendTenantEmail).toHaveBeenCalledTimes(1)
+    const second = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
+    expect(second).toMatchObject({ status: 'sent', emailed: true })
+    expect(sendTenantEmail).toHaveBeenCalledTimes(1)
+    expect(db.tables.payments).toHaveLength(1)
+    expect(db.tables.public_course_invoice_mail_claims).toHaveLength(1)
+  })
+
+  it('two claim inserts for one tenant invoice allow only the first', async () => {
+    const db = createMemorySupabase(baseTables())
+    const first = await db.from('public_course_invoice_mail_claims').insert({
+      tenant_id: TENANT,
+      invoice_id: 'inv-1',
+      registration_id: 'reg-new',
+      claim_token: 'a',
+      outcome: 'claimed',
+    })
+    const second = await db.from('public_course_invoice_mail_claims').insert({
+      tenant_id: TENANT,
+      invoice_id: 'inv-1',
+      registration_id: 'reg-new',
+      claim_token: 'b',
+      outcome: 'claimed',
+    })
+    const otherTenant = await db.from('public_course_invoice_mail_claims').insert({
+      tenant_id: OTHER,
+      invoice_id: 'inv-1',
+      registration_id: 'reg-b',
+      claim_token: 'c',
+      outcome: 'claimed',
+    })
+    expect(first.error).toBeNull()
+    expect(second.error?.code).toBe('23505')
+    expect(otherTenant.error).toBeNull()
+    const own = db.tables.public_course_invoice_mail_claims.filter((row) => row.tenant_id === TENANT)
+    expect(own).toHaveLength(1)
+    expect(own[0].claim_token).toBe('a')
+  })
+
+  it('a held claim for another registration does not authorize a send', async () => {
+    const db = createMemorySupabase(baseTables())
+    seedCommittedPublicInvoice(db)
+    seedMailClaim(db, { registration_id: 'reg-other', outcome: 'failed' })
+    const result = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
+    expect(result).toMatchObject({ status: 'created', reason: 'mail_claim_held', emailed: false })
+    expect(sendTenantEmail).not.toHaveBeenCalled()
+    expect(db.tables.public_course_invoice_mail_claims).toHaveLength(1)
+    expect(db.tables.public_course_invoice_mail_claims[0]).toMatchObject({
+      registration_id: 'reg-other',
+      outcome: 'failed',
+    })
+  })
+
+  it('does not send when the mail-claim table is unavailable', async () => {
+    const db = createMemorySupabase(baseTables(), { claimUnavailable: true })
+    const result = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
+    expect(result).toMatchObject({ status: 'created', reason: 'mail_claim_unavailable', emailed: false })
+    expect(sendTenantEmail).not.toHaveBeenCalled()
+    expect(db.tables.invoices[0].status).toBe('draft')
+    expect(db.tables.payments).toHaveLength(1)
+    expect(db.tables.public_course_invoice_mail_claims).toEqual([])
+  })
+
+  it('an existing tenant invoice is not described as missing when billing stops', async () => {
+    const db = createMemorySupabase(baseTables())
+    seedCommittedPublicInvoice(db, { paymentGross: 100 })
+    const result = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
+    expect(result).toMatchObject({ status: 'created', invoiceId: 'inv-winner', emailed: false })
+    expect(publicCourseEnrollmentMessage('invoice', result)).not.toContain('konnte nicht erstellt')
+    expect(publicCourseEnrollmentMessage('invoice', result)).toContain('nicht per E-Mail zugestellt')
+    expect(toPublicBillingResponse(result)).toMatchObject({
+      status: 'created',
+      invoiceId: 'inv-winner',
+      emailed: false,
+    })
+    expect(db.tables.invoices).toHaveLength(1)
+    expect(db.tables.payments).toHaveLength(1)
+    expect(db.tables.course_registrations[0].invoice_id).toBe('inv-winner')
+    expect(sendTenantEmail).not.toHaveBeenCalled()
+  })
+
+  it('does not reveal an invoice id that is not in the registration tenant', async () => {
+    const db = createMemorySupabase(baseTables({
+      registration: { invoice_id: 'inv-foreign' },
+    }))
+    db.tables.users[0].tenant_id = OTHER
+    const result = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
+    expect(result).toMatchObject({ status: 'failed', emailed: false })
+    expect(result.invoiceId).toBeUndefined()
+    expect(sendTenantEmail).not.toHaveBeenCalled()
+    expect(db.tables.invoices).toEqual([])
+  })
+
+  it('an unexpected error after an invoice exists does not say the invoice is missing', async () => {
+    const db = createMemorySupabase(baseTables(), { throwOn: 'payments' })
+    seedCommittedPublicInvoice(db)
+    const result = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
+    expect(result).toMatchObject({ status: 'created', invoiceId: 'inv-winner', emailed: false })
+    expect(publicCourseEnrollmentMessage('invoice', result)).not.toContain('konnte nicht erstellt')
+    expect(sendTenantEmail).not.toHaveBeenCalled()
+    expect(db.tables.invoices).toHaveLength(1)
+    expect(db.tables.course_registrations[0].invoice_id).toBe('inv-winner')
+  })
+
   it('same-process parallel calls share one orchestration', async () => {
     const db = createMemorySupabase(baseTables())
     const [first, second] = await Promise.all([
@@ -984,6 +1164,7 @@ describe('runPublicCourseInvoiceBilling', () => {
     expect(first.invoiceId).toBe(second.invoiceId)
     expect(db.tables.invoices).toHaveLength(1)
     expect(db.tables.payments).toHaveLength(1)
+    expect(db.tables.public_course_invoice_mail_claims).toHaveLength(1)
     expect(sendTenantEmail).toHaveBeenCalledTimes(1)
   })
 })
@@ -1045,6 +1226,14 @@ describe('unchanged neighbours', () => {
     const orchestrator = read('server/utils/public-course-invoice.ts')
     expect(orchestrator).toContain('public_course_invoice: true')
     expect(orchestrator).toContain("error.code === '23505'")
+    expect(orchestrator).toContain('payments_public_course_invoice_registration_uidx')
+    const claims = read('migrations/20261003_public_course_invoice_mail_claims.sql')
+    expect(claims).toContain('PRIMARY KEY (tenant_id, invoice_id)')
+    expect(claims).toContain("CHECK (outcome IN ('claimed', 'failed', 'sent', 'unconfirmed'))")
+    expect(claims).not.toContain('issue_course_invoice')
+    expect(claims).not.toContain('DROP ')
+    const cash = read('server/api/courses/enroll-cash.post.ts')
+    expect(cash).toContain("billing?.status === 'created' ? 'created' : 'none'")
   })
 
   it('public copy no longer promises an invoice email unconditionally', () => {

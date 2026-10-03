@@ -35,6 +35,8 @@ type SessionPriceRow = {
 }
 
 const inflight = new Map<string, Promise<PublicCourseBillingResult>>()
+const PAYMENT_UIDX = 'payments_public_course_invoice_registration_uidx'
+const MAIL_CLAIMS = 'public_course_invoice_mail_claims'
 
 export function resolvePublicEnrollmentPriceRappen(input: {
   pricePerParticipantRappen: number | null
@@ -126,6 +128,8 @@ async function runPublicCourseInvoiceBillingInner(opts: {
   registrationId: string
 }): Promise<PublicCourseBillingResult> {
   const registrationId = opts.registrationId
+  let seenRegistration: { invoice_id?: unknown } | null = null
+  let seenTenantId = ''
   try {
     if (!registrationId) return fail('billing_error', { registrationId })
 
@@ -134,16 +138,18 @@ async function runPublicCourseInvoiceBillingInner(opts: {
 
     let registration = loaded.row
     const tenantId = String(registration.tenant_id || '')
+    seenRegistration = registration
+    seenTenantId = tenantId
     if (!tenantId) return fail('billing_error', { registrationId, detail: 'missing_tenant' })
 
     const course = await loadCourse(opts.supabase, registration.course_id, tenantId)
-    if (course.error || !course.row) return fail('billing_error', { registrationId, tenantId, detail: course.error || 'course_not_found' })
+    if (course.error || !course.row) return failOrExisting(opts.supabase, registration, tenantId, 'billing_error', { registrationId, tenantId, detail: course.error || 'course_not_found' })
 
     const categoryMode = await loadCategoryMode(opts.supabase, course.row.course_category_id, tenantId)
-    if (categoryMode.error) return fail('billing_error', { registrationId, tenantId, detail: categoryMode.error })
+    if (categoryMode.error) return failOrExisting(opts.supabase, registration, tenantId, 'billing_error', { registrationId, tenantId, detail: categoryMode.error })
 
     const tenant = await loadTenant(opts.supabase, tenantId)
-    if (tenant.error || !tenant.row) return fail('billing_error', { registrationId, tenantId, detail: tenant.error || 'tenant_not_found' })
+    if (tenant.error || !tenant.row) return failOrExisting(opts.supabase, registration, tenantId, 'billing_error', { registrationId, tenantId, detail: tenant.error || 'tenant_not_found' })
 
     const timing = resolveCourseInvoiceTiming({
       categoryMode: categoryMode.mode,
@@ -157,19 +163,19 @@ async function runPublicCourseInvoiceBillingInner(opts: {
     if (!registration.user_id) return skipped('user_unassigned')
 
     if (registration.payment_method !== 'invoice') {
-      return fail('billing_error', { registrationId, tenantId, detail: 'payment_method_not_invoice' })
+      return failOrExisting(opts.supabase, registration, tenantId, 'billing_error', { registrationId, tenantId, detail: 'payment_method_not_invoice' })
     }
 
     const user = await loadUser(opts.supabase, registration.user_id, tenantId)
     if (user.error || !user.row) {
-      return fail('conflict', { registrationId, tenantId, detail: user.error || 'user_not_in_tenant' })
+      return failOrExisting(opts.supabase, registration, tenantId, 'conflict', { registrationId, tenantId, detail: user.error || 'user_not_in_tenant' })
     }
 
     const sessions = await loadSessions(opts.supabase, course.row.id, tenantId)
-    if (sessions.error) return fail('billing_error', { registrationId, tenantId, detail: sessions.error })
+    if (sessions.error) return failOrExisting(opts.supabase, registration, tenantId, 'billing_error', { registrationId, tenantId, detail: sessions.error })
 
     const category = await loadCategoryPrice(opts.supabase, course.row.course_category_id, tenantId)
-    if (category.error) return fail('billing_error', { registrationId, tenantId, detail: category.error })
+    if (category.error) return failOrExisting(opts.supabase, registration, tenantId, 'billing_error', { registrationId, tenantId, detail: category.error })
 
     const net = resolvePublicEnrollmentPriceRappen({
       pricePerParticipantRappen: numberOrNull(course.row.price_per_participant_rappen),
@@ -180,30 +186,31 @@ async function runPublicCourseInvoiceBillingInner(opts: {
       sessions: sessions.rows,
     })
     if (!Number.isFinite(net) || net < 0) {
-      return fail('billing_error', { registrationId, tenantId, detail: 'invalid_price' })
+      return failOrExisting(opts.supabase, registration, tenantId, 'billing_error', { registrationId, tenantId, detail: 'invalid_price' })
     }
 
     const amounts = courseInvoiceSnapshotAmounts(net, Number(tenant.row.default_vat_rate))
     const snap = await ensureSnapshot(opts.supabase, registration, tenantId, amounts)
-    if (snap.error) return fail(snap.reason || 'billing_error', { registrationId, tenantId, detail: snap.error })
+    if (snap.error) return failOrExisting(opts.supabase, registration, tenantId, snap.reason || 'billing_error', { registrationId, tenantId, detail: snap.error })
     registration = snap.registration
+    seenRegistration = registration
 
     const existingPayments = await loadPayments(opts.supabase, registrationId)
-    if (existingPayments.error) return fail('billing_error', { registrationId, tenantId, detail: existingPayments.error })
+    if (existingPayments.error) return failOrExisting(opts.supabase, registration, tenantId, 'billing_error', { registrationId, tenantId, detail: existingPayments.error })
     if (existingPayments.rows.some((row) => row.tenant_id !== tenantId)) {
-      return fail('conflict', { registrationId, tenantId, detail: 'cross_tenant_payment' })
+      return failOrExisting(opts.supabase, registration, tenantId, 'conflict', { registrationId, tenantId, detail: 'cross_tenant_payment' })
     }
     const tenantPayments = existingPayments.rows.filter((row) => row.tenant_id === tenantId)
     if (tenantPayments.length > 1) {
-      return fail('conflict', { registrationId, tenantId, detail: 'multiple_payments' })
+      return failOrExisting(opts.supabase, registration, tenantId, 'conflict', { registrationId, tenantId, detail: 'multiple_payments' })
     }
 
     const existingPayment = tenantPayments[0] || null
     if (existingPayment?.invoice_id && registration.invoice_id && existingPayment.invoice_id !== registration.invoice_id) {
-      return fail('conflict', { registrationId, tenantId, detail: 'invoice_payment_mismatch' })
+      return failOrExisting(opts.supabase, registration, tenantId, 'conflict', { registrationId, tenantId, detail: 'invoice_payment_mismatch' })
     }
     if (existingPayment && !existingPayment.invoice_id) {
-      return fail('conflict', { registrationId, tenantId, detail: 'payment_without_invoice' })
+      return failOrExisting(opts.supabase, registration, tenantId, 'conflict', { registrationId, tenantId, detail: 'payment_without_invoice' })
     }
     if (
       existingPayment
@@ -212,12 +219,12 @@ async function runPublicCourseInvoiceBillingInner(opts: {
         || Number(existingPayment.lesson_price_rappen) !== amounts.agreed_gross_rappen
       )
     ) {
-      return fail('conflict', { registrationId, tenantId, detail: 'payment_amount_mismatch' })
+      return failOrExisting(opts.supabase, registration, tenantId, 'conflict', { registrationId, tenantId, detail: 'payment_amount_mismatch' })
     }
 
     const issued = await issueInvoice(opts.supabase, tenantId, registrationId)
     if (issued.error || !issued.invoiceId) {
-      return fail(issued.reason || 'billing_error', { registrationId, tenantId, detail: issued.error })
+      return failOrExisting(opts.supabase, registration, tenantId, issued.reason || 'billing_error', { registrationId, tenantId, detail: issued.error })
     }
 
     if (registration.invoice_id && registration.invoice_id !== issued.invoiceId) {
@@ -272,10 +279,6 @@ async function runPublicCourseInvoiceBillingInner(opts: {
       }
     }
 
-    if (!payment.maySend) {
-      return invoiceCreated(issued.invoiceId, 'concurrent_payment', numberOrZero(invoice.row.total_amount_rappen))
-    }
-
     const recipient = firstEmail(registration.email) || firstEmail(user.row.email)
     if (!recipient) {
       return {
@@ -287,6 +290,15 @@ async function runPublicCourseInvoiceBillingInner(opts: {
       }
     }
 
+    const claim = await acquireMailClaim(opts.supabase, {
+      tenantId,
+      invoiceId: issued.invoiceId,
+      registrationId,
+    })
+    if (!claim.won || !claim.token) {
+      return invoiceCreated(issued.invoiceId, claim.reason || 'mail_claim_held', numberOrZero(invoice.row.total_amount_rappen))
+    }
+
     const mailed = await sendSnapshotInvoiceEmail({
       supabase: opts.supabase,
       tenant: tenant.row,
@@ -295,6 +307,7 @@ async function runPublicCourseInvoiceBillingInner(opts: {
       customerName: studentName(registration),
     })
     if (!mailed.ok) {
+      await releaseMailClaim(opts.supabase, tenantId, issued.invoiceId, claim.token)
       logger.error('public course invoice email failed', {
         registrationId,
         tenantId,
@@ -312,8 +325,10 @@ async function runPublicCourseInvoiceBillingInner(opts: {
 
     const marked = await markInvoiceSent(opts.supabase, issued.invoiceId, tenantId)
     if (marked !== 'sent') {
+      await setMailClaimOutcome(opts.supabase, tenantId, issued.invoiceId, claim.token, 'unconfirmed')
       return invoiceCreated(issued.invoiceId, 'sent_status_unconfirmed', numberOrZero(invoice.row.total_amount_rappen))
     }
+    await setMailClaimOutcome(opts.supabase, tenantId, issued.invoiceId, claim.token, 'sent')
     return {
       status: 'sent',
       invoiceId: issued.invoiceId,
@@ -321,6 +336,8 @@ async function runPublicCourseInvoiceBillingInner(opts: {
       grossRappen: numberOrZero(invoice.row.total_amount_rappen),
     }
   } catch (error: any) {
+    const existing = await finishIfInvoiceExists(opts.supabase, seenRegistration, seenTenantId, 'billing_error')
+    if (existing) return existing
     return fail('billing_error', { registrationId, detail: error?.message || 'unexpected' })
   }
 }
@@ -336,6 +353,48 @@ function invoiceCreated(invoiceId: string, reason: string, grossRappen: number):
 function fail(reason: string, context: Record<string, unknown>): PublicCourseBillingResult {
   logger.error('public course invoice billing failed', { reason, ...context })
   return { status: 'failed', reason, emailed: false }
+}
+
+async function failOrExisting(
+  supabase: SupabaseClient,
+  registration: { invoice_id?: unknown } | null,
+  tenantId: string,
+  reason: string,
+  context: Record<string, unknown>,
+): Promise<PublicCourseBillingResult> {
+  const existing = await finishIfInvoiceExists(supabase, registration, tenantId, reason)
+  if (!existing) return fail(reason, context)
+  logger.error('public course invoice billing stopped with an existing invoice', {
+    reason,
+    invoiceId: existing.invoiceId,
+    ...context,
+  })
+  return existing
+}
+
+async function finishIfInvoiceExists(
+  supabase: SupabaseClient,
+  registration: { invoice_id?: unknown } | null,
+  tenantId: string,
+  reason: string,
+): Promise<PublicCourseBillingResult | null> {
+  const invoiceId = registration?.invoice_id ? String(registration.invoice_id) : ''
+  if (!invoiceId || !tenantId) return null
+  try {
+    const invoice = await loadInvoice(supabase, invoiceId, tenantId)
+    if (invoice.error || !invoice.row || invoice.row.tenant_id !== tenantId) return null
+    if (invoice.row.status === 'sent' || invoice.row.sent_at) {
+      return {
+        status: 'sent',
+        invoiceId,
+        emailed: true,
+        grossRappen: numberOrZero(invoice.row.total_amount_rappen),
+      }
+    }
+    return invoiceCreated(invoiceId, reason, numberOrZero(invoice.row.total_amount_rappen))
+  } catch {
+    return null
+  }
 }
 
 async function loadRegistration(supabase: SupabaseClient, registrationId: string) {
@@ -545,8 +604,8 @@ async function ensurePayment(
 ) {
   if (input.existingPayment) {
     const reused = matchingPayment(input.existingPayment, input.invoiceId, input.grossRappen)
-    if (reused.error) return { paymentId: null as string | null, maySend: false, error: reused.error, reason: 'conflict' as const }
-    return { paymentId: String(input.existingPayment.id), maySend: true, error: null as string | null, reason: null as string | null }
+    if (reused.error) return { paymentId: null as string | null, error: reused.error, reason: 'conflict' as const }
+    return { paymentId: String(input.existingPayment.id), error: null as string | null, reason: null as string | null }
   }
 
   const { error } = await supabase.from('payments').insert({
@@ -570,11 +629,9 @@ async function ensurePayment(
     const raced = await reuseRacedPayment(supabase, input)
     return raced
   }
-  if (error) return { paymentId: null, maySend: false, error: error.message, reason: 'billing_error' as const }
+  if (error) return { paymentId: null, error: error.message, reason: 'billing_error' as const }
 
-  const confirmed = await reuseRacedPayment(supabase, input)
-  if (confirmed.error || !confirmed.paymentId) return confirmed
-  return { ...confirmed, maySend: true }
+  return reuseRacedPayment(supabase, input)
 }
 
 function matchingPayment(payment: any, invoiceId: string, grossRappen: number) {
@@ -588,11 +645,89 @@ function matchingPayment(payment: any, invoiceId: string, grossRappen: number) {
   return { error: null as string | null }
 }
 
-function isUniqueViolation(error: { code?: string; message?: string } | null): boolean {
+function constraintText(error: { message?: string; details?: string; constraint?: string }): string {
+  return `${error.message || ''} ${error.details || ''} ${error.constraint || ''}`
+}
+
+function isUniqueViolation(error: { code?: string; message?: string; details?: string; constraint?: string } | null): boolean {
   if (!error) return false
-  if (error.code === '23505') return true
-  const message = error.message || ''
-  return message.includes('payments_public_course_invoice_registration_uidx')
+  const text = constraintText(error)
+  if (!text.includes(PAYMENT_UIDX)) return false
+  return error.code === '23505' || text.includes(PAYMENT_UIDX)
+}
+
+function isMailClaimViolation(error: { code?: string; message?: string; details?: string; constraint?: string } | null): boolean {
+  if (!error) return false
+  const text = constraintText(error)
+  return error.code === '23505' && text.includes(MAIL_CLAIMS)
+}
+
+async function acquireMailClaim(
+  supabase: SupabaseClient,
+  input: { tenantId: string; invoiceId: string; registrationId: string },
+): Promise<{ won: boolean; token: string | null; reason: string }> {
+  const token = crypto.randomUUID()
+  const inserted = await supabase.from(MAIL_CLAIMS).insert({
+    tenant_id: input.tenantId,
+    invoice_id: input.invoiceId,
+    registration_id: input.registrationId,
+    claim_token: token,
+    outcome: 'claimed',
+  })
+  if (!inserted.error) return { won: true, token, reason: 'mail_claim_won' }
+  if (!isMailClaimViolation(inserted.error)) {
+    return { won: false, token: null, reason: 'mail_claim_unavailable' }
+  }
+
+  const reclaimed = await supabase
+    .from(MAIL_CLAIMS)
+    .update({
+      outcome: 'claimed',
+      claim_token: token,
+      claimed_at: new Date().toISOString(),
+    })
+    .eq('tenant_id', input.tenantId)
+    .eq('invoice_id', input.invoiceId)
+    .eq('registration_id', input.registrationId)
+    .eq('outcome', 'failed')
+    .select('claim_token')
+  if (reclaimed.error) return { won: false, token: null, reason: 'mail_claim_held' }
+  const rows = Array.isArray(reclaimed.data) ? reclaimed.data : []
+  if (rows.length === 1) return { won: true, token, reason: 'mail_claim_won' }
+  return { won: false, token: null, reason: 'mail_claim_held' }
+}
+
+async function releaseMailClaim(
+  supabase: SupabaseClient,
+  tenantId: string,
+  invoiceId: string,
+  token: string,
+) {
+  await setMailClaimOutcome(supabase, tenantId, invoiceId, token, 'failed')
+}
+
+async function setMailClaimOutcome(
+  supabase: SupabaseClient,
+  tenantId: string,
+  invoiceId: string,
+  token: string,
+  outcome: 'failed' | 'sent' | 'unconfirmed',
+) {
+  const { error } = await supabase
+    .from(MAIL_CLAIMS)
+    .update({ outcome })
+    .eq('tenant_id', tenantId)
+    .eq('invoice_id', invoiceId)
+    .eq('claim_token', token)
+    .eq('outcome', 'claimed')
+  if (error) {
+    logger.error('public course invoice mail claim update failed', {
+      tenantId,
+      invoiceId,
+      outcome,
+      detail: error.message,
+    })
+  }
 }
 
 async function reuseRacedPayment(
@@ -605,17 +740,17 @@ async function reuseRacedPayment(
   },
 ) {
   const after = await loadPayments(supabase, input.registration.id)
-  if (after.error) return { paymentId: null as string | null, maySend: false, error: after.error, reason: 'billing_error' as const }
+  if (after.error) return { paymentId: null as string | null, error: after.error, reason: 'billing_error' as const }
   if (after.rows.some((row) => row.tenant_id !== input.tenantId)) {
-    return { paymentId: null, maySend: false, error: 'cross_tenant_payment', reason: 'conflict' as const }
+    return { paymentId: null, error: 'cross_tenant_payment', reason: 'conflict' as const }
   }
   const own = after.rows.filter((row) => row.tenant_id === input.tenantId)
   if (own.length !== 1) {
-    return { paymentId: null, maySend: false, error: 'payment_race', reason: 'conflict' as const }
+    return { paymentId: null, error: 'payment_race', reason: 'conflict' as const }
   }
   const matched = matchingPayment(own[0], input.invoiceId, input.grossRappen)
-  if (matched.error) return { paymentId: null, maySend: false, error: matched.error, reason: 'conflict' as const }
-  return { paymentId: String(own[0].id), maySend: false, error: null as string | null, reason: null as string | null }
+  if (matched.error) return { paymentId: null, error: matched.error, reason: 'conflict' as const }
+  return { paymentId: String(own[0].id), error: null as string | null, reason: null as string | null }
 }
 
 async function linkPaymentId(
