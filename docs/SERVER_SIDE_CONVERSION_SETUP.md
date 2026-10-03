@@ -4,6 +4,12 @@ Dieser Guide beschreibt die einmaligen Konfigurationsschritte, damit das neue
 Cross-Domain-Conversion-Tracking (drivingteam.ch → app.simy.ch → Google Ads)
 in Produktion läuft.
 
+> **Runtime semantics (Sep 2026):** Primary booking conversions fire when a
+> **binding booking** is established (`appointments` / `course_registrations`
+> → `confirmed`), not when payment settles. See
+> [`BINDING_BOOKING_CONVERSIONS.md`](./BINDING_BOOKING_CONVERSIONS.md) for
+> eligibility, claim-before-upload, and call sites (#170).
+
 ## Architektur (Kurzfassung)
 
 ```
