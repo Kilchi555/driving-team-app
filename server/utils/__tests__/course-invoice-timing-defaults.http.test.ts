@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { createError } from 'h3'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { normalizeCourseInvoiceTimingForSave, resolveCourseInvoiceTiming } from '../course-invoice-timing'
 
@@ -7,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   readBody: vi.fn(),
   getSupabaseAdmin: vi.fn(),
   getAuthenticatedUser: vi.fn(),
-  requireAdminProfile: vi.fn(),
+  requireAdminOnly: vi.fn(),
 }))
 
 vi.mock('h3', async (importOriginal) => {
@@ -25,7 +26,7 @@ vi.mock('~/server/utils/supabase-admin', () => ({
 
 vi.mock('~/server/utils/auth', () => ({
   getAuthenticatedUser: mocks.getAuthenticatedUser,
-  requireAdminProfile: mocks.requireAdminProfile,
+  requireAdminOnly: (...args: unknown[]) => mocks.requireAdminOnly(...args),
 }))
 
 vi.mock('~/server/utils/rate-limiter', () => ({
@@ -139,14 +140,56 @@ function read(path: string) {
   return readFileSync(resolve(process.cwd(), path), 'utf8')
 }
 
+function adminOnlyRoles(): string[] {
+  const source = read('server/utils/auth.ts')
+  const match = source.match(
+    /export async function requireAdminOnly\(event: H3Event\) \{\s*return requireAdminProfile\(event,\s*(\[[^\]]+\])\s*\)/,
+  )
+  if (!match) throw new Error('requireAdminOnly role list not found')
+  return JSON.parse(match[1].replace(/'/g, '"'))
+}
+
+function session(role: string | null, extras: Record<string, unknown> = {}) {
+  if (role === null) return null
+  return {
+    id: `auth-${role}`,
+    role,
+    tenant_id: TENANT,
+    db_user_id: `${role}-1`,
+    is_active: true,
+    email: `${role}@example.test`,
+    ...extras,
+  }
+}
+
 describe('PUT /api/admin/tenant/course-invoice-timing', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     db = freshDb()
-    mocks.requireAdminProfile.mockResolvedValue({
-      id: 'admin-1',
-      tenant_id: TENANT,
-      role: 'admin',
+    mocks.getAuthenticatedUser.mockResolvedValue(session('admin'))
+    mocks.requireAdminOnly.mockImplementation(async (event: unknown) => {
+      const allowed = adminOnlyRoles()
+      const authUser = await mocks.getAuthenticatedUser(event)
+      if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+      const role = String(authUser.role || authUser.profile?.role || '')
+      const tenantId = String(authUser.tenant_id || authUser.profile?.tenant_id || '')
+      const dbUserId = String(authUser.db_user_id || authUser.profile?.id || '')
+      if (authUser.deleted_at || authUser.is_active === false) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden – inactive account' })
+      }
+      if (!allowed.includes(role)) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden – insufficient role' })
+      }
+      if (!tenantId || !dbUserId) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden – no tenant assigned' })
+      }
+      return {
+        id: dbUserId,
+        tenant_id: tenantId,
+        role,
+        email: authUser.email || '',
+        auth_user_id: authUser.id,
+      }
     })
     mocks.getSupabaseAdmin.mockReturnValue({
       from: (table: string) => {
@@ -166,6 +209,64 @@ describe('PUT /api/admin/tenant/course-invoice-timing', () => {
     const handler = (await import('~/server/api/admin/tenant/course-invoice-timing.get')).default as (event: unknown) => Promise<{ default_invoice_timing_mode: string }>
     return handler({})
   }
+
+  it('locks both tenant endpoints to requireAdminOnly roles admin and super_admin', () => {
+    expect(adminOnlyRoles()).toEqual(['admin', 'super_admin'])
+    for (const file of [
+      'server/api/admin/tenant/course-invoice-timing.get.ts',
+      'server/api/admin/tenant/course-invoice-timing.put.ts',
+    ]) {
+      const source = read(file)
+      expect(source).toContain('requireAdminOnly(event)')
+      expect(source).not.toContain('requireAdminProfile(')
+    }
+  })
+
+  it('allows admin GET', async () => {
+    await expect(get()).resolves.toEqual({ default_invoice_timing_mode: 'off' })
+  })
+
+  it('allows super_admin GET and PUT', async () => {
+    mocks.getAuthenticatedUser.mockResolvedValue(session('super_admin'))
+    await expect(get()).resolves.toEqual({ default_invoice_timing_mode: 'off' })
+    const result = await put({ default_invoice_timing_mode: 'immediate', tenant_id: OTHER })
+    expect(result.default_invoice_timing_mode).toBe('immediate')
+    expect(db.tenants.find((row) => row.id === TENANT)?.default_invoice_timing_mode).toBe('immediate')
+    expect(db.tenants.find((row) => row.id === OTHER)?.default_invoice_timing_mode).toBe('off')
+    expect(db.writes[0].filters.id).toBe(TENANT)
+  })
+
+  it('denies staff GET and leaves tenant rows unchanged', async () => {
+    const before = structuredClone(db.tenants)
+    mocks.getAuthenticatedUser.mockResolvedValue(session('staff'))
+    await expect(get()).rejects.toMatchObject({ statusCode: 403 })
+    expect(db.writes).toEqual([])
+    expect(db.tenants).toEqual(before)
+  })
+
+  it('denies staff PUT and leaves the tenant snapshot unchanged', async () => {
+    const before = structuredClone(db.tenants)
+    mocks.getAuthenticatedUser.mockResolvedValue(session('staff'))
+    await expect(put({ default_invoice_timing_mode: 'immediate', tenant_id: OTHER })).rejects.toMatchObject({ statusCode: 403 })
+    expect(db.writes).toEqual([])
+    expect(db.tenants).toEqual(before)
+  })
+
+  it('denies unauthenticated GET', async () => {
+    const before = structuredClone(db.tenants)
+    mocks.getAuthenticatedUser.mockResolvedValue(session(null))
+    await expect(get()).rejects.toMatchObject({ statusCode: 401 })
+    expect(db.writes).toEqual([])
+    expect(db.tenants).toEqual(before)
+  })
+
+  it('denies unauthenticated PUT and does not write', async () => {
+    const before = structuredClone(db.tenants)
+    mocks.getAuthenticatedUser.mockResolvedValue(session(null))
+    await expect(put({ default_invoice_timing_mode: 'immediate', tenant_id: OTHER })).rejects.toMatchObject({ statusCode: 401 })
+    expect(db.writes).toEqual([])
+    expect(db.tenants).toEqual(before)
+  })
 
   it('accepts off and writes only the authenticated tenant column', async () => {
     const result = await put({ default_invoice_timing_mode: 'off', tenant_id: OTHER })
@@ -204,9 +305,11 @@ describe('PUT /api/admin/tenant/course-invoice-timing', () => {
   })
 
   it('does not write when the admin has no tenant', async () => {
-    mocks.requireAdminProfile.mockResolvedValue({ id: 'admin-1', tenant_id: '', role: 'admin' })
-    await expect(put({ default_invoice_timing_mode: 'immediate', tenant_id: OTHER })).rejects.toMatchObject({ statusCode: 400 })
+    const before = structuredClone(db.tenants)
+    mocks.getAuthenticatedUser.mockResolvedValue(session('admin', { tenant_id: '' }))
+    await expect(put({ default_invoice_timing_mode: 'immediate', tenant_id: OTHER })).rejects.toMatchObject({ statusCode: 403 })
     expect(db.writes).toEqual([])
+    expect(db.tenants).toEqual(before)
   })
 })
 

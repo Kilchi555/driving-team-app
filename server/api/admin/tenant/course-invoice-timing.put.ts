@@ -1,5 +1,5 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { requireAdminProfile } from '~/server/utils/auth'
+import { requireAdminOnly } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
@@ -11,7 +11,7 @@ const TENANT_INVOICE_TIMING = new Set(['off', 'immediate'])
  * Client tenant ids are ignored.
  */
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event)
+  const profile = await requireAdminOnly(event)
   if (!profile.tenant_id) {
     throw createError({ statusCode: 400, statusMessage: 'No tenant' })
   }

@@ -1,5 +1,5 @@
 import { defineEventHandler, createError } from 'h3'
-import { requireAdminProfile } from '~/server/utils/auth'
+import { requireAdminOnly } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
@@ -8,7 +8,7 @@ import { logger } from '~/utils/logger'
  * Returns tenants.default_invoice_timing_mode for the authenticated admin tenant.
  */
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event)
+  const profile = await requireAdminOnly(event)
   if (!profile.tenant_id) {
     throw createError({ statusCode: 400, statusMessage: 'No tenant' })
   }
