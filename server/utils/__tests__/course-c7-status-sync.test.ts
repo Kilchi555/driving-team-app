@@ -82,7 +82,7 @@ function fulfillSupabase(rpcData: Record<string, unknown> | null) {
       const chain: Record<string, unknown> = {}
       chain.select = () => chain
       chain.eq = () => chain
-      chain.maybeSingle = async () => ({ data: { id: 'u1', tenant_id: 't1', role: 'student' }, error: null })
+      chain.maybeSingle = async () => ({ data: { id: 'u1', tenant_id: 't1', role: 'client' }, error: null })
       return chain
     },
   }

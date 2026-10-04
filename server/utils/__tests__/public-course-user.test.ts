@@ -316,7 +316,7 @@ describe('Wallee public user', () => {
     const userId = await ensureGuestUserForCoursePayment(db.supabase, payment, TENANT)
     expect(userId).toBeTruthy()
     expect(db.inserts[0]).toMatchObject({
-      role: 'student',
+      role: 'client',
       auth_user_id: null,
       tenant_id: TENANT,
       email: 'paid@example.com',

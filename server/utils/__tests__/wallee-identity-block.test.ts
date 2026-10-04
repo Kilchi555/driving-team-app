@@ -227,7 +227,7 @@ describe('captured Wallee identity block', () => {
     expect(fulfilled.status).toBe('fulfilled')
     expect(fulfilled.registrationId).toBe('reg-1')
     expect(db.inserts).toHaveLength(1)
-    expect(db.inserts[0]).toMatchObject({ auth_user_id: null, role: 'student', tenant_id: TENANT })
+    expect(db.inserts[0]).toMatchObject({ auth_user_id: null, role: 'client', tenant_id: TENANT })
     expect(db.rpcCalls).toHaveLength(1)
     expect(pay.payment_status).toBe('completed')
     expect(pay.metadata.wallee_failure_state).toBeUndefined()
