@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import {
   accountStaffPosCash,
   planStaffPosBulkRemainder,
+  selectionAfterProcessedPayments,
   staffPosBulkKind,
   staffPosCashBookableRappen,
   staffPosPermanentExclusions,
@@ -398,5 +399,64 @@ describe('cash dialog wiring', () => {
     expect(overpaymentCall).toBeGreaterThan(handler.indexOf('completeDeferredStaffPos'))
     expect(overpaymentCall).toBeLessThan(handler.indexOf("'/api/staff/process-bulk-payment'"))
     expect(handler).not.toContain('payment_ids: plan.deferredIds, method')
+  })
+
+  it('keeps skipped staff-POS rows selected after a credit payment', () => {
+    const credit = vueSource.slice(
+      vueSource.indexOf('const confirmCreditPayment'),
+      vueSource.indexOf('const paymentsCount'),
+    )
+    expect(credit).toContain('if (openIds.length === 0) return')
+    expect(credit.indexOf('if (openIds.length === 0) return')).toBeLessThan(
+      credit.indexOf("method: 'credit'"),
+    )
+    expect(credit).toContain('selectionAfterProcessedPayments(selectedPayments.value, response?.results)')
+    expect(credit).not.toContain('selectedPayments.value = []')
+    expect(credit).not.toContain('staff-pos/complete')
+    expect(credit).not.toContain('staff-pos/overpayment')
+  })
+})
+
+describe('credit payment selection', () => {
+  const appointment = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  const otherAppointment = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  const deferred = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+  const invoice = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+
+  it('removes an appointment when the response says it was processed', () => {
+    expect(selectionAfterProcessedPayments(
+      [appointment],
+      [{ payment_id: appointment, success: true, status: 'completed' }],
+    )).toEqual([])
+  })
+
+  it('keeps a skipped staff-POS row when only the appointment was processed', () => {
+    expect(selectionAfterProcessedPayments(
+      [appointment, deferred, invoice],
+      [{ payment_id: appointment, success: true, status: 'completed', credit_applied_rappen: 5000 }],
+    )).toEqual([deferred, invoice])
+  })
+
+  it('does not clear a staff-POS-only selection when nothing was processed', () => {
+    expect(selectionAfterProcessedPayments([deferred], [])).toEqual([deferred])
+    expect(selectionAfterProcessedPayments([deferred], undefined)).toEqual([deferred])
+  })
+
+  it('keeps the selection when the payment response reports failure', () => {
+    expect(selectionAfterProcessedPayments(
+      [appointment, deferred],
+      [{ payment_id: appointment, success: false, error: 'update failed' }],
+    )).toEqual([appointment, deferred])
+  })
+
+  it('removes only the rows the response processed when another row failed or was skipped', () => {
+    expect(selectionAfterProcessedPayments(
+      [appointment, otherAppointment, deferred],
+      [
+        { payment_id: appointment, success: true, status: 'completed' },
+        { payment_id: otherAppointment, success: true, skipped: true },
+        { payment_id: deferred, success: false },
+      ],
+    )).toEqual([otherAppointment, deferred])
   })
 })

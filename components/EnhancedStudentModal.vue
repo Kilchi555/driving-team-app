@@ -1980,7 +1980,7 @@
 import { ref, computed, toRefs, watch, onUnmounted, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
 import { isStaffProductSalePayment, staffProductSaleTitle } from '~/utils/staff-product-sale-display'
-import { accountStaffPosCash, staffPosBulkKind, staffPosCashBookableRappen, staffPosPermanentExclusions } from '~/utils/staff-pos-bulk-split'
+import { accountStaffPosCash, selectionAfterProcessedPayments, staffPosBulkKind, staffPosCashBookableRappen, staffPosPermanentExclusions } from '~/utils/staff-pos-bulk-split'
 import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { openPdf } from '~/utils/openPdf'
 import { getSupabase } from '~/utils/supabase'
@@ -3026,7 +3026,7 @@ const confirmCreditPayment = async () => {
     showCreditPaymentDialog.value = false
     await loadPayments()
     await loadLessons()
-    selectedPayments.value = []
+    selectedPayments.value = selectionAfterProcessedPayments(selectedPayments.value, response?.results)
   } catch (error: any) {
     console.error('❌ Error processing credit payment:', error)
     alert(error?.data?.statusMessage || error?.message || 'Guthaben konnte nicht verrechnet werden')

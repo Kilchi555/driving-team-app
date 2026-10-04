@@ -240,6 +240,30 @@ export function staffPosCashBookableRappen(args: {
   }).accountedRappen
 }
 
+/**
+ * Payment ids the bulk response says were actually processed.
+ * A missing list, a skipped row, or a failed row removes nothing.
+ * The original request ids are not treated as success.
+ */
+export function processedBulkPaymentIds(results: unknown): string[] {
+  if (!Array.isArray(results)) return []
+  const ids: string[] = []
+  for (const row of results) {
+    if (!row || typeof row !== 'object') continue
+    const record = row as { payment_id?: unknown; success?: unknown; skipped?: unknown }
+    if (record.success !== true || record.skipped === true) continue
+    if (typeof record.payment_id !== 'string' || record.payment_id.length === 0) continue
+    ids.push(record.payment_id)
+  }
+  return ids
+}
+
+/** Drops only the ids the bulk response processed. Unlisted rows stay selected. */
+export function selectionAfterProcessedPayments(selectedIds: readonly string[], results: unknown): string[] {
+  const processed = new Set(processedBulkPaymentIds(results))
+  return selectedIds.filter((id) => !processed.has(id))
+}
+
 export function staffPosPermanentExclusions(rows: StaffPosBulkRow[]): StaffPosPermanentExclusion[] {
   return PERMANENT_EXCLUSION_ORDER.flatMap((kind) => {
     const dueRappen = sumDue(rows.filter((row) => row.kind === kind))
