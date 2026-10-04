@@ -152,6 +152,7 @@ async function runPublicCourseInvoiceBillingInner(opts: {
     if (tenant.error || !tenant.row) return failOrExisting(opts.supabase, registration, tenantId, 'billing_error', { registrationId, tenantId, detail: tenant.error || 'tenant_not_found' })
 
     const timing = resolveCourseInvoiceTiming({
+      courseMode: course.row.invoice_timing_mode,
       categoryMode: categoryMode.mode,
       tenantMode: tenant.row.default_invoice_timing_mode,
     })
@@ -422,7 +423,7 @@ async function loadCourse(supabase: SupabaseClient, courseId: unknown, tenantId:
   if (!courseId) return { row: null, error: 'course_not_found' }
   const { data, error } = await supabase
     .from('courses')
-    .select('id, tenant_id, name, billing_mode, price_per_participant_rappen, is_partial_only, course_category_id')
+    .select('id, tenant_id, name, billing_mode, price_per_participant_rappen, is_partial_only, course_category_id, invoice_timing_mode')
     .eq('id', courseId as string)
     .eq('tenant_id', tenantId)
     .maybeSingle()

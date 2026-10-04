@@ -7,6 +7,7 @@ import { logger } from '~/utils/logger'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { zurichLocalToUtcIso } from '~/server/utils/zurich-time'
 import { httpErrorForCourseWrite } from '~/server/utils/course-write-error'
+import { normalizeCourseInvoiceTimingForSave } from '~/server/utils/course-invoice-timing'
 
 // ── ICS calendar invite generator ────────────────────────────────────────────
 function toIcsDate(dateStr: string, timeStr: string): string {
@@ -171,6 +172,15 @@ export default defineEventHandler(async (event) => {
       }
     }
   }
+
+  const courseTiming = normalizeCourseInvoiceTimingForSave({
+    paymentMethod: courseData.payment_method,
+    invoiceTimingMode: courseData.invoice_timing_mode,
+  })
+  if ('error' in courseTiming) {
+    throw createError({ statusCode: 400, statusMessage: courseTiming.error })
+  }
+  courseData.invoice_timing_mode = courseTiming.invoice_timing_mode
 
   // Always scope to tenant
   const payload = {
