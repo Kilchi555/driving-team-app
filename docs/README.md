@@ -309,6 +309,10 @@ Dokumentation wichtiger Datenflüsse und Geschäftsprozesse der Anwendung.
 
 ---
 
+## Engineering Runbooks
+
+- [Staff POS / product sale as payment](./STAFF_POS_PRODUCT_SALE.md) — Staff Direktverkauf (`staff_pos_sale`, #336); current main credit timing; DRAFT migrations
+
 ## 🚀 Verwendung dieser Dokumentation
 
 ### Für neue Entwickler
@@ -341,6 +345,19 @@ Bei Änderungen am System:
 - Policy-Änderungen → Aktualisieren Sie RLS_POLICIES.csv
 - Feature-Änderungen → Aktualisieren Sie APP_DOCUMENTATION.csv
 - Prozess-Änderungen → Aktualisieren Sie DATA_FLOWS.csv
+
+---
+
+## Engineering Runbooks
+
+| Runbook | Topic |
+|---------|--------|
+| [TRIAL_CACHE_AUTHORIZATION.md](./TRIAL_CACHE_AUTHORIZATION.md) | #337 — server-authoritative trial gate; no localStorage entitlement |
+| [ASSIGNABLE_USER_ROLES.md](./ASSIGNABLE_USER_ROLES.md) | #344 — closed `public.users.role` allowlists; no `student` |
+| [INVITATION_ROLE_REGISTRATION.md](./INVITATION_ROLE_REGISTRATION.md) | #362 — invitation role lock at staff/admin accept |
+| [SARI_TENANT_BOUNDARY.md](./SARI_TENANT_BOUNDARY.md) | #347 — tenant ownership before SARI side effects |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Session identity cache (HMR); trial authz → trial runbook |
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Passkey recovery |
 
 ---
 
