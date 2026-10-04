@@ -346,15 +346,19 @@ Bei Änderungen am System:
 
 ## Engineering Runbooks
 
-| Runbook | Topic |
+Operational notes for engineers (intent → contract → pitfalls → codepaths). Only files that exist on this branch are linked.
+
+| Runbook | Covers |
 |---------|--------|
-| [STAFF_POS_PRODUCT_SALE.md](./STAFF_POS_PRODUCT_SALE.md) | #336 — Staff Direktverkauf (`staff_pos_sale`); main credit timing; DRAFT migrations |
-| [TRIAL_CACHE_AUTHORIZATION.md](./TRIAL_CACHE_AUTHORIZATION.md) | #337 — server-authoritative trial gate; no localStorage entitlement |
-| [ASSIGNABLE_USER_ROLES.md](./ASSIGNABLE_USER_ROLES.md) | #344 — closed `public.users.role` allowlists; no `student` |
-| [INVITATION_ROLE_REGISTRATION.md](./INVITATION_ROLE_REGISTRATION.md) | #362 — invitation role lock at staff/admin accept |
-| [SARI_TENANT_BOUNDARY.md](./SARI_TENANT_BOUNDARY.md) | #347 — tenant ownership before SARI side effects |
+| [STAFF_POS_PRODUCT_SALE.md](./STAFF_POS_PRODUCT_SALE.md) | Staff Direktverkauf as `payments` via `staff_pos_sale` (#336); main credit timing; DRAFT migrations |
+| [TRIAL_CACHE_AUTHORIZATION.md](./TRIAL_CACHE_AUTHORIZATION.md) | Server-authoritative trial gate; no localStorage entitlement (#337) |
+| [ASSIGNABLE_USER_ROLES.md](./ASSIGNABLE_USER_ROLES.md) | Closed `public.users.role` allowlists; no `student` (#344) |
+| [INVITATION_ROLE_REGISTRATION.md](./INVITATION_ROLE_REGISTRATION.md) | Invitation role lock at staff/admin accept (#362) |
+| [SARI_TENANT_BOUNDARY.md](./SARI_TENANT_BOUNDARY.md) | Tenant ownership before SARI side effects (#347) |
 | [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Session identity cache (HMR); trial authz → trial runbook |
 | [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Passkey recovery |
+| [ACCESS_AND_SECRETS_POLICY.md](./ACCESS_AND_SECRETS_POLICY.md) | Access and secrets policy |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Wallee payment recovery |
 
 ---
 
