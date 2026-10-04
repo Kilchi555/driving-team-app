@@ -71,6 +71,7 @@ export interface CustomerRow {
   tenant_id: string
   role: string
   deleted_at: string | null
+  is_active?: boolean | null
 }
 
 export function isStaffPosRole(role: string | null | undefined): boolean {
@@ -85,6 +86,7 @@ export function isEligiblePosCustomer(
   return customer.tenant_id === tenantId
     && customer.role === 'client'
     && customer.deleted_at == null
+    && customer.is_active === true
 }
 
 export function customerRejectionCode(
@@ -94,6 +96,7 @@ export function customerRejectionCode(
   if (!customer) return 'invalid_customer'
   if (customer.tenant_id !== tenantId) return 'foreign_tenant'
   if (customer.deleted_at != null) return 'deleted_customer'
+  if (customer.is_active !== true) return 'inactive_customer'
   if (customer.role !== 'client') return 'invalid_customer_role'
   return null
 }
@@ -314,7 +317,7 @@ export function creditRappenForProduct(product: {
 }
 
 export function creditsImmediately(method: StaffPosMethod): boolean {
-  return method === 'cash' || method === 'deferred' || method === 'invoice'
+  return method === 'cash'
 }
 
 export function paymentStatusFor(method: StaffPosMethod): 'completed' | 'pending' {
@@ -324,6 +327,45 @@ export function paymentStatusFor(method: StaffPosMethod): 'completed' | 'pending
 export function storedPaymentMethod(method: StaffPosMethod): string {
   if (method === 'invoice_send') return 'invoice'
   return method
+}
+
+/**
+ * Same domain as online booking: only Wallee is a payment_provider value.
+ * Cash, invoice, and deferred store NULL so the column default `wallee` is not applied.
+ */
+export function staffPosPaymentProvider(method: StaffPosMethod): 'wallee' | null {
+  return method === 'wallee' ? 'wallee' : null
+}
+
+export interface SaleCreditSnapshotLine {
+  is_credit_product?: boolean | null
+  credit_amount_rappen?: number | null
+  quantity?: number | null
+}
+
+/**
+ * Credit for a sale that was already priced. Reads only the stored snapshot.
+ * A credit-product line with a missing or non-positive amount is an error.
+ */
+export function creditFromSaleSnapshot(lines: SaleCreditSnapshotLine[]): number {
+  let total = 0
+  for (const line of lines) {
+    if (line.is_credit_product !== true) continue
+    const quantity = Number(line.quantity)
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > STAFF_POS_MAX_QUANTITY) {
+      throw new StaffProductSaleError('invalid_quantity', 400, 'Menge muss eine ganze Zahl sein')
+    }
+    const unit = Number(line.credit_amount_rappen)
+    if (!Number.isInteger(unit) || unit <= 0) {
+      throw new StaffProductSaleError('zero_credit_snapshot', 409, 'Guthaben-Snapshot ist ungültig')
+    }
+    const lineCredit = unit * quantity
+    if (!Number.isSafeInteger(lineCredit) || total + lineCredit > INT4_MAX) {
+      throw new StaffProductSaleError('overflow', 400, 'Gutschrift ist zu hoch')
+    }
+    total += lineCredit
+  }
+  return total
 }
 
 export function buildSaleMetadata(input: {
@@ -556,13 +598,13 @@ export interface SendClaimState {
 }
 
 export type InvoiceSendPlan =
-  | { action: 'skip_send_apply_credit' }
+  | { action: 'skip_send' }
   | { action: 'wait' }
   | { action: 'send' }
 
 /** Mail is sent only while the invoice has no sent_at and no fresh claim. */
 export function planInvoiceSend(state: SendClaimState): InvoiceSendPlan {
-  if (state.sentAt) return { action: 'skip_send_apply_credit' }
+  if (state.sentAt) return { action: 'skip_send' }
   if (state.claimAt) {
     const claimMs = Date.parse(state.claimAt)
     if (Number.isFinite(claimMs) && state.nowMs - claimMs < SEND_CLAIM_TTL_MS) {

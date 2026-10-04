@@ -33,6 +33,22 @@ export function staffProductSaleTitle(payment: {
   return lines.map((line) => `${line.quantity}× ${line.name}`).join(', ')
 }
 
+export function isStaffProductSalePayment(payment: {
+  metadata?: { source?: string } | null
+} | null | undefined): boolean {
+  return payment?.metadata?.source === 'staff_product_sale'
+}
+
+export function isDeferredStaffProductSale(payment: {
+  metadata?: { source?: string; fulfillment?: string } | null
+  payment_method?: string | null
+  appointment_id?: string | null
+} | null | undefined): boolean {
+  if (!isStaffProductSalePayment(payment)) return false
+  if (payment?.appointment_id) return false
+  return payment?.payment_method === 'deferred' && payment?.metadata?.fulfillment === 'deferred'
+}
+
 export function staffProductSaleRows(payment: { id?: string; metadata?: any }) {
   if (payment?.metadata?.source !== 'staff_product_sale') return []
   return staffProductLines(payment.metadata).map((line, index) => ({
