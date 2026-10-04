@@ -2,6 +2,7 @@ import { defineEventHandler, getQuery, getHeader, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateEmail } from '~/server/utils/validators'
+import { isSpamEmail } from '~/server/utils/email-validator'
 import { isReservedSlug } from '~/server/utils/reserved-slugs'
 
 const SLUG_RE = /^[a-z0-9-]{3,50}$/
@@ -52,7 +53,7 @@ export default defineEventHandler(async (event) => {
 
   if (email) {
     const normalized = String(email).toLowerCase().trim()
-    if (!validateEmail(normalized).valid) {
+    if (!validateEmail(normalized).valid || isSpamEmail(normalized)) {
       result.email = { available: false, reason: 'invalid' }
     } else {
       const [{ data: existingTenant }, { data: existingUser }] = await Promise.all([

@@ -85,8 +85,16 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!normalizedEmail) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Pflichtfelder fehlen'
+      })
+    }
+
     // ✅ LAYER 4: Email validation (format + disposable check)
-    if (!validateEmail(email)) {
+    if (!validateEmail(normalizedEmail).valid) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Ungültige E-Mail-Adresse'
@@ -94,7 +102,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const { validateRegistrationEmail } = await import('~/server/utils/email-validator')
-    const emailValidation = await validateRegistrationEmail(email)
+    const emailValidation = await validateRegistrationEmail(normalizedEmail)
     if (!emailValidation.valid) {
       logger.warn('⚠️ Email validation failed for staff registration:', emailValidation.reason)
       throw createError({
@@ -145,8 +153,6 @@ export default defineEventHandler(async (event) => {
       })
     }
     const sanitizedPhone = rawPhone ? normalizePhoneNumber(rawPhone) : null
-
-    const normalizedEmail = email.toLowerCase().trim()
 
     // Email-bound invitations must match before we claim the row, so a wrong
     // email cannot briefly consume the invitation ahead of the invited staff.
@@ -323,7 +329,7 @@ export default defineEventHandler(async (event) => {
       .from('users')
       .insert({
         auth_user_id: authData.user.id,
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         first_name: sanitizedFirstName,
         last_name: sanitizedLastName,
         phone: sanitizedPhone,
@@ -614,7 +620,7 @@ export default defineEventHandler(async (event) => {
     // 10. Send welcome email (non-blocking — don't hold the registration response)
     void sendWelcomeEmail({
       role: registeredRole,
-      to: email.toLowerCase().trim(),
+      to: normalizedEmail,
       firstName: sanitizedFirstName,
       tenantId: invitation.tenant_id,
     }).then(() => {
@@ -633,7 +639,7 @@ export default defineEventHandler(async (event) => {
       ip_address: ipAddress,
       status: 'success',
       details: {
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         invitation_id: invitation.id,
         categories: selectedCategories || [],
         invited_by: invitation.invited_by,

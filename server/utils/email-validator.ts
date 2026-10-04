@@ -97,12 +97,16 @@ export function isSpamEmail(email: string): boolean {
     return true
   }
 
-  if (/\d{6,}/.test(localPart) || /(.)\1{5,}/.test(localPart)) {
+  // Same character six or more times (aaaaaa). Digit runs are legitimate:
+  // birth dates, phone-like locals, and invoice-style mailboxes must pass.
+  if (/(.)\1{5,}/.test(localPart)) {
     return true
   }
 
   return false
 }
+
+export const REGISTRATION_SPAM_EMAIL_REASON = 'E-Mail-Adresse scheint ungültig zu sein'
 
 export async function validateRegistrationEmail(
   email: string
@@ -116,7 +120,7 @@ export async function validateRegistrationEmail(
   }
 
   if (isSpamEmail(email)) {
-    return { valid: false, reason: 'E-Mail-Adresse scheint ungültig zu sein' }
+    return { valid: false, reason: REGISTRATION_SPAM_EMAIL_REASON }
   }
 
   return { valid: true }

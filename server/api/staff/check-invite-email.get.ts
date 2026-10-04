@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateEmail } from '~/server/utils/validators'
+import { isSpamEmail, REGISTRATION_SPAM_EMAIL_REASON } from '~/server/utils/email-validator'
 import {
   checkEmailAvailableForStaff,
   emailConflictMessage,
@@ -32,6 +33,15 @@ export default defineEventHandler(async (event) => {
         available: false,
         reason: 'invalid' as const,
         message: 'Ungültige E-Mail-Adresse',
+      },
+    }
+  }
+  if (isSpamEmail(email)) {
+    return {
+      email: {
+        available: false,
+        reason: 'invalid' as const,
+        message: REGISTRATION_SPAM_EMAIL_REASON,
       },
     }
   }
