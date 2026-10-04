@@ -53,13 +53,22 @@ A person decides these unless a future written policy says otherwise:
 
 ## Review state
 
-`.github/workflows/review-state.yml` is an observer. It upserts one pull request comment marked `<!-- simy-review-state -->`.
+`.github/workflows/review-state.yml` is an observer. It publishes one pull request comment marked `<!-- simy-review-state -->`.
 
-`next_action: ready_for_human_merge` means the required checks passed, no open Bugbot finding was parsed, and GitHub reports the pull request mergeable. `risk_hint` stays `unknown`. That comment is not permission to merge, deploy, or apply SQL.
+That comment is an observation cache, not authority. A consumer must read the live pull request, compare `head_sha`, re-read required checks, merge state, and review threads, revalidate `risk_hint`, and reject a stale, duplicate, malformed, or unknown-schema comment. The canonical comment is the active marker with the greatest `observed_at`, then `evaluation_id`. Any other marker is not controller state.
+
+`next_action: ready_for_human_merge` means only that this observation found the conditions for a human merge decision at the observed head. It is not permission to merge, deploy, push, or apply SQL. `risk_hint` stays `unknown`. `cache.may_merge` and `cache.may_automate` stay false.
+
+The required-check names in the observer are the contexts from ruleset `Protect main — Required CI` as of 2026-09-26: Test and lint, E2E login, and Dependency review. If that ruleset cannot be read, or its contexts differ, the observer must not report `ready_for_human_merge`. A missing required check stays pending and is not treated as green. A cancelled required check is not a code fix.
+
+CodeQL is not a required ruleset check. `codeql.gate` stays `not_required`. `codeql.clean` is true only when the observed CodeQL status is `pass`. `fail`, `unknown`, and a missing CodeQL check are not clean.
+
+GitHub Actions has no review-thread event. Thread state in the comment is eventual, not live. The observer re-reads threads on pull request, review, and review-comment events, on watched check completion, and on a 15-minute schedule. `freshness.live` stays false.
 
 ## Never
 
-- Treat Cursor, Vercel, CodeQL, or App Store status rolls as the merge gate. The required ruleset checks are Test and lint, E2E login, and Dependency review. App Store checks such as `App | Default` are not merge blockers.
+- Treat Cursor, Vercel, CodeQL, or App Store status rolls as the merge gate. The required ruleset checks are Test and lint, E2E login, and Dependency review. App Store checks such as `App | Default` are not merge blockers. CodeQL `unknown` or `fail` is not a clean result.
+- Treat the review-state comment as permission to merge, push, or start an autonomous fix. Re-read GitHub before acting, and ignore a comment whose `head_sha` is not the live head.
 - Use git branch `preview` as a staging path. It is stale and is not production.
 - Temporarily drop branch protection to merge, unless the user explicitly asks after Actions failed to start.
 - Open a ready PR into `main` unless it should ship. Keep work-in-progress as a **draft**.

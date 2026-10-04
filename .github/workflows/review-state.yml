@@ -1,26 +1,41 @@
 # Observer only. Upserts one <!-- simy-review-state --> comment.
 # Does not merge, approve, push, deploy, or call Supabase.
 #
-# issue_comment is intentionally absent. Current Bugbot findings are pull
-# review comments marked BUGBOT_BUG_ID, not issue comments. Issue comments
-# on these PRs are mostly Vercel and would rerun this job without new state.
-# GitHub Actions has no pull_request_review_thread event. A resolved Bugbot
-# thread is picked up on the next review or required-check completion.
+# The comment is an observation cache. It is not permission to merge or
+# to modify code. scripts/review-state.mjs re-reads the pull request head
+# immediately before any write and refuses to publish a stale snapshot.
 #
-# check_run is limited to the ruleset checks, CodeQL, and Cursor Bugbot.
-# The job name "Publish review state" is not in that list, so this workflow
-# does not retrigger itself when its own check completes.
+# GitHub Actions has no event for review-thread resolution. The first
+# draft of this workflow tried an unsupported thread event and failed
+# validation. Thread state is therefore eventual, not live: it is re-read
+# on the events below and on the 15-minute schedule. The JSON says
+# freshness.review_threads = "eventual" and freshness.live = false.
+#
+# check_run and schedule run from the default branch, so those refreshes
+# start after this file is on main. pull_request* events run from the
+# merge commit of the pull request.
+#
+# Concurrency is per pull request number for pull_request* events, so a
+# newer commit cancels an in-flight run for the same PR. check_run events
+# often omit pull_requests, so they are grouped by head SHA. The script
+# still refuses a cross-SHA overwrite if cancellation arrives late.
+# The job name "Publish review state" is not a watched check, so this
+# workflow does not retrigger itself.
+
 name: Review state
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   pull_request_review:
-    types: [submitted]
+    types: [submitted, edited, dismissed]
   pull_request_review_comment:
-    types: [created]
+    types: [created, edited, deleted]
   check_run:
     types: [completed]
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -28,14 +43,14 @@ permissions:
   checks: read
 
 concurrency:
-  group: review-state-${{ github.event.pull_request.head.sha || github.event.check_run.head_sha || github.run_id }}
+  group: ${{ github.event.pull_request.number && format('review-state-pr-{0}', github.event.pull_request.number) || github.event_name == 'schedule' && 'review-state-schedule' || github.event.check_run.head_sha && format('review-state-sha-{0}', github.event.check_run.head_sha) || format('review-state-run-{0}', github.run_id) }}
   cancel-in-progress: true
 
 jobs:
   publish:
     name: Publish review state
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     if: >-
       github.event_name != 'check_run' ||
       contains(fromJSON('["Test and lint","E2E login","Dependency review","CodeQL","Analyze (javascript-typescript)","Analyze (actions)","Cursor Bugbot"]'), github.event.check_run.name)
@@ -54,6 +69,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
           EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER: ${{ github.event.pull_request.number || '' }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.check_run.head_sha || '' }}
