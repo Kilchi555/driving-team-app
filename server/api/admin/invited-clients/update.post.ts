@@ -7,6 +7,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { evaluateClientEmailClaim } from '~/server/utils/auth-email-claim'
 import {
   assertClientInviteEmailFree,
+  assertInvitationAdmin,
   loadInvitationAdminCaller,
   updatePendingClientInvitation,
 } from '~/server/utils/invited-user-manage'
@@ -32,6 +33,7 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
     const caller = await loadInvitationAdminCaller(supabase, authUser.id)
+    const tenantId = assertInvitationAdmin(caller)
 
     const result = await updatePendingClientInvitation({
       caller,
@@ -79,7 +81,7 @@ export default defineEventHandler(async (event) => {
     await logAudit({
       action: 'client_invitation_updated',
       user_id: authUser.id,
-      tenant_id: caller.tenantId,
+      tenant_id: tenantId,
       resource_type: 'user',
       resource_id: result.id,
       ip_address: ipAddress,

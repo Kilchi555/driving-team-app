@@ -8,6 +8,7 @@ import { sendEmail } from '~/server/utils/email'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { buildOnboardingEmailHtml } from '~/server/utils/onboarding-email'
 import {
+  assertInvitationAdmin,
   loadInvitationAdminCaller,
   renewPendingClientInvitation,
 } from '~/server/utils/invited-user-manage'
@@ -33,6 +34,7 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
     const caller = await loadInvitationAdminCaller(supabase, authUser.id)
+    const tenantId = assertInvitationAdmin(caller)
 
     const renewed = await renewPendingClientInvitation({
       caller,
@@ -91,7 +93,7 @@ export default defineEventHandler(async (event) => {
     await logAudit({
       action: 'client_invitation_resend',
       user_id: authUser.id,
-      tenant_id: caller.tenantId,
+      tenant_id: tenantId,
       resource_type: 'user',
       resource_id: renewed.id,
       ip_address: ipAddress,

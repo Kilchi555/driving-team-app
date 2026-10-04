@@ -9,6 +9,7 @@ import {
   emailConflictMessage,
 } from '~/server/utils/email-availability'
 import {
+  assertInvitationAdmin,
   loadInvitationAdminCaller,
   updatePendingStaffInvitation,
 } from '~/server/utils/invited-user-manage'
@@ -32,6 +33,7 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
     const caller = await loadInvitationAdminCaller(supabase, authUser.id)
+    const tenantId = assertInvitationAdmin(caller)
 
     const result = await updatePendingStaffInvitation({
       caller,
@@ -112,7 +114,7 @@ export default defineEventHandler(async (event) => {
     await logAudit({
       action: 'staff_invitation_updated',
       user_id: authUser.id,
-      tenant_id: caller.tenantId,
+      tenant_id: tenantId,
       resource_type: 'staff_invitation',
       resource_id: result.id,
       ip_address: ipAddress,
