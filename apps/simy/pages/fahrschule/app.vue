@@ -147,7 +147,7 @@
             </tbody>
           </table>
         </div>
-        <p class="text-xs text-gray-400 text-center mt-4">Angaben basieren auf öffentlich verfügbaren Informationen der jeweiligen Anbieter (Stand Oktober 2026). QualiDrive: CHF 12 einmalig pro neuem Schüler für Standardfunktionen, dazu Setup ab CHF 590 und 17 % Hosting pro Jahr. Module wie Online-Buchung, Kurse und Schüler-App kosten extra pro Schüler. Simy: unbegrenzte Schüler im Monatspreis, {{ PRICE_VAT_NOTE_SHORT }}.</p>
+        <p class="text-xs text-gray-400 text-center mt-4">Angaben basieren auf öffentlich verfügbaren Informationen der jeweiligen Anbieter (Stand {{ qualiAsOf }}). QualiDrive: CHF 12 einmalig pro neuem Schüler für Standardfunktionen. Online-Buchung, Kurse und die Store-App sind dort weitere Module. Simy: unbegrenzt viele Schüler im Monatspreis, Schülerportal im Browser, keine Einrichtungsgebühr für das Software-Abo. {{ PRICE_VAT_NOTE_SHORT }}.</p>
       </div>
     </section>
 
@@ -175,9 +175,10 @@
 </template>
 
 <script setup lang="ts">
-import { PRICE_VAT_NOTE_SHORT } from '~/data/pricing'
+import { PRICE_VAT_NOTE_SHORT, QUALIDRIVE_PRICE_LIST_AS_OF } from '~/data/pricing'
 import { breadcrumbLd, faqPageLd, ldScripts, softwareAppLd } from '~/utils/schema'
 const { registerCta } = useRegisterCta('driving_school')
+const qualiAsOf = QUALIDRIVE_PRICE_LIST_AS_OF
 
 useHead({
   title: 'Fahrlehrer App – Simy | iOS & Android Fahrschulsoftware',
@@ -244,8 +245,8 @@ const comparison = [
     simy: true, carzi: false, orphy: false, admin: false, quali: false
   },
   {
-    feature: 'Kostenlose Schüler-App',
-    simy: true, carzi: true, orphy: true, admin: 'Add-on', quali: 'Add-on'
+    feature: 'Zugang für Schüler',
+    simy: 'Portal im Browser', carzi: true, orphy: true, admin: 'Add-on', quali: 'Store-App, Add-on'
   },
   {
     feature: 'Auf Schweizer Servern',
@@ -256,12 +257,12 @@ const comparison = [
     simy: '30 Tage', carzi: 'Auf Anfrage', orphy: '30 Tage', admin: 'k. A.', quali: 'k. A.'
   },
   {
-    feature: 'Schüler im Grundpreis',
+    feature: 'Schüler im Monatspreis',
     simy: 'Unbegrenzt', carzi: 'k. A.', orphy: 'k. A.', admin: 'k. A.', quali: 'CHF 12 / Schüler'
   },
   {
-    feature: 'Einrichtungsgebühr',
-    simy: 'Keine', carzi: 'k. A.', orphy: 'k. A.', admin: 'k. A.', quali: 'Ab CHF 590'
+    feature: 'Einrichtungsgebühr Software',
+    simy: 'Keine', carzi: 'k. A.', orphy: 'k. A.', admin: 'k. A.', quali: 'CHF 590 Standard'
   },
   {
     feature: 'Preis / Monat',

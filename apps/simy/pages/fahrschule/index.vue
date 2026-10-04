@@ -61,7 +61,7 @@
           </span>
           <span class="flex items-center gap-1.5">
             <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-            Unbegrenzte Schüler
+            {{ claimUnlimitedStudents }}
           </span>
           <span class="flex items-center gap-1.5">
             <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
@@ -72,6 +72,10 @@
             DSGVO-konform
           </span>
         </div>
+        <p class="mt-4 text-sm text-gray-600">
+          {{ claimNoFeePerStudent }} Keine Einrichtungsgebühr für die Software.
+          <a href="/preise" class="font-semibold underline underline-offset-2" style="color: var(--brand-primary)">Preise ansehen</a>
+        </p>
       </div>
 
       <div class="relative max-w-5xl mx-auto mt-16 px-0">
@@ -297,11 +301,13 @@
 import { ref } from 'vue'
 import { FOUNDER_BLURB_HOME } from '~/data/founder'
 import { FAHRSCHULE_JOBS, FAHRSCHULE_SCREENSHOTS as shots } from '~/data/fahrschule-jobs'
-import { PRICE_VAT_NOTE } from '~/data/pricing'
+import { CLAIM_NO_FEE_PER_STUDENT, CLAIM_UNLIMITED_STUDENTS, PRICE_VAT_NOTE } from '~/data/pricing'
 const { registerCta } = useRegisterCta('driving_school')
 const jobs = FAHRSCHULE_JOBS
 
 const founderBlurbHome = FOUNDER_BLURB_HOME
+const claimNoFeePerStudent = CLAIM_NO_FEE_PER_STUDENT
+const claimUnlimitedStudents = CLAIM_UNLIMITED_STUDENTS
 
 useHead({
   title: 'Fahrschulsoftware Schweiz – Buchung, App & Website | Simy',
@@ -334,7 +340,8 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
         mainEntity: [
-          { '@type': 'Question', name: 'Was kostet Simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: `Simy bietet Pläne ab CHF 49/Monat mit unbegrenzten Schülern, ohne Preis pro Schüler und ohne Einrichtungsgebühr. Online-Buchung, Schülerportal und TWINT sind im Grundpreis. 30 Tage kostenlos, ohne Kreditkarte. ${PRICE_VAT_NOTE}` } },
+          { '@type': 'Question', name: 'Was kostet Simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: `Simy bietet Pläne ab CHF 49/Monat. Unbegrenzt viele Schüler, keine Gebühr pro Schüler, keine Einrichtungsgebühr für die Software. Online-Buchung und das Schülerportal sind im Monatspreis. Online-Kursverwaltung ab Professional. 30 Tage kostenlos, ohne Kreditkarte. ${PRICE_VAT_NOTE}` } },
+          { '@type': 'Question', name: 'Gibt es eine Gebühr pro Schüler?', acceptedAnswer: { '@type': 'Answer', text: 'Nein. Simy berechnet keine Gebühr pro Schüler. Deine Schüler sind im Monatspreis enthalten.' } },
           { '@type': 'Question', name: 'Wie lange dauert die Einrichtung?', acceptedAnswer: { '@type': 'Answer', text: 'In der Regel unter 15 Minuten. Der Setup-Wizard führt durch alle Schritte.' } },
           { '@type': 'Question', name: 'Können meine Schüler selbst Termine buchen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink. Im Schülerportal sehen sie Termine, Fortschritt, Guthaben und Dokumente.' } },
           { '@type': 'Question', name: 'Sehen Schüler ihre Bewertungen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Dokumentierte Bewertungen sind im Portal sichtbar. Schule und Schüler können das PDF exportieren.' } },
@@ -378,12 +385,13 @@ const testimonials = [
 ]
 
 const faqs = [
-  { q: 'Was kostet Simy für Fahrschulen?', a: `Simy bietet Pläne ab CHF 49/Monat mit unbegrenzten Schülern — kein Preis pro Schüler, keine Einrichtungsgebühr. Online-Buchung, Schülerportal und TWINT sind im Grundpreis. 30 Tage kostenlos, ohne Kreditkarte. ${PRICE_VAT_NOTE}` },
+  { q: 'Was kostet Simy für Fahrschulen?', a: `Simy bietet Pläne ab CHF 49/Monat. Unbegrenzt viele Schüler, keine Gebühr pro Schüler, keine Einrichtungsgebühr für die Software. Online-Buchung und das Schülerportal sind im Monatspreis. Online-Kursverwaltung ab Professional. 30 Tage kostenlos, ohne Kreditkarte. ${PRICE_VAT_NOTE} Details auf der Preisseite.` },
+  { q: 'Gibt es eine Gebühr pro Schüler?', a: 'Nein. Simy berechnet keine Gebühr pro Schüler. Deine Schüler sind im Monatspreis enthalten.' },
   { q: 'Wie lange dauert die Einrichtung?', a: 'In der Regel bist du in unter 15 Minuten startklar. Der Setup-Wizard führt dich durch alle Schritte: Kategorien, Preise, Standorte und Fahrlehrer.' },
   { q: 'Können meine Schüler selbst Termine buchen?', a: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink. Im Schülerportal sehen sie Termine, Fortschritt, Guthaben und hochgeladene Dokumente.' },
   { q: 'Sehen Schüler ihre Bewertungen?', a: 'Ja. Was du nach der Stunde dokumentierst, ist im Portal sichtbar. Schule und Schüler können das PDF exportieren.' },
   { q: 'Wie funktioniert die Abholung?', a: 'Du setzt einen Radius in Fahrzeit-Minuten. Der Schüler wählt den Treffpunkt. Liegt die Adresse zu weit weg oder passt die Fahrt nicht zwischen zwei Stunden, erscheint der Slot nicht.' },
-  { q: 'Kann ich Theorie- und VKU-Kurse online verkaufen?', a: 'Ja. Mit der Kursbuchungsseite melden sich Schüler selbst an, freie Plätze sind sichtbar. Ist der Kurs voll, landen Interessenten auf der Warteliste statt im Chat.' },
+  { q: 'Kann ich Theorie- und VKU-Kurse online verkaufen?', a: 'Ja. Ab Professional ist die Kursbuchungsseite im Monatspreis, im Starter zubuchbar. Schüler melden sich selbst an, freie Plätze sind sichtbar. Ist der Kurs voll, landen Interessenten auf der Warteliste.' },
   { q: 'Funktioniert Simy auch auf dem Smartphone?', a: 'Ja. Die Fahrlehrer-App läuft auf iOS und Android. Deine Schüler können den Buchungslink direkt im Browser öffnen.' },
   { q: 'Sind meine Daten in der Schweiz gespeichert?', a: 'Ja. Simy speichert alle Daten auf Schweizer Servern und ist vollständig DSGVO-konform.' },
   { q: 'Kann ich Simy zusammen mit meiner bestehenden Website nutzen?', a: 'Ja. Du kannst den Buchungslink auf deiner bestehenden Website einbinden — oder eine komplette SEO-Website von Simy generieren lassen.' },

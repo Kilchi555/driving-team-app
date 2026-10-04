@@ -109,7 +109,7 @@
       <!-- Section 3 — Simy CTA Block -->
       <section :id="toc[2].id">
         <h2 class="text-3xl font-extrabold text-gray-900 mb-6">Simy — Die beste Fahrschulsoftware für die Schweiz</h2>
-        <p class="text-gray-600 leading-relaxed mb-8">Simy ist speziell für den Schweizer Markt entwickelt. Mit TWINT-Integration, Schweizer Datenschutz und auf Deutsch verfügbar — All-in-One mit Website und Marketing inklusive.</p>
+        <p class="text-gray-600 leading-relaxed mb-8">Simy ist speziell für den Schweizer Markt entwickelt. Mit TWINT, Schweizer Datenschutz und auf Deutsch. Die Website ist ein separates Produkt.</p>
         <div class="grid sm:grid-cols-3 gap-5 mb-8">
           <div v-for="usp in usps" :key="usp.title"
             class="rounded-2xl p-6 text-center border border-gray-100 hover:border-gray-200 transition-all">
@@ -226,8 +226,9 @@ useHead({
       url: 'https://www.simy.ch/fahrschule/software',
     }),
     faqPageLd([
-      { q: 'Was kostet Fahrschulsoftware?', a: `Fahrschulsoftware kostet je nach Anbieter einen Monatspreis oder einen Betrag pro Schüler plus Setup. Simy startet ab CHF 49/Monat mit unbegrenzten Schülern, ohne Einrichtungsgebühr, und mit 30 Tagen kostenlosem Test. ${PRICE_VAT_NOTE}` },
-      { q: 'Welche Fahrschulsoftware ist die beste?', a: 'Simy ist eine All-in-One Lösung für Schweizer Fahrschulen mit Terminbuchung, automatischen Rechnungen, Fahrlehrer-App und Website-Generator.' },
+      { q: 'Was kostet Fahrschulsoftware?', a: `Simy startet ab CHF 49/Monat. Unbegrenzt viele Schüler, keine Gebühr pro Schüler, keine Einrichtungsgebühr für die Software. Online-Buchung und das Schülerportal sind im Monatspreis. Online-Kursverwaltung ab Professional. 30 Tage kostenlos testen. ${PRICE_VAT_NOTE}` },
+      { q: 'Gibt es eine Gebühr pro Schüler?', a: 'Nein. Simy berechnet keine Gebühr pro Schüler. Deine Schüler sind im Monatspreis enthalten.' },
+      { q: 'Welche Fahrschulsoftware ist die beste?', a: 'Simy ist eine Lösung für Schweizer Fahrschulen mit Terminbuchung, automatischen Rechnungen und Fahrlehrer-App. Online-Kursverwaltung ab Professional. Die Website ist ein separates Produkt.' },
       { q: 'Was kostet die Online-Zahlung via Wallee?', a: WALLEE_FEE_FAQ },
     ]),
     breadcrumbLd([
@@ -260,7 +261,7 @@ const featureCats = [
     features: ['Online-Buchungslink für Schüler', 'Echtzeit-Kalender pro Fahrlehrer', 'Automatische Terminbestätigung', 'Absage-Verwaltung', 'Mehrtagesansicht', 'iCal-Sync'],
   },
   {
-    title: 'Kurse & Theorie', icon: 'school', color: 'var(--brand-primary)', tag: 'Must-Have',
+    title: 'Kurse & Theorie', icon: 'school', color: 'var(--brand-primary)', tag: 'Ab Professional',
     features: ['Kursbuchungsseite mit Branding', 'Platzkontingente & Restplätze', 'Online-Anmeldung für Theorie/VKU', 'Warteliste bei ausgebuchten Kursen', 'Zahlung bei Anmeldung', 'Neben Fahrstunden nutzbar'],
   },
   {
@@ -280,12 +281,12 @@ const featureCats = [
 const usps = [
   { icon: 'swiss', title: 'Swiss Made', desc: 'Server in der Schweiz, DSGVO-konform, TWINT & QR-Rechnung inklusive' },
   { icon: 'zap', title: 'Schnell startklar', desc: 'In 15 Minuten vollständig eingerichtet — mit Wizard und Vorlagen' },
-  { icon: 'globe', title: 'Website inklusive', desc: 'Simy generiert automatisch eine professionelle Website für deine Fahrschule' },
+  { icon: 'globe', title: 'Website separat', desc: 'Eigene Website mit eigenem Setup. Kein Teil des Software-Abos.' },
 ]
 
 const pricingTable = [
   { model: 'Excel / Paper', price: 'Gratis', pro: 'Keine Lizenzkosten', con: 'Sehr zeitaufwendig, fehleranfällig', highlight: false },
   { model: 'Einmalige Software', price: 'CHF 500–2000', pro: 'Keine monatlichen Kosten', con: 'Kein Updates, kein Support', highlight: false },
-  { model: 'SaaS / Abo (Simy)', price: 'Ab CHF 49/Mt.', pro: 'Immer aktuell, inkl. Support & Website', con: 'Monatliche Kosten', highlight: true },
+  { model: 'SaaS / Abo (Simy)', price: 'Ab CHF 49/Mt.', pro: 'Immer aktuell, inkl. Support. Keine Gebühr pro Schüler.', con: 'Monatliche Kosten', highlight: true },
 ]
 </script>
