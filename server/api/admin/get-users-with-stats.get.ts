@@ -33,6 +33,7 @@ interface UserWithStats {
   is_active: boolean
   created_at: string
   tenant_id: string
+  onboarding_status?: string | null
   appointment_count: number
   completed_appointments: number
   unpaid_count: number
@@ -128,7 +129,8 @@ export default defineEventHandler(async (event) => {
         is_active,
         can_edit_guide,
         created_at,
-        tenant_id
+        tenant_id,
+        onboarding_status
       `)
       .eq('tenant_id', tenantId)
       .is('deleted_at', null)
@@ -210,6 +212,7 @@ export default defineEventHandler(async (event) => {
         is_active: user.is_active,
         created_at: user.created_at,
         tenant_id: user.tenant_id,
+        onboarding_status: user.onboarding_status || null,
         appointment_count: userAppointments.length,
         completed_appointments: completedAppointments.length,
         unpaid_count: pendingPayments.length,
