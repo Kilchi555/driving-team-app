@@ -199,3 +199,8 @@ CRON_SECRET=your-secret-key  # Required for cron endpoint auth
 - **Storage**: ~1KB per webhook log entry
 
 Run cron job every 10 minutes to stay current.
+
+## Related
+
+- CHF-0 / wrong pricing-rule completions (not Wallee-specific): [SUSPICIOUS_ZERO_PAYMENTS.md](./SUSPICIOUS_ZERO_PAYMENTS.md)
+- Customer cannot UPDATE `payment_status` via Data API (F-05): [PAYMENTS_REMINDER_LOGS_RLS.md](./PAYMENTS_REMINDER_LOGS_RLS.md)
