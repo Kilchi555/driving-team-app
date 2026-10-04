@@ -925,6 +925,25 @@
             >
               Aktuelle Auswahl: <strong>{{ autoPaymentMethodLabel }}</strong>
             </p>
+            <div v-if="newCourse.payment_method === 'INVOICE'" class="mt-3">
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Rechnungsstellung
+              </label>
+              <select
+                v-model="newCourse.invoice_timing_mode"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
+              >
+                <option :value="null">Standard</option>
+                <option value="immediate">Sofort</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">
+                Standard verwendet die Rechnungs-Einstellung von Kategorie/Tenant.
+                Für sofortige automatische Rechnung „Sofort“ auswählen.
+              </p>
+              <p v-if="newCourse.invoice_timing_mode === 'immediate'" class="text-xs text-gray-700 mt-1">
+                Nach erfolgreicher öffentlicher Anmeldung wird die Rechnung automatisch erstellt und per E-Mail versendet.
+              </p>
+            </div>
           </div>
 
           <!-- Participant Settings -->
@@ -5123,8 +5142,13 @@ const newCourse = ref({
   registration_deadline: null as string | null,
   status: 'draft',
   payment_method: defaultCoursePaymentMethod.value as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null,
+  invoice_timing_mode: null as 'immediate' | null,
   billing_mode: 'individual' as 'individual' | 'company_collective',
   company_id: null as string | null,
+})
+
+watch(() => newCourse.value.payment_method, (method) => {
+  if (method !== 'INVOICE') newCourse.value.invoice_timing_mode = null
 })
 
 // Live preview: which payment method will the auto-detection pick when
@@ -5576,6 +5600,7 @@ const resetNewCourse = () => {
     registration_deadline: null,
     status: 'scheduled',
     payment_method: defaultCoursePaymentMethod.value,
+    invoice_timing_mode: null,
     billing_mode: 'individual',
     company_id: null,
   }
@@ -6356,6 +6381,9 @@ const editCourse = (course: any) => {
     registration_deadline: course.registration_deadline || null,
     status: course.status || 'draft',
     payment_method: (course.payment_method as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null) ?? null,
+    invoice_timing_mode: course.payment_method === 'INVOICE' && course.invoice_timing_mode === 'immediate'
+      ? 'immediate'
+      : null,
     billing_mode: (course.billing_mode === 'company_collective' ? 'company_collective' : 'individual') as 'individual' | 'company_collective',
     company_id: course.company_id || null,
   }
