@@ -32,6 +32,7 @@ import {
   sendCourseFulfillmentConfirmation,
   tryFulfillCourseFromCapturedWalleeTx,
 } from '~/server/utils/fulfill-course-wallee-payment'
+import { stampActiveWalleeCompletionFeeKind } from '~/server/utils/wallee-fee-kind'
 
 interface PaymentProcessRequest {
   // CHANGED: Now takes existing paymentId instead of creating new payment
@@ -55,7 +56,10 @@ async function fulfillOrThrowExistingCourseWalleeCapture(opts: {
   supabase: any
   payment: any
   existingTx: any
+  spaceId: number
+  sdkConfig: any
 }): Promise<PaymentProcessResponse | null> {
+  const statusBefore = opts.payment?.payment_status
   const attempt = await tryFulfillCourseFromCapturedWalleeTx({
     supabase: opts.supabase,
     payment: opts.payment,
@@ -64,6 +68,15 @@ async function fulfillOrThrowExistingCourseWalleeCapture(opts: {
   const httpErr = courseCapturedWalleeHttpError(attempt)
   if (httpErr) throw createError(httpErr)
   if (!isCourseCapturedWalleeFulfilled(attempt) || !attempt.result) return null
+
+  await stampActiveWalleeCompletionFeeKind({
+    supabase: opts.supabase,
+    payment: opts.payment,
+    tx: opts.existingTx,
+    spaceId: opts.spaceId,
+    sdkConfig: opts.sdkConfig,
+    statusBefore,
+  })
 
   const fulfilled = attempt.result
   if (fulfilled.status === 'fulfilled' && fulfilled.registrationId) {
@@ -316,6 +329,8 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
             supabase: supabaseAdmin,
             payment,
             existingTx,
+            spaceId: spaceIdEarly,
+            sdkConfig: configEarly,
           })
           if (recovered) return recovered
         }
@@ -580,9 +595,12 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
               supabase: supabaseAdmin,
               payment,
               existingTx,
+              spaceId,
+              sdkConfig: config,
             })
             if (recovered) return recovered
 
+            const statusBeforeComplete = payment.payment_status
             const completed = await completeCapturedWalleePayment(supabaseAdmin, payment, {
               extraUpdate: { wallee_transaction_state: existingTx.state },
             })
@@ -594,6 +612,15 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
                   : 'Zahlung konnte nicht abgeschlossen werden.',
               })
             }
+
+            await stampActiveWalleeCompletionFeeKind({
+              supabase: supabaseAdmin,
+              payment,
+              tx: existingTx,
+              spaceId,
+              sdkConfig: config,
+              statusBefore: statusBeforeComplete,
+            })
 
             const now = new Date().toISOString()
             if (payment.appointments?.id) {

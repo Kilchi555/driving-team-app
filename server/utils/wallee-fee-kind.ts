@@ -101,3 +101,29 @@ export async function stampWalleeFeeKind(
   }
   payment.metadata = mergePaymentMetadata(existing, patch)
 }
+
+const ACTIVE_WALLEE_COMPLETION_STATUSES = new Set(['pending', 'processing'])
+
+/**
+ * Classify a Wallee capture this request is completing now.
+ * `statusBefore` is the payment status from before fulfillment mutates the row
+ * in memory. Completed and paid rows are not rewritten.
+ */
+export async function stampActiveWalleeCompletionFeeKind(opts: {
+  supabase: PaymentUpdateClient
+  payment: { id?: string | null, metadata?: unknown }
+  tx: unknown
+  spaceId: number
+  sdkConfig: unknown
+  statusBefore: string | null | undefined
+}): Promise<void> {
+  const status = String(opts.statusBefore || '').toLowerCase()
+  if (!ACTIVE_WALLEE_COMPLETION_STATUSES.has(status)) return
+  try {
+    await ensureWalleePaymentMethodId(opts.tx, opts.spaceId, opts.sdkConfig)
+    await stampWalleeFeeKind(opts.supabase, opts.payment, opts.tx)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    logger.warn('⚠️ Wallee fee kind stamp on active completion failed:', message)
+  }
+}
