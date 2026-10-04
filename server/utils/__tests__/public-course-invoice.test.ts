@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { resolveCourseInvoiceTiming } from '../course-invoice-timing'
+import { normalizeCourseInvoiceTimingForSave, resolveCourseInvoiceTiming } from '../course-invoice-timing'
 import {
   courseInvoiceSnapshotAmounts,
   publicCourseEnrollmentMessage,
@@ -450,9 +450,90 @@ describe('resolveCourseInvoiceTiming', () => {
     expect(resolveCourseInvoiceTiming({ categoryMode: 'immediate', tenantMode: 'off' })).toBe('immediate')
   })
 
+  it('course immediate overrides category and tenant', () => {
+    expect(resolveCourseInvoiceTiming({ courseMode: 'immediate', categoryMode: 'inherit', tenantMode: 'off' })).toBe('immediate')
+    expect(resolveCourseInvoiceTiming({ courseMode: 'immediate', categoryMode: 'off', tenantMode: 'off' })).toBe('immediate')
+    expect(resolveCourseInvoiceTiming({ courseMode: 'IMMEDIATE', categoryMode: 'inherit', tenantMode: 'off' })).toBe('immediate')
+  })
+
+  it('a null course mode keeps the category and tenant resolution', () => {
+    expect(resolveCourseInvoiceTiming({ courseMode: null, categoryMode: 'immediate', tenantMode: 'off' })).toBe('immediate')
+    expect(resolveCourseInvoiceTiming({ courseMode: null, categoryMode: 'inherit', tenantMode: 'immediate' })).toBe('immediate')
+    expect(resolveCourseInvoiceTiming({ courseMode: null, categoryMode: 'inherit', tenantMode: 'off' })).toBe('off')
+    expect(resolveCourseInvoiceTiming({ courseMode: undefined, categoryMode: 'off', tenantMode: 'immediate' })).toBe('off')
+    expect(resolveCourseInvoiceTiming({ courseMode: '', categoryMode: 'inherit', tenantMode: 'off' })).toBe('off')
+  })
+
+  it('an invalid course mode fails closed', () => {
+    expect(resolveCourseInvoiceTiming({ courseMode: 'off', categoryMode: 'inherit', tenantMode: 'immediate' })).toBe('unsupported')
+    expect(resolveCourseInvoiceTiming({ courseMode: 'inherit', categoryMode: 'immediate', tenantMode: 'off' })).toBe('unsupported')
+    expect(resolveCourseInvoiceTiming({ courseMode: 'days_before_start', categoryMode: 'inherit', tenantMode: 'immediate' })).toBe('unsupported')
+  })
+
   it('has no database access', () => {
     const src = read('server/utils/course-invoice-timing.ts')
     expect(src).not.toMatch(/supabase|\.from\(|\.rpc\(/)
+  })
+})
+
+describe('normalizeCourseInvoiceTimingForSave', () => {
+  it('persists immediate only for an invoice course', () => {
+    expect(normalizeCourseInvoiceTimingForSave({
+      paymentMethod: 'INVOICE',
+      invoiceTimingMode: 'immediate',
+    })).toEqual({ invoice_timing_mode: 'immediate' })
+    expect(normalizeCourseInvoiceTimingForSave({
+      paymentMethod: 'INVOICE',
+      invoiceTimingMode: null,
+    })).toEqual({ invoice_timing_mode: null })
+  })
+
+  it('rejects an invalid timing value on an invoice course', () => {
+    expect(normalizeCourseInvoiceTimingForSave({
+      paymentMethod: 'INVOICE',
+      invoiceTimingMode: 'off',
+    })).toEqual({ error: 'Ungültige Rechnungsstellung. Erlaubt sind Standard oder Sofort.' })
+    expect(normalizeCourseInvoiceTimingForSave({
+      paymentMethod: 'INVOICE',
+      invoiceTimingMode: 'days_before_start',
+    })).toHaveProperty('error')
+  })
+
+  it('clears course timing unless the payment method is invoice', () => {
+    for (const paymentMethod of ['WALLEE', 'CASH_ON_SITE', null, '']) {
+      expect(normalizeCourseInvoiceTimingForSave({
+        paymentMethod,
+        invoiceTimingMode: 'immediate',
+      })).toEqual({ invoice_timing_mode: null })
+    }
+  })
+
+  it('upsert stores the normalized value before insert and update', () => {
+    const src = read('server/api/admin/courses/upsert.post.ts')
+    const normalized = src.indexOf('const courseTiming = normalizeCourseInvoiceTimingForSave')
+    const payload = src.indexOf('const payload')
+    const insert = src.indexOf(".insert(")
+    const update = src.indexOf('.update(payload)')
+    expect(normalized).toBeGreaterThan(0)
+    expect(payload).toBeGreaterThan(normalized)
+    expect(update).toBeGreaterThan(payload)
+    expect(insert).toBeGreaterThan(payload)
+    expect(src).toContain('courseData.invoice_timing_mode = courseTiming.invoice_timing_mode')
+  })
+})
+
+describe('courses.invoice_timing_mode migration', () => {
+  const sql = read('migrations/20261003_courses_invoice_timing_mode.sql')
+
+  it('adds a nullable column with no immediate default and does not rewrite rows', () => {
+    expect(sql).toContain('ADD COLUMN IF NOT EXISTS invoice_timing_mode text')
+    expect(sql).not.toMatch(/invoice_timing_mode\s+text\s+NOT\s+NULL/i)
+    expect(sql).not.toMatch(/invoice_timing_mode[^;\n]*DEFAULT/i)
+    expect(sql).toContain("invoice_timing_mode IS NULL OR invoice_timing_mode = 'immediate'")
+    expect(sql).not.toMatch(/\bUPDATE\b/i)
+    expect(sql).not.toMatch(/\bINSERT\s+INTO\b/i)
+    expect(sql).not.toMatch(/ROW LEVEL SECURITY|CREATE\s+POLICY/i)
+    expect(sql).not.toMatch(/payment_method\s*=/i)
   })
 })
 
@@ -569,6 +650,19 @@ describe('runPublicCourseInvoiceBilling', () => {
     buildInvoiceEmailHtml.mockClear()
     generateInvoicePdf.mockClear()
     generateInvoicePdf.mockResolvedValue(Buffer.from('pdf'))
+  })
+
+  it('course immediate bills when the tenant and category stay off', async () => {
+    const db = createMemorySupabase(baseTables({
+      tenantMode: 'off',
+      categoryMode: 'inherit',
+      course: { invoice_timing_mode: 'immediate' },
+    }))
+    const result = await runPublicCourseInvoiceBilling({ supabase: asClient(db), registrationId: 'reg-new' })
+    expect(result.status).toBe('sent')
+    expect(db.tables.invoices).toHaveLength(1)
+    expect(db.tables.payments).toHaveLength(1)
+    expect(sendTenantEmail).toHaveBeenCalledTimes(1)
   })
 
   it('1. off creates no billing', async () => {
