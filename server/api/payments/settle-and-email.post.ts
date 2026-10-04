@@ -10,6 +10,7 @@ import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateUUID } from '~/server/utils/validators'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { internalEmailAuthHeaders } from '~/server/utils/internal-email-secret'
 
 interface SettleAndEmailRequest {
   appointmentIds: string[]
@@ -341,6 +342,7 @@ export default defineEventHandler(async (event) => {
                   html: emailHtml,
                   body: emailHtml.replace(/<[^>]*>/g, '')
                 },
+                headers: internalEmailAuthHeaders(),
                 method: 'POST'
               })
 

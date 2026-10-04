@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import type { PriceAdjustmentResult } from './appointment-price-adjustment'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { internalEmailAuthHeaders } from '~/server/utils/internal-email-secret'
 
 interface AdjustmentEmailData {
   userId: string
@@ -208,6 +209,7 @@ ${teamSignoff}
         html: emailHtml,
         body: emailText
       },
+      headers: internalEmailAuthHeaders(),
       method: 'POST'
     })
 
@@ -312,6 +314,7 @@ ${teamSignoff}
         html: emailHtml,
         body: emailText
       },
+      headers: internalEmailAuthHeaders(),
       method: 'POST'
     })
 

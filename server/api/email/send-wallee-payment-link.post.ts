@@ -4,6 +4,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
+import { internalEmailAuthHeaders } from '~/server/utils/internal-email-secret'
 
 interface SendEmailRequest {
   email: string
@@ -37,7 +38,8 @@ export default defineEventHandler(async (event) => {
         subject,
         html,
         from: 'noreply@simy.ch'
-      }
+      },
+      headers: internalEmailAuthHeaders(),
     })
 
     if (error) {
