@@ -10,44 +10,42 @@ import { pathToFileURL } from 'node:url'
  * that this observation found the conditions for a human merge decision
  * at the observed head.
  *
- * Publication barrier (not transactional; GitHub issue comments have no
- * compare-and-swap):
+ * Concurrency. GitHub issue comments have no compare-and-swap. Safety
+ * does not come from a GET before PATCH.
  *
- *   OBSERVE → EVALUATE → RE-READ HEAD → PUBLISH ONLY IF STILL CURRENT
+ * 1. The workflow concurrency group `simy-review-state` allows one run
+ *    at a time and does not cancel the in-progress run. A later event
+ *    waits until this process has exited, then reads GitHub again.
+ * 2. publishObservation holds an in-process lock for the whole write.
+ *    Two calls cannot interleave their reads and writes.
+ * 3. Publication appends a new comment. It never patches a marker body
+ *    over another observation. Retirement removes the marker from losers.
+ * 4. started_at is taken before any read. The canonical marker is the
+ *    greatest started_at, then observed_at, then evaluation_id. A
+ *    snapshot that started before the canonical observed_at is not
+ *    published. An earlier-started comment cannot become authoritative
+ *    even if its observed_at is later.
+ * 5. SIGINT/SIGTERM sets a flag checked before every write.
  *
- * 1. Re-read the pull request head immediately before a write. If it
- *    differs from the evaluated head, write nothing.
- * 2. Re-read marker comments immediately before a write. The canonical
- *    marker is the one with the greatest (observed_at, evaluation_id).
- *    An older observation must not update that comment.
- * 3. After a write, reconcile again. If the head changed, retire only
- *    the comment this run just published. If another marker is newer,
- *    retire the older ones. Retirement removes the marker, so a retired
- *    comment is not controller state.
- * 4. SIGINT/SIGTERM (Actions cancellation) sets a flag that is checked
- *    before every write. A cancelled run does not publish just because
- *    a later statement runs.
+ * Freshness. Review-thread resolution is not an event this workflow
+ * receives. event_driven refresh is not a time bound.
+ * freshness.max_lag_minutes is 15 only when this workflow file is
+ * present on the repository default branch, which is what makes the
+ * schedule real. Otherwise the guarantee is none and max_lag_minutes
+ * is null.
  *
- * Two creates can still both POST. Until reconcile runs, a consumer must
- * ignore every marker except the canonical (observed_at, evaluation_id)
- * pair. A duplicate or a comment whose head_sha is not the live head is
- * not actionable.
+ * Ruleset. Expected check names are policy. They are never copied over
+ * an empty, missing, or unreadable live ruleset. Those states cannot
+ * become ready_for_human_merge.
  *
- * Thread freshness is eventual. GitHub Actions has no
- * pull_request_review_thread event. Threads are re-read on pull_request,
- * review, review-comment, watched check_run, and a 15-minute schedule.
- * freshness.live is false. freshness.max_lag_minutes matches that cron.
- *
- * Required check names are the contexts on ruleset "Protect main —
- * Required CI" as of 2026-09-26. When the ruleset can be read, its
- * contexts are what this run evaluates. A missing name stays pending.
- * A mismatch or an unreadable ruleset cannot become
- * ready_for_human_merge. A cancelled check on the evaluated head is
- * wait, not fix: cancellation is not a code change for an executor.
+ * Precedence. Uncertainty escalates. Actionable findings and failed
+ * required checks are fix. An inconsistent ruleset or an unresolved
+ * thread escalates. rebase is synchronization only, and only when
+ * blocking_reasons and actionable_findings are empty.
  */
 
 const MARKER = '<!-- simy-review-state -->'
-const SUPPORTED_SCHEMA_VERSION = 2
+const SUPPORTED_SCHEMA_VERSION = 3
 const THREAD_REFRESH_MINUTES = 15
 const EXPECTED_RULESET_NAME = 'Protect main — Required CI'
 const REQUIRED_CHECK_NAMES = ['Test and lint', 'E2E login', 'Dependency review']
@@ -58,6 +56,58 @@ const REVIEW_SENTENCE =
 const BUG_ID = /<!-- BUGBOT_BUG_ID:\s*([0-9a-fA-F-]{36})\s*-->/
 const API = 'https://api.github.com'
 const NEXT_ACTIONS = ['wait', 'fix', 'rebase', 'escalate', 'ready_for_human_merge']
+
+const EXECUTOR_ACTIONS = {
+  fix: [
+    'Re-read the live pull request head. Stop if it differs from head_sha.',
+    'Re-read required checks on that head.',
+    'Re-read current review threads and Bugbot findings.',
+    'Continue only if this observation is still the canonical marker for that same head.',
+  ],
+  rebase: [
+    'Re-read the live head and base relationship.',
+    'Confirm blocking_reasons is empty and actionable_findings is empty.',
+    'Synchronize the branch onto its base only. Do not modify product code.',
+    'Re-read review state after synchronization.',
+  ],
+  ready_for_human_merge: [
+    'Do not automate. A human decides whether to merge.',
+    'Re-read the live head.',
+    'Verify required checks, the live ruleset, unresolved review threads, Bugbot, and risk_hint.',
+  ],
+  escalate: [
+    'Do not automate.',
+    'Read blocking_reasons. This observation is not a safe automatic action.',
+  ],
+  wait: [
+    'Do not automate.',
+    'Re-read this pull request after the waited condition changes.',
+  ],
+}
+
+export function freshnessContract(scheduleAvailable) {
+  const shared = {
+    live: false,
+    event_driven: true,
+    covers_thread_resolution: false,
+  }
+  if (scheduleAvailable === true) {
+    return {
+      ...shared,
+      review_threads: 'eventual',
+      scheduled: true,
+      max_lag_minutes: THREAD_REFRESH_MINUTES,
+      guarantee: 'scheduled',
+    }
+  }
+  return {
+    ...shared,
+    review_threads: 'unknown',
+    scheduled: false,
+    max_lag_minutes: null,
+    guarantee: 'none',
+  }
+}
 
 let stopRequested = false
 
@@ -289,12 +339,53 @@ function cacheBlock() {
     may_merge: false,
     may_modify_code: false,
     may_automate: false,
-    consumer_must_revalidate: ['head_sha', 'required_checks', 'merge_state', 'review_threads', 'ruleset', 'risk_hint'],
+    consumer_must_revalidate: [
+      'head_sha',
+      'required_checks',
+      'merge_state',
+      'review_threads',
+      'ruleset',
+      'risk_hint',
+      'blocking_reasons',
+      'actionable_findings',
+      'freshness',
+      'sync_required',
+    ],
   }
 }
 
+function liveRequiredNames(ruleset) {
+  if (ruleset?.verified !== true) return []
+  if (Array.isArray(ruleset.observed_required_checks)) return [...ruleset.observed_required_checks]
+  if (Array.isArray(ruleset.required_checks)) return [...ruleset.required_checks]
+  return []
+}
+
+function rulesetBlockReason(ruleset) {
+  if (!ruleset.verified) {
+    return 'The active ruleset could not be verified, so this observation cannot call the pull request ready.'
+  }
+  if (!ruleset.observed_required_checks.length) {
+    return 'The live ruleset has no required status checks, so this observation cannot call the pull request ready.'
+  }
+  return 'The live ruleset required checks do not match the expected Test and lint, E2E login, and Dependency review contexts, so this observation cannot call the pull request ready.'
+}
+
 export function evaluateReviewState(input) {
-  const names = input.requiredCheckNames?.length ? input.requiredCheckNames : REQUIRED_CHECK_NAMES
+  const supplied = input.ruleset || { verified: false }
+  const names = liveRequiredNames(supplied)
+  const matchesExpected = supplied.verified === true && expectedRulesetMatches(names)
+  const ruleset = {
+    verified: supplied.verified === true,
+    name: supplied.name || EXPECTED_RULESET_NAME,
+    required_checks: names,
+    observed_required_checks: names,
+    expected_required_checks: [...REQUIRED_CHECK_NAMES],
+    matches_expected: matchesExpected,
+    consistent: matchesExpected,
+    requires_review_thread_resolution: supplied.verified === true && supplied.requires_review_thread_resolution === true,
+    policy_checks: supplied.policy_checks || input.policyChecks || null,
+  }
   const required = input.requiredChecks || {}
   const findings = input.findings || []
   const threads = input.reviewThreads || {
@@ -303,7 +394,6 @@ export function evaluateReviewState(input) {
     unresolved_bugbot_count: 0,
     uncertain: false,
   }
-  const ruleset = input.ruleset || { verified: false, matches_expected: false }
   const unknownRequired = names.filter((name) => required[name] === 'unknown')
   const failed = names.filter((name) => required[name] === 'fail')
   const cancelled = names.filter((name) => required[name] === 'cancelled')
@@ -321,6 +411,33 @@ export function evaluateReviewState(input) {
     || threads.uncertain
     || unknownRequired.length > 0,
   )
+  const syncRequired = merge === 'BEHIND' || merge === 'DIRTY'
+  const bugbotFindings = findings.map((finding) => ({
+    source: 'bugbot',
+    title: finding.title,
+    url: finding.url,
+  }))
+  const actionableFindings = uncertain
+    ? []
+    : [
+      ...failed.map((name) => ({ source: 'required_check', title: name, url: null })),
+      ...bugbotFindings,
+    ]
+  const blockingReasons = []
+  if (uncertain) blockingReasons.push('observation_uncertain')
+  if (failed.length > 0) blockingReasons.push('required_check_failed')
+  if (bugbotFindings.length > 0 && !uncertain) blockingReasons.push('bugbot_finding')
+  if (!ruleset.consistent) {
+    if (!ruleset.verified) blockingReasons.push('ruleset_unverified')
+    else if (!ruleset.observed_required_checks.length) blockingReasons.push('ruleset_empty')
+    else blockingReasons.push('ruleset_mismatch')
+  }
+  if ((threads.unresolved_count || 0) > 0) blockingReasons.push('unresolved_review_thread')
+  if (pending.length > 0) blockingReasons.push('checks_pending')
+  if (cancelled.length > 0) blockingReasons.push('checks_cancelled')
+  if (merge === 'DRAFT') blockingReasons.push('draft')
+  if (merge == null || merge === 'UNKNOWN') blockingReasons.push('merge_state_unknown')
+  if (merge === 'BLOCKED' || merge === 'HAS_HOOKS') blockingReasons.push('merge_blocked')
 
   let nextAction = 'escalate'
   let reason = 'Review state could not be determined reliably.'
@@ -339,17 +456,14 @@ export function evaluateReviewState(input) {
   } else if (failed.length > 0) {
     nextAction = 'fix'
     reason = failedReason(failed)
-  } else if (merge === 'BEHIND') {
-    nextAction = 'rebase'
-    reason = 'The branch is behind the base and must be updated before merge.'
-  } else if (merge === 'DIRTY') {
-    nextAction = 'rebase'
-    reason = 'The branch conflicts with the base and must be updated before merge.'
-  } else if (findings.length > 0) {
+  } else if (bugbotFindings.length > 0) {
     nextAction = 'fix'
-    reason = findings.length === 1
+    reason = bugbotFindings.length === 1
       ? '1 open Bugbot finding on the current head.'
-      : `${findings.length} open Bugbot findings on the current head.`
+      : `${bugbotFindings.length} open Bugbot findings on the current head.`
+  } else if (!ruleset.consistent) {
+    nextAction = 'escalate'
+    reason = rulesetBlockReason(ruleset)
   } else if ((threads.unresolved_count || 0) > 0) {
     nextAction = 'escalate'
     const nonBugbot = threads.unresolved_non_bugbot_count || 0
@@ -364,23 +478,28 @@ export function evaluateReviewState(input) {
   } else if (merge === 'DRAFT') {
     nextAction = 'wait'
     reason = 'The pull request is still a draft.'
+  } else if (syncRequired) {
+    nextAction = 'rebase'
+    reason = merge === 'BEHIND'
+      ? 'The branch is behind the base. Synchronization only; this is not a content fix.'
+      : 'The branch conflicts with the base. Synchronization only; this is not a content fix.'
   } else if (merge == null || merge === 'UNKNOWN') {
     nextAction = 'escalate'
     reason = 'Merge state is unknown after required checks finished.'
   } else if (merge === 'BLOCKED' || merge === 'HAS_HOOKS') {
     nextAction = 'escalate'
     reason = 'Merge state is blocked after required checks passed and no open review threads were parsed.'
-  } else if (!ruleset.verified || ruleset.matches_expected !== true) {
-    nextAction = 'escalate'
-    reason = ruleset.verified
-      ? 'The active ruleset required checks do not match the expected Test and lint, E2E login, and Dependency review contexts.'
-      : 'The active ruleset could not be verified, so this observation cannot call the pull request ready.'
-  } else if ((merge === 'CLEAN' || merge === 'UNSTABLE') && input.mergeable === true && (threads.unresolved_count || 0) === 0) {
+  } else if ((merge === 'CLEAN' || merge === 'UNSTABLE') && input.mergeable === true && (threads.unresolved_count || 0) === 0 && ruleset.consistent) {
     nextAction = 'ready_for_human_merge'
     reason = 'This observation found the conditions for a human merge decision at this head. It is not permission to merge.'
   }
 
   if (!NEXT_ACTIONS.includes(nextAction)) nextAction = 'escalate'
+  const syncOnly = nextAction === 'rebase'
+  if (syncOnly && (blockingReasons.length > 0 || actionableFindings.length > 0)) {
+    nextAction = 'escalate'
+    reason = 'Synchronization was withheld because blocking review state is still present.'
+  }
 
   const requiredChecks = {}
   for (const name of names) requiredChecks[name] = required[name] || 'pending'
@@ -389,11 +508,8 @@ export function evaluateReviewState(input) {
   return {
     schema_version: SUPPORTED_SCHEMA_VERSION,
     cache: cacheBlock(),
-    freshness: {
-      review_threads: 'eventual',
-      live: false,
-      max_lag_minutes: THREAD_REFRESH_MINUTES,
-    },
+    freshness: freshnessContract(input.scheduleAvailable === true),
+    started_at: input.startedAt || null,
     observed_at: input.observedAt || null,
     evaluation_id: input.evaluationId || null,
     pr_number: input.prNumber ?? null,
@@ -401,19 +517,13 @@ export function evaluateReviewState(input) {
     base_sha: input.baseSha || '',
     merge_state_status: merge || 'unknown',
     mergeable: input.mergeable === true ? true : input.mergeable === false ? false : null,
-    ruleset: {
-      verified: Boolean(ruleset.verified),
-      name: ruleset.name || EXPECTED_RULESET_NAME,
-      required_checks: ruleset.required_checks || [...REQUIRED_CHECK_NAMES],
-      matches_expected: ruleset.matches_expected === true,
-      requires_review_thread_resolution: ruleset.requires_review_thread_resolution !== false,
-    },
+    ruleset,
     required_checks: requiredChecks,
     bugbot: {
-      count: findings.length,
+      count: uncertain ? 0 : bugbotFindings.length,
       summary_count: input.bugbotSummaryCount ?? null,
-      findings: findings.map((finding) => ({ title: finding.title, url: finding.url })),
-      comment_urls: findings.map((finding) => finding.url),
+      findings: uncertain ? [] : bugbotFindings.map((finding) => ({ title: finding.title, url: finding.url })),
+      comment_urls: uncertain ? [] : bugbotFindings.map((finding) => finding.url),
       uncertain: Boolean(input.bugbotUncertain || threads.uncertain),
     },
     review_threads: {
@@ -425,6 +535,17 @@ export function evaluateReviewState(input) {
     codeql,
     ignored_noise: ignoredNoise,
     risk_hint: 'unknown',
+    blocking_reasons: blockingReasons,
+    actionable_findings: actionableFindings,
+    sync_required: syncRequired,
+    sync_only: syncOnly && nextAction === 'rebase',
+    executor: {
+      may_automate: false,
+      human_only: nextAction === 'ready_for_human_merge',
+      sync_only: nextAction === 'rebase',
+      before_acting: EXECUTOR_ACTIONS[nextAction] || EXECUTOR_ACTIONS.escalate,
+      actions: EXECUTOR_ACTIONS,
+    },
     next_action: nextAction,
     reason,
   }
@@ -450,9 +571,20 @@ export function renderReviewComment(state) {
     '',
     'This comment is an observation cache, not permission to merge, push, or modify code.',
     'Consumers must re-read the live pull request and reject a stale, duplicate, malformed, or unknown-schema comment.',
-    `Canonical marker: greatest \`observed_at\`, then \`evaluation_id\`. Review threads are eventual (about ${state.freshness?.max_lag_minutes ?? THREAD_REFRESH_MINUTES} minutes), not live.`,
+    'Canonical marker: greatest `started_at`, then `observed_at`, then `evaluation_id`.',
+    state.freshness?.guarantee === 'scheduled'
+      ? `Scheduled refresh from the default branch is about ${state.freshness.max_lag_minutes} minutes. Review-thread resolution is not an event, so that bound is eventual, not live.`
+      : 'Scheduled refresh is not available from the default branch. Review-thread age is not guaranteed. Resolving a thread does not by itself refresh this comment.',
     '',
     `**Next action:** \`${state.next_action}\``,
+    '',
+    `**Sync required:** \`${Boolean(state.sync_required)}\``,
+    '',
+    `**Sync only:** \`${state.next_action === 'rebase'}\``,
+    '',
+    `**Blocking reasons:** ${state.blocking_reasons?.length ? state.blocking_reasons.map((reason) => `\`${reason}\``).join(', ') : 'none'}`,
+    '',
+    `**Actionable findings:** ${state.actionable_findings?.length || 0}`,
     '',
     `**Reason:** ${state.reason}`,
     '',
@@ -519,9 +651,21 @@ export function extractMachineState(body) {
 }
 
 export function compareObservations(left, right) {
+  const start = String(left?.started_at || '').localeCompare(String(right?.started_at || ''))
+  if (start !== 0) return start
   const time = String(left?.observed_at || '').localeCompare(String(right?.observed_at || ''))
   if (time !== 0) return time
   return String(left?.evaluation_id || '').localeCompare(String(right?.evaluation_id || ''))
+}
+
+function freshnessConsistent(state) {
+  const fresh = state?.freshness
+  if (!fresh || fresh.live !== false || fresh.covers_thread_resolution !== false || fresh.event_driven !== true) return false
+  if (fresh.guarantee === 'none') return fresh.scheduled === false && fresh.max_lag_minutes == null
+  if (fresh.guarantee === 'scheduled') {
+    return fresh.scheduled === true && fresh.max_lag_minutes === THREAD_REFRESH_MINUTES
+  }
+  return false
 }
 
 function markerRecords(comments) {
@@ -532,12 +676,22 @@ function markerRecords(comments) {
         const state = extractMachineState(comment.body)
         const invalid = !state
           || state.schema_version !== SUPPORTED_SCHEMA_VERSION
+          || typeof state.started_at !== 'string'
           || typeof state.observed_at !== 'string'
+          || state.started_at > state.observed_at
           || typeof state.evaluation_id !== 'string'
           || typeof state.head_sha !== 'string'
+          || !Array.isArray(state.blocking_reasons)
+          || !Array.isArray(state.actionable_findings)
           || state.cache?.authoritative !== false
           || state.cache?.may_merge !== false
+          || state.cache?.may_modify_code !== false
           || state.cache?.may_automate !== false
+          || state.executor?.may_automate !== false
+          || !freshnessConsistent(state)
+          || (state.next_action === 'rebase' && (state.sync_only !== true || state.executor?.sync_only !== true || state.blocking_reasons.length > 0 || state.actionable_findings.length > 0))
+          || (state.next_action === 'ready_for_human_merge' && state.executor?.human_only !== true)
+          || (state.next_action !== 'rebase' && state.sync_only === true)
         return { id: Number(comment.id), body: comment.body, state: invalid ? null : state, invalid }
       } catch {
         return { id: Number(comment.id), body: comment.body, state: null, invalid: true }
@@ -556,26 +710,25 @@ export function planPublication({ observation, currentHeadSha, comments, cancell
   if (!observation?.head_sha || currentHeadSha !== observation.head_sha) {
     return { action: 'skip', reason: 'stale-head', retireIds: [] }
   }
+  if (typeof observation.started_at !== 'string' || typeof observation.observed_at !== 'string') {
+    return { action: 'skip', reason: 'stale-snapshot', retireIds: [] }
+  }
 
   const marked = markerRecords(comments)
   const canonical = selectCanonicalMarker(comments)
   const retireOthers = (keepId) => marked.filter((record) => record.id !== keepId).map((record) => record.id)
 
-  if (canonical && compareObservations(canonical.state, observation) > 0) {
-    return { action: 'skip', reason: 'older-than-canonical', retireIds: retireOthers(canonical.id) }
-  }
-  if (canonical && compareObservations(canonical.state, observation) === 0) {
+  if (canonical && canonical.state.evaluation_id === observation.evaluation_id) {
     return { action: 'skip', reason: 'already-current', retireIds: retireOthers(canonical.id) }
   }
-  if (!canonical) {
-    return { action: 'create', reason: 'publish', retireIds: marked.map((record) => record.id), previousBody: null }
+  if (canonical && (canonical.state.observed_at >= observation.started_at || compareObservations(canonical.state, observation) >= 0)) {
+    return { action: 'skip', reason: 'stale-snapshot', retireIds: retireOthers(canonical.id) }
   }
   return {
-    action: 'update',
+    action: 'create',
     reason: 'publish',
-    updateId: canonical.id,
-    previousBody: canonical.body,
-    retireIds: retireOthers(canonical.id),
+    retireIds: marked.map((record) => record.id),
+    previousBody: null,
   }
 }
 
@@ -642,7 +795,9 @@ export function interpretPublishedState(comments, live = {}) {
 
   const canonical = selectCanonicalMarker(list)
   if (!canonical) {
-    return refused(sawMalformed && !sawUnknownSchema ? 'malformed' : 'unknown_schema')
+    if (sawMalformed && !sawUnknownSchema) return refused('malformed')
+    if (sawUnknownSchema) return refused('unknown_schema')
+    return refused('inconsistent')
   }
   if (canonical.state.head_sha !== live.headSha) {
     return {
@@ -687,17 +842,24 @@ export function buildEvaluationInput({
   checksTruncated = false,
   ruleset,
   observedAt,
+  startedAt,
   evaluationId,
   prNumber,
+  scheduleAvailable = false,
 }) {
   const checks = collapseChecks(checkRuns, statuses)
-  const names = ruleset?.verified && Array.isArray(ruleset.required_checks) && ruleset.required_checks.length
+  const names = ruleset?.verified === true && Array.isArray(ruleset.required_checks)
     ? [...ruleset.required_checks]
-    : [...REQUIRED_CHECK_NAMES]
+    : []
   const requiredChecks = {}
   for (const name of names) {
     const found = checks.find((check) => check.name === name)
     requiredChecks[name] = found ? found.status : 'pending'
+  }
+  const policyChecks = {}
+  for (const name of REQUIRED_CHECK_NAMES) {
+    const found = checks.find((check) => check.name === name)
+    policyChecks[name] = found ? found.status : 'pending'
   }
   const ignoredNoise = NOISE_CHECK_NAMES.flatMap((name) => {
     const found = checks.find((check) => check.name === name)
@@ -707,20 +869,24 @@ export function buildEvaluationInput({
   const analyzed = analyzeReviews({ reviews, threads, threadsTruncated, reviewsTruncated })
   let resolvedMerge = normalizeMergeState(mergeStateStatus)
   if (isDraft && resolvedMerge !== 'BEHIND' && resolvedMerge !== 'DIRTY') resolvedMerge = 'DRAFT'
-  const rulesetState = ruleset?.verified
+  const rulesetState = ruleset?.verified === true
     ? {
       verified: true,
       name: ruleset.name || EXPECTED_RULESET_NAME,
       required_checks: names,
+      observed_required_checks: names,
       matches_expected: expectedRulesetMatches(names),
-      requires_review_thread_resolution: ruleset.requires_review_thread_resolution !== false,
+      requires_review_thread_resolution: ruleset.requires_review_thread_resolution === true,
+      policy_checks: policyChecks,
     }
     : {
       verified: false,
       name: EXPECTED_RULESET_NAME,
-      required_checks: [...REQUIRED_CHECK_NAMES],
+      required_checks: [],
+      observed_required_checks: [],
       matches_expected: false,
-      requires_review_thread_resolution: true,
+      requires_review_thread_resolution: false,
+      policy_checks: policyChecks,
     }
 
   return {
@@ -730,6 +896,9 @@ export function buildEvaluationInput({
     mergeable,
     requiredCheckNames: names,
     requiredChecks,
+    policyChecks,
+    scheduleAvailable: scheduleAvailable === true,
+    startedAt,
     codeql: resolveCodeql(checks),
     ignoredNoise,
     findings: analyzed.findings,
@@ -939,7 +1108,7 @@ async function loadRuleset(token, owner, name) {
     const summaries = Array.isArray(payload) ? payload : []
     const branchRules = summaries.filter((ruleset) => ruleset.target === 'branch' && ruleset.enforcement === 'active')
     if (branchRules.length !== 1) {
-      return { verified: false, matches_expected: false, required_checks: [...REQUIRED_CHECK_NAMES] }
+      return { verified: false, matches_expected: false, required_checks: [] }
     }
     const { payload: full } = await github(token, `/repos/${owner}/${name}/rulesets/${branchRules[0].id}`)
     const parsed = rulesetFromPayload(full)
@@ -949,17 +1118,12 @@ async function loadRuleset(token, owner, name) {
     return parsed
   } catch (error) {
     console.error(`Ruleset could not be verified: ${error instanceof Error ? error.message : String(error)}`)
-    return { verified: false, matches_expected: false, required_checks: [...REQUIRED_CHECK_NAMES] }
+    return { verified: false, matches_expected: false, required_checks: [] }
   }
 }
 
 async function listComments(token, owner, name, number) {
   return githubPaginated(token, `/repos/${owner}/${name}/issues/${number}/comments`)
-}
-
-async function getComment(token, owner, name, id) {
-  const { payload } = await github(token, `/repos/${owner}/${name}/issues/comments/${id}`)
-  return payload
 }
 
 async function listOpenPullNumbers(token, owner, name, sha) {
@@ -972,23 +1136,30 @@ async function listOpenBasePullNumbers(token, owner, name) {
   return pulls.map((pull) => pull.number)
 }
 
-async function retireComments(token, owner, name, ids, canonical) {
+const publicationTail = new Map()
+
+export function withPublicationLock(key, fn) {
+  const previous = publicationTail.get(key) || Promise.resolve()
+  const run = previous.then(fn, fn)
+  publicationTail.set(key, run.then(() => undefined, () => undefined))
+  return run
+}
+
+async function retireComments(client, ids, canonical) {
   for (const id of ids) {
     if (halted()) return
-    await github(token, `/repos/${owner}/${name}/issues/comments/${id}`, {
-      method: 'PATCH',
-      body: { body: retirementBody(canonical) },
-    })
+    const body = retirementBody(canonical)
+    if (body.includes(MARKER)) throw new Error('Retirement note must not contain the review-state marker')
+    await client.updateComment(id, body)
     console.log(`Retired non-canonical review-state comment ${id}`)
   }
 }
 
-async function publishObservation(token, owner, name, number, state) {
+async function publishObservationLocked(client, number, state) {
   if (halted()) return 'cancelled'
-  const comments = await listComments(token, owner, name, number)
+  const head = await client.readHead(number)
   if (halted()) return 'cancelled'
-  const head = await readHead(token, owner, name, number)
-  if (halted()) return 'cancelled'
+  let comments = await client.listComments(number)
   let plan = planPublication({
     observation: state,
     currentHeadSha: head,
@@ -1000,67 +1171,55 @@ async function publishObservation(token, owner, name, number, state) {
     return plan.reason
   }
 
-  const headNow = await readHead(token, owner, name, number)
+  const headNow = await client.readHead(number)
   if (halted() || headNow !== state.head_sha) {
     console.log(`#${number} superseded before write: observation ${state.head_sha}, live ${headNow}`)
     return 'stale-head'
   }
-  const commentsNow = await listComments(token, owner, name, number)
+  comments = await client.listComments(number)
   if (halted()) return 'cancelled'
   plan = planPublication({
     observation: state,
     currentHeadSha: headNow,
-    comments: commentsNow,
+    comments,
     cancelled: halted(),
   })
   if (plan.action === 'skip') {
     if (plan.reason !== 'stale-head' && plan.reason !== 'cancelled') {
-      await retireComments(token, owner, name, plan.retireIds, selectCanonicalMarker(commentsNow)?.state || state)
+      await retireComments(client, plan.retireIds, selectCanonicalMarker(comments)?.state || null)
     }
     console.log(`#${number} ${plan.reason}`)
     return plan.reason
   }
 
-  if (plan.action === 'create') {
-    const headBeforeCreate = await readHead(token, owner, name, number)
-    if (halted() || headBeforeCreate !== state.head_sha) {
-      console.log(`#${number} superseded before create: live ${headBeforeCreate}`)
-      return 'stale-head'
+  const headBeforeCreate = await client.readHead(number)
+  if (halted() || headBeforeCreate !== state.head_sha) {
+    console.log(`#${number} superseded before create: live ${headBeforeCreate}`)
+    return 'stale-head'
+  }
+  comments = await client.listComments(number)
+  plan = planPublication({
+    observation: state,
+    currentHeadSha: headBeforeCreate,
+    comments,
+    cancelled: halted(),
+  })
+  if (plan.action !== 'create') {
+    if (plan.action === 'skip' && plan.reason !== 'stale-head' && plan.reason !== 'cancelled') {
+      await retireComments(client, plan.retireIds, selectCanonicalMarker(comments)?.state || null)
     }
-    await github(token, `/repos/${owner}/${name}/issues/${number}/comments`, {
-      method: 'POST',
-      body: { body: renderReviewComment(state) },
-    })
-    console.log(`Created review-state comment on #${number}`)
-  } else {
-    const fresh = await getComment(token, owner, name, plan.updateId)
-    const headBeforeUpdate = await readHead(token, owner, name, number)
-    if (halted() || headBeforeUpdate !== state.head_sha) {
-      console.log(`#${number} superseded before update: live ${headBeforeUpdate}`)
-      return 'stale-head'
-    }
-    const freshPlan = planPublication({
-      observation: state,
-      currentHeadSha: headBeforeUpdate,
-      comments: [fresh],
-      cancelled: halted(),
-    })
-    if (freshPlan.action !== 'update') {
-      console.log(`#${number} ${freshPlan.reason} at update barrier`)
-      return freshPlan.reason
-    }
-    await github(token, `/repos/${owner}/${name}/issues/comments/${plan.updateId}`, {
-      method: 'PATCH',
-      body: { body: renderReviewComment(state) },
-    })
-    console.log(`Updated review-state comment ${plan.updateId} on #${number}`)
+    console.log(`#${number} ${plan.reason} at create barrier`)
+    return plan.reason
   }
 
-  const headAfter = await readHead(token, owner, name, number)
-  const commentsAfter = await listComments(token, owner, name, number)
+  await client.createComment(number, renderReviewComment(state))
+  console.log(`Created review-state comment on #${number}`)
+
+  const headAfter = await client.readHead(number)
+  const commentsAfter = await client.listComments(number)
   const reconcile = planReconcile({ observation: state, currentHeadSha: headAfter, comments: commentsAfter })
   const canonical = headAfter === state.head_sha ? selectCanonicalMarker(commentsAfter) : null
-  if (!halted()) await retireComments(token, owner, name, reconcile.retireIds, canonical?.state || null)
+  if (!halted()) await retireComments(client, reconcile.retireIds, canonical?.state || null)
   if (headAfter !== state.head_sha) {
     console.log(`#${number} unpublished stale observation after head moved to ${headAfter}`)
     return 'stale-head'
@@ -1068,7 +1227,53 @@ async function publishObservation(token, owner, name, number, state) {
   return 'published'
 }
 
+export async function publishObservation(client, number, state) {
+  return withPublicationLock(number, () => publishObservationLocked(client, number, state))
+}
+
+function createGitHubClient(token, owner, name) {
+  return {
+    readHead: (number) => readHead(token, owner, name, number),
+    listComments: (number) => listComments(token, owner, name, number),
+    createComment: async (number, body) => {
+      await github(token, `/repos/${owner}/${name}/issues/${number}/comments`, {
+        method: 'POST',
+        body: { body },
+      })
+    },
+    updateComment: async (id, body) => {
+      await github(token, `/repos/${owner}/${name}/issues/comments/${id}`, {
+        method: 'PATCH',
+        body: { body },
+      })
+    },
+  }
+}
+
+export async function readWorkflowOnDefaultBranch(request, owner, name) {
+  try {
+    const repo = await request(`/repos/${owner}/${name}`)
+    const branch = repo?.payload?.default_branch
+    if (!branch) return false
+    const file = await request(
+      `/repos/${owner}/${name}/contents/.github/workflows/review-state.yml?ref=${encodeURIComponent(branch)}`,
+      { tolerate: [404] },
+    )
+    return file?.status === 200
+  } catch (error) {
+    console.error(`Scheduled freshness could not be confirmed: ${error instanceof Error ? error.message : String(error)}`)
+    return false
+  }
+}
+
 async function updateOne(token, owner, name, number) {
+  if (halted()) return 'cancelled'
+  const startedAt = new Date().toISOString()
+  const scheduleAvailable = await readWorkflowOnDefaultBranch(
+    (path, options) => github(token, path, options),
+    owner,
+    name,
+  )
   if (halted()) return 'cancelled'
   const pull = await loadPullRequest(token, owner, name, number)
   if (halted()) return 'cancelled'
@@ -1088,8 +1293,10 @@ async function updateOne(token, owner, name, number) {
     ...checks,
     ruleset,
     observedAt,
+    startedAt,
     evaluationId,
     prNumber: number,
+    scheduleAvailable,
   })
   const state = evaluateReviewState(input)
   const body = renderReviewComment(state)
@@ -1098,8 +1305,8 @@ async function updateOne(token, owner, name, number) {
     throw new Error('Refusing to publish a comment whose machine state does not round-trip')
   }
   if (halted()) return 'cancelled'
-  const result = await publishObservation(token, owner, name, number, state)
-  console.log(`#${number} next_action=${state.next_action} publish=${result}`)
+  const result = await publishObservation(createGitHubClient(token, owner, name), number, state)
+  console.log(`#${number} next_action=${state.next_action} freshness=${state.freshness.guarantee} publish=${result}`)
   return result
 }
 
