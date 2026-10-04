@@ -112,7 +112,16 @@ describe('public.users.role student write/read contract', () => {
 
   it('course session binding accepts only client', () => {
     const src = read('server/utils/fulfill-course-wallee-payment.ts')
-    expect(src).toContain("new Set(['client'])")
-    expect(src).not.toContain("'student'")
+    const session = src.slice(
+      src.indexOf('const PUBLIC_COURSE_SESSION_ROLES'),
+      src.indexOf('export function publicCourseSessionPrincipalId'),
+    )
+    expect(session).toContain("const PUBLIC_COURSE_SESSION_ROLES = new Set(['client'])")
+    expect(session).not.toContain('student')
+    const reuse = src.slice(
+      src.indexOf('const PUBLIC_COURSE_CUSTOMER_ROLES'),
+      src.indexOf('export async function ensureGuestUserForCoursePayment'),
+    )
+    expect(reuse).toContain("const PUBLIC_COURSE_CUSTOMER_ROLES = new Set(['client', 'student'])")
   })
 })

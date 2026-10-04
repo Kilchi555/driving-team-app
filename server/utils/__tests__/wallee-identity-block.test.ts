@@ -58,6 +58,8 @@ function harness(initial: Row[]) {
   const rows = initial.map((row) => ({ ...row }))
   const inserts: Record<string, unknown>[] = []
   const paymentUpdates: Record<string, unknown>[] = []
+  const userUpdates: Record<string, unknown>[] = []
+  const queries: Array<{ table: string, filters: Array<{ op: string, col: string, val: unknown }> }> = []
   const rpcCalls: unknown[] = []
   let rpcResult: { status: string, registration_id?: string } = {
     status: 'fulfilled',
@@ -92,8 +94,17 @@ function harness(initial: Row[]) {
         return q
       }
       q.is = chain
-      q.limit = () => Promise.resolve({ data: match().slice(0, 2), error: null })
-      q.maybeSingle = async () => ({ data: match()[0] ?? null, error: null })
+      const record = () => {
+        queries.push({ table, filters: filters.map((filter) => ({ ...filter })) })
+      }
+      q.limit = () => {
+        record()
+        return Promise.resolve({ data: match().slice(0, 2), error: null })
+      }
+      q.maybeSingle = async () => {
+        record()
+        return { data: match()[0] ?? null, error: null }
+      }
       q.insert = (payload: Record<string, unknown>) => {
         inserts.push(payload)
         const id = `user-${rows.length + 1}`
@@ -113,6 +124,7 @@ function harness(initial: Row[]) {
       }
       q.update = (payload: Record<string, unknown>) => {
         if (table === 'payments') paymentUpdates.push(payload)
+        if (table === 'users') userUpdates.push(payload)
         return q
       }
       q.then = (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => (
@@ -126,6 +138,8 @@ function harness(initial: Row[]) {
     rows,
     inserts,
     paymentUpdates,
+    userUpdates,
+    queries,
     rpcCalls,
     setRpc(result: { status: string, registration_id?: string }) {
       rpcResult = result
@@ -551,5 +565,255 @@ describe('identity-block cancel race', () => {
     expect(recovery.count).toBe(0)
     expect(blocked.payment_status).toBe('pending')
     expect(blocked.metadata?.wallee_failure_state).toBe(CAPTURED_IDENTITY_BLOCK_STATE)
+  })
+})
+
+const OTHER = 'tenant-other'
+
+function registrationUserId(call: unknown): string | null {
+  const args = call as { p_registration?: { user_id?: string | null } } | undefined
+  return args?.p_registration?.user_id ?? null
+}
+
+describe('server payment.user_id reuse', () => {
+  it('A. same-tenant student on the payment is reused when email is absent', async () => {
+    const student = {
+      id: 'student-1',
+      role: 'student',
+      tenant_id: TENANT,
+      email: 'sam@example.com',
+      phone: '+41791112233',
+    }
+    const before = { ...student }
+    const db = harness([student])
+    const pay = payment({
+      user_id: 'student-1',
+      metadata: {
+        course_id: 'course-1',
+        phone: '0791112233',
+        firstname: 'Sam',
+        lastname: 'Student',
+      },
+    })
+    const result = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: pay })
+    expect(result.status).toBe('fulfilled')
+    expect(result.registrationId).toBe('reg-1')
+    expect(registrationUserId(db.rpcCalls[0])).toBe('student-1')
+    expect(db.inserts).toHaveLength(0)
+    expect(db.userUpdates).toHaveLength(0)
+    expect(db.rows).toEqual([before])
+    expect(pay.user_id).toBe('student-1')
+    expect(pay.payment_status).toBe('completed')
+    expect(pay.metadata.wallee_failure_state).toBeUndefined()
+    expect(db.paymentUpdates.some((update) => update.payment_status)).toBe(false)
+    const userQueries = db.queries.filter((query) => query.table === 'users')
+    expect(userQueries).toEqual([{
+      table: 'users',
+      filters: [{ op: 'eq', col: 'id', val: 'student-1' }],
+    }])
+    expect(JSON.stringify(db.queries)).not.toContain(OTHER)
+  })
+
+  it('B. same-tenant client on the payment still fulfills', async () => {
+    const client = {
+      id: 'client-1',
+      role: 'client',
+      tenant_id: TENANT,
+      email: 'ada@example.com',
+      phone: '+41790000001',
+    }
+    const before = { ...client }
+    const db = harness([client])
+    const pay = payment({
+      user_id: 'client-1',
+      metadata: {
+        course_id: 'course-1',
+        email: 'ada@example.com',
+        phone: '0790000001',
+        firstname: 'Ada',
+        lastname: 'Client',
+      },
+    })
+    const result = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: pay })
+    expect(result.status).toBe('fulfilled')
+    expect(registrationUserId(db.rpcCalls[0])).toBe('client-1')
+    expect(db.inserts).toHaveLength(0)
+    expect(db.userUpdates).toHaveLength(0)
+    expect(db.rows).toEqual([before])
+    expect(pay.metadata.wallee_failure_state).toBeUndefined()
+  })
+
+  it('C. a payment user from another tenant is not fulfilled', async () => {
+    const foreign = {
+      id: 'foreign-student',
+      role: 'student',
+      tenant_id: OTHER,
+      email: 'foreign@example.com',
+      phone: '+41791112233',
+    }
+    const local = {
+      id: 'local-student',
+      role: 'student',
+      tenant_id: TENANT,
+      email: 'local@example.com',
+      phone: '+41791112233',
+    }
+    const db = harness([foreign, local])
+    const pay = payment({
+      user_id: 'foreign-student',
+      metadata: {
+        course_id: 'course-1',
+        phone: '0791112233',
+        firstname: 'Foreign',
+        lastname: 'Student',
+      },
+    })
+    const result = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: pay })
+    expectBlocked(result, db, pay, 'phone_only')
+    expect(registrationUserId(db.rpcCalls[0])).toBeNull()
+    expect(pay.user_id).toBe('foreign-student')
+    expect(db.rows.map((row) => row.id)).toEqual(['foreign-student', 'local-student'])
+    expect(JSON.stringify(db.rpcCalls)).not.toContain('foreign-student')
+    expect(db.queries.some((query) => query.filters.some((filter) => filter.val === OTHER))).toBe(false)
+  })
+
+  it('D. no payment.user_id still creates one course-tenant client', async () => {
+    const db = harness([])
+    const pay = payment({
+      user_id: null,
+      metadata: {
+        course_id: 'course-1',
+        email: 'new.person@example.com',
+        phone: '0792223344',
+        firstname: 'New',
+        lastname: 'Person',
+      },
+    })
+    const result = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: pay })
+    expect(result.status).toBe('fulfilled')
+    expect(db.inserts).toHaveLength(1)
+    expect(db.inserts[0]).toMatchObject({
+      role: 'client',
+      tenant_id: TENANT,
+      email: 'new.person@example.com',
+      auth_user_id: null,
+    })
+    expect(db.inserts[0]).not.toHaveProperty('onboarding_token')
+    expect(registrationUserId(db.rpcCalls[0])).toBe(db.rows[0].id)
+    expect(pay.user_id).toBe(db.rows[0].id)
+    expect(db.rows[0].role).toBe('client')
+  })
+
+  it('E. ambiguous public identity stays blocked without a stored customer', async () => {
+    const db = harness([
+      { id: 'a', role: 'client', tenant_id: TENANT, email: 'ada@example.com', phone: null },
+      { id: 'b', role: 'student', tenant_id: TENANT, email: 'ada@example.com', phone: null },
+      { id: 'other-student', role: 'student', tenant_id: TENANT, email: 'other@example.com', phone: '+41790000009' },
+    ])
+    const ambiguous = payment({
+      user_id: null,
+      metadata: { course_id: 'course-1', email: 'ada@example.com', firstname: 'Ada', lastname: 'Lovelace' },
+    })
+    const blocked = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: ambiguous })
+    expectBlocked(blocked, db, ambiguous, 'ambiguous_email')
+
+    const disagreed = payment({
+      id: 'pay-disagreed',
+      user_id: 'other-student',
+      metadata: { course_id: 'course-1', email: 'ada@example.com', firstname: 'Ada', lastname: 'Lovelace' },
+    })
+    const stillBlocked = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: disagreed })
+    expect(stillBlocked.status).toBe('identity_blocked')
+    expect(db.rpcCalls).toHaveLength(0)
+    expect(db.inserts).toHaveLength(0)
+    expect(disagreed.user_id).toBe('other-student')
+    expect(disagreed.payment_status).toBe('pending')
+    expect(db.rows).toHaveLength(3)
+  })
+
+  it('F. a captured unresolved identity cannot be cancelled', async () => {
+    const db = harness([
+      { id: 'owner', role: 'student', tenant_id: TENANT, email: 'owner@example.com', phone: '+41791112233' },
+    ])
+    const pay = payment()
+    const result = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: pay })
+    expectBlocked(result, db, pay, 'phone_only')
+    const split = partitionStalePendingWalleePayments([pay])
+    expect(split.identityBlocked.map((row) => row.id)).toEqual([pay.id])
+    expect(split.genuineFailure).toHaveLength(0)
+    expect(split.abandoned).toHaveLength(0)
+    const cancelIds = [...split.genuineFailure, ...split.abandoned].map((row) => row.id)
+    expect(cancelIds).not.toContain(pay.id)
+    expect(pay.payment_status).toBe('pending')
+  })
+
+  it('G. a previously blocked same-tenant student fulfills once on retry', async () => {
+    const student = {
+      id: 'student-1',
+      role: 'student',
+      tenant_id: TENANT,
+      email: 'sam@example.com',
+      phone: '+41791112233',
+    }
+    const before = { ...student }
+    const db = harness([student])
+    const pay = payment({
+      user_id: 'student-1',
+      metadata: {
+        course_id: 'course-1',
+        phone: '0791112233',
+        firstname: 'Sam',
+        lastname: 'Student',
+        wallee_failure_state: 'identity_blocked',
+        identity_block_reason: 'phone_only',
+      },
+    })
+    const split = partitionStalePendingWalleePayments([pay])
+    expect(split.identityBlocked.map((row) => row.id)).toEqual(['pay-captured'])
+    expect([...split.genuineFailure, ...split.abandoned]).toHaveLength(0)
+
+    const result = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: pay })
+    expect(result.status).toBe('fulfilled')
+    expect(result.registrationId).toBe('reg-1')
+    expect(registrationUserId(db.rpcCalls[0])).toBe('student-1')
+    expect(db.inserts).toHaveLength(0)
+    expect(db.userUpdates).toHaveLength(0)
+    expect(db.rows).toEqual([before])
+    expect(pay.user_id).toBe('student-1')
+    expect(pay.payment_status).toBe('completed')
+    expect(pay.metadata.wallee_failure_state).toBeUndefined()
+    expect(pay.metadata.identity_block_reason).toBe('phone_only')
+    expect(pay.metadata.identity_block_resolved_at).toBeTruthy()
+    expect(db.paymentUpdates.some((update) => update.payment_status === 'cancelled')).toBe(false)
+
+    db.setRpc({ status: 'already_fulfilled', registration_id: 'reg-1' })
+    const replay = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: pay })
+    expect(replay.status).toBe('already_fulfilled')
+    expect(db.inserts).toHaveLength(0)
+    expect(db.userUpdates).toHaveLength(0)
+    expect(db.rpcCalls).toHaveLength(2)
+    expect(registrationUserId(db.rpcCalls[1])).toBe('student-1')
+    expect(db.rows).toEqual([before])
+    expect(pay.payment_status).toBe('completed')
+  })
+
+  it('same-tenant staff on the payment is not a course customer', async () => {
+    const db = harness([
+      { id: 'staff-1', role: 'staff', tenant_id: TENANT, email: 'staff@example.com', phone: '+41791112233' },
+    ])
+    const pay = payment({
+      user_id: 'staff-1',
+      metadata: {
+        course_id: 'course-1',
+        phone: '0791112233',
+        firstname: 'Staff',
+        lastname: 'Member',
+      },
+    })
+    const result = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: pay })
+    expectBlocked(result, db, pay, 'staff_contact')
+    expect(pay.user_id).toBe('staff-1')
+    expect(db.rows[0].role).toBe('staff')
+    expect(db.userUpdates).toHaveLength(0)
   })
 })

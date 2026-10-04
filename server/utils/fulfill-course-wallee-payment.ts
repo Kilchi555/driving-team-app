@@ -266,7 +266,15 @@ async function persistCoursePaymentGuestUserId(
   payment.user_id = userId
 }
 
-const PUBLIC_COURSE_CUSTOMER_ROLES = new Set(['client'])
+/**
+ * Customers already stored on the server payment row.
+ * New public rows are `client`. Leftover `student` rows are the same
+ * business customer and are reused without being rewritten.
+ * This is not the browser-session gate (`PUBLIC_COURSE_SESSION_ROLES`),
+ * which stays client-only. Staff and other non-customer roles are not
+ * a fulfillment identity.
+ */
+const PUBLIC_COURSE_CUSTOMER_ROLES = new Set(['client', 'student'])
 
 export async function ensureGuestUserForCoursePayment(
   supabase: any,
@@ -286,9 +294,10 @@ export async function ensureGuestUserForCoursePayment(
       && owned.tenant_id === tenantId
       && PUBLIC_COURSE_CUSTOMER_ROLES.has(owned.role),
     )
-    // Reuse only when this payment already points at the email's customer,
-    // or when the payment has no enrollment email (captured retry fixture).
-    // A different email must go through the resolver. Client user ids are not a key.
+    // The payment row is the server identity. Reuse it when that user is a
+    // same-tenant course customer and the enrollment email agrees or is absent.
+    // A different email stays on the resolver, so an ambiguous public match
+    // is not forced onto this user. The id is never taken from the browser.
     const emailAgrees = !enrollmentEmail || ownedEmail === enrollmentEmail
     if (sameTenantCustomer && emailAgrees) {
       return owned.id
