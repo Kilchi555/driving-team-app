@@ -1,9 +1,12 @@
 // Resolves or creates a guest customer for shop checkout.
-// Public, but email is not proof of identity — never return PII or onboarding tokens.
+// Public, but email is not proof of identity — never return PII, onboarding tokens,
+// or an existing account id from a contact match.
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
+import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
+import { publicShopSessionPrincipalId } from '~/server/utils/shop-public-identity'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import crypto from 'crypto'
@@ -24,7 +27,7 @@ function assertResolveRateLimit(event: Parameters<typeof getClientIP>[0]) {
   lookupWindows.set(key, stamps)
 }
 
-function publicCustomer(id: string) {
+function publicCustomer(id: string | null) {
   return {
     customer: { id },
   }
@@ -78,6 +81,12 @@ export default defineEventHandler(async (event) => {
 
     const sanitizedTenantId = tenant.id
 
+    const sessionUser = await getAuthenticatedUserWithDbId(event)
+    const sessionPrincipalId = publicShopSessionPrincipalId(sessionUser, sanitizedTenantId)
+    if (sessionPrincipalId) {
+      return publicCustomer(sessionPrincipalId)
+    }
+
     const { data: existingUser, error: lookupError } = await supabase
       .from('users')
       .select('id')
@@ -91,7 +100,8 @@ export default defineEventHandler(async (event) => {
     }
 
     if (existingUser?.id) {
-      return publicCustomer(existingUser.id)
+      // Contact match ≠ authorization — do not disclose the existing users.id.
+      return publicCustomer(null)
     }
 
     const userId = crypto.randomUUID()
@@ -120,18 +130,10 @@ export default defineEventHandler(async (event) => {
 
     if (insertError) {
       if (insertError.code === '23505') {
-        const { data: retryUser, error: retryError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('tenant_id', sanitizedTenantId)
-          .eq('email', normalizedEmail)
-          .maybeSingle()
-
-        if (retryError || !retryUser?.id) {
-          throw createError({ statusCode: 500, message: 'Failed to resolve concurrent user creation' })
-        }
-
-        return publicCustomer(retryUser.id)
+        logger.debug('ℹ️ resolve-customer: unique conflict is fail-closed', {
+          email: normalizedEmail,
+        })
+        return publicCustomer(null)
       }
 
       logger.error('❌ Failed to create guest user:', insertError)
