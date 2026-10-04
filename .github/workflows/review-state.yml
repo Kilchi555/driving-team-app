@@ -1,0 +1,60 @@
+# Observer only. Upserts one <!-- simy-review-state --> comment.
+# Does not merge, approve, push, deploy, or call Supabase.
+#
+# issue_comment is intentionally absent. Current Bugbot findings are pull
+# review comments marked BUGBOT_BUG_ID, not issue comments. Issue comments
+# on these PRs are mostly Vercel and would rerun this job without new state.
+#
+# check_run is limited to the ruleset checks, CodeQL, and Cursor Bugbot.
+# The job name "Publish review state" is not in that list, so this workflow
+# does not retrigger itself when its own check completes.
+name: Review state
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review_thread:
+    types: [resolved, unresolved]
+  check_run:
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: read
+
+concurrency:
+  group: review-state-${{ github.event.pull_request.head.sha || github.event.check_run.head_sha || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish review state
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: >-
+      github.event_name != 'check_run' ||
+      contains(fromJSON('["Test and lint","E2E login","Dependency review","CodeQL","Analyze (javascript-typescript)","Analyze (actions)","Cursor Bugbot"]'), github.event.check_run.name)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Publish review state
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.check_run.head_sha || '' }}
+        run: node scripts/review-state.mjs

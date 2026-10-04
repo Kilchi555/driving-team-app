@@ -31,17 +31,41 @@ Hard rules:
 
 1. Branch from `origin/main` (not a dirty feature branch). Keep the hotfix small.
 2. Open a PR into `main`. Do not `git push` to `main`.
-3. Non-draft PRs to `main` enable squash auto-merge (`.github/workflows/auto-merge.yml`). GitHub merges only when **Test and lint** and **E2E login** are green. Those come from `.github/workflows/ci.yml`.
-4. Vercel deploys production from `main` after that merge.
+3. Required ruleset checks must pass, and the branch must satisfy the current GitHub ruleset. Today that means the branch is up to date with `main`, review threads are resolved, and history stays linear. The required check contexts are **Test and lint**, **E2E login**, and **Dependency review**.
+4. A green PR does not merge itself. Merging into `main` stays a human action unless a future explicit policy changes that.
+5. Vercel deploys production from `main` after that merge.
+
+## Auto-merge
+
+Global auto-merge is not enabled.
+
+`.github/workflows/auto-merge.yml` was removed in #222 (`security(ci): disable automatic PR merging`). Do not recreate that workflow. Do not enable repository auto-merge as a substitute.
+
+## Human gates
+
+A person decides these unless a future written policy says otherwise:
+
+- Merging into `main`
+- Production SQL and database migrations
+- Payments, Wallee, Stripe, and billing gates
+- RLS and tenant isolation
+- Authentication and authorization
+
+## Review state
+
+`.github/workflows/review-state.yml` is an observer. It upserts one pull request comment marked `<!-- simy-review-state -->`.
+
+`next_action: ready_for_human_merge` means the required checks passed, no open Bugbot finding was parsed, and GitHub reports the pull request mergeable. `risk_hint` stays `unknown`. That comment is not permission to merge, deploy, or apply SQL.
 
 ## Never
 
-- Treat Cursor / Vercel „6/6“ as enough. That is Bugbot + Vercel previews, not the required Actions jobs. Auto-merge waits only for the two Actions checks.
+- Treat Cursor, Vercel, CodeQL, or App Store status rolls as the merge gate. The required ruleset checks are Test and lint, E2E login, and Dependency review. App Store checks such as `App | Default` are not merge blockers.
 - Use git branch `preview` as a staging path. It is stale and is not production.
 - Temporarily drop branch protection to merge, unless the user explicitly asks after Actions failed to start.
 - Open a ready PR into `main` unless it should ship. Keep work-in-progress as a **draft**.
 - Treat a SAFE Impact Gate or green preview as sufficient to mark Ready when Ship/CI floors are unmet.
+- Recreate `.github/workflows/auto-merge.yml` or turn green checks into an automatic merge.
 
 ## If required checks never appear
 
-Open https://github.com/Kilchi555/driving-team-app/actions. If `CI` did not start within a minute, push a follow-up commit or re-run the workflow. Auto-merge cannot complete while GitHub still says required checks are expected.
+Open https://github.com/Kilchi555/driving-team-app/actions. If `CI` did not start within a minute, push a follow-up commit or re-run the workflow. A merge still waits for the required ruleset checks. Nothing in this repository merges the pull request when they turn green.
