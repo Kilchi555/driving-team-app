@@ -94,9 +94,9 @@ export const PRICE_VAT_STANDARD_FROM = 'Oktober 2026'
 export const PRICE_VAT_NOTE = `Alle Preise exkl. MwSt. Aktuell beträgt die MwSt. ${PRICE_VAT_RATE_PERCENT} %. Ab ${PRICE_VAT_STANDARD_FROM} gilt der offizielle Normalsatz von ${PRICE_VAT_STANDARD_PERCENT} %.`
 export const PRICE_VAT_NOTE_SHORT = `exkl. MwSt. (aktuell ${PRICE_VAT_RATE_PERCENT} %, ab Okt. 2026 ${PRICE_VAT_STANDARD_PERCENT} %)`
 
-export const WALLEE_FEE_PERCENT = '1.7%'
+export const WALLEE_FEE_PERCENT = '1,35 % (TWINT 1,3 %)'
 export const WALLEE_FEE_NOTE =
-  `Online-Zahlungen (TWINT, Karte) über Wallee: ${WALLEE_FEE_PERCENT} Transaktionsgebühr pro Kundenzahlung — kein monatlicher Aufpreis.`
+  `Online-Zahlungen über Wallee: ${WALLEE_FEE_PERCENT} Transaktionsgebühr pro erfolgreicher Kundenzahlung — kein monatlicher Aufpreis. QR-Rechnung und Barzahlung ohne diese Gebühr.`
 export const WALLEE_FEE_PRICE_TIP =
   'Viele Betriebe heben ihre Preise um 2–3 % an. Die App hat laufende Kosten, die Gebühr ist damit gedeckt, es bleibt ein kleiner Gewinn — und automatische Zahlungen sparen Zeit und Nachfassen.'
 export const WALLEE_FEE_FAQ =

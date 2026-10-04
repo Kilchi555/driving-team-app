@@ -10,6 +10,7 @@ import { Wallee } from 'wallee'
 import { z } from 'zod'
 import { walleeRemainingChf, walleeRemainingRappen } from '~/server/utils/wallee-remaining-amount'
 import { normalizePaymentMetadata } from '~/server/utils/payment-metadata'
+import { ensureWalleePaymentMethodId, stampWalleeFeeKind } from '~/server/utils/wallee-fee-kind'
 import {
   courseCapturedWalleeHttpError,
   isCourseCapturedWalleeFulfilled,
@@ -124,6 +125,7 @@ export default defineEventHandler(async (event) => {
       try {
         const existingTxResponse = await transactionService.read(spaceId, parseInt(paymentRow.wallee_transaction_id, 10))
         const existingTx = (existingTxResponse as any)?.body || existingTxResponse
+        await ensureWalleePaymentMethodId(existingTx, spaceId, sdkConfig)
         const state = existingTx?.state ? String(existingTx.state) : null
         const COMPLETED = ['FULFILL', 'COMPLETED', 'SUCCESSFUL']
         const OPEN = ['PENDING', 'CONFIRMED', 'PROCESSING']
@@ -145,6 +147,11 @@ export default defineEventHandler(async (event) => {
                 statusCode: 503,
                 message: 'Kurszahlung konnte nicht über den Shop-Pfad abgeschlossen werden',
               })
+            }
+            try {
+              await stampWalleeFeeKind(supabase, paymentForCourse, existingTx)
+            } catch (feeErr: any) {
+              logger.warn('⚠️ Wallee fee kind stamp after shop course completion (non-fatal):', feeErr?.message)
             }
             if (attempt.result?.status === 'fulfilled' && attempt.result.registrationId) {
               try {
@@ -170,6 +177,11 @@ export default defineEventHandler(async (event) => {
             updated_at: new Date().toISOString(),
             wallee_transaction_state: state
           }).eq('id', orderId)
+          try {
+            await stampWalleeFeeKind(supabase, paymentRow, existingTx)
+          } catch (feeErr: any) {
+            logger.warn('⚠️ Wallee fee kind stamp after shop completion (non-fatal):', feeErr?.message)
+          }
           throw createError({ statusCode: 409, message: 'Zahlung wurde bereits abgeschlossen' })
         }
 

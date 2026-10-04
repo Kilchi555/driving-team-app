@@ -184,7 +184,7 @@ useHead({
 const courseFeatures = [
   { icon: 'school', title: 'Eigene Kursseite', desc: 'Öffentlicher Link mit Branding — Kunden sehen Datum, Ort, Preis und freie Plätze.' },
   { icon: 'users', title: 'Platzkontingente', desc: 'Maximale Teilnehmerzahl, Restplätze live — keine Überbuchung per WhatsApp.' },
-  { icon: 'credit-card', title: 'Online-Zahlung', desc: `Anmeldung mit TWINT, Karte oder QR-Rechnung — ${WALLEE_FEE_PERCENT} Transaktionsgebühr. ${WALLEE_FEE_PRICE_TIP}` },
+  { icon: 'credit-card', title: 'Online-Zahlung', desc: `Anmeldung mit TWINT, Karte oder QR-Rechnung. ${WALLEE_FEE_PERCENT} nur auf erfolgreiche Wallee-Zahlungen. QR-Rechnung und Barzahlung ohne diese Gebühr. ${WALLEE_FEE_PRICE_TIP}` },
   { icon: 'clipboard', title: 'Warteliste', desc: 'Kurs voll? Interessenten reihen sich ein. Du holst nach, wenn ein Platz frei wird — ohne Chat-Nummer.' },
   { icon: 'calendar', title: 'Neben Einzelterminen', desc: '1:1-Buchung und Gruppenkurse in derselben All-in-One Software.' },
   { icon: 'bell', title: 'Erinnerungen', desc: 'Automatische Bestätigung und Reminder an Teilnehmer — weniger No-Shows.' },

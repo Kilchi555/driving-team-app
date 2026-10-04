@@ -266,7 +266,7 @@ const featureCats = [
   },
   {
     title: 'Rechnungen & Kasse', icon: 'wallet', color: '#059669', tag: 'Must-Have',
-    features: ['Automatische Rechnungserstellung', `TWINT & Online-Zahlung (CH), ${WALLEE_FEE_PERCENT}`, 'Automatische Erinnerungen bei Online-Zahlung', 'Guthaben-System', 'QR-Rechnung', 'Exportfunktion'],
+    features: ['Automatische Rechnungserstellung', `Online-Zahlung (CH): ${WALLEE_FEE_PERCENT}`, 'Automatische Erinnerungen bei Online-Zahlung', 'Guthaben-System', 'QR-Rechnung', 'Exportfunktion'],
   },
   {
     title: 'Schülerverwaltung', icon: 'graduate', color: '#0891B2', tag: 'Must-Have',

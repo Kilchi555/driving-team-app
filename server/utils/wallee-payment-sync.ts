@@ -10,7 +10,8 @@ import { Wallee } from 'wallee'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { logger } from '~/utils/logger'
-import { normalizePaymentMetadata } from '~/server/utils/payment-metadata'
+import { mergePaymentMetadata, normalizePaymentMetadata } from '~/server/utils/payment-metadata'
+import { ensureWalleePaymentMethodId, walleeFeeMetadataPatch, stampWalleeFeeKind } from '~/server/utils/wallee-fee-kind'
 import {
   courseCapturedWalleeHttpError,
   isCourseCapturedWalleeFulfilled,
@@ -101,6 +102,7 @@ async function getTransactionService(tenantId: string, spaceIdHint?: number | nu
   const sdkConfig = getWalleeSDKConfig(walleeConfig.spaceId, walleeConfig.userId, walleeConfig.apiSecret)
   return {
     spaceId: walleeConfig.spaceId,
+    sdkConfig,
     transactionService: new Wallee.api.TransactionService(sdkConfig),
     paymentPageService: new Wallee.api.TransactionPaymentPageService(sdkConfig)
   }
@@ -113,12 +115,13 @@ export async function readWalleeTransactionState(opts: {
   includePaymentUrl?: boolean
 }): Promise<WalleeSyncResult> {
   try {
-    const { spaceId, transactionService, paymentPageService } = await getTransactionService(
+    const { spaceId, sdkConfig, transactionService, paymentPageService } = await getTransactionService(
       opts.tenantId,
       opts.walleeSpaceId
     )
     const response = await transactionService.read(spaceId, parseInt(opts.walleeTransactionId, 10))
     const tx = (response as any)?.body || response
+    await ensureWalleePaymentMethodId(tx, spaceId, sdkConfig)
     const walleeState = tx?.state ? String(tx.state) : null
     const decision = walleeState ? decideFromState(walleeState) : 'unknown'
 
@@ -168,6 +171,7 @@ export async function applyWalleeSyncDecision(opts: {
   currentStatus: string
   decision: WalleeSyncDecision
   walleeState?: string | null
+  walleeTx?: unknown
 }): Promise<{ changed: boolean; newStatus: string }> {
   const supabase = getSupabaseAdmin()
   const now = new Date().toISOString()
@@ -192,13 +196,18 @@ export async function applyWalleeSyncDecision(opts: {
       })
       return { changed: false, newStatus: row.payment_status }
     }
+    const feePatch = walleeFeeMetadataPatch(opts.walleeTx)
+    const feeMetadata = feePatch && metadata.wallee_fee_kind !== 'standard' && metadata.wallee_fee_kind !== 'twint'
+      ? { metadata: mergePaymentMetadata(metadata, feePatch) }
+      : {}
     const { error } = await supabase
       .from('payments')
       .update({
         payment_status: 'completed',
         paid_at: now,
         updated_at: now,
-        ...(opts.walleeState ? { wallee_transaction_state: opts.walleeState } : {})
+        ...(opts.walleeState ? { wallee_transaction_state: opts.walleeState } : {}),
+        ...feeMetadata,
       })
       .eq('id', opts.paymentId)
       .neq('payment_status', 'completed')
@@ -334,12 +343,20 @@ export async function syncAndResolvePayment(payment: {
       }
     }
     if (paymentHasCourseId(dbPayment)) {
+      const wasCompleted = dbPayment.payment_status === 'completed'
       const attempt = await tryFulfillCourseFromCapturedWalleeTx({
         supabase: getSupabaseAdmin(),
         payment: dbPayment,
         walleeTx: sync.rawTx
       })
       if (isCourseCapturedWalleeFulfilled(attempt) && attempt.result) {
+        if (!wasCompleted) {
+          try {
+            await stampWalleeFeeKind(getSupabaseAdmin(), dbPayment, sync.rawTx)
+          } catch (feeErr: any) {
+            logger.warn('⚠️ Wallee fee kind stamp after course fulfillment (non-fatal):', feeErr?.message)
+          }
+        }
         if (attempt.result.status === 'fulfilled' && attempt.result.registrationId) {
           try {
             await runPostCommitCourseFulfillmentSideEffects({
@@ -386,7 +403,8 @@ export async function syncAndResolvePayment(payment: {
     paymentId: payment.id,
     currentStatus: payment.payment_status,
     decision: sync.decision,
-    walleeState: sync.walleeState
+    walleeState: sync.walleeState,
+    walleeTx: sync.rawTx,
   })
 
   return {

@@ -25,6 +25,7 @@ import { classifyWalleeWebhookTimestamp, shouldShortCircuitWalleeWebhook } from 
 import { capturedAmountChfFromWalleeTx, shouldRejectWalleeCaptureMismatch, walleeRemainingChf } from '~/server/utils/wallee-remaining-amount'
 import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
 import { mergePaymentMetadata, normalizePaymentMetadata } from '~/server/utils/payment-metadata'
+import { ensureWalleePaymentMethodId, stampWalleeFeeKind } from '~/server/utils/wallee-fee-kind'
 import { applyCapturedWalleeTopupCredits } from '~/server/utils/topup-credit'
 import { isCourseCapacityExceeded } from '~/server/utils/course-capacity'
 import {
@@ -590,8 +591,9 @@ export default defineEventHandler(async (event) => {
     // Never trust webhook body.state alone — Wallee does not sign webhooks.
     // Completion/authorization must be confirmed by reading the live transaction.
     let verifiedCapturedChf = NaN
+    let verifiedTx: any = null
     {
-      const verifiedTx = await fetchWalleeTransaction(transactionId, spaceId)
+      verifiedTx = await fetchWalleeTransaction(transactionId, spaceId)
       if (!verifiedTx?.state) {
         logger.error('❌ Rejecting webhook: could not verify transaction with Wallee API', {
           transactionId,
@@ -708,6 +710,7 @@ export default defineEventHandler(async (event) => {
     // is claimed. Appointments / product sales / top-ups still use Layer 7.
     let courseFulfillmentAttempted = false
     const newlyFulfilledCourseIds = new Set<string>()
+    const feeStampPayments: any[] = []
     if (paymentStatus === 'completed') {
       const coursePayments = payments.filter((p: any) => paymentHasCourseId(p))
       for (const payment of coursePayments) {
@@ -756,6 +759,7 @@ export default defineEventHandler(async (event) => {
             transactionId,
           }
         }
+        if (paymentsToUpdate.some((p: any) => p.id === payment.id)) feeStampPayments.push(payment)
         if (result.status === 'fulfilled' && result.registrationId) {
           newlyFulfilledCourseIds.add(payment.id)
           const enrollResult = await enrollInSARIAfterPayment(supabase, result.registrationId)
@@ -902,6 +906,20 @@ export default defineEventHandler(async (event) => {
     }
     
     logger.info(`✅ Updated ${paymentsToUpdate.length} payment(s) to: ${paymentStatus}`)
+
+    if (paymentStatus === 'completed' && verifiedTx) {
+      const toStamp = [
+        ...payments.filter((p: any) => normalUpdateIds.includes(p.id)),
+        ...feeStampPayments,
+      ]
+      for (const payment of toStamp) {
+        try {
+          await stampWalleeFeeKind(supabase, payment, verifiedTx)
+        } catch (feeErr: any) {
+          logger.warn('⚠️ Wallee fee kind stamp (non-fatal):', feeErr?.message)
+        }
+      }
+    }
 
     const completedEffectPayments = paymentStatus === 'completed'
       ? [...payments.filter((p: any) => paymentHasCourseId(p)), ...paymentsToUpdate]
@@ -2110,7 +2128,9 @@ async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: nu
     
     transactionService = new WalleeSDK.api.TransactionService(config)
     const response = await transactionService.read(walleeCredentials.spaceId, parseInt(transactionId))
-    return response.body
+    const body = response.body
+    await ensureWalleePaymentMethodId(body, walleeCredentials.spaceId, config)
+    return body
   } catch (error: any) {
     logger.warn('⚠️ Could not fetch Wallee transaction:', error.message)
     return null

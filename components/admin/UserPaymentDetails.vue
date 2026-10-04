@@ -620,7 +620,7 @@
                   </div>
                   <div class="text-right">
                     <p class="text-sm font-semibold text-gray-900 whitespace-nowrap">{{ formatCurrency(calculateAppointmentAmount(appointment)) }}</p>
-                    <p v-if="walleeFeeChf(appointment) > 0" class="text-[11px] text-amber-700">Gebühr {{ walleeFeeLabel }}: {{ formatCurrency(walleeFeeChf(appointment)) }}</p>
+                    <p v-if="walleeFeeChf(appointment) > 0" class="text-[11px] text-amber-700">Gebühr {{ appointmentFeeLabel(appointment) }}: {{ formatCurrency(walleeFeeChf(appointment)) }}</p>
                   </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-1.5">
@@ -739,7 +739,7 @@ v-for="appointment in filteredAppointments" :key="appointment.id"
                     <div>
                       <div class="font-medium">{{ formatCurrency(calculateAppointmentAmount(appointment)) }}</div>
                       <div v-if="walleeFeeChf(appointment) > 0 && !hasPriceDetails(appointment)" class="text-xs text-amber-700 mt-1">
-                        Wallee-Gebühr {{ walleeFeeLabel }}: {{ formatCurrency(walleeFeeChf(appointment)) }}
+                        Wallee-Gebühr {{ appointmentFeeLabel(appointment) }}: {{ formatCurrency(walleeFeeChf(appointment)) }}
                       </div>
                       
                       <!-- Detaillierte Preisaufschlüsselung direkt in der Tabelle -->
@@ -800,7 +800,7 @@ v-if="(appointment.credit_used || 0) > 0"
                           v-if="walleeFeeChf(appointment) > 0"
                           class="flex justify-between text-xs text-amber-700 pt-1 border-t border-gray-100"
                         >
-                          <span>Wallee-Gebühr {{ walleeFeeLabel }}:</span>
+                          <span>Wallee-Gebühr {{ appointmentFeeLabel(appointment) }}:</span>
                           <span>{{ formatCurrency(walleeFeeChf(appointment)) }}</span>
                         </div>
                       </div>
@@ -1119,12 +1119,11 @@ import { logger } from '~/utils/logger'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import { isInvoicedPayment } from '~/utils/payment-invoiced'
-import { isWalleeCollectedPayment, WALLEE_FEE_RATE_LABEL, walleeFeeRappen } from '~/utils/wallee-fee'
+import { isWalleeCollectedPayment, walleeFeeKindFromMetadata, walleeFeeLabel, walleeFeeRappen, type WalleeFeeKind } from '~/utils/wallee-fee'
 import { splitGrossVat } from '~/utils/vat'
 
 const authStore = useAuthStore()
 const supabase = getSupabase()
-const walleeFeeLabel = WALLEE_FEE_RATE_LABEL
 const {
   primaryColor: brandingPrimaryColor,
   brandName,
@@ -1219,6 +1218,7 @@ interface Appointment {
   discount_amount?: number
   credit_used?: number
   amount_paid?: number
+  wallee_fee_kind?: WalleeFeeKind
   // Zahlungsstatus aus payments
   payment_status?: string
   // Neue Felder für Titel-Anzeige
@@ -1261,6 +1261,7 @@ interface Payment {
   created_at?: string
   updated_at?: string
   scheduled_authorization_date?: string
+  metadata?: unknown
 }
 
 interface InvoiceData {
@@ -1725,7 +1726,8 @@ const loadUserAppointments = async () => {
         products_price: productsPrice,
         discount_amount: discountAmount,
         credit_used: payment ? (payment.credit_used_rappen || 0) / 100 : 0,
-        amount_paid: payment ? (payment.amount_paid_rappen || 0) / 100 : 0
+        amount_paid: payment ? (payment.amount_paid_rappen || 0) / 100 : 0,
+        wallee_fee_kind: payment ? walleeFeeKindFromMetadata(payment.metadata) : undefined,
       }
       
       logger.debug(`📋 Final processed appointment ${appointment.id}:`, {
@@ -1758,6 +1760,10 @@ const loadUserAppointments = async () => {
 }
 
 
+const appointmentFeeKind = (appointment: Appointment): WalleeFeeKind => appointment.wallee_fee_kind || 'legacy'
+
+const appointmentFeeLabel = (appointment: Appointment): string => walleeFeeLabel(appointmentFeeKind(appointment))
+
 const walleeFeeChf = (appointment: Appointment): number => {
   if (!isWalleeCollectedPayment({
     payment_method: appointment.payment_method,
@@ -1765,7 +1771,7 @@ const walleeFeeChf = (appointment: Appointment): number => {
     refunded_at: appointment.refunded_at,
   })) return 0
   const grossRappen = Math.round((appointment.total_amount || 0) * 100)
-  return walleeFeeRappen(grossRappen) / 100
+  return walleeFeeRappen(grossRappen, appointmentFeeKind(appointment)) / 100
 }
 
 const getPaymentMethodLabel = (method: string): string => {
