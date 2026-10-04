@@ -3,9 +3,12 @@
  * The bulk endpoint cannot do this: it requires appointment payments and
  * rejects every staff-product sale. The surplus is a student-wallet deposit.
  * It does not update the deferred payment.
+ *
+ * Idempotency is the partial unique index inside
+ * apply_staff_pos_deferred_cash_overpayment. The key is the tenant plus the
+ * sorted deferred payment ids. The amount is not part of the key.
  */
 import { StaffProductSaleError } from '~/server/utils/staff-product-sale'
-import { applyStudentCreditDelta } from '~/server/utils/student-credit-ledger'
 import { isDeferredStaffProductSale } from '~/utils/staff-product-sale-display'
 
 export interface DeferredOverpaymentPayment {
@@ -23,6 +26,15 @@ export interface DeferredOverpaymentResult {
   replayed: boolean
 }
 
+type RpcError = { message?: string; code?: string; details?: string }
+
+export type DeferredOverpaymentClient = {
+  rpc: (
+    name: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: RpcError | null }>
+}
+
 export function deferredCashOverpaymentKey(paymentIds: string[]): string {
   return `staff-pos-deferred-overpay:${[...paymentIds].sort().join(',')}`
 }
@@ -31,8 +43,37 @@ export function deferredCashOverpaymentNote(amountRappen: number): string {
   return `Überzahlung bei Barzahlung (CHF ${(amountRappen / 100).toFixed(2)} Rückgeld)`
 }
 
+function firstRow(data: unknown): Record<string, unknown> | null {
+  if (Array.isArray(data)) {
+    const row = data[0]
+    return row && typeof row === 'object' ? row as Record<string, unknown> : null
+  }
+  if (data && typeof data === 'object') return data as Record<string, unknown>
+  return null
+}
+
+function mapRpcError(error: RpcError): Error {
+  const message = `${error.message || ''} ${error.details || ''}`
+  if (message.includes('overpayment_amount_mismatch') || message.includes('idempotency_user_mismatch')) {
+    return new StaffProductSaleError('invalid_amount', 409, 'Überzahlung wurde bereits anders verbucht')
+  }
+  if (
+    message.includes('invalid_amount')
+    || message.includes('invalid_description')
+    || message.includes('invalid_identity')
+    || message.includes('invalid_note')
+  ) {
+    return new StaffProductSaleError('invalid_amount', 400, 'Überzahlung ist ungültig')
+  }
+  const failure = new Error(error.message || 'Überzahlung konnte nicht verbucht werden')
+  if (error.code) {
+    Object.assign(failure, { code: error.code })
+  }
+  return failure
+}
+
 export async function creditDeferredCashOverpayment(args: {
-  supabase: any
+  supabase: DeferredOverpaymentClient
   actorId: string
   actorTenantId: string
   payments: DeferredOverpaymentPayment[]
@@ -64,39 +105,22 @@ export async function creditDeferredCashOverpayment(args: {
   const studentId = [...studentIds][0]
   const key = deferredCashOverpaymentKey(args.payments.map((payment) => payment.id))
 
-  const { data: existing, error: lookupError } = await args.supabase
-    .from('credit_transactions')
-    .select('id, amount_rappen, user_id')
-    .eq('tenant_id', args.actorTenantId)
-    .eq('user_id', studentId)
-    .eq('transaction_type', 'deposit')
-    .eq('payment_method', 'cash')
-    .eq('reference_type', 'overpayment')
-    .eq('description', key)
-    .maybeSingle()
+  const { data, error } = await args.supabase.rpc('apply_staff_pos_deferred_cash_overpayment', {
+    p_user_id: studentId,
+    p_tenant_id: args.actorTenantId,
+    p_amount: args.amountRappen,
+    p_description: key,
+    p_note: deferredCashOverpaymentNote(args.amountRappen),
+    p_created_by: args.actorId,
+  })
+  if (error) throw mapRpcError(error)
 
-  if (lookupError) {
-    throw new StaffProductSaleError('sale_failed', 500, 'Überzahlung konnte nicht geprüft werden')
+  const row = firstRow(data)
+  if (!row || (row.applied !== true && row.already_applied !== true)) {
+    throw new Error('Überzahlung konnte nicht verbucht werden')
   }
-  if (existing) {
-    if (existing.user_id !== studentId || existing.amount_rappen !== args.amountRappen) {
-      throw new StaffProductSaleError('invalid_amount', 409, 'Überzahlung wurde bereits anders verbucht')
-    }
+  if (row.already_applied === true) {
     return { creditedRappen: 0, replayed: true }
   }
-
-  await applyStudentCreditDelta(args.supabase, {
-    userId: studentId,
-    tenantId: args.actorTenantId,
-    deltaRappen: args.amountRappen,
-    transactionType: 'deposit',
-    notes: deferredCashOverpaymentNote(args.amountRappen),
-    description: key,
-    referenceType: 'overpayment',
-    referenceId: null,
-    createdBy: args.actorId,
-    paymentMethod: 'cash',
-  })
-
   return { creditedRappen: args.amountRappen, replayed: false }
 }
