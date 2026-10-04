@@ -8,6 +8,7 @@ import { logger } from '~/utils/logger'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import { sendEmail } from '~/server/utils/email'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
+import { isSpamEmail, REGISTRATION_SPAM_EMAIL_REASON } from '~/server/utils/email-validator'
 import { getPlanById } from '~/utils/planFeatures'
 import {
   buildStaffInviteEmailHtml,
@@ -149,11 +150,13 @@ export default defineEventHandler(async (event) => {
       results.push({ name: firstName || '?', status: 'failed', message: 'Vorname erforderlich' })
       continue
     }
-    if (!email) {
+    if (!email || isSpamEmail(email)) {
       results.push({
         name: `${firstName} ${lastName}`,
         status: 'failed',
-        message: emailRaw ? 'Ungültige E-Mail' : 'E-Mail für Staff-Login erforderlich',
+        message: !email
+          ? (emailRaw ? 'Ungültige E-Mail' : 'E-Mail für Staff-Login erforderlich')
+          : REGISTRATION_SPAM_EMAIL_REASON,
       })
       continue
     }
