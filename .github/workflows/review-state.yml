@@ -4,6 +4,8 @@
 # issue_comment is intentionally absent. Current Bugbot findings are pull
 # review comments marked BUGBOT_BUG_ID, not issue comments. Issue comments
 # on these PRs are mostly Vercel and would rerun this job without new state.
+# GitHub Actions has no pull_request_review_thread event. A resolved Bugbot
+# thread is picked up on the next review or required-check completion.
 #
 # check_run is limited to the ruleset checks, CodeQL, and Cursor Bugbot.
 # The job name "Publish review state" is not in that list, so this workflow
@@ -17,8 +19,6 @@ on:
     types: [submitted]
   pull_request_review_comment:
     types: [created]
-  pull_request_review_thread:
-    types: [resolved, unresolved]
   check_run:
     types: [completed]
 
