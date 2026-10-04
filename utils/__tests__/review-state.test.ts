@@ -7,6 +7,7 @@ import {
   THREAD_REFRESH_MINUTES,
   analyzeReviews,
   buildEvaluationInput,
+  cell,
   clearStopForTests,
   evaluateReviewState,
   extractMachineState,
@@ -343,6 +344,199 @@ describe('Bugbot and review threads', () => {
       reviewThreads: resolvedAndQuiet.reviewThreads,
       bugbotUncertain: false,
     }).next_action).toBe('ready_for_human_merge')
+  })
+
+  it('publishes a known clean Bugbot observation as certain and empty', () => {
+    const state = evaluate({})
+    expect(state.bugbot.uncertain).toBe(false)
+    expect(state.bugbot.count).toBe(0)
+    expect(state.bugbot.findings).toEqual([])
+    expect(state.actionable_findings).toEqual([])
+    expect(state.next_action).toBe('ready_for_human_merge')
+    expect(renderReviewComment(state)).toContain('No current actionable findings.')
+    expect(renderReviewComment(state)).not.toContain('unavailable because this observation is uncertain')
+  })
+
+  it('does not publish an unknown required check as a clean Bugbot result', () => {
+    const visible = evaluate({
+      requiredChecks: { ...passing, 'E2E login': 'unknown' },
+      findings: [finding],
+      reviewThreads: {
+        unresolved_count: 1,
+        unresolved_non_bugbot_count: 0,
+        unresolved_bugbot_count: 1,
+        uncertain: false,
+      },
+    })
+    expect(visible.next_action).toBe('escalate')
+    expect(visible.blocking_reasons).toContain('observation_uncertain')
+    expect(visible.bugbot.uncertain).toBe(false)
+    expect(visible.bugbot.count).toBe(1)
+    expect(visible.bugbot.findings).toEqual([{ title: finding.title, url: finding.url }])
+    expect(visible.actionable_findings).toEqual([
+      { source: 'bugbot', title: finding.title, url: finding.url },
+    ])
+    const visibleComment = renderReviewComment(visible)
+    expect(visibleComment).toContain(finding.title)
+    expect(visibleComment).not.toContain('No current actionable findings.')
+    expect(visibleComment).not.toContain('unavailable because this observation is uncertain')
+
+    const hidden = evaluate({
+      requiredChecks: { ...passing, 'E2E login': 'unknown' },
+      findings: [finding],
+      bugbotUncertain: true,
+      reviewThreads: {
+        unresolved_count: 1,
+        unresolved_non_bugbot_count: 0,
+        unresolved_bugbot_count: 1,
+        uncertain: true,
+      },
+    })
+    expect(hidden.next_action).toBe('escalate')
+    expect(hidden.bugbot.uncertain).toBe(true)
+    expect(hidden.bugbot.count).toBe(0)
+    expect(hidden.bugbot.findings).toEqual([])
+    expect(hidden.actionable_findings).toEqual([])
+    const hiddenComment = renderReviewComment(hidden)
+    expect(hiddenComment).toContain('unavailable because this observation is uncertain')
+    expect(hiddenComment).not.toContain('No current actionable findings.')
+    expect(hiddenComment).not.toContain(finding.title)
+
+    const unresolvedWithoutRows = evaluate({
+      requiredChecks: { ...passing, 'E2E login': 'unknown' },
+      findings: [],
+      reviewThreads: {
+        unresolved_count: 1,
+        unresolved_non_bugbot_count: 0,
+        unresolved_bugbot_count: 1,
+        uncertain: false,
+      },
+    })
+    expect(unresolvedWithoutRows.next_action).toBe('escalate')
+    expect(unresolvedWithoutRows.bugbot.uncertain).toBe(true)
+    expect(unresolvedWithoutRows.bugbot.findings).toEqual([])
+    expect(unresolvedWithoutRows.bugbot.count).toBe(0)
+    expect(renderReviewComment(unresolvedWithoutRows)).not.toContain('No current actionable findings.')
+  })
+
+  it('propagates input.uncertain without claiming a certain Bugbot result', () => {
+    const state = evaluate({
+      uncertain: true,
+      findings: [finding],
+      reviewThreads: {
+        unresolved_count: 1,
+        unresolved_non_bugbot_count: 0,
+        unresolved_bugbot_count: 1,
+        uncertain: false,
+      },
+    })
+    expect(state.next_action).toBe('escalate')
+    expect(state.next_action).not.toBe('ready_for_human_merge')
+    expect(state.blocking_reasons).toContain('observation_uncertain')
+    expect(state.bugbot.uncertain).toBe(true)
+    expect(state.bugbot.findings).toEqual([{ title: finding.title, url: finding.url }])
+    expect(state.bugbot.count).toBe(1)
+    expect(state.actionable_findings).toEqual([
+      { source: 'bugbot', title: finding.title, url: finding.url },
+    ])
+    const comment = renderReviewComment(state)
+    expect(comment).toContain(finding.title)
+    expect(comment).toContain('not a closed result because the observation is uncertain')
+    expect(comment).not.toContain('No current actionable findings.')
+    expect(comment).toContain('**Next action:** `escalate`')
+  })
+
+  it('keeps Bugbot and thread parse failures explicit and does not invent findings', () => {
+    const parsed = analyzeReviews({
+      reviews: [{ body: summary(1) }],
+      threads: [thread('### Title\n<!-- BUGBOT_BUG_ID: not-a-uuid -->')],
+    })
+    expect(parsed.uncertain).toBe(true)
+    expect(parsed.findings).toEqual([])
+    const state = evaluate({
+      bugbotUncertain: parsed.uncertain,
+      threadsUncertain: parsed.reviewThreads.uncertain,
+      findings: parsed.findings,
+      bugbotSummaryCount: parsed.summaryCount,
+      reviewThreads: parsed.reviewThreads,
+    })
+    expect(state.bugbot.uncertain).toBe(true)
+    expect(state.review_threads.uncertain).toBe(true)
+    expect(state.bugbot.findings).toEqual([])
+    expect(state.bugbot.count).toBe(0)
+    expect(state.next_action).toBe('escalate')
+    expect(renderReviewComment(state)).toContain('unavailable because this observation is uncertain')
+
+    const threadsOnly = evaluate({
+      threadsUncertain: true,
+      findings: [finding],
+      reviewThreads: {
+        unresolved_count: 1,
+        unresolved_non_bugbot_count: 0,
+        unresolved_bugbot_count: 1,
+        uncertain: false,
+      },
+    })
+    expect(threadsOnly.bugbot.uncertain).toBe(true)
+    expect(threadsOnly.review_threads.uncertain).toBe(true)
+    expect(threadsOnly.bugbot.findings).toEqual([])
+    expect(threadsOnly.bugbot.count).toBe(0)
+    expect(threadsOnly.next_action).toBe('escalate')
+    expect(threadsOnly.next_action).not.toBe('fix')
+    expect(threadsOnly.next_action).not.toBe('ready_for_human_merge')
+  })
+
+  it('keeps a known Bugbot finding when an unrelated check is uncertain', () => {
+    const state = evaluate({
+      requiredChecks: { ...passing, 'Dependency review': 'unknown' },
+      findings: [finding],
+      reviewThreads: {
+        unresolved_count: 1,
+        unresolved_non_bugbot_count: 0,
+        unresolved_bugbot_count: 1,
+        uncertain: false,
+      },
+    })
+    expect(state.bugbot.uncertain).toBe(false)
+    expect(state.bugbot.findings).toEqual([{ title: finding.title, url: finding.url }])
+    expect(state.actionable_findings).toEqual([
+      { source: 'bugbot', title: finding.title, url: finding.url },
+    ])
+    expect(state.blocking_reasons).toContain('bugbot_finding')
+    expect(state.next_action).toBe('escalate')
+
+    const truncated = buildEvaluationInput({
+      headSha: 'abc123def456',
+      baseSha: 'def456abc123',
+      mergeStateStatus: 'CLEAN',
+      mergeable: true,
+      ruleset: verifiedRuleset,
+      observedAt: '2026-10-04T08:00:00.000Z',
+      startedAt: '2026-10-04T07:59:00.000Z',
+      evaluationId: 'truncated-checks',
+      prNumber: 368,
+      checksTruncated: true,
+      checkRuns: [
+        { name: 'Test and lint', status: 'completed', conclusion: 'success', completed_at: '2026-10-04T00:00:00Z' },
+        { name: 'E2E login', status: 'completed', conclusion: 'success', completed_at: '2026-10-04T00:00:00Z' },
+        { name: 'Dependency review', status: 'completed', conclusion: 'success', completed_at: '2026-10-04T00:00:00Z' },
+      ],
+      reviews: [{ body: summary(1) }],
+      threads: [thread(bug('Visible finding', '7687a38c-0f4a-46b4-8ec0-c52310fae59f'))],
+    })
+    expect(truncated.uncertain).toBe(true)
+    expect(truncated.bugbotUncertain).toBe(false)
+    expect(truncated.findings).toHaveLength(1)
+    const published = evaluateReviewState(truncated)
+    expect(published.next_action).toBe('escalate')
+    expect(published.bugbot.uncertain).toBe(true)
+    expect(published.bugbot.findings).toEqual(truncated.findings)
+    expect(published.bugbot.count).toBe(1)
+    expect(published.actionable_findings).toEqual([
+      { source: 'bugbot', title: 'Visible finding', url: truncated.findings[0].url },
+    ])
+    expect(renderReviewComment(published)).toContain('Visible finding')
+    expect(renderReviewComment(published)).not.toContain('No current actionable findings.')
   })
 
   it('does not call the pull request ready while a non-Bugbot thread is unresolved', () => {
@@ -932,6 +1126,23 @@ describe('rebase does not hide findings', () => {
     expect(state.executor.actions.ready_for_human_merge.join(' ')).toContain('human decides')
     expect(state.executor.actions.fix.join(' ')).toContain('Re-read the live pull request head')
     expect(state.executor.actions.escalate.join(' ')).toContain('Do not automate')
+  })
+})
+
+describe('markdown cell escaping', () => {
+  it('escapes backslashes before pipes and still turns newlines into spaces', () => {
+    expect(cell('plain')).toBe('plain')
+    expect(cell('a|b')).toBe('a\\|b')
+    expect(cell('a\\b')).toBe('a\\\\b')
+    expect(cell('a\\|b')).toBe('a\\\\\\|b')
+    expect(cell('a\nb')).toBe('a b')
+    expect(cell('a\\\n|b')).toBe('a\\\\ \\|b')
+
+    const state = evaluate({
+      ignoredNoise: [{ name: 'A|B\\C', status: 'fail', reason: 'line1\nline2' }],
+    })
+    expect(renderReviewComment(state)).toContain('| A\\|B\\\\C | fail | line1 line2 |')
+    expect(renderReviewComment(state)).toContain('| Test and lint |')
   })
 })
 

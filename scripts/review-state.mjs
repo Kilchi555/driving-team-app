@@ -404,11 +404,19 @@ export function evaluateReviewState(input) {
     : { gate: 'not_required', status: input.codeqlCheck || 'unknown', clean: false }
   if (codeql.status !== 'pass') codeql.clean = false
 
+  // Withhold Bugbot rows only when that channel itself could not be read.
+  // An unknown required check or a truncated check list does not make a
+  // parsed finding unknowable. input.uncertain still marks the published
+  // Bugbot block uncertain so a cleared or incomplete snapshot cannot
+  // read as a clean Bugbot result.
+  const bugbotUnknowable = Boolean(
+    input.bugbotUncertain
+    || input.threadsUncertain
+    || threads.uncertain,
+  )
   const uncertain = Boolean(
     input.uncertain
-    || input.bugbotUncertain
-    || input.threadsUncertain
-    || threads.uncertain
+    || bugbotUnknowable
     || unknownRequired.length > 0,
   )
   const syncRequired = merge === 'BEHIND' || merge === 'DIRTY'
@@ -417,16 +425,19 @@ export function evaluateReviewState(input) {
     title: finding.title,
     url: finding.url,
   }))
-  const actionableFindings = uncertain
-    ? []
-    : [
-      ...failed.map((name) => ({ source: 'required_check', title: name, url: null })),
-      ...bugbotFindings,
-    ]
+  const publishedBugbotFindings = bugbotUnknowable ? [] : bugbotFindings
+  const withheldDespiteThreads = uncertain
+    && publishedBugbotFindings.length === 0
+    && (threads.unresolved_bugbot_count || 0) > 0
+  const bugbotUncertain = bugbotUnknowable || Boolean(input.uncertain) || withheldDespiteThreads
+  const actionableFindings = [
+    ...(uncertain ? [] : failed.map((name) => ({ source: 'required_check', title: name, url: null }))),
+    ...publishedBugbotFindings,
+  ]
   const blockingReasons = []
   if (uncertain) blockingReasons.push('observation_uncertain')
   if (failed.length > 0) blockingReasons.push('required_check_failed')
-  if (bugbotFindings.length > 0 && !uncertain) blockingReasons.push('bugbot_finding')
+  if (publishedBugbotFindings.length > 0) blockingReasons.push('bugbot_finding')
   if (!ruleset.consistent) {
     if (!ruleset.verified) blockingReasons.push('ruleset_unverified')
     else if (!ruleset.observed_required_checks.length) blockingReasons.push('ruleset_empty')
@@ -520,17 +531,17 @@ export function evaluateReviewState(input) {
     ruleset,
     required_checks: requiredChecks,
     bugbot: {
-      count: uncertain ? 0 : bugbotFindings.length,
+      count: publishedBugbotFindings.length,
       summary_count: input.bugbotSummaryCount ?? null,
-      findings: uncertain ? [] : bugbotFindings.map((finding) => ({ title: finding.title, url: finding.url })),
-      comment_urls: uncertain ? [] : bugbotFindings.map((finding) => finding.url),
-      uncertain: Boolean(input.bugbotUncertain || threads.uncertain),
+      findings: publishedBugbotFindings.map((finding) => ({ title: finding.title, url: finding.url })),
+      comment_urls: publishedBugbotFindings.map((finding) => finding.url),
+      uncertain: bugbotUncertain,
     },
     review_threads: {
       unresolved_count: threads.unresolved_count || 0,
       unresolved_non_bugbot_count: threads.unresolved_non_bugbot_count || 0,
       unresolved_bugbot_count: threads.unresolved_bugbot_count || 0,
-      uncertain: Boolean(threads.uncertain),
+      uncertain: Boolean(input.threadsUncertain || threads.uncertain),
     },
     codeql,
     ignored_noise: ignoredNoise,
@@ -551,8 +562,8 @@ export function evaluateReviewState(input) {
   }
 }
 
-function cell(value) {
-  return String(value).replace(/\|/g, '\\|').replace(/\n/g, ' ')
+export function cell(value) {
+  return String(value).replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ')
 }
 
 const STATUS_ICON = {
@@ -609,13 +620,18 @@ export function renderReviewComment(state) {
   const threads = state.review_threads || {}
   lines.push(`Unresolved: ${threads.unresolved_count ?? 0} (Bugbot ${threads.unresolved_bugbot_count ?? 0}, other ${threads.unresolved_non_bugbot_count ?? 0}).`)
   lines.push('', '### Bugbot', '')
-  if (!state.bugbot || state.bugbot.count === 0) {
+  if (state.bugbot?.uncertain && !(state.bugbot.count > 0)) {
+    lines.push('Bugbot findings are unavailable because this observation is uncertain.')
+  } else if (!state.bugbot || state.bugbot.count === 0) {
     lines.push('No current actionable findings.')
   } else {
     lines.push(`${state.bugbot.count} open finding${state.bugbot.count === 1 ? '' : 's'}.`, '')
     state.bugbot.findings.forEach((finding, index) => {
       lines.push(`${index + 1}. [${finding.title}](${finding.url})`)
     })
+    if (state.bugbot.uncertain) {
+      lines.push('', 'This Bugbot list is not a closed result because the observation is uncertain.')
+    }
   }
 
   lines.push('', '### Ignored noise', '')
