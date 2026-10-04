@@ -2063,6 +2063,34 @@
               </div>
             </div>
 
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Rechnungsstellung</label>
+              <select
+                v-model="categoryForm.invoice_timing_mode"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
+                @change="categoryInvoiceTimingWritable = true"
+              >
+                <option value="inherit">Standard</option>
+                <option value="off">Aus</option>
+                <option value="immediate">Sofort</option>
+              </select>
+              <p v-if="categoryForm.invoice_timing_mode === 'inherit'" class="text-xs text-gray-500 mt-1">
+                Übernimmt die Standard-Rechnungsstellung der Fahrschule.
+              </p>
+              <p v-else-if="categoryForm.invoice_timing_mode === 'off'" class="text-xs text-gray-500 mt-1">
+                Keine automatische Rechnungsstellung für diese Kursart.
+              </p>
+              <p v-else-if="categoryForm.invoice_timing_mode === 'immediate'" class="text-xs text-gray-500 mt-1">
+                Rechnung wird nach erfolgreicher öffentlicher Anmeldung sofort erstellt und verschickt.
+              </p>
+              <p class="text-xs text-gray-500 mt-1">
+                Gilt für Kurse dieser Kursart mit Rechnungsstellung „Standard“. Ohne Zahlungsart Rechnung entsteht keine Rechnung.
+              </p>
+              <p v-if="!categoryInvoiceTimingWritable" class="text-xs text-amber-700 mt-1">
+                Der gespeicherte Wert bleibt bestehen, bis Sie hier Standard, Aus oder Sofort wählen.
+              </p>
+            </div>
+
             <!-- Waitlist -->
             <div class="border border-blue-200 rounded-lg p-4 bg-blue-50">
               <ToggleSwitch
@@ -5074,6 +5102,8 @@ const importantNoticeFromString = (val: string) => {
     : ['']
 }
 
+const categoryInvoiceTimingWritable = ref(true)
+
 const categoryForm = ref({
   code: '',
   name: '',
@@ -5099,6 +5129,7 @@ const categoryForm = ref({
   partial_price_rappen: 0,
     // Waitlist
   waitlist_enabled: false,
+  invoice_timing_mode: 'inherit' as 'inherit' | 'off' | 'immediate',
   // Email
   email_important_notice: '',
 })
@@ -5990,9 +6021,16 @@ const editCategoryItem = (category: any) => {
     partial_price_rappen: category.partial_price_rappen || 0,
     // Waitlist
     waitlist_enabled: category.waitlist_enabled || false,
+    invoice_timing_mode: category.invoice_timing_mode === 'off' || category.invoice_timing_mode === 'immediate'
+      ? category.invoice_timing_mode
+      : 'inherit',
     // Email
     email_important_notice: category.email_important_notice || '',
   }
+  categoryInvoiceTimingWritable.value = category.invoice_timing_mode == null
+    || category.invoice_timing_mode === 'inherit'
+    || category.invoice_timing_mode === 'off'
+    || category.invoice_timing_mode === 'immediate'
   emailImportantNoticeItems.value = importantNoticeFromString(category.email_important_notice || '')
   defaultCategoryPrice.value = category.default_price_rappen / 100
   partialCategoryPrice.value = (category.partial_price_rappen || 0) / 100
@@ -6059,6 +6097,9 @@ const saveCategory = async () => {
     if (!categoryData.default_vehicle_id) {
       delete (categoryData as any).default_vehicle_id
     }
+    if (!categoryInvoiceTimingWritable.value) {
+      delete (categoryData as any).invoice_timing_mode
+    }
 
     if (showEditCategoryModal.value && editingCategory.value) {
       // Update existing category
@@ -6088,6 +6129,7 @@ const cancelCategoryForm = () => {
 }
 
 const resetCategoryForm = () => {
+  categoryInvoiceTimingWritable.value = true
   categoryForm.value = {
     code: '',
     name: '',
@@ -6113,6 +6155,7 @@ const resetCategoryForm = () => {
     partial_price_rappen: 0,
     // Waitlist
     waitlist_enabled: false,
+    invoice_timing_mode: 'inherit',
     // Email
     email_important_notice: '',
   }
