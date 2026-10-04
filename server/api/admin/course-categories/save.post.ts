@@ -4,6 +4,13 @@ import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 
+const CATEGORY_INVOICE_TIMING = new Set(['inherit', 'off', 'immediate'])
+
+function categoryInvoiceTimingForSave(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  return value.trim()
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const user = await getAuthenticatedUser(event)
@@ -32,7 +39,18 @@ export default defineEventHandler(async (event) => {
       'session_count', 'hours_per_session', 'total_duration_hours', 'session_structure',
       'allow_partial_enrollment', 'partial_start_position', 'partial_price_rappen',
       'is_active', 'waitlist_enabled',
+      'invoice_timing_mode',
     ]
+    if (rest.invoice_timing_mode !== undefined) {
+      const mode = categoryInvoiceTimingForSave(rest.invoice_timing_mode)
+      if (!CATEGORY_INVOICE_TIMING.has(mode)) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Ungültige Rechnungsstellung. Erlaubt sind Standard, Aus oder Sofort.',
+        })
+      }
+      rest.invoice_timing_mode = mode
+    }
     const fields: Record<string, any> = { updated_at: new Date().toISOString() }
     for (const key of ALLOWED) {
       if (rest[key] !== undefined) fields[key] = rest[key]
@@ -63,6 +81,9 @@ export default defineEventHandler(async (event) => {
         .eq('tenant_id', tenantId)
         .select()
         .single()
+      if (err?.code === 'PGRST116' || (!err && !data)) {
+        throw createError({ statusCode: 404, statusMessage: 'Category not found' })
+      }
       if (err) throw err
       result = data
     } else {

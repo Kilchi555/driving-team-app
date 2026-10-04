@@ -18,6 +18,7 @@ interface CourseCategory {
   icon: string
   is_active: boolean
   sort_order: number
+  invoice_timing_mode?: 'inherit' | 'off' | 'immediate' | 'days_before_start' | 'on_confirmed'
   // New duration fields
   total_duration_hours: number
   session_count: number

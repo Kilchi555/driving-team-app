@@ -1874,6 +1874,51 @@
             </div>
           </div>
 
+          <!-- Course invoice timing default. Separate from invoice payment enablement and appointment auto-invoices. -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-lg font-semibold text-gray-900">Standard-Rechnungsstellung für Kurse</h2>
+            <p class="text-sm text-gray-500 mt-1 mb-4">
+              Zeitpunkt für Kursarten mit „Standard“ und für Kurse mit „Standard“.
+              Die Zahlungsart bleibt separat: ohne Zahlungsart Rechnung entsteht keine Rechnung.
+            </p>
+            <div class="space-y-2">
+              <label
+                class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                :class="courseInvoiceTimingDefault === 'off' ? '' : 'border-gray-200'"
+                :style="courseInvoiceTimingDefault === 'off' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
+              >
+                <input
+                  type="radio"
+                  class="mt-1 mr-3"
+                  value="off"
+                  v-model="courseInvoiceTimingDefault"
+                  @change="saveCourseInvoiceTimingDefault"
+                />
+                <div>
+                  <div class="font-medium text-gray-900">Aus</div>
+                  <div class="text-sm text-gray-600">Keine automatische Rechnungsstellung als Default.</div>
+                </div>
+              </label>
+              <label
+                class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                :class="courseInvoiceTimingDefault === 'immediate' ? '' : 'border-gray-200'"
+                :style="courseInvoiceTimingDefault === 'immediate' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
+              >
+                <input
+                  type="radio"
+                  class="mt-1 mr-3"
+                  value="immediate"
+                  v-model="courseInvoiceTimingDefault"
+                  @change="saveCourseInvoiceTimingDefault"
+                />
+                <div>
+                  <div class="font-medium text-gray-900">Sofort</div>
+                  <div class="text-sm text-gray-600">Neue Kurse und Kursarten ohne abweichenden Override können sofort abrechnen.</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <!-- Payment Reminder Settings -->
           <div class="bg-white rounded-lg shadow-sm border p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-1">Zahlungserinnerungen</h2>
@@ -3120,6 +3165,9 @@ const defaultPaymentMethodOptions = [
   { key: 'cash', label: 'Bar' }
 ]
 
+const courseInvoiceTimingDefault = ref<'off' | 'immediate' | null>(null)
+const savedCourseInvoiceTimingDefault = ref<'off' | 'immediate' | null>(null)
+
 const staffInvoicePermission = ref<'hidden' | 'create_only' | 'create_and_send'>('create_and_send')
 const autoInvoiceOnComplete = ref(false)
 const autoInvoiceRecipient = ref<'customer' | 'office' | 'both'>('customer')
@@ -3287,6 +3335,38 @@ const isSavingInstructorConfirmation = ref(false)
 // External calendar privacy (default: show real titles)
 const anonymizeExternalEventTitles = ref(false)
 const isSavingAnonymizeExternalTitles = ref(false)
+
+const loadCourseInvoiceTimingDefault = async () => {
+  try {
+    const result = await $fetch<{ default_invoice_timing_mode?: string }>('/api/admin/tenant/course-invoice-timing')
+    const mode = result?.default_invoice_timing_mode
+    const allowed = mode === 'off' || mode === 'immediate' ? mode : null
+    courseInvoiceTimingDefault.value = allowed
+    savedCourseInvoiceTimingDefault.value = allowed
+  } catch (err: any) {
+    logger.error('Error loading course invoice timing default:', err)
+  }
+}
+
+const saveCourseInvoiceTimingDefault = async () => {
+  const next = courseInvoiceTimingDefault.value
+  if (next !== 'off' && next !== 'immediate') return
+  if (next === savedCourseInvoiceTimingDefault.value) return
+  try {
+    const result = await $fetch<{ default_invoice_timing_mode: 'off' | 'immediate' }>('/api/admin/tenant/course-invoice-timing', {
+      method: 'PUT',
+      body: { default_invoice_timing_mode: next },
+    })
+    const saved = result.default_invoice_timing_mode === 'immediate' ? 'immediate' : 'off'
+    courseInvoiceTimingDefault.value = saved
+    savedCourseInvoiceTimingDefault.value = saved
+    showAutoSaveSuccess(saved === 'immediate' ? 'Kurs-Rechnungsstellung: Sofort' : 'Kurs-Rechnungsstellung: Aus')
+  } catch (err: any) {
+    logger.error('Error saving course invoice timing default:', err)
+    courseInvoiceTimingDefault.value = savedCourseInvoiceTimingDefault.value
+    showAutoSaveError('Fehler beim Speichern der Kurs-Rechnungsstellung')
+  }
+}
 
 const loadInstructorConfirmationSetting = async () => {
   try {
@@ -3821,6 +3901,7 @@ const loadData = async () => {
       
       await loadSessionSettings(tenantId)
       await loadPaymentSettings(tenantId)
+      await loadCourseInvoiceTimingDefault()
       await loadInvoiceSettings(tenantId)
       await loadPaymentReminderSettings(tenantId)
       await loadSARISettings(tenantId)
