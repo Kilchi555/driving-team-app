@@ -53,22 +53,24 @@ A person decides these unless a future written policy says otherwise:
 
 ## Review state
 
-`.github/workflows/review-state.yml` is an observer. It publishes one pull request comment marked `<!-- simy-review-state -->`.
+`.github/workflows/review-state.yml` is an observer. It publishes a pull request comment marked `<!-- simy-review-state -->`.
 
-That comment is an observation cache, not authority. A consumer must read the live pull request, compare `head_sha`, re-read required checks, merge state, and review threads, revalidate `risk_hint`, and reject a stale, duplicate, malformed, or unknown-schema comment. The canonical comment is the active marker with the greatest `observed_at`, then `evaluation_id`. Any other marker is not controller state.
+That comment is an observation cache, not authority. A consumer must read the live pull request, compare `head_sha`, re-read required checks, merge state, and review threads, revalidate `risk_hint`, and reject a stale, duplicate, malformed, inconsistent, or unknown-schema comment. The canonical comment is the active marker with the greatest `started_at`, then `observed_at`, then `evaluation_id`. A comment that started earlier is not controller state, even if its `observed_at` is later. `next_action` is not the only instruction: also read `blocking_reasons`, `actionable_findings`, `sync_required`, `sync_only`, and `executor.before_acting`.
 
-`next_action: ready_for_human_merge` means only that this observation found the conditions for a human merge decision at the observed head. It is not permission to merge, deploy, push, or apply SQL. `risk_hint` stays `unknown`. `cache.may_merge` and `cache.may_automate` stay false.
+`executor.may_automate` stays false. `next_action: fix` still requires a fresh read of the head, required checks, and current findings. `next_action: rebase` means synchronize the branch onto its base only, and only when `blocking_reasons` and `actionable_findings` are empty; then re-read review state. `next_action: ready_for_human_merge` is a human decision, not permission to merge, deploy, push, or apply SQL. `next_action: escalate` and `wait` are not automatic actions. `risk_hint` stays `unknown`. `cache.may_merge` and `cache.may_automate` stay false.
 
-The required-check names in the observer are the contexts from ruleset `Protect main — Required CI` as of 2026-09-26: Test and lint, E2E login, and Dependency review. If that ruleset cannot be read, or its contexts differ, the observer must not report `ready_for_human_merge`. A missing required check stays pending and is not treated as green. A cancelled required check is not a code fix.
+The required-check names in the observer are the contexts from ruleset `Protect main — Required CI` as of 2026-09-26: Test and lint, E2E login, and Dependency review. Those names are policy expectations. They must not replace an empty, missing, or unreadable live ruleset. If the live ruleset cannot be verified, has no required checks, or its contexts differ, the observer must not report `ready_for_human_merge`. A missing required check on a verified list stays pending and is not treated as green. A cancelled required check is not a code fix.
 
 CodeQL is not a required ruleset check. `codeql.gate` stays `not_required`. `codeql.clean` is true only when the observed CodeQL status is `pass`. `fail`, `unknown`, and a missing CodeQL check are not clean.
 
-GitHub Actions has no review-thread event. Thread state in the comment is eventual, not live. The observer re-reads threads on pull request, review, and review-comment events, on watched check completion, and on a 15-minute schedule. `freshness.live` stays false.
+GitHub Actions has no review-thread event. Resolving or reopening a thread does not by itself refresh the comment. `freshness.covers_thread_resolution` stays false and `freshness.live` stays false. `freshness.max_lag_minutes` is 15 only when `freshness.guarantee` is `scheduled`, which the observer sets only after it sees this workflow file on the default branch. Until then `freshness.guarantee` is `none` and `max_lag_minutes` is null. Do not treat a missing guarantee as a 15-minute bound.
+
+Publication is serialized by the `simy-review-state` concurrency group with `cancel-in-progress: false`. One run finishes before the next starts. The publisher appends a new comment instead of patching over an existing observation.
 
 ## Never
 
 - Treat Cursor, Vercel, CodeQL, or App Store status rolls as the merge gate. The required ruleset checks are Test and lint, E2E login, and Dependency review. App Store checks such as `App | Default` are not merge blockers. CodeQL `unknown` or `fail` is not a clean result.
-- Treat the review-state comment as permission to merge, push, or start an autonomous fix. Re-read GitHub before acting, and ignore a comment whose `head_sha` is not the live head.
+- Treat the review-state comment as permission to merge, push, or start an autonomous fix. Re-read GitHub before acting, and ignore a comment whose `head_sha` is not the live head. Do not treat `rebase` as a content fix or as a clean review. Do not treat `freshness.max_lag_minutes` as a bound when `freshness.guarantee` is `none`.
 - Use git branch `preview` as a staging path. It is stale and is not production.
 - Temporarily drop branch protection to merge, unless the user explicitly asks after Actions failed to start.
 - Open a ready PR into `main` unless it should ship. Keep work-in-progress as a **draft**.

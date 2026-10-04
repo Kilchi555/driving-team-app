@@ -13,6 +13,8 @@ import {
   interpretPublishedState,
   planPublication,
   planReconcile,
+  publishObservation,
+  readWorkflowOnDefaultBranch,
   renderReviewComment,
   requestStop,
   resolveCodeql,
@@ -58,6 +60,7 @@ function evaluate(overrides: Record<string, unknown> = {}) {
     threadsUncertain: false,
     uncertain: false,
     ruleset: verifiedRuleset,
+    startedAt: '2026-10-04T07:59:00.000Z',
     observedAt: '2026-10-04T08:00:00.000Z',
     evaluationId: 'run:1:368:abc123def456:2026-10-04T08:00:00.000Z',
     prNumber: 368,
@@ -402,8 +405,16 @@ describe('comment publication barrier', () => {
   })
 
   it('lets the later same-head observation win and blocks the earlier one', () => {
-    const first = observation({ observedAt: '2026-10-04T08:00:00.000Z', evaluationId: 'same-a' })
-    const second = observation({ observedAt: '2026-10-04T08:05:00.000Z', evaluationId: 'same-b' })
+    const first = observation({
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T08:00:01.000Z',
+      evaluationId: 'same-a',
+    })
+    const second = observation({
+      startedAt: '2026-10-04T08:05:00.000Z',
+      observedAt: '2026-10-04T08:05:01.000Z',
+      evaluationId: 'same-b',
+    })
     expect(planPublication({
       observation: first,
       currentHeadSha: first.head_sha,
@@ -416,8 +427,7 @@ describe('comment publication barrier', () => {
       comments: [comment(5, first)],
       cancelled: false,
     })
-    expect(afterFirst.action).toBe('update')
-    expect(afterFirst.updateId).toBe(5)
+    expect(afterFirst.action).toBe('create')
     const blocked = planPublication({
       observation: first,
       currentHeadSha: first.head_sha,
@@ -425,7 +435,7 @@ describe('comment publication barrier', () => {
       cancelled: false,
     })
     expect(blocked.action).toBe('skip')
-    expect(blocked.reason).toBe('older-than-canonical')
+    expect(blocked.reason).toBe('stale-snapshot')
     expect(blocked.retireIds).not.toContain(5)
   })
 
@@ -437,7 +447,7 @@ describe('comment publication barrier', () => {
       cancelled: false,
     })
     expect(plan.action).toBe('skip')
-    expect(plan.reason).toBe('older-than-canonical')
+    expect(plan.reason).toBe('stale-snapshot')
     expect(plan.retireIds).toEqual([])
     const reconcile = planReconcile({
       observation: older,
@@ -450,8 +460,16 @@ describe('comment publication barrier', () => {
   })
 
   it('selects the newer marker when two runs both created one from an empty list', () => {
-    const first = observation({ observedAt: '2026-10-04T08:00:00.000Z', evaluationId: 'create-a' })
-    const second = observation({ observedAt: '2026-10-04T08:00:01.000Z', evaluationId: 'create-b' })
+    const first = observation({
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T08:00:01.000Z',
+      evaluationId: 'create-a',
+    })
+    const second = observation({
+      startedAt: '2026-10-04T08:00:02.000Z',
+      observedAt: '2026-10-04T08:00:03.000Z',
+      evaluationId: 'create-b',
+    })
     expect(planPublication({ observation: first, currentHeadSha: first.head_sha, comments: [], cancelled: false }).action).toBe('create')
     expect(planPublication({ observation: second, currentHeadSha: second.head_sha, comments: [], cancelled: false }).action).toBe('create')
     const comments = [comment(11, first), comment(12, second)]
@@ -544,7 +562,376 @@ describe('consumer interpretation', () => {
     expect(first.split(MARKER)).toHaveLength(2)
     expect(extractMachineState(first)).toEqual(state)
     expect(state.freshness.live).toBe(false)
-    expect(state.freshness.max_lag_minutes).toBe(THREAD_REFRESH_MINUTES)
+    expect(state.freshness.guarantee).toBe('none')
+    expect(state.freshness.max_lag_minutes).toBeNull()
+    expect(state.freshness.covers_thread_resolution).toBe(false)
+  })
+})
+
+function memoryGitHub(head: string) {
+  const comments: { id: number, body: string }[] = []
+  let headSha = head
+  let nextId = 1
+  const calls: string[] = []
+  return {
+    calls,
+    comments,
+    setHead(sha: string) {
+      headSha = sha
+    },
+    async readHead() {
+      calls.push('readHead')
+      return headSha
+    },
+    async listComments() {
+      calls.push('listComments')
+      return comments.map((comment) => ({ ...comment }))
+    },
+    async createComment(_number: number, body: string) {
+      calls.push('create')
+      const created = { id: nextId, body }
+      nextId += 1
+      comments.push(created)
+      return { ...created }
+    },
+    async updateComment(id: number, body: string) {
+      calls.push('update')
+      if (body.includes('<!-- simy-review-state -->')) {
+        throw new Error('publisher patched a marker body')
+      }
+      const found = comments.find((comment) => comment.id === id)
+      if (!found) throw new Error(`missing comment ${id}`)
+      found.body = body
+      return { ...found }
+    },
+  }
+}
+
+function activeMarker(client: ReturnType<typeof memoryGitHub>) {
+  return client.comments.find((comment) => comment.body.includes('<!-- simy-review-state -->'))
+}
+
+describe('publisher write barrier', () => {
+  const head = 'abc123def456'
+
+  function snapshot(partial: Record<string, unknown>) {
+    return observation({ headSha: head, ...partial })
+  }
+
+  it('does not let a later-finished stale same-head snapshot become authoritative', async () => {
+    const client = memoryGitHub(head)
+    const fresh = snapshot({
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:02.000Z',
+      evaluationId: 'fresh',
+    })
+    const stale = snapshot({
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T09:00:05.000Z',
+      evaluationId: 'stale',
+      requiredChecks: { ...passing, 'Test and lint': 'pending' },
+    })
+    expect(stale.observed_at > fresh.observed_at).toBe(true)
+    expect(await publishObservation(client, 368, fresh)).toBe('published')
+    expect(await publishObservation(client, 368, stale)).toBe('stale-snapshot')
+    const marker = activeMarker(client)
+    expect(marker?.body).toContain('"evaluation_id": "fresh"')
+    expect(marker?.body).not.toContain('"evaluation_id": "stale"')
+    expect(client.calls.filter((call) => call === 'update')).toEqual([])
+  })
+
+  it('serializes overlapping publishers and keeps the later-started observation', async () => {
+    const client = memoryGitHub(head)
+    const later = snapshot({
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:02.000Z',
+      evaluationId: 'later',
+    })
+    const earlier = snapshot({
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T09:00:05.000Z',
+      evaluationId: 'earlier',
+      requiredChecks: { ...passing, 'Test and lint': 'pending' },
+    })
+    let releaseCreate: (() => void) | undefined
+    const gate = new Promise<void>((resolve) => {
+      releaseCreate = resolve
+    })
+    let held = false
+    const originalCreate = client.createComment.bind(client)
+    client.createComment = async (number, body) => {
+      if (!held) {
+        held = true
+        await gate
+      }
+      return originalCreate(number, body)
+    }
+    let readsAtGate = -1
+    const entered = new Promise<void>((resolve) => {
+      const original = client.createComment
+      client.createComment = async (number, body) => {
+        readsAtGate = client.calls.filter((call) => call === 'readHead').length
+        resolve()
+        return original(number, body)
+      }
+    })
+    const first = publishObservation(client, 368, later)
+    const second = publishObservation(client, 368, earlier)
+    await entered
+    expect(readsAtGate).toBe(3)
+    expect(client.calls.filter((call) => call === 'create')).toEqual([])
+    releaseCreate?.()
+    await Promise.all([first, second])
+    const markers = client.comments.filter((comment) => comment.body.includes('<!-- simy-review-state -->'))
+    expect(markers).toHaveLength(1)
+    expect(markers[0]?.body).toContain('"evaluation_id": "later"')
+    expect(client.comments.some((comment) => comment.body.includes('"evaluation_id": "earlier"') && comment.body.includes('<!-- simy-review-state -->'))).toBe(false)
+  })
+
+  it('prefers the later start when both comments were created', () => {
+    const fresh = snapshot({
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:02.000Z',
+      evaluationId: 'fresh',
+    })
+    const stale = snapshot({
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T09:00:05.000Z',
+      evaluationId: 'stale',
+      requiredChecks: { ...passing, 'Test and lint': 'pending' },
+    })
+    const result = interpretPublishedState(
+      [comment(1, stale), comment(2, fresh)],
+      { headSha: head },
+    )
+    expect(result.usable_as_cache).toBe(true)
+    expect(result.state?.evaluation_id).toBe('fresh')
+    expect(result.actionable_for_automation).toBe(false)
+    expect(result.state?.next_action).not.toBe('wait')
+  })
+
+  it('refuses a different head and leaves the canonical comment untouched', async () => {
+    const client = memoryGitHub(head)
+    const current = snapshot({
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:02.000Z',
+      evaluationId: 'current',
+    })
+    expect(await publishObservation(client, 368, current)).toBe('published')
+    client.setHead('ffffffffffffffff')
+    const late = snapshot({
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T09:00:06.000Z',
+      evaluationId: 'old-head',
+      headSha: head,
+    })
+    expect(await publishObservation(client, 368, late)).toBe('stale-head')
+    expect(activeMarker(client)?.body).toContain('"evaluation_id": "current"')
+  })
+
+  it('replaces an older same-head comment without patching its marker body', async () => {
+    const client = memoryGitHub(head)
+    const first = snapshot({
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T08:00:01.000Z',
+      evaluationId: 'first',
+    })
+    const second = snapshot({
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'second',
+    })
+    expect(await publishObservation(client, 368, first)).toBe('published')
+    expect(await publishObservation(client, 368, second)).toBe('published')
+    const markers = client.comments.filter((comment) => comment.body.includes('<!-- simy-review-state -->'))
+    expect(markers).toHaveLength(1)
+    expect(markers[0]?.body).toContain('"evaluation_id": "second"')
+    expect(client.comments.some((comment) => comment.body.includes('not canonical'))).toBe(true)
+  })
+})
+
+describe('ruleset fail closed', () => {
+  function input(ruleset: Record<string, unknown>) {
+    return buildEvaluationInput({
+      headSha: 'abc123def456',
+      baseSha: 'def456abc123',
+      mergeStateStatus: 'CLEAN',
+      mergeable: true,
+      ruleset,
+      observedAt: '2026-10-04T08:00:00.000Z',
+      startedAt: '2026-10-04T07:59:00.000Z',
+      evaluationId: 'ruleset',
+      prNumber: 368,
+      scheduleAvailable: false,
+      checkRuns: [
+        { name: 'Test and lint', status: 'completed', conclusion: 'success', completed_at: '2026-10-04T00:00:00Z' },
+        { name: 'E2E login', status: 'completed', conclusion: 'success', completed_at: '2026-10-04T00:00:00Z' },
+        { name: 'Dependency review', status: 'completed', conclusion: 'success', completed_at: '2026-10-04T00:00:00Z' },
+      ],
+    })
+  }
+
+  it('accepts a verified ruleset whose live checks match the expected set', () => {
+    const state = evaluateReviewState(input(verifiedRuleset))
+    expect(state.next_action).toBe('ready_for_human_merge')
+    expect(state.ruleset.matches_expected).toBe(true)
+    expect(state.ruleset.consistent).toBe(true)
+    expect(state.executor.human_only).toBe(true)
+    expect(state.executor.may_automate).toBe(false)
+  })
+
+  it('does not turn an empty verified ruleset into the expected checks', () => {
+    const built = input({
+      verified: true,
+      name: 'Protect main — Required CI',
+      required_checks: [],
+      matches_expected: true,
+    })
+    expect(built.ruleset.required_checks).toEqual([])
+    expect(built.requiredChecks).toEqual({})
+    const state = evaluateReviewState(built)
+    expect(state.next_action).toBe('escalate')
+    expect(state.ruleset.matches_expected).toBe(false)
+    expect(state.ruleset.observed_required_checks).toEqual([])
+    expect(state.blocking_reasons).toContain('ruleset_empty')
+    expect(state.reason).toContain('no required status checks')
+    expect(state.ruleset.policy_checks['Test and lint']).toBe('pass')
+  })
+
+  it('does not call a pull request ready when the ruleset cannot be read', () => {
+    const state = evaluateReviewState(input({ verified: false, required_checks: ['Test and lint', 'E2E login', 'Dependency review'] }))
+    expect(state.next_action).toBe('escalate')
+    expect(state.ruleset.verified).toBe(false)
+    expect(state.ruleset.observed_required_checks).toEqual([])
+    expect(state.blocking_reasons).toContain('ruleset_unverified')
+  })
+
+  it('does not call a pull request ready when the live checks differ', () => {
+    const state = evaluateReviewState(input({
+      verified: true,
+      required_checks: ['Test and lint', 'New required check'],
+      matches_expected: true,
+    }))
+    expect(state.next_action).toBe('escalate')
+    expect(state.ruleset.matches_expected).toBe(false)
+    expect(state.ruleset.observed_required_checks).toEqual(['Test and lint', 'New required check'])
+    expect(state.blocking_reasons).toContain('ruleset_mismatch')
+    expect(state.required_checks['New required check']).toBe('pending')
+  })
+})
+
+describe('freshness contract', () => {
+  it('does not publish a finite thread bound before scheduled refresh exists', () => {
+    const hidden = evaluate({ scheduleAvailable: false })
+    expect(hidden.freshness).toMatchObject({
+      review_threads: 'unknown',
+      live: false,
+      event_driven: true,
+      covers_thread_resolution: false,
+      scheduled: false,
+      max_lag_minutes: null,
+      guarantee: 'none',
+    })
+    const visible = evaluate({ scheduleAvailable: true })
+    expect(visible.freshness.guarantee).toBe('scheduled')
+    expect(visible.freshness.scheduled).toBe(true)
+    expect(visible.freshness.max_lag_minutes).toBe(THREAD_REFRESH_MINUTES)
+    expect(visible.freshness.covers_thread_resolution).toBe(false)
+  })
+
+  it('rejects a comment that claims a 15-minute bound without the scheduled guarantee', () => {
+    const state = observation({})
+    state.freshness = { ...state.freshness, max_lag_minutes: 15 }
+    const result = interpretPublishedState([comment(1, state)], { headSha: state.head_sha })
+    expect(result.usable_as_cache).toBe(false)
+    expect(result.reason).toBe('inconsistent')
+    expect(result.actionable_for_automation).toBe(false)
+  })
+
+  it('reads scheduled availability from the default branch, not from the pull request head', async () => {
+    const paths: string[] = []
+    const absent = await readWorkflowOnDefaultBranch(async (path) => {
+      paths.push(path)
+      if (path.endsWith('/contents/.github/workflows/review-state.yml?ref=main')) {
+        return { status: 404, payload: null }
+      }
+      return { status: 200, payload: { default_branch: 'main' } }
+    }, 'Kilchi555', 'driving-team-app')
+    expect(absent).toBe(false)
+    expect(paths.some((path) => path.includes('ref=main'))).toBe(true)
+
+    const present = await readWorkflowOnDefaultBranch(async (path) => {
+      if (path.includes('/contents/')) return { status: 200, payload: { type: 'file' } }
+      return { status: 200, payload: { default_branch: 'main' } }
+    }, 'Kilchi555', 'driving-team-app')
+    expect(present).toBe(true)
+  })
+})
+
+describe('rebase does not hide findings', () => {
+  it('keeps an actionable Bugbot finding ahead of branch synchronization', () => {
+    const state = evaluate({
+      mergeStateStatus: 'BEHIND',
+      mergeable: false,
+      findings: [finding],
+      reviewThreads: {
+        unresolved_count: 1,
+        unresolved_non_bugbot_count: 0,
+        unresolved_bugbot_count: 1,
+        uncertain: false,
+      },
+    })
+    expect(state.next_action).toBe('fix')
+    expect(state.sync_required).toBe(true)
+    expect(state.sync_only).toBe(false)
+    expect(state.actionable_findings).toEqual([
+      { source: 'bugbot', title: finding.title, url: finding.url },
+    ])
+    expect(state.blocking_reasons).toContain('bugbot_finding')
+    expect(state.executor.sync_only).toBe(false)
+    expect(state.executor.before_acting.join(' ')).toContain('Bugbot')
+  })
+
+  it('does not turn an unresolved review thread into a sync-only rebase', () => {
+    const state = evaluate({
+      mergeStateStatus: 'BEHIND',
+      mergeable: false,
+      reviewThreads: {
+        unresolved_count: 1,
+        unresolved_non_bugbot_count: 1,
+        unresolved_bugbot_count: 0,
+        uncertain: false,
+      },
+    })
+    expect(state.next_action).toBe('escalate')
+    expect(state.sync_required).toBe(true)
+    expect(state.sync_only).toBe(false)
+    expect(state.blocking_reasons).toContain('unresolved_review_thread')
+    expect(state.actionable_findings).toEqual([])
+    expect(state.executor.before_acting.join(' ')).toContain('Do not automate')
+  })
+
+  it('uses rebase only when the review state is otherwise clean', () => {
+    const state = evaluate({ mergeStateStatus: 'BEHIND', mergeable: false })
+    expect(state.next_action).toBe('rebase')
+    expect(state.sync_required).toBe(true)
+    expect(state.sync_only).toBe(true)
+    expect(state.blocking_reasons).toEqual([])
+    expect(state.actionable_findings).toEqual([])
+    expect(state.executor.sync_only).toBe(true)
+    expect(state.executor.before_acting.join(' ')).toContain('Synchronize the branch')
+    expect(state.reason).toContain('Synchronization only')
+  })
+
+  it('is ready for a human only when sync, findings, threads, checks, and the ruleset are clear', () => {
+    const state = evaluate({})
+    expect(state.next_action).toBe('ready_for_human_merge')
+    expect(state.sync_required).toBe(false)
+    expect(state.executor.human_only).toBe(true)
+    expect(state.executor.may_automate).toBe(false)
+    expect(state.executor.actions.ready_for_human_merge.join(' ')).toContain('human decides')
+    expect(state.executor.actions.fix.join(' ')).toContain('Re-read the live pull request head')
+    expect(state.executor.actions.escalate.join(' ')).toContain('Do not automate')
   })
 })
 
@@ -556,8 +943,9 @@ describe('review-state workflow safety', () => {
     expect(workflow).toContain('checks: read')
     expect(workflow).toContain('persist-credentials: false')
     expect(workflow).toContain("cron: '*/15 * * * *'")
-    expect(workflow).toContain('review-state-pr-')
-    expect(workflow).toContain('cancel-in-progress: true')
+    expect(workflow).toContain('group: simy-review-state')
+    expect(workflow).toContain('cancel-in-progress: false')
+    expect(workflow).not.toContain('cancel-in-progress: true')
     expect(workflow).not.toContain('contents: write')
     expect(workflow).not.toContain('actions: write')
     expect(workflow).not.toContain('deployments: write')
