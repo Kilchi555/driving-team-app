@@ -258,7 +258,7 @@
 
               <td class="px-5 py-3.5">
                 <p class="text-sm text-gray-700">{{ user.phone || '—' }}</p>
-                <p class="text-xs text-gray-400 mt-0.5">{{ user.is_invitation ? 'Einladung ausstehend' : (user.preferred_payment_method || 'Nicht festgelegt') }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ user.is_invitation || isPendingClientInvite(user) ? 'Einladung ausstehend' : (user.preferred_payment_method || 'Nicht festgelegt') }}</p>
               </td>
 
               <td class="px-5 py-3.5">
@@ -270,6 +270,10 @@
                   :class="['inline-flex px-2 py-0.5 text-xs font-semibold rounded-full', user.invitation_status === 'expired' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700']">
                   {{ user.invitation_status === 'expired' ? 'Abgelaufen' : 'Eingeladen' }}
                 </span>
+                <span v-else-if="isPendingClientInvite(user)"
+                  class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-700">
+                  Eingeladen
+                </span>
                 <span v-else :class="user.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'"
                   class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full">
                   {{ user.is_active ? 'Aktiv' : 'Inaktiv' }}
@@ -279,29 +283,7 @@
               <!-- Guide-Edit Toggle / Resend invite (staff tab) -->
               <td v-if="activeTab === 'staff'" class="px-5 py-3.5" @click.stop>
                 <button
-                  v-if="user.is_invitation && user.invitation_status !== 'expired'"
-                  @click="resendStaffInvitation(user)"
-                  :disabled="resendingInvitationId === user.id"
-                  class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 disabled:opacity-50"
-                  title="Einladung per E-Mail erneut senden"
-                >
-                  <svg v-if="resendingInvitationId === user.id" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
-                  </svg>
-                  <span>{{ resendingInvitationId === user.id ? 'Senden…' : 'E-Mail erneut' }}</span>
-                </button>
-                <button
-                  v-else-if="user.is_invitation && user.invitation_status === 'expired'"
-                  @click="resendStaffInvitation(user)"
-                  :disabled="resendingInvitationId === user.id"
-                  class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
-                  title="Abgelaufene Einladung erneuern und per E-Mail senden"
-                >
-                  <span>{{ resendingInvitationId === user.id ? 'Senden…' : 'Erneuern + E-Mail' }}</span>
-                </button>
-                <button
-                  v-else-if="!user.is_invitation && !user.deleted_at"
+                  v-if="!user.is_invitation && !user.deleted_at"
                   @click="toggleGuideEdit(user)"
                   :disabled="togglingGuideEdit === user.id"
                   :title="user.can_edit_guide ? 'Unterrichts-Guide-Zugriff entziehen' : 'Unterrichts-Guide bearbeiten erlauben'"
@@ -338,6 +320,12 @@
                 <p v-if="user.is_invitation && user.invitation_expires_at" class="text-xs text-gray-400 mt-0.5">
                   Läuft ab: {{ formatExpiryDate(user.invitation_expires_at) }}
                 </p>
+                <InvitedUserRowActions
+                  v-if="user.is_invitation || isPendingClientInvite(user)"
+                  :busy="resendingInvitationId === user.id"
+                  @edit="openInviteEditor(user)"
+                  @resend="resendStaffInvitation(user)"
+                />
               </td>
             </tr>
 
@@ -1035,6 +1023,13 @@
       </div>
     </div>
   </div>
+  <InvitedUserEditDialog
+    v-if="editingInvite"
+    :kind="editingInvite.is_invitation ? 'staff_invitation' : 'client'"
+    :user="editingInvite"
+    @close="editingInvite = null"
+    @changed="loadUsers"
+  />
 </template>
 
 <script setup lang="ts">
@@ -1052,6 +1047,9 @@ const { primaryColor } = useTenantBranding()
 import StaffTab from '~/components/users/StaffTab.vue'
 import AdminsTab from '~/components/users/AdminsTab.vue'
 import CustomersTab from '~/components/users/CustomersTab.vue'
+import InvitedUserEditDialog from '~/components/users/InvitedUserEditDialog.vue'
+import InvitedUserRowActions from '~/components/users/InvitedUserRowActions.vue'
+import { isPendingClientInvite, resendInvitedUser } from '~/composables/useInvitedUserActions'
 import { useTerminology } from '~/composables/useTerminology'
 
 const { t } = useTerminology()
@@ -1083,6 +1081,7 @@ interface User {
   is_invitation?: boolean
   invitation_status?: 'pending' | 'expired'
   invitation_expires_at?: string
+  onboarding_status?: string | null
 }
 
 // State
@@ -1148,6 +1147,7 @@ const showInviteStaffModal = ref(false)
 const isInvitingStaff = ref(false)
 const inviteStaffError = ref('')
 const resendingInvitationId = ref<string | null>(null)
+const editingInvite = ref<User | null>(null)
 const inviteForm = ref({
   firstName: '',
   phone: '',
@@ -1557,9 +1557,9 @@ const filteredUsers = computed(() => {
 
   // Invitation filter
   if (invitationFilter.value === 'users') {
-    filtered = filtered.filter(user => !user.is_invitation)
+    filtered = filtered.filter(user => !user.is_invitation && !isPendingClientInvite(user))
   } else if (invitationFilter.value === 'invitations') {
-    filtered = filtered.filter(user => user.is_invitation)
+    filtered = filtered.filter(user => user.is_invitation || isPendingClientInvite(user))
   }
 
   // Search filter
@@ -1957,30 +1957,20 @@ const isPlaceholderInviteEmail = (email?: string | null) => {
   return e.includes('@onboarding.simy.ch') || (e.startsWith('pending_') && e.includes('@invite.simy.ch'))
 }
 
+const openInviteEditor = (user: User) => {
+  editingInvite.value = user
+}
+
 const resendStaffInvitation = async (user: User) => {
-  if (!user?.id || !user.is_invitation) return
+  if (!user?.id) return
+  if (!user.is_invitation && !isPendingClientInvite(user)) return
+  if ((user.is_invitation || isPendingClientInvite(user)) && isPlaceholderInviteEmail(user.email)) {
+    openInviteEditor(user)
+    return
+  }
   resendingInvitationId.value = user.id
   try {
-    let emailForResend: string | undefined
-    if (isPlaceholderInviteEmail(user.email)) {
-      const entered = window.prompt(
-        `Für ${user.first_name} ist noch keine Staff-E-Mail hinterlegt.\nBitte E-Mail für den ${t.value.staff}-Login eingeben (nicht die Admin-E-Mail):`,
-        ''
-      )
-      if (!entered?.trim() || !entered.includes('@')) {
-        inviteStaffError.value = 'E-Mail erforderlich für den erneuten Versand'
-        showInviteStaffModal.value = true
-        return
-      }
-      emailForResend = entered.trim().toLowerCase()
-    } else {
-      emailForResend = user.email || undefined
-    }
-
-    const data = await $fetch<any>('/api/staff/resend-invite', {
-      method: 'POST',
-      body: { invitationId: user.id, email: emailForResend },
-    })
+    const data = await resendInvitedUser(user)
 
     if (data?.sentVia === 'email_failed' || data?.sentVia === 'failed') {
       inviteManualLink.value = data.inviteLink || ''
@@ -1989,11 +1979,11 @@ const resendStaffInvitation = async (user: User) => {
       inviteStaffError.value = data.message || 'E-Mail konnte nicht gesendet werden'
     } else {
       showInviteSuccessToast.value = true
-      inviteSuccessMessage.value = `Einladung per E-Mail an ${data.email || emailForResend || ''} erneut gesendet!`
+      inviteSuccessMessage.value = `Einladung per E-Mail an ${data.email || user.email || ''} erneut gesendet!`
     }
     await loadUsers()
   } catch (error: any) {
-    console.error('❌ Error resending staff invitation:', error)
+    console.error('❌ Error resending invitation:', error)
     inviteStaffError.value = error?.data?.statusMessage || error?.statusMessage || error?.message || 'Fehler beim erneuten Senden'
     showInviteStaffModal.value = true
   } finally {

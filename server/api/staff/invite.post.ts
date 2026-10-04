@@ -17,6 +17,7 @@ import {
   checkEmailAvailableForStaff,
   emailConflictMessage,
 } from '~/server/utils/email-availability'
+import { generateInvitationToken } from '~/server/utils/invitation-token'
 import { pickStaffInviteFields } from '~/server/utils/invitation-role'
 import {
   missingStaffInvitationRole,
@@ -246,7 +247,7 @@ export default defineEventHandler(async (event) => {
 
     const showDualLoginHint = await isFirstStaffOnboarding(serviceSupabase, userProfile.tenant_id)
 
-    const token = generateToken()
+    const token = generateInvitationToken()
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 30)
 
@@ -390,12 +391,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-
-function generateToken(): string {
-  const array = new Uint8Array(24)
-  crypto.getRandomValues(array)
-  return btoa(String.fromCharCode(...array))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '')
-}

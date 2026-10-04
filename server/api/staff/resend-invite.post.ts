@@ -10,6 +10,7 @@ import {
   isFirstStaffOnboarding,
   isPlaceholderStaffInviteEmail,
 } from '~/server/utils/staff-invite-email'
+import { buildStaffInvitationRenewal } from '~/server/utils/invited-user-manage'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
@@ -134,24 +135,24 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const token = generateToken()
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 30)
+    const renewal = buildStaffInvitationRenewal({ email: sendToEmail })
+    const token = renewal.invitation_token
 
-    const { error: updateError } = await supabase
+    const { data: renewed, error: updateError } = await supabase
       .from('staff_invitations')
-      .update({
-        invitation_token: token,
-        expires_at: expiresAt.toISOString(),
-        status: 'pending',
-        email: sendToEmail,
-      })
+      .update(renewal)
       .eq('id', invitation.id)
       .eq('tenant_id', userProfile.tenant_id)
+      .in('status', ['pending', 'expired'])
+      .select('id')
+      .maybeSingle()
 
     if (updateError) {
       logger.error('❌ Failed to renew staff invitation:', updateError)
       throw createError({ statusCode: 500, statusMessage: 'Einladung konnte nicht erneuert werden' })
+    }
+    if (!renewed) {
+      throw createError({ statusCode: 409, statusMessage: 'Einladung ist nicht mehr offen' })
     }
 
     const envBase = process.env.NUXT_PUBLIC_BASE_URL || process.env.BASE_URL
@@ -253,12 +254,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-
-function generateToken(): string {
-  const array = new Uint8Array(24)
-  crypto.getRandomValues(array)
-  return btoa(String.fromCharCode(...array))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '')
-}
