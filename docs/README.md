@@ -309,10 +309,6 @@ Dokumentation wichtiger Datenflüsse und Geschäftsprozesse der Anwendung.
 
 ---
 
-## Engineering Runbooks
-
-- [Staff POS / product sale as payment](./STAFF_POS_PRODUCT_SALE.md) — Staff Direktverkauf (`staff_pos_sale`, #336); current main credit timing; DRAFT migrations
-
 ## 🚀 Verwendung dieser Dokumentation
 
 ### Für neue Entwickler
@@ -352,6 +348,7 @@ Bei Änderungen am System:
 
 | Runbook | Topic |
 |---------|--------|
+| [STAFF_POS_PRODUCT_SALE.md](./STAFF_POS_PRODUCT_SALE.md) | #336 — Staff Direktverkauf (`staff_pos_sale`); main credit timing; DRAFT migrations |
 | [TRIAL_CACHE_AUTHORIZATION.md](./TRIAL_CACHE_AUTHORIZATION.md) | #337 — server-authoritative trial gate; no localStorage entitlement |
 | [ASSIGNABLE_USER_ROLES.md](./ASSIGNABLE_USER_ROLES.md) | #344 — closed `public.users.role` allowlists; no `student` |
 | [INVITATION_ROLE_REGISTRATION.md](./INVITATION_ROLE_REGISTRATION.md) | #362 — invitation role lock at staff/admin accept |
