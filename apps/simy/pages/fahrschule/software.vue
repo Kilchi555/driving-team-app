@@ -226,7 +226,7 @@ useHead({
       url: 'https://www.simy.ch/fahrschule/software',
     }),
     faqPageLd([
-      { q: 'Was kostet Fahrschulsoftware?', a: `Fahrschulsoftware kostet je nach Anbieter zwischen CHF 29 und CHF 199 pro Monat. Simy bietet Pläne ab CHF 49/Monat mit 30 Tagen kostenlosem Test. ${PRICE_VAT_NOTE}` },
+      { q: 'Was kostet Fahrschulsoftware?', a: `Fahrschulsoftware kostet je nach Anbieter einen Monatspreis oder einen Betrag pro Schüler plus Setup. Simy startet ab CHF 49/Monat mit unbegrenzten Schülern, ohne Einrichtungsgebühr, und mit 30 Tagen kostenlosem Test. ${PRICE_VAT_NOTE}` },
       { q: 'Welche Fahrschulsoftware ist die beste?', a: 'Simy ist eine All-in-One Lösung für Schweizer Fahrschulen mit Terminbuchung, automatischen Rechnungen, Fahrlehrer-App und Website-Generator.' },
       { q: 'Was kostet die Online-Zahlung via Wallee?', a: WALLEE_FEE_FAQ },
     ]),

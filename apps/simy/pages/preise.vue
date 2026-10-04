@@ -14,7 +14,8 @@
           Preise
         </div>
         <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">Software-Preise — transparent &amp; fair</h1>
-        <p class="text-xl text-gray-500 max-w-xl mx-auto mb-10">30 Tage kostenlos testen — keine Kreditkarte, keine Jahresbindung.</p>
+        <p class="text-xl text-gray-500 max-w-xl mx-auto">30 Tage kostenlos testen — keine Kreditkarte, keine Jahresbindung.</p>
+        <p class="text-base font-semibold text-gray-800 max-w-xl mx-auto mt-4 mb-10">Unbegrenzte Schüler in jedem Plan. Kein Preis pro Schüler. Keine Einrichtungsgebühr.</p>
       </div>
     </section>
 
@@ -64,7 +65,7 @@
         </div>
 
         <!-- Feature comparison note -->
-        <p class="text-center text-sm text-gray-400">Alle Pläne: DSGVO-konform, Schweizer Server, monatlich kündbar. <a href="#vergleich" class="underline hover:text-gray-600">Vollständiger Feature-Vergleich ↓</a></p>
+        <p class="text-center text-sm text-gray-400">Alle Pläne: unbegrenzte Schüler, DSGVO-konform, Schweizer Server, monatlich kündbar. <a href="#vergleich" class="underline hover:text-gray-600">Vollständiger Feature-Vergleich ↓</a></p>
         <SimyPriceVatNote class="text-center mt-2" />
       </div>
     </section>
@@ -106,6 +107,39 @@
             Website erstellen →
           </a>
         </div>
+      </div>
+    </section>
+
+    <!-- Was im Monatspreis steckt -->
+    <section class="pb-20 px-6">
+      <div class="max-w-5xl mx-auto">
+        <p class="text-xs font-bold uppercase tracking-widest text-center mb-3" style="color: var(--brand-primary)">Im Monatspreis</p>
+        <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 text-center mb-3">Diese Leistungen sind bei Simy schon drin</h2>
+        <p class="text-gray-500 text-center max-w-2xl mx-auto mb-8">Der Preis richtet sich nach den Mitarbeiter-Logins. Die Schülerzahl ist in jedem Plan unbegrenzt. Die Tabelle zeigt die öffentlichen Modulpreise von QualiDrive daneben.</p>
+        <div class="overflow-x-auto rounded-2xl border border-gray-100 bg-white">
+          <table class="w-full text-sm min-w-[640px]">
+            <thead>
+              <tr class="border-b border-gray-100 bg-gray-50">
+                <th class="px-5 py-4 text-left font-bold text-gray-500">Leistung</th>
+                <th class="px-4 py-4 text-left font-bold text-gray-500">QualiDrive, öffentliche Preisliste</th>
+                <th class="px-4 py-4 text-left font-bold" style="color: var(--brand-primary)">Simy</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, i) in qualiCompare" :key="i" class="border-t border-gray-50">
+                <td class="px-5 py-3.5 font-medium text-gray-800">{{ row.feature }}</td>
+                <td class="px-4 py-3.5 text-gray-500">{{ row.quali }}</td>
+                <td class="px-4 py-3.5 font-semibold text-gray-900">{{ row.simy }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-gray-400 mt-4 leading-relaxed">
+          QualiDrive-Preise gemäss qualidrive.ch/preise, Stand 4. Oktober 2026. Der Schülerpreis gilt einmalig pro neu erfasstem Schüler und summiert sich über die aktivierten Module. Setup und Hosting (17&nbsp;% der Setup-Pauschalen pro Jahr) kommen dazu.
+          Das Simy-Schülerportal läuft im Browser auf dem Handy.
+          Online-Zahlungen laufen über Wallee mit {{ walleeFeePercent }} pro Kundenzahlung, ohne Monatspreis.
+          Bei QualiDrive sind Fahrlehrer-Logins im Grundpreis unbeschränkt. Bei Simy gilt das Seat-Kontingent des Plans.
+        </p>
       </div>
     </section>
 
@@ -319,6 +353,7 @@ const plans = computed(() => [
     price: monthlyPrice('starter'),
     highlighted: false,
     features: [
+      { text: 'Unbegrenzte Schüler' },
       { text: '1 Mitarbeiter inkl.' },
       { text: '20 SMS-Segmente inkl. / Monat' },
       { text: 'Online-Terminbuchung' },
@@ -334,6 +369,7 @@ const plans = computed(() => [
     price: monthlyPrice('professional'),
     highlighted: true,
     features: [
+      { text: 'Unbegrenzte Schüler' },
       { text: 'Bis 5 Mitarbeiter inkl.' },
       { text: '50 SMS-Segmente inkl. / Monat' },
       { text: 'Alles aus Starter' },
@@ -346,6 +382,7 @@ const plans = computed(() => [
     price: monthlyPrice('enterprise'),
     highlighted: false,
     features: [
+      { text: 'Unbegrenzte Schüler' },
       { text: 'Bis 10 Mitarbeiter inkl.' },
       { text: '100 SMS-Segmente inkl. / Monat' },
       { text: 'Alles aus Professional' },
@@ -355,10 +392,26 @@ const plans = computed(() => [
   },
 ])
 
+const qualiCompare = [
+  { feature: 'Jeder neue Schüler (Standard)', quali: 'CHF 12 einmalig', simy: 'Unbegrenzt, im Monatspreis' },
+  { feature: 'Weitere Ausbildungskategorien', quali: 'CHF 3 / Schüler + CHF 290 Setup', simy: 'Im Grundpreis, alle Kategorien' },
+  { feature: 'Online-Buchung', quali: 'CHF 4 / Schüler + CHF 190 Setup', simy: 'Im Grundpreis, ab Starter' },
+  { feature: 'Kursverwaltung', quali: 'CHF 5 / Schüler + CHF 290 Setup', simy: 'Ab Professional inklusive' },
+  { feature: 'Zugang für Schüler', quali: 'CHF 3 / Schüler + CHF 190 Setup (App)', simy: 'Schülerportal im Grundpreis' },
+  { feature: 'Online-Zahlung (TWINT, Karte)', quali: 'CHF 29 / Monat + CHF 390 Setup', simy: `Im Grundpreis, ${WALLEE_FEE_PERCENT} pro Zahlung` },
+  { feature: 'Einrichtung', quali: 'Ab CHF 590 einmalig', simy: 'Keine Einrichtungsgebühr' },
+  { feature: 'Updates & Hosting', quali: '17 % der Setup-Kosten pro Jahr', simy: 'Im Monatspreis' },
+  { feature: 'SMS an Schüler', quali: 'Pro versendeter SMS extra', simy: 'Kontingent im Plan, danach CHF 0.15' },
+]
+
 const comparison: { label: string; starter: boolean | string; pro: boolean | string; enterprise: boolean | string }[] = [
+  { label: 'Schüler', starter: 'Unbegrenzt', pro: 'Unbegrenzt', enterprise: 'Unbegrenzt' },
   { label: 'Mitarbeiter inkl.', starter: '1', pro: '5', enterprise: '10' },
   { label: 'SMS-Segmente inkl. / Monat', starter: '20', pro: '50', enterprise: '100' },
   { label: 'SMS-Überzug', starter: 'CHF 0.15/Seg.', pro: 'CHF 0.15/Seg.', enterprise: 'CHF 0.15/Seg.' },
+  { label: 'Ausbildungskategorien', starter: 'Alle', pro: 'Alle', enterprise: 'Alle' },
+  { label: 'Schülerportal', starter: true, pro: true, enterprise: true },
+  { label: 'Hosting & Updates', starter: 'Inklusive', pro: 'Inklusive', enterprise: 'Inklusive' },
   { label: 'Online-Terminbuchung', starter: true, pro: true, enterprise: true },
   { label: 'Kundenverwaltung', starter: true, pro: true, enterprise: true },
   { label: 'E-Mail- & SMS-Erinnerungen', starter: true, pro: true, enterprise: true },
@@ -380,6 +433,7 @@ const comparison: { label: string; starter: boolean | string; pro: boolean | str
 ]
 
 const faqs = [
+  { q: 'Gibt es ein Limit bei der Anzahl Schüler?', a: 'Nein. In jedem Plan sind unbegrenzt viele Schüler inklusive — kein Preis pro neuem Schüler. Begrenzt sind die Mitarbeiter-Logins: Starter 1, Professional 5, Enterprise 10. Weitere Seats kannst du dazubuchen.' },
   { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein. Die 30 Tage sind vollständig kostenlos und ohne Kreditkarte. Du wirst erst danach zur Kasse gebeten — und kannst jederzeit kündigen.' },
   { q: 'Kann ich jederzeit upgraden oder downgraden?', a: 'Ja. Planwechsel sind jederzeit möglich und wirken sofort. Beim Upgrade wird der Differenzbetrag anteilsmässig für die verbleibenden Tage des Monats berechnet. Beim Downgrade erhältst du eine Gutschrift auf die nächste Rechnung. Keine Wartezeit, keine manuelle Freischaltung.' },
   { q: 'Wie funktioniert die Abrechnung?', a: `Wir stellen monatlich per TWINT, Kreditkarte oder Banküberweisung in Rechnung. Bei Jahresabo wird einmal jährlich abgerechnet. ${PRICE_VAT_NOTE}` },
@@ -394,7 +448,7 @@ const faqs = [
 useHead(() => ({
   title: `Preise – Simy | All-in-One Software ab CHF ${STARTING_PRICE_CHF}/Monat`,
   meta: [
-    { name: 'description', content: `Simy Preise: All-in-One Software ab CHF ${STARTING_PRICE_CHF}/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.` },
+    { name: 'description', content: `Simy Preise: ab CHF ${STARTING_PRICE_CHF}/Monat, unbegrenzte Schüler, keine Einrichtungsgebühr. Online-Buchung, Schülerportal und TWINT im Grundpreis. 30 Tage kostenlos.` },
     { name: 'keywords', content: 'Simy preis, all-in-one software kosten, online buchungssystem preis schweiz, website hosten schweiz, google business profile preis, website generator preis' },
     { property: 'og:title', content: `Preise – Simy | All-in-One Software ab CHF ${STARTING_PRICE_CHF}/Monat` },
     { property: 'og:description', content: `Simy Preise: ab CHF ${STARTING_PRICE_CHF}/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar.` },

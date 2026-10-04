@@ -147,7 +147,7 @@
             </tbody>
           </table>
         </div>
-        <p class="text-xs text-gray-400 text-center mt-4">Angaben basieren auf öffentlich verfügbaren Informationen der jeweiligen Anbieter (Stand Juni 2026). QualiDrive-Preis: pro neu erfasstem Schüler (einmalig), ohne Setup-Pauschale. Simy-Preise {{ PRICE_VAT_NOTE_SHORT }}.</p>
+        <p class="text-xs text-gray-400 text-center mt-4">Angaben basieren auf öffentlich verfügbaren Informationen der jeweiligen Anbieter (Stand Oktober 2026). QualiDrive: CHF 12 einmalig pro neuem Schüler für Standardfunktionen, dazu Setup ab CHF 590 und 17 % Hosting pro Jahr. Module wie Online-Buchung, Kurse und Schüler-App kosten extra pro Schüler. Simy: unbegrenzte Schüler im Monatspreis, {{ PRICE_VAT_NOTE_SHORT }}.</p>
       </div>
     </section>
 
@@ -254,6 +254,14 @@ const comparison = [
   {
     feature: 'Kostenloser Test',
     simy: '30 Tage', carzi: 'Auf Anfrage', orphy: '30 Tage', admin: 'k. A.', quali: 'k. A.'
+  },
+  {
+    feature: 'Schüler im Grundpreis',
+    simy: 'Unbegrenzt', carzi: 'k. A.', orphy: 'k. A.', admin: 'k. A.', quali: 'CHF 12 / Schüler'
+  },
+  {
+    feature: 'Einrichtungsgebühr',
+    simy: 'Keine', carzi: 'k. A.', orphy: 'k. A.', admin: 'k. A.', quali: 'Ab CHF 590'
   },
   {
     feature: 'Preis / Monat',

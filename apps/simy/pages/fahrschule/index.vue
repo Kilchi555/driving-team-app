@@ -61,6 +61,10 @@
           </span>
           <span class="flex items-center gap-1.5">
             <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            Unbegrenzte Schüler
+          </span>
+          <span class="flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
             Swiss Made
           </span>
           <span class="flex items-center gap-1.5">
@@ -330,7 +334,7 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
         mainEntity: [
-          { '@type': 'Question', name: 'Was kostet Simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: `Simy bietet Pläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos — keine Kreditkarte nötig. ${PRICE_VAT_NOTE}` } },
+          { '@type': 'Question', name: 'Was kostet Simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: `Simy bietet Pläne ab CHF 49/Monat mit unbegrenzten Schülern, ohne Preis pro Schüler und ohne Einrichtungsgebühr. Online-Buchung, Schülerportal und TWINT sind im Grundpreis. 30 Tage kostenlos, ohne Kreditkarte. ${PRICE_VAT_NOTE}` } },
           { '@type': 'Question', name: 'Wie lange dauert die Einrichtung?', acceptedAnswer: { '@type': 'Answer', text: 'In der Regel unter 15 Minuten. Der Setup-Wizard führt durch alle Schritte.' } },
           { '@type': 'Question', name: 'Können meine Schüler selbst Termine buchen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink. Im Schülerportal sehen sie Termine, Fortschritt, Guthaben und Dokumente.' } },
           { '@type': 'Question', name: 'Sehen Schüler ihre Bewertungen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Dokumentierte Bewertungen sind im Portal sichtbar. Schule und Schüler können das PDF exportieren.' } },
@@ -374,7 +378,7 @@ const testimonials = [
 ]
 
 const faqs = [
-  { q: 'Was kostet Simy für Fahrschulen?', a: `Simy bietet verschiedene Pläne ab CHF 49/Monat. Du kannst 30 Tage vollständig kostenlos testen — ohne Kreditkarte. ${PRICE_VAT_NOTE}` },
+  { q: 'Was kostet Simy für Fahrschulen?', a: `Simy bietet Pläne ab CHF 49/Monat mit unbegrenzten Schülern — kein Preis pro Schüler, keine Einrichtungsgebühr. Online-Buchung, Schülerportal und TWINT sind im Grundpreis. 30 Tage kostenlos, ohne Kreditkarte. ${PRICE_VAT_NOTE}` },
   { q: 'Wie lange dauert die Einrichtung?', a: 'In der Regel bist du in unter 15 Minuten startklar. Der Setup-Wizard führt dich durch alle Schritte: Kategorien, Preise, Standorte und Fahrlehrer.' },
   { q: 'Können meine Schüler selbst Termine buchen?', a: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink. Im Schülerportal sehen sie Termine, Fortschritt, Guthaben und hochgeladene Dokumente.' },
   { q: 'Sehen Schüler ihre Bewertungen?', a: 'Ja. Was du nach der Stunde dokumentierst, ist im Portal sichtbar. Schule und Schüler können das PDF exportieren.' },

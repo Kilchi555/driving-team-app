@@ -1023,7 +1023,8 @@
       <div class="max-w-4xl mx-auto text-center">
         <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Preise</p>
         <h2 class="text-4xl font-extrabold text-gray-900 mb-3">Transparent. Flexibel. Fair.</h2>
-        <p class="text-gray-500 text-lg mb-12">Monatlich kündbar, keine Jahresbindung. Starte mit 30 Tagen kostenlos.</p>
+        <p class="text-gray-500 text-lg mb-3">Monatlich kündbar, keine Jahresbindung. Starte mit 30 Tagen kostenlos.</p>
+        <p class="text-gray-800 font-semibold mb-12">Unbegrenzte Schüler. Kein Preis pro Schüler. Keine Einrichtungsgebühr.</p>
 
         <div class="grid md:grid-cols-3 gap-5 mb-10">
           <div v-for="plan in pricingPlans" :key="plan.name"
@@ -1638,7 +1639,7 @@ useHead({
             name: 'Was kostet Simy?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende). ${PRICE_VAT_NOTE}`,
+              text: `Simy bietet Preispläne ab CHF 49/Monat mit unbegrenzten Schülern, ohne Preis pro Schüler und ohne Einrichtungsgebühr. Online-Buchung, Schülerportal und Online-Zahlung sind im Grundpreis. Die ersten 30 Tage sind kostenlos, ohne Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende). ${PRICE_VAT_NOTE}`,
             },
           },
         ],
@@ -1980,7 +1981,7 @@ const PLAN_STATIC = [
     tagline: 'Für Einzelpersonen & Solo',
     fallbackPrice: '49',
     highlighted: true,
-    featureList: ['1 Mitarbeiter', 'Online-Terminbuchung', 'Kundenverwaltung', 'Rechnungen & Zahlungen', 'E-Mail Support'],
+    featureList: ['Unbegrenzte Schüler', '1 Mitarbeiter', 'Online-Terminbuchung', 'Kundenverwaltung', 'Rechnungen & Zahlungen', 'E-Mail Support'],
   },
   {
     key: 'professional',
@@ -1988,7 +1989,7 @@ const PLAN_STATIC = [
     tagline: 'Für wachsende Betriebe',
     fallbackPrice: '149',
     highlighted: false,
-    featureList: ['Bis 5 Mitarbeiter', 'Alles aus Starter', 'Kursbuchungsseite', 'Prioritäts-Support'],
+    featureList: ['Unbegrenzte Schüler', 'Bis 5 Mitarbeiter', 'Alles aus Starter', 'Kursbuchungsseite', 'Prioritäts-Support'],
   },
   {
     key: 'enterprise',
@@ -1996,7 +1997,7 @@ const PLAN_STATIC = [
     tagline: 'Für Teams & mehrere Standorte',
     fallbackPrice: '259',
     highlighted: false,
-    featureList: ['Bis zu 10 Mitarbeiter', 'Alles aus Professional', 'Affiliate-System', 'Dedizierter Support'],
+    featureList: ['Unbegrenzte Schüler', 'Bis zu 10 Mitarbeiter', 'Alles aus Professional', 'Affiliate-System', 'Dedizierter Support'],
   },
 ]
 
@@ -2013,7 +2014,7 @@ const faqs = reactive([
   { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: WALLEE_FEE_FAQ, open: false },
   { q: 'Kann ich von einem Plan upgraden?', a: 'Ja, jederzeit. Dein Upgrade wird sofort aktiv und anteilig verrechnet. Du verlierst keine Daten.', open: false },
   { q: 'Sind meine Daten sicher?', a: 'Ja. Simy betreibt alle Daten auf Schweizer Servern, ist DSGVO-konform und verwendet Ende-zu-Ende-Verschlüsselung für sensible Daten.', open: false },
-  { q: 'Was kostet Simy?', a: `Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende). ${PRICE_VAT_NOTE}`, open: false },
+  { q: 'Was kostet Simy?', a: `Simy bietet Preispläne ab CHF 49/Monat mit unbegrenzten Schülern, ohne Preis pro Schüler und ohne Einrichtungsgebühr. Online-Buchung, Schülerportal und Online-Zahlung sind im Grundpreis. Die ersten 30 Tage sind kostenlos, ohne Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende). ${PRICE_VAT_NOTE}`, open: false },
   { q: 'Was bringt die Google-Business-Automation?', a: `Simy postet den Jahreskalender (1–4×/Woche), verteilt deinen Foto-Pool (1–3×/Woche), beantwortet neue Google-Reviews automatisch und zeigt Insights. CHF 19/Monat. Sonst gehen kostenlose Maps-Klicks verloren. ${PRICE_VAT_NOTE}`, open: false },
 ])
 
