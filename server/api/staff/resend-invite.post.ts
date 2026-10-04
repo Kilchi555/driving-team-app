@@ -97,6 +97,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const { isSpamEmail, REGISTRATION_SPAM_EMAIL_REASON } = await import('~/server/utils/email-validator')
+    if (isSpamEmail(sendToEmail)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: REGISTRATION_SPAM_EMAIL_REASON,
+      })
+    }
+
     const { data: adminRow } = await supabase
       .from('users')
       .select('email')

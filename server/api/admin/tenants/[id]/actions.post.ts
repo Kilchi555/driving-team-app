@@ -22,6 +22,7 @@ import {
   isFirstStaffOnboarding,
   isPlaceholderStaffInviteEmail,
 } from '~/server/utils/staff-invite-email'
+import { isSpamEmail, REGISTRATION_SPAM_EMAIL_REASON } from '~/server/utils/email-validator'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { syncOneExternalCalendar } from '~/server/utils/sync-external-calendars-job'
 
@@ -99,6 +100,9 @@ export default defineEventHandler(async (event) => {
     }
     if (!['pending', 'expired'].includes(invitation.status)) {
       throw createError({ statusCode: 400, message: 'Einladung kann nicht erneuert werden' })
+    }
+    if (invitation.email && !isPlaceholderStaffInviteEmail(invitation.email) && isSpamEmail(invitation.email)) {
+      throw createError({ statusCode: 400, message: REGISTRATION_SPAM_EMAIL_REASON })
     }
 
     const token = generateToken()

@@ -6,6 +6,7 @@ import { sendEmail } from '~/server/utils/email'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
+import { isSpamEmail, REGISTRATION_SPAM_EMAIL_REASON } from '~/server/utils/email-validator'
 import { getPlanById } from '~/utils/planFeatures'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import {
@@ -54,6 +55,12 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 400,
         statusMessage: 'Ungültige E-Mail-Adresse',
+      })
+    }
+    if (isSpamEmail(emailCandidate)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: REGISTRATION_SPAM_EMAIL_REASON,
       })
     }
     const staffEmail = emailCandidate

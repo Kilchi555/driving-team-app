@@ -4,6 +4,7 @@
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { isStaffProductSalePayment } from '~/utils/staff-product-sale-display'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -25,6 +26,19 @@ export default defineEventHandler(async (event) => {
   if (!payment_id) throw createError({ statusCode: 400, statusMessage: 'payment_id required' })
 
   const now = new Date().toISOString()
+
+  const { data: existingPayment } = await supabase
+    .from('payments')
+    .select('id, metadata')
+    .eq('id', payment_id)
+    .maybeSingle()
+
+  if (isStaffProductSalePayment(existingPayment)) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'Staff-POS-Zahlungen werden nicht über diesen Abschluss verbucht.',
+    })
+  }
 
   // Zahlung auf completed + cash setzen
   const { data: payment, error: paymentError } = await supabase

@@ -1,10 +1,10 @@
 // server/api/shop/products.get.ts
-// Public endpoint — returns active shop products for a given tenant slug or ID
-// Uses the anon Supabase client so RLS policies govern access (no service role key)
-// Requires DB migration: add_products_public_read_policy.sql
+// Public shop catalog. Tenant, is_active, and show_in_shop are enforced here.
+// The anon table policy does not expose other tenants or non-shop products.
+// Credit amounts are not selected.
 
 import { defineEventHandler, getQuery, createError } from 'h3'
-import { getSupabaseAnon } from '~/server/utils/supabase-admin'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   const { tenant, tenantId } = getQuery(event) as { tenant?: string; tenantId?: string }
@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'tenant oder tenantId Parameter erforderlich' })
   }
 
-  const supabase = getSupabaseAnon()
+  const supabase = getSupabaseAdmin()
 
   let resolvedTenantId = tenantId as string | undefined
 
@@ -32,11 +32,11 @@ export default defineEventHandler(async (event) => {
     resolvedTenantId = tenantRow.id
   }
 
-  // RLS policy "products_public_read" filters to is_active = true
   const { data: products, error } = await supabase
     .from('products')
     .select('id, name, description, price_rappen, category, display_order, is_voucher, allow_custom_amount, min_amount_rappen, max_amount_rappen')
     .eq('tenant_id', resolvedTenantId!)
+    .eq('is_active', true)
     .eq('show_in_shop', true)
     .order('display_order')
 

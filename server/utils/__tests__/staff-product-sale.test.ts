@@ -6,6 +6,7 @@ import {
   STAFF_POS_MAX_QUANTITY,
   StaffProductSaleError,
   buildSaleMetadata,
+  creditFromSaleSnapshot,
   creditRappenForProduct,
   creditsImmediately,
   customerRejectionCode,
@@ -16,6 +17,7 @@ import {
   parseStaffPosMethod,
   partitionWebhookPayments,
   paymentStatusFor,
+  staffPosPaymentProvider,
   planInvoiceSend,
   allocatePositionNets,
   autoDraftAmountsFromPayments,
@@ -45,6 +47,7 @@ const activeClient = {
   tenant_id: tenant,
   role: 'client',
   deleted_at: null,
+  is_active: true,
 }
 
 function catalog(overrides: Record<string, unknown> = {}) {
@@ -77,6 +80,12 @@ describe('customer authorization', () => {
     const row = { ...activeClient, deleted_at: '2026-01-01' }
     expect(isEligiblePosCustomer(row, tenant)).toBe(false)
     expect(customerRejectionCode(row, tenant)).toBe('deleted_customer')
+  })
+
+  it('rejects an inactive client even when the search API is skipped', () => {
+    const row = { ...activeClient, is_active: false }
+    expect(isEligiblePosCustomer(row, tenant)).toBe(false)
+    expect(customerRejectionCode(row, tenant)).toBe('inactive_customer')
   })
 
   it('rejects a staff user', () => {
@@ -138,14 +147,14 @@ describe('payment and credit matrix', () => {
     expect(creditsImmediately('cash')).toBe(true)
   })
 
-  it('keeps deferred pending, without invoice, and credits immediately', () => {
+  it('keeps deferred pending and withholds credit until completion', () => {
     expect(paymentStatusFor('deferred')).toBe('pending')
-    expect(creditsImmediately('deferred')).toBe(true)
+    expect(creditsImmediately('deferred')).toBe(false)
   })
 
-  it('keeps invoice pending and credits immediately', () => {
+  it('keeps invoice pending and withholds credit until the invoice is paid', () => {
     expect(paymentStatusFor('invoice')).toBe('pending')
-    expect(creditsImmediately('invoice')).toBe(true)
+    expect(creditsImmediately('invoice')).toBe(false)
   })
 
   it('does not credit invoice-send or online before confirmation', () => {
@@ -192,9 +201,9 @@ describe('invoice send plan', () => {
     expect(planInvoiceSend({ sentAt: null, claimAt: null, nowMs: now }).action).toBe('send')
   })
 
-  it('skips a second mail after a confirmed send and still allows credit', () => {
+  it('skips a second mail after a confirmed send without treating send as payment', () => {
     expect(planInvoiceSend({ sentAt: '2026-10-01T11:00:00.000Z', claimAt: null, nowMs: now }).action)
-      .toBe('skip_send_apply_credit')
+      .toBe('skip_send')
   })
 
   it('waits on a fresh claim so two retries do not both send', () => {
@@ -255,7 +264,7 @@ describe('orchestrator', () => {
   })
 
   it('replays the same idempotency key without a second create', async () => {
-    const rpc = vi.fn(async () => ({
+    const rpc = vi.fn(async (_args: Record<string, unknown>) => ({
       ok: true,
       replayed: true,
       payment_id: 'pay-1',
@@ -267,28 +276,32 @@ describe('orchestrator', () => {
     await executeStaffProductSale({ rpc, actor, body: { ...body, payment_method: 'cash' } })
     await executeStaffProductSale({ rpc, actor, body: { ...body, payment_method: 'cash' } })
     expect(rpc).toHaveBeenCalledTimes(2)
-    expect(rpc.mock.calls[0][0].p_idempotency_key).toBe(key)
-    expect(rpc.mock.calls[1][0].p_idempotency_key).toBe(key)
+    const firstCall = rpc.mock.calls[0]
+    const secondCall = rpc.mock.calls[1]
+    if (!firstCall || !secondCall) throw new Error('missing rpc call')
+    expect(firstCall[0].p_idempotency_key).toBe(key)
+    expect(secondCall[0].p_idempotency_key).toBe(key)
   })
 
-  it('creates deferred pending with credit and without an invoice', async () => {
+  it('creates deferred pending without credit and without an invoice', async () => {
     const { rpc, run } = harness(async () => ({
       ok: true,
       payment_id: 'pay-2',
       payment_status: 'pending',
       payment_method: 'deferred',
-      credit_applied: true,
+      credit_applied: false,
       invoice_id: null,
       total_rappen: 1000,
     }))
     const result = await run({ ...body, payment_method: 'deferred' })
     expect(result.payment_status).toBe('pending')
     expect(result.invoice_id).toBeNull()
-    expect(result.credit_applied).toBe(true)
+    expect(result.credit_applied).toBe(false)
     expect(rpc.mock.calls[0][0].p_method).toBe('deferred')
+    expect(rpc.mock.calls.map((call) => call[0].p_action)).toEqual(['create'])
   })
 
-  it('creates an unsent invoice and credits inside the sale', async () => {
+  it('creates an unsent invoice without credit', async () => {
     const sendInvoice = vi.fn()
     const { rpc, run } = harness(async () => ({
       ok: true,
@@ -296,22 +309,22 @@ describe('orchestrator', () => {
       payment_status: 'pending',
       payment_method: 'invoice',
       invoice_id: 'inv-1',
-      credit_applied: true,
+      credit_applied: false,
       total_rappen: 1000,
     }), { sendInvoice })
     const result = await run({ ...body, payment_method: 'invoice' })
     expect(result.invoice_id).toBe('inv-1')
     expect(result.invoice_sent).toBe(false)
-    expect(result.credit_applied).toBe(true)
+    expect(result.credit_applied).toBe(false)
     expect(sendInvoice).not.toHaveBeenCalled()
     expect(rpc).toHaveBeenCalledTimes(1)
   })
 
-  it('credits invoice-send only after the send succeeds', async () => {
+  it('sends an invoice without applying credit', async () => {
     const sendInvoice = vi.fn(async () => ({ sent: true }))
     const actions: string[] = []
     const { run } = harness(async (args) => {
-      actions.push(args.p_action)
+      if (typeof args.p_action === 'string') actions.push(args.p_action)
       if (args.p_action === 'create') {
         return { ok: true, payment_id: 'pay-4', payment_status: 'pending', invoice_id: 'inv-2', credit_applied: false, total_rappen: 1000 }
       }
@@ -326,15 +339,16 @@ describe('orchestrator', () => {
     const result = await run({ ...body, payment_method: 'invoice_send' })
     expect(sendInvoice).toHaveBeenCalledTimes(1)
     expect(result.invoice_sent).toBe(true)
-    expect(result.credit_applied).toBe(true)
-    expect(actions.filter((action) => action === 'apply_credit')).toHaveLength(1)
+    expect(result.payment_status).toBe('pending')
+    expect(result.credit_applied).toBe(false)
+    expect(actions).not.toContain('apply_credit')
   })
 
   it('keeps the invoice and withholds credit when send fails', async () => {
     const sendInvoice = vi.fn(async () => ({ sent: false, reason: 'send_failed' }))
     const actions: string[] = []
     const { run } = harness(async (args) => {
-      actions.push(args.p_action)
+      if (typeof args.p_action === 'string') actions.push(args.p_action)
       if (args.p_action === 'create') {
         return { ok: true, payment_id: 'pay-5', invoice_id: 'inv-3', credit_applied: false, payment_status: 'pending', total_rappen: 1000 }
       }
@@ -352,11 +366,11 @@ describe('orchestrator', () => {
     expect(actions).not.toContain('apply_credit')
   })
 
-  it('retries a sent invoice without a second mail or a second credit call beyond the idempotent apply', async () => {
+  it('retries a sent invoice without a second mail or a credit call', async () => {
     const sendInvoice = vi.fn()
     const actions: string[] = []
     const { run } = harness(async (args) => {
-      actions.push(args.p_action)
+      if (typeof args.p_action === 'string') actions.push(args.p_action)
       if (args.p_action === 'create') {
         return { ok: true, replayed: true, payment_id: 'pay-5', invoice_id: 'inv-3', credit_applied: false, payment_status: 'pending', total_rappen: 1000 }
       }
@@ -368,8 +382,8 @@ describe('orchestrator', () => {
     const result = await run({ ...body, payment_method: 'invoice_send' })
     expect(sendInvoice).not.toHaveBeenCalled()
     expect(result.invoice_sent).toBe(true)
-    expect(result.credit_applied).toBe(true)
-    expect(actions.filter((action) => action === 'apply_credit')).toHaveLength(1)
+    expect(result.credit_applied).toBe(false)
+    expect(actions).not.toContain('apply_credit')
   })
 
   it('starts online payment without credit', async () => {
@@ -381,7 +395,7 @@ describe('orchestrator', () => {
     })
     const actions: string[] = []
     const { run } = harness(async (args) => {
-      actions.push(args.p_action)
+      if (typeof args.p_action === 'string') actions.push(args.p_action)
       if (args.p_action === 'create') {
         return {
           ok: true,
@@ -458,11 +472,13 @@ describe('webhook credit', () => {
   })
 
   it('calls the payment credit RPC once per confirmed staff sale', async () => {
-    const rpc = vi.fn(async () => ({ data: { ok: true, credit_applied: true, replayed: false }, error: null }))
+    const rpc = vi.fn(async (_fn: string, _args: Record<string, unknown>) => ({ data: { ok: true, credit_applied: true, replayed: false }, error: null }))
     await applyStaffProductSaleCredits({ rpc }, [sale, { id: 'lesson', metadata: {} }], 'completed')
     expect(rpc).toHaveBeenCalledTimes(1)
-    expect(rpc.mock.calls[0][0]).toBe('staff_pos_sale')
-    expect(rpc.mock.calls[0][1]).toMatchObject({
+    const creditCall = rpc.mock.calls[0]
+    if (!creditCall) throw new Error('missing rpc call')
+    expect(creditCall[0]).toBe('staff_pos_sale')
+    expect(creditCall[1]).toMatchObject({
       p_action: 'apply_credit',
       p_payment_id: 'pay-6',
       p_actor_user_id: null,
@@ -542,6 +558,53 @@ describe('migration and legacy guards', () => {
     expect(webhook).toContain('processVouchersAndCredits(legacy)')
     expect(webhook).toContain('applyStaffProductSaleCredits')
     expect(customers).toContain('restrictToAssigned')
+  })
+})
+
+describe('sale snapshot credit', () => {
+  it('keeps the sold credit after the live product amount changes', () => {
+    const sold = [{ is_credit_product: true, credit_amount_rappen: 95000, quantity: 1 }]
+    expect(creditFromSaleSnapshot(sold)).toBe(95000)
+  })
+
+  it('rejects a zero credit snapshot for a credit product', () => {
+    expect(() => creditFromSaleSnapshot([
+      { is_credit_product: true, credit_amount_rappen: 0, quantity: 1 },
+    ])).toThrow(StaffProductSaleError)
+  })
+
+  it('credits nothing for a non-credit line', () => {
+    expect(creditFromSaleSnapshot([
+      { is_credit_product: false, credit_amount_rappen: 0, quantity: 1 },
+    ])).toBe(0)
+  })
+})
+
+describe('payment provider domain', () => {
+  it('stores wallee only for online and null for cash, invoice, and deferred', () => {
+    expect(staffPosPaymentProvider('wallee')).toBe('wallee')
+    expect(staffPosPaymentProvider('cash')).toBeNull()
+    expect(staffPosPaymentProvider('invoice')).toBeNull()
+    expect(staffPosPaymentProvider('invoice_send')).toBeNull()
+    expect(staffPosPaymentProvider('deferred')).toBeNull()
+  })
+})
+
+describe('tenant sale matrix', () => {
+  const productA = catalog()
+  const customerB = { ...activeClient, tenant_id: other }
+  const productB = catalog({ tenant_id: other })
+
+  it('accepts staff tenant A with customer A and product A', () => {
+    expect(isEligiblePosCustomer(activeClient, tenant)).toBe(true)
+    expect(isEligiblePosProduct(productA, tenant)).toBe(true)
+  })
+
+  it('rejects tenant B customer and tenant B product for tenant A staff', () => {
+    expect(isEligiblePosCustomer(customerB, tenant)).toBe(false)
+    expect(isEligiblePosProduct(productB, tenant)).toBe(false)
+    expect(isEligiblePosCustomer(activeClient, other)).toBe(false)
+    expect(isEligiblePosProduct(productA, other)).toBe(false)
   })
 })
 
@@ -763,5 +826,58 @@ describe('VAT replay and Wallee gate', () => {
     expect(startWallee).not.toHaveBeenCalled()
     expect(result.payment_url).toBeNull()
     expect(result.warning).toBe('MwSt-Satz des Verkaufs fehlt')
+  })
+
+  it('treats a zero credit snapshot as a failed credit, not a silent success', async () => {
+    await expect(executeStaffProductSale({
+      rpc: async () => {
+        throw new Error('zero_credit_snapshot')
+      },
+      actor,
+      body,
+    })).rejects.toMatchObject({ code: 'zero_credit_snapshot', statusCode: 409 })
+  })
+})
+
+describe('remediation SQL contract', () => {
+  const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8')
+  const sql = read('migrations/20261003_staff_pos_credit_remediation.sql')
+  const applyCredit = sql.slice(sql.indexOf('apply_credit uses the sale snapshot only'))
+
+  it('requires an active client in the sale tenant', () => {
+    expect(sql).toContain('AND role = \'client\'')
+    expect(sql).toContain('AND deleted_at IS NULL')
+    expect(sql).toContain('AND is_active IS TRUE')
+    expect(sql).toContain('AND tenant_id = v_tenant')
+  })
+
+  it('credits later payments from the snapshot and rejects a zero credit product snapshot', () => {
+    expect(applyCredit).toContain("v_item->>'credit_amount_rappen'")
+    expect(applyCredit).toContain("RAISE EXCEPTION 'zero_credit_snapshot'")
+    expect(applyCredit).not.toContain('FROM public.products')
+  })
+
+  it('stores wallee only for online sales', () => {
+    expect(sql).toContain("CASE WHEN p_method = 'wallee' THEN 'wallee' ELSE NULL END")
+    expect(sql).not.toContain("'deferred'::")
+  })
+
+  it('books staff product sales as Produkte & Materialien and leaves appointments as Termine', () => {
+    expect(sql).toContain("WHEN NEW.metadata->>'source' = 'staff_product_sale' THEN 'Produkte & Materialien'")
+    expect(sql).toContain("ELSE 'Termine'")
+    expect(sql).toContain('WHERE NOT EXISTS')
+  })
+
+  it('keeps idempotency locks and closes client writes', () => {
+    expect(sql).toContain('pg_advisory_xact_lock')
+    expect(sql).toContain('unique_violation')
+    expect(sql).toContain('DROP POLICY IF EXISTS "products_public_read"')
+    expect(sql).toContain('show_in_shop IS TRUE')
+    expect(sql).toContain('DROP POLICY IF EXISTS "credit_transactions_update_staff"')
+    expect(sql).toContain('DROP POLICY IF EXISTS "sc_update_staff"')
+    expect(sql).toContain('REVOKE ALL ON TABLE public.student_credits FROM anon')
+    expect(sql).toContain('REVOKE ALL ON TABLE public.credit_transactions FROM authenticated')
+    expect(sql).toContain('GRANT SELECT ON TABLE public.student_credits TO authenticated')
+    expect(sql).not.toContain('GRANT ALL')
   })
 })
