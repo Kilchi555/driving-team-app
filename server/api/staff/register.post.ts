@@ -104,7 +104,16 @@ export default defineEventHandler(async (event) => {
     const { validateRegistrationEmail } = await import('~/server/utils/email-validator')
     const emailValidation = await validateRegistrationEmail(normalizedEmail)
     if (!emailValidation.valid) {
-      logger.warn('⚠️ Email validation failed for staff registration:', emailValidation.reason)
+      // Domain + disposable signal only — never log the full email address.
+      logger.warn('⚠️ Email validation failed for staff registration:', {
+        reason: emailValidation.reason,
+        ...(emailValidation.disposableRejection
+          ? {
+              emailDomain: emailValidation.disposableRejection.domain,
+              disposableSignal: emailValidation.disposableRejection.signal,
+            }
+          : {}),
+      })
       throw createError({
         statusCode: 400,
         statusMessage: emailValidation.reason || 'Ungültige E-Mail-Adresse'
