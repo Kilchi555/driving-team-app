@@ -67,6 +67,7 @@ Dieses Reglement ist ein internes Dokument. Kunden erhalten auf Anfrage im Rahme
 - `pages/avv.vue` §4 (Technische und organisatorische Massnahmen) und §9 (Einsatz von Künstlicher Intelligenz)
 - `pages/datenschutz.vue` §9 (Datensicherheit) und §11 (Einsatz von Künstlicher Intelligenz)
 - `docs/PCI_COMPLIANCE_POLICY.md` (Zahlungsdaten-spezifische Regelungen)
+- `docs/INTERNAL_EMAIL_EDGE_SECRET.md` (server-to-server gate for Supabase email edge functions via `SIMY_INTERNAL_EMAIL_SECRET`)
 
 ## Review
 
