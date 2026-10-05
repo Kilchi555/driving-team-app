@@ -11,6 +11,8 @@ import { REGISTRATION_SPAM_EMAIL_REASON } from '../email-validator'
 
 const NORMALIZED = 'hans.19850312@bluewin.ch'
 const SUBMITTED = '  HANS.19850312@BLUEWIN.CH  '
+const BLUEMAIL_NORMALIZED = 'roger.gemperli@bluemail.ch'
+const BLUEMAIL_SUBMITTED = '  Roger.Gemperli@BLUEMAIL.CH  '
 const FUTURE = '2099-01-01T00:00:00.000Z'
 const TOKEN = 'staff-email-normalization-token'
 
@@ -24,7 +26,7 @@ function createHttpError(opts: { statusCode: number, statusMessage?: string, mes
   return error
 }
 
-function createRegistrationClient() {
+function createRegistrationClient(inviteEmail = NORMALIZED) {
   const lookedUpEmails: string[] = []
   const createdEmails: string[] = []
   const insertedEmails: string[] = []
@@ -43,7 +45,7 @@ function createRegistrationClient() {
         return {
           data: {
             id: 'inv-1',
-            email: NORMALIZED,
+            email: inviteEmail,
             expires_at: FUTURE,
             tenant_id: 'tenant-a',
           },
@@ -57,7 +59,7 @@ function createRegistrationClient() {
             tenant_id: 'tenant-a',
             first_name: 'Hans',
             last_name: 'Meier',
-            email: NORMALIZED,
+            email: inviteEmail,
             phone: null,
             link_to_admin: false,
             invited_by: null,
@@ -187,6 +189,76 @@ describe('POST /api/staff/register email validation', () => {
     expect(harness.lookedUpEmails.length).toBeGreaterThan(0)
     expect(harness.lookedUpEmails.every(email => email === NORMALIZED)).toBe(true)
     expect(fetchMock).toHaveBeenCalled()
+  })
+
+  // G — locked invite email is exactly what reaches validation (trim/lowercase only)
+  it('validates and stores the locked bluemail.ch invite email despite debounce disposable', async () => {
+    const harness = createRegistrationClient(BLUEMAIL_NORMALIZED)
+    const warn = vi.fn()
+    vi.resetModules()
+    vi.stubGlobal('defineEventHandler', (fn: Handler) => fn)
+    vi.stubGlobal('createError', createHttpError)
+    vi.stubGlobal('getHeader', () => null)
+    vi.stubGlobal('useRuntimeConfig', () => ({
+      public: { supabaseUrl: 'http://localhost:54321' },
+      supabaseServiceRoleKey: 'test-service-key',
+    }))
+    // Simulate the real provider disagreement; allowlist must still accept.
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('api.mailcheck.ai')) {
+        return { ok: true, json: async () => ({ disposable: false, mx: true }) }
+      }
+      if (url.includes('disposable.debounce.io')) {
+        return { ok: true, json: async () => ({ disposable: 'true' }) }
+      }
+      return { ok: true, json: async () => ({ disposable: false }) }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('readBody', async () => ({
+      invitationToken: TOKEN,
+      email: BLUEMAIL_SUBMITTED,
+      firstName: 'Roger',
+      lastName: 'Gemperli',
+      password: 'CorrectHorse1',
+      selectedLocationIds: [],
+      selectedExamLocationIds: [],
+    }))
+    vi.doMock('@supabase/supabase-js', () => ({
+      createClient: () => harness.client,
+    }))
+    vi.doMock('~/utils/logger', () => ({
+      logger: { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() },
+    }))
+    vi.doMock('~/server/utils/rate-limiter', () => ({
+      checkRateLimit: async () => ({ allowed: true, remaining: 4, retryAfter: 0 }),
+    }))
+    vi.doMock('~/server/utils/audit', () => ({
+      logAudit: async () => undefined,
+    }))
+    vi.doMock('~/server/utils/send-welcome-email', () => ({
+      sendWelcomeEmail: vi.fn(),
+    }))
+    vi.doMock('~/server/utils/queue-availability-recalc', () => ({
+      enqueueStaffAvailabilityRecalc: vi.fn(),
+    }))
+    vi.doMock('~/server/utils/ip-utils', () => ({
+      getClientIP: () => '127.0.0.1',
+    }))
+
+    const mod = await import('../../api/staff/register.post')
+    const handler = mod.default as Handler
+
+    await expect(handler({})).rejects.toMatchObject({
+      statusCode: 500,
+      statusMessage: 'Fehler beim Erstellen des Profils',
+    })
+
+    expect(harness.createdEmails).toEqual([BLUEMAIL_NORMALIZED])
+    expect(harness.insertedEmails).toEqual([BLUEMAIL_NORMALIZED])
+    expect(harness.lookedUpEmails.every(email => email === BLUEMAIL_NORMALIZED)).toBe(true)
+    // Disposable allowlist skips remote; never log full addresses on this path.
+    expect(warn).not.toHaveBeenCalled()
   })
 
   it('still rejects an exact spam local part before Auth user creation', async () => {

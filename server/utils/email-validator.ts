@@ -28,6 +28,30 @@ const disposableDomains = new Set([
   'apdtax.com', // known temp-mail.org alias used in spam signup 2026-07-28
 ])
 
+/**
+ * Exact-match domains that must not be rejected by disposable checks.
+ * bluemail.ch: Swisscom-operated NS (dns*.swisscom.com) and Bluewin MX
+ * (mx*.p.bluenet.ch, same as bluewin.ch). Debounce.io falsely classifies it;
+ * mailcheck/debounce OR policy is unchanged for every other domain.
+ */
+const ALLOWED_NON_DISPOSABLE_DOMAINS = new Set([
+  'bluemail.ch',
+])
+
+export type DisposableRejectionSignal = 'local' | 'mailcheck' | 'debounce'
+
+export const REGISTRATION_DISPOSABLE_EMAIL_REASON =
+  'Bitte verwenden Sie eine echte E-Mail-Adresse'
+
+function emailDomain(email: string): string | null {
+  const domain = email.split('@')[1]?.toLowerCase()
+  return domain || null
+}
+
+function isAllowedNonDisposableDomain(domain: string): boolean {
+  return ALLOWED_NON_DISPOSABLE_DOMAINS.has(domain)
+}
+
 export function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email)) return false
@@ -38,20 +62,22 @@ export function isValidEmail(email: string): boolean {
 }
 
 export function isDisposableEmail(email: string): boolean {
-  const domain = email.split('@')[1]?.toLowerCase()
+  const domain = emailDomain(email)
   if (!domain) return false
+  if (isAllowedNonDisposableDomain(domain)) return false
   return disposableDomains.has(domain)
 }
 
 /**
- * Remote disposable-domain check.
- * Uses mailcheck.ai + debounce.io — Kickbox misses many rotating temp-mail aliases.
- * Fails open (returns false) on network errors so legitimate signups aren't blocked.
+ * Remote disposable providers only (mailcheck.ai + debounce.io).
+ * Same OR semantics as before: either confirmed disposable → signal.
+ * Fails open (returns null) on network / non-OK responses.
  */
-export async function isDisposableEmailRemote(email: string): Promise<boolean> {
-  const domain = email.split('@')[1]?.toLowerCase()
-  if (!domain) return false
-  if (disposableDomains.has(domain)) return true
+async function remoteDisposableSignal(
+  email: string
+): Promise<'mailcheck' | 'debounce' | null> {
+  const domain = emailDomain(email)
+  if (!domain) return null
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 2500)
@@ -76,14 +102,27 @@ export async function isDisposableEmailRemote(email: string): Promise<boolean> {
       }),
     ])
 
-    if (mailcheckRes.status === 'fulfilled' && mailcheckRes.value) return true
-    if (debounceRes.status === 'fulfilled' && debounceRes.value) return true
-    return false
+    if (mailcheckRes.status === 'fulfilled' && mailcheckRes.value) return 'mailcheck'
+    if (debounceRes.status === 'fulfilled' && debounceRes.value) return 'debounce'
+    return null
   } catch {
-    return false
+    return null
   } finally {
     clearTimeout(timeout)
   }
+}
+
+/**
+ * Remote disposable-domain check.
+ * Uses mailcheck.ai + debounce.io — Kickbox misses many rotating temp-mail aliases.
+ * Fails open (returns false) on network errors so legitimate signups aren't blocked.
+ */
+export async function isDisposableEmailRemote(email: string): Promise<boolean> {
+  const domain = emailDomain(email)
+  if (!domain) return false
+  if (isAllowedNonDisposableDomain(domain)) return false
+  if (disposableDomains.has(domain)) return true
+  return (await remoteDisposableSignal(email)) !== null
 }
 
 export function isSpamEmail(email: string): boolean {
@@ -110,13 +149,34 @@ export const REGISTRATION_SPAM_EMAIL_REASON = 'E-Mail-Adresse scheint ungültig 
 
 export async function validateRegistrationEmail(
   email: string
-): Promise<{ valid: boolean; reason?: string }> {
+): Promise<{
+  valid: boolean
+  reason?: string
+  /** Present only on disposable rejection — domain + signal, never the full address. */
+  disposableRejection?: { domain: string, signal: DisposableRejectionSignal }
+}> {
   if (!isValidEmail(email)) {
     return { valid: false, reason: 'Ungültige E-Mail-Adresse' }
   }
 
-  if (isDisposableEmail(email) || await isDisposableEmailRemote(email)) {
-    return { valid: false, reason: 'Bitte verwenden Sie eine echte E-Mail-Adresse' }
+  const domain = emailDomain(email)
+  if (domain && !isAllowedNonDisposableDomain(domain)) {
+    if (isDisposableEmail(email)) {
+      return {
+        valid: false,
+        reason: REGISTRATION_DISPOSABLE_EMAIL_REASON,
+        disposableRejection: { domain, signal: 'local' },
+      }
+    }
+
+    const remoteSignal = await remoteDisposableSignal(email)
+    if (remoteSignal) {
+      return {
+        valid: false,
+        reason: REGISTRATION_DISPOSABLE_EMAIL_REASON,
+        disposableRejection: { domain, signal: remoteSignal },
+      }
+    }
   }
 
   if (isSpamEmail(email)) {
