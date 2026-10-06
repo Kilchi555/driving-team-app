@@ -404,7 +404,18 @@ export async function fulfillCourseWalleePayment(opts: {
 
   const result = parseRpcResult(data, error)
   if (isSuccessfulCourseFulfillment(result.status) && result.registrationId) {
-    await clearCapturedIdentityBlock(supabase, payment)
+    // Seat + payment are already durable in the RPC. Clearing identity_blocked
+    // metadata is best-effort: a throw here must not look like fulfillment failure
+    // or suppress caller SARI / confirmation / post-commit delivery.
+    try {
+      await clearCapturedIdentityBlock(supabase, payment)
+    } catch (clearErr: any) {
+      logger.warn('⚠️ Captured identity block was not cleared after durable fulfillment', {
+        paymentId: payment.id,
+        status: result.status,
+        error: clearErr?.message || clearErr,
+      })
+    }
     payment.user_id = userId || payment.user_id
     ;(payment as any).course_registration_id = result.registrationId
     payment.payment_status = 'completed'

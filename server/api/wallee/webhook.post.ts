@@ -757,19 +757,26 @@ export default defineEventHandler(async (event) => {
             transactionId,
           }
         }
-        if (result.status === 'fulfilled' && result.registrationId) {
-          newlyFulfilledCourseIds.add(payment.id)
+        // Confirmation emails stay gated on newlyFulfilledCourseIds (fulfilled only).
+        // SARI enroll is idempotent and must still run on already_fulfilled replay so a
+        // prior delivery that crashed after the durable RPC can repair membership.
+        if (isSuccessfulCourseFulfillment(result.status) && result.registrationId) {
+          if (result.status === 'fulfilled') {
+            newlyFulfilledCourseIds.add(payment.id)
+          }
           const enrollResult = await enrollInSARIAfterPayment(supabase, result.registrationId)
           if (enrollResult.membershipPending) pendingSariRepairs.add(result.registrationId)
           else pendingSariRepairs.delete(result.registrationId)
-          try {
-            await runPostCommitCourseFulfillmentSideEffects({
-              supabase,
-              payment,
-              registrationId: result.registrationId,
-            })
-          } catch (sideErr: any) {
-            logger.warn('⚠️ Post-fulfillment side effects (non-fatal):', sideErr?.message)
+          if (result.status === 'fulfilled') {
+            try {
+              await runPostCommitCourseFulfillmentSideEffects({
+                supabase,
+                payment,
+                registrationId: result.registrationId,
+              })
+            } catch (sideErr: any) {
+              logger.warn('⚠️ Post-fulfillment side effects (non-fatal):', sideErr?.message)
+            }
           }
         }
       }

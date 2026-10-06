@@ -65,6 +65,7 @@ function harness(initial: Row[]) {
     status: 'fulfilled',
     registration_id: 'reg-1',
   }
+  let failClearMetadataUpdates = false
   const supabase = {
     rpc: async (_name: string, args: unknown) => {
       rpcCalls.push(args)
@@ -72,6 +73,7 @@ function harness(initial: Row[]) {
     },
     from(table: string) {
       const filters: Array<{ op: 'eq' | 'ilike' | 'in', col: string, val: unknown }> = []
+      let pendingUpdate: Record<string, unknown> | null = null
       const match = () => rows.filter((row) => filters.every((filter) => {
         const value = (row as Record<string, unknown>)[filter.col]
         if (filter.op === 'eq') return value === filter.val
@@ -123,13 +125,27 @@ function harness(initial: Row[]) {
         return inserted
       }
       q.update = (payload: Record<string, unknown>) => {
+        pendingUpdate = payload
         if (table === 'payments') paymentUpdates.push(payload)
         if (table === 'users') userUpdates.push(payload)
         return q
       }
-      q.then = (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => (
-        Promise.resolve({ data: null, error: null }).then(resolve, reject)
-      )
+      q.then = (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => {
+        const meta = pendingUpdate?.metadata as Record<string, unknown> | undefined
+        const isClearAttempt = Boolean(
+          table === 'payments'
+          && meta
+          && meta.identity_block_resolved_at
+          && meta.wallee_failure_state === undefined,
+        )
+        if (failClearMetadataUpdates && isClearAttempt) {
+          return Promise.resolve({
+            data: null,
+            error: { message: 'simulated clearCapturedIdentityBlock failure' },
+          }).then(resolve, reject)
+        }
+        return Promise.resolve({ data: null, error: null }).then(resolve, reject)
+      }
       return q
     },
   }
@@ -143,6 +159,9 @@ function harness(initial: Row[]) {
     rpcCalls,
     setRpc(result: { status: string, registration_id?: string }) {
       rpcResult = result
+    },
+    setFailClearMetadataUpdates(value: boolean) {
+      failClearMetadataUpdates = value
     },
   }
 }
@@ -254,6 +273,104 @@ describe('captured Wallee identity block', () => {
     expect(db.inserts).toHaveLength(1)
     expect(db.rpcCalls).toHaveLength(2)
     expect(pay.payment_status).toBe('completed')
+  })
+
+  it('clearCapturedIdentityBlock success still returns fulfilled and clears identity_blocked', async () => {
+    const student = {
+      id: 'student-1',
+      role: 'student',
+      tenant_id: TENANT,
+      email: 'sam@example.com',
+      phone: '+41791112233',
+    }
+    const db = harness([student])
+    const pay = payment({
+      user_id: 'student-1',
+      metadata: {
+        course_id: 'course-1',
+        phone: '0791112233',
+        firstname: 'Sam',
+        lastname: 'Student',
+        wallee_failure_state: 'identity_blocked',
+        identity_block_reason: 'phone_only',
+      },
+    })
+    const result = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: pay })
+    expect(result.status).toBe('fulfilled')
+    expect(result.registrationId).toBe('reg-1')
+    expect(isSuccessfulCourseFulfillment(result.status)).toBe(true)
+    expect(pay.payment_status).toBe('completed')
+    expect(pay.metadata.wallee_failure_state).toBeUndefined()
+    expect(pay.metadata.identity_block_resolved_at).toBeTruthy()
+    expect(db.rpcCalls).toHaveLength(1)
+    expect(db.paymentUpdates.some((update) => update.payment_status === 'cancelled')).toBe(false)
+  })
+
+  it('clearCapturedIdentityBlock throw after durable RPC still returns successful fulfillment', async () => {
+    const student = {
+      id: 'student-1',
+      role: 'student',
+      tenant_id: TENANT,
+      email: 'sam@example.com',
+      phone: '+41791112233',
+    }
+    const db = harness([student])
+    db.setFailClearMetadataUpdates(true)
+    const pay = payment({
+      user_id: 'student-1',
+      metadata: {
+        course_id: 'course-1',
+        phone: '0791112233',
+        firstname: 'Sam',
+        lastname: 'Student',
+        wallee_failure_state: 'identity_blocked',
+        identity_block_reason: 'phone_only',
+      },
+    })
+    const result = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: pay })
+    expect(result.status).toBe('fulfilled')
+    expect(result.registrationId).toBe('reg-1')
+    expect(isSuccessfulCourseFulfillment(result.status)).toBe(true)
+    expect(isRetryableCourseFulfillment(result.status)).toBe(false)
+    expect(pay.payment_status).toBe('completed')
+    expect(pay.user_id).toBe('student-1')
+    // DB clear failed: in-memory block flag remains so a later retry can clean it.
+    expect(pay.metadata.wallee_failure_state).toBe('identity_blocked')
+    expect(db.rpcCalls).toHaveLength(1)
+    expect(db.inserts).toHaveLength(0)
+    expect(db.paymentUpdates.some((update) => update.payment_status === 'cancelled')).toBe(false)
+
+    db.setRpc({ status: 'already_fulfilled', registration_id: 'reg-1' })
+    const blockedReplay = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: pay })
+    expect(blockedReplay.status).toBe('already_fulfilled')
+    expect(db.rpcCalls).toHaveLength(2)
+    expect(pay.payment_status).toBe('completed')
+    expect(pay.metadata.wallee_failure_state).toBe('identity_blocked')
+    expect(db.inserts).toHaveLength(0)
+
+    db.setFailClearMetadataUpdates(false)
+    const cleaned = await fulfillCourseWalleePayment({ supabase: db.supabase, payment: pay })
+    expect(cleaned.status).toBe('already_fulfilled')
+    expect(db.rpcCalls).toHaveLength(3)
+    expect(pay.payment_status).toBe('completed')
+    expect(pay.metadata.wallee_failure_state).toBeUndefined()
+    expect(pay.metadata.identity_block_resolved_at).toBeTruthy()
+    expect(db.inserts).toHaveLength(0)
+  })
+
+  it('webhook runs idempotent SARI on already_fulfilled without widening email gate', () => {
+    const webhook = readFileSync(resolve(process.cwd(), 'server/api/wallee/webhook.post.ts'), 'utf8')
+    expect(webhook).toContain('isSuccessfulCourseFulfillment(result.status) && result.registrationId')
+    expect(webhook).toContain("if (result.status === 'fulfilled')")
+    expect(webhook).toContain('newlyFulfilledCourseIds.add(payment.id)')
+    expect(webhook).toContain('enrollInSARIAfterPayment(supabase, result.registrationId)')
+    expect(webhook).toContain('newlyFulfilledCourseIds.has(p.id)')
+    const fulfillSrc = readFileSync(resolve(process.cwd(), 'server/utils/fulfill-course-wallee-payment.ts'), 'utf8')
+    expect(fulfillSrc).toContain('Captured identity block was not cleared after durable fulfillment')
+    expect(fulfillSrc).toContain('await clearCapturedIdentityBlock(supabase, payment)')
+    const clearSrc = readFileSync(resolve(process.cwd(), 'server/utils/wallee-identity-block.ts'), 'utf8')
+    const clearFn = clearSrc.slice(clearSrc.indexOf('export async function clearCapturedIdentityBlock'))
+    expect(clearFn.indexOf('payment.metadata = next')).toBeGreaterThan(clearFn.indexOf('if (error)'))
   })
 
   it('does not refund and does not let sibling cleanup cancel a captured identity block', () => {

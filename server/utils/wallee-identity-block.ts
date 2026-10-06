@@ -134,7 +134,8 @@ export async function clearCapturedIdentityBlock(
     identity_block_resolved_at: new Date().toISOString(),
   })
   delete next.wallee_failure_state
-  payment.metadata = next
+  // Mutate the in-memory row only after the DB write succeeds. Otherwise a
+  // failed clear would hide the still-blocked DB metadata from a later retry.
   const { error } = await supabase
     .from('payments')
     .update({ metadata: next })
@@ -143,4 +144,5 @@ export async function clearCapturedIdentityBlock(
   if (error) {
     throw new Error(error.message || 'identity block metadata was not cleared')
   }
+  payment.metadata = next
 }
