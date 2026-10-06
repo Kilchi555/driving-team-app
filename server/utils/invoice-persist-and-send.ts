@@ -7,6 +7,7 @@ import { sendEmail } from '~/server/utils/email'
 import { generateInvoicePdf, formatTenantContactPerson } from '~/server/utils/invoice-pdf'
 import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/tenant-logo-for-pdf'
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
+import { presentStoredInvoiceLine } from '~/server/utils/invoice-line-snapshot'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 import { appointmentCountLabel, getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { applyMissingInvoiceBilling, invoiceQrDebtorName, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
@@ -214,7 +215,7 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
     throw new Error(invoiceError?.message || 'Failed to create invoice')
   }
 
-  if (draft.items.length > 0) {
+    if (draft.items.length > 0) {
     const items = draft.items.map((item: any, i: number) => ({
       invoice_id: invoice.id,
       tenant_id: tenantId,
@@ -223,6 +224,12 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
       product_id: item.product_id || null,
       product_name: item.product_name,
       product_description: item.product_description || null,
+      event_type_code: item.event_type_code || null,
+      user_id: item.user_id || null,
+      staff_id: item.staff_id || null,
+      staff_first_name: item.staff_first_name || null,
+      customer_first_name: item.customer_first_name || null,
+      customer_last_name: item.customer_last_name || null,
       appointment_title: item.appointment_title || null,
       appointment_date: item.appointment_date || null,
       appointment_duration_minutes: item.appointment_duration_minutes || null,
@@ -353,6 +360,23 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
   const uniqueRecipients = [...new Set(recipients)]
   let pdfAttachments: any[] = []
 
+  const displayItems = (draft.items || []).map((item: any) => {
+    const presented = presentStoredInvoiceLine({
+      productName: item.product_name,
+      productId: item.product_id,
+      eventTypeCode: item.event_type_code,
+      staffFirstName: item.staff_first_name,
+      customerFirstName: item.customer_first_name,
+      customerLastName: item.customer_last_name,
+    })
+    return {
+      ...item,
+      product_name: presented.product_name,
+      breakdown_label: presented.breakdown_label,
+      customer_line: presented.customer_line,
+    }
+  })
+
   if (sendEmailFlag && uniqueRecipients.length > 0) {
     try {
       const html = buildInvoiceEmailHtml({
@@ -360,7 +384,7 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
         invoiceNumber,
         invoiceDate: draft.invoice_date,
         dueDate: draft.due_date,
-        items: draft.items,
+        items: displayItems,
         subtotalRappen: draft.subtotal_rappen || draft.total_amount_rappen,
         discountRappen: draft.discount_amount_rappen || 0,
         totalRappen: draft.total_amount_rappen,
@@ -405,7 +429,7 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
           billingZip: pdfAddr.billingZip,
           billingCity: pdfAddr.billingCity,
           billingEmail: billingEmail || uniqueRecipients[0],
-          items: draft.items,
+          items: displayItems,
           subtotalRappen: draft.subtotal_rappen || draft.total_amount_rappen,
           discountRappen: draft.discount_amount_rappen || 0,
           vatRate: Number(draft.vat_rate) || 0,

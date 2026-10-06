@@ -8,8 +8,12 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { computeInvoiceDueDate } from '~/server/utils/invoice-due-date'
 import { computeVatAmountRappen, getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
 import { groupProductSalesByAppointment } from '~/server/utils/invoice-product-lines'
-import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
-import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
+import {
+  buildServiceLineSnapshot,
+  loadTenantEventTypeNames,
+} from '~/server/utils/invoice-line-snapshot'
 import { resolveStudentBillingAddress } from '~/server/utils/billing-from-company'
 import { billingPersonNameParts } from '~/utils/billing-address-map'
 import { autoDraftAmountsFromPayments, staffPosAllocatedLines } from '~/server/utils/staff-product-sale'
@@ -42,6 +46,7 @@ export default defineEventHandler(async (event) => {
 
   const paymentSelect = `
     id,
+    user_id,
     total_amount_rappen,
     lesson_price_rappen,
     admin_fee_rappen,
@@ -64,7 +69,8 @@ export default defineEventHandler(async (event) => {
       event_type_code,
       status,
       cancellation_charge_percentage,
-      staff:users!staff_id (first_name)
+      staff_id,
+      staff:users!staff_id (id, first_name)
     )
   `
 
@@ -75,15 +81,22 @@ export default defineEventHandler(async (event) => {
       .select(paymentSelect)
       .in('id', explicitPaymentIds)
       .eq('user_id', student_user_id)
+      .eq('tenant_id', staffUser.tenant_id)
       .order('created_at', { ascending: true })
     openPayments = data
     paymentsError = error
+    const returned = new Set((data || []).map((row: any) => String(row.id)))
+    const requested = Array.from(new Set((explicitPaymentIds as string[]).map(String)))
+    if (!paymentsError && requested.some((id) => !returned.has(id))) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
   } else {
     // Fallback: fetch all uninvoiced 'invoice'-method payments for this student
     const baseQuery = () => supabase
       .from('payments')
       .select(paymentSelect)
       .eq('user_id', student_user_id)
+      .eq('tenant_id', staffUser.tenant_id)
       .eq('payment_method', 'invoice')
       .in('payment_status', ['pending', 'open', 'partial'])
       .order('created_at', { ascending: true })
@@ -123,6 +136,7 @@ export default defineEventHandler(async (event) => {
     .from('users')
     .select('id, first_name, last_name, email, street, street_nr, zip, city, phone, company_id, default_company_billing_address_id')
     .eq('id', student_user_id)
+    .eq('tenant_id', staffUser.tenant_id)
     .maybeSingle()
 
   if (studentById) {
@@ -132,6 +146,7 @@ export default defineEventHandler(async (event) => {
       .from('users')
       .select('id, first_name, last_name, email, street, street_nr, zip, city, phone, company_id, default_company_billing_address_id')
       .eq('auth_user_id', student_user_id)
+      .eq('tenant_id', staffUser.tenant_id)
       .maybeSingle()
     student = studentByAuthId
   }
@@ -268,8 +283,12 @@ export default defineEventHandler(async (event) => {
   }
 
   const terms = await getTenantTerminology(supabase, staffUser.tenant_id)
-  const eventTypeMap = eventTypeLabelMap(terms)
   const appointmentFallback = terms.appointment || 'Termin'
+  const eventTypeNames = await loadTenantEventTypeNames(
+    supabase,
+    staffUser.tenant_id,
+    openPayments.map((p) => (p.appointments as any)?.event_type_code),
+  )
 
   let sortOrder = 0
   draft.items = openPayments.flatMap((p) => {
@@ -285,6 +304,12 @@ export default defineEventHandler(async (event) => {
         appointment_date: null as string | null,
         appointment_start_time: null as string | null,
         appointment_duration_minutes: null as number | null,
+        event_type_code: null as string | null,
+        user_id: p.user_id || student.id,
+        staff_id: null as string | null,
+        staff_first_name: null as string | null,
+        customer_first_name: null as string | null,
+        customer_last_name: null as string | null,
         quantity: line.quantity,
         unit_price_rappen: Math.floor(line.netRappen / line.quantity),
         total_price_rappen: line.netRappen,
@@ -303,15 +328,19 @@ export default defineEventHandler(async (event) => {
     }
 
     const apt = p.appointments as any
-    const label = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
-    const staffFirstName = apt?.staff?.first_name || null
-    const serviceName = buildInvoiceServiceLineLabel({
-      eventLabel: label,
-      title: apt?.title,
-      fallback: appointmentFallback,
-      staffFirstName,
+    const eventTypeCode = String(apt?.event_type_code || '').trim() || null
+    const snapshot = buildServiceLineSnapshot({
+      eventTypeCode,
+      eventTypeName: eventTypeCode ? eventTypeNames[eventTypeCode] || null : null,
+      existingTitle: apt?.title,
+      fallbackLabel: appointmentFallback,
       appointmentStatus: apt?.status,
       cancellationChargePercentage: apt?.cancellation_charge_percentage,
+      snapshotUserId: p.user_id || student.id,
+      staffId: apt?.staff_id || apt?.staff?.id || null,
+      staffFirstName: apt?.staff?.first_name || null,
+      customerFirstName: student.first_name || null,
+      customerLastName: student.last_name || null,
     })
     const serviceDescription = buildInvoiceServiceDescription({
       categoryType: apt?.type,
@@ -319,7 +348,7 @@ export default defineEventHandler(async (event) => {
     })
 
     const products = (p.appointment_id && productsByApt[p.appointment_id]) || []
-    const productsTotal = products.reduce((sum, pd) => sum + (pd.price_rappen || 0), 0)
+    const productsTotal = products.reduce((sum: number, pd: { price_rappen?: number }) => sum + (pd.price_rappen || 0), 0)
       || (p.products_price_rappen || 0)
     const serviceGross = Math.max(0, getGrossAmount(p) - productsTotal)
 
@@ -327,7 +356,13 @@ export default defineEventHandler(async (event) => {
       payment_id: p.id,
       appointment_id: p.appointment_id,
       product_id: null as string | null,
-      product_name: serviceName,
+      event_type_code: snapshot.event_type_code,
+      user_id: snapshot.user_id,
+      staff_id: snapshot.staff_id,
+      staff_first_name: snapshot.staff_first_name,
+      customer_first_name: snapshot.customer_first_name,
+      customer_last_name: snapshot.customer_last_name,
+      product_name: snapshot.product_name,
       product_description: serviceDescription,
       appointment_title: apt?.title || null,
       appointment_date: apt?.start_time || null,
@@ -349,7 +384,7 @@ export default defineEventHandler(async (event) => {
       product_details: [] as { name: string; price_rappen: number }[],
     }
 
-    const productItems = products.map((pd) => {
+    const productItems = products.map((pd: { product_id?: string | null; name?: string; price_rappen?: number; quantity?: number }) => {
       const price = pd.price_rappen || 0
       const qty = pd.quantity || 1
       return {

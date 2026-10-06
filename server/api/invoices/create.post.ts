@@ -11,6 +11,10 @@ import { applyStudentCreditToPayments } from '~/server/utils/apply-student-credi
 import { resolveInvoiceLineCreditRappen } from '~/server/utils/invoice-credit'
 import { snapshotBillingCompanyName } from '~/utils/billing-address-map'
 import { isInvoiceSourceTable, stampInvoiceSourceRow } from '~/server/utils/invoice-tenant-guards'
+import {
+  buildServiceLineSnapshot,
+  loadTenantEventTypeNames,
+} from '~/server/utils/invoice-line-snapshot'
 
 export default defineEventHandler(async (event) => {
   // ✅ Use authenticated user
@@ -146,10 +150,103 @@ export default defineEventHandler(async (event) => {
     }
 
     const totalRappen: number = subtotalRappen + vatRappen - discountRappen
+    const tenantId = userProfile.tenant_id
+
+    if (invoiceData.tenant_id && invoiceData.tenant_id !== tenantId) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+
+    if (invoiceData.user_id) {
+      const { data: billedUser } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('id', invoiceData.user_id)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+      if (!billedUser) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+
+    if (invoiceData.company_id) {
+      const { data: company } = await supabaseAdmin
+        .from('companies')
+        .select('id')
+        .eq('id', invoiceData.company_id)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+      if (!company) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+
+    const appointmentIdsForSnapshot = Array.from(new Set(
+      [
+        invoiceData.appointment_id,
+        ...invoiceItemsInput.map((item: any) => item.appointment_id),
+      ].filter(Boolean),
+    )) as string[]
+    const paymentIdsForSnapshot = Array.from(new Set(
+      invoiceItemsInput.flatMap((item: any) => [
+        item.payment_id,
+        item._open_item_source_table === 'payments' ? item._open_item_id : null,
+      ]).filter(Boolean),
+    )) as string[]
+
+    const appointmentById = new Map<string, {
+      id: string
+      user_id: string | null
+      staff_id: string | null
+      event_type_code: string | null
+      title: string | null
+      status: string | null
+      cancellation_charge_percentage: number | null
+    }>()
+    if (appointmentIdsForSnapshot.length > 0) {
+      const { data: appointments } = await supabaseAdmin
+        .from('appointments')
+        .select('id, user_id, staff_id, event_type_code, title, status, cancellation_charge_percentage')
+        .in('id', appointmentIdsForSnapshot)
+        .eq('tenant_id', tenantId)
+      for (const row of appointments || []) appointmentById.set(row.id, row)
+      if (appointmentById.size !== appointmentIdsForSnapshot.length) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+      }
+    }
+
+    const paymentById = new Map<string, { id: string; user_id: string | null; appointment_id: string | null }>()
+    if (paymentIdsForSnapshot.length > 0) {
+      const { data: paymentRows } = await supabaseAdmin
+        .from('payments')
+        .select('id, user_id, appointment_id')
+        .in('id', paymentIdsForSnapshot)
+        .eq('tenant_id', tenantId)
+      for (const row of paymentRows || []) paymentById.set(row.id, row)
+      if (paymentById.size !== paymentIdsForSnapshot.length) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+      }
+    }
+
+    const partyIds = Array.from(new Set([
+      ...[...appointmentById.values()].flatMap((row) => [row.user_id, row.staff_id]),
+      ...[...paymentById.values()].map((row) => row.user_id),
+      invoiceData.user_id || null,
+    ].filter(Boolean))) as string[]
+    const partyById = new Map<string, { id: string; first_name: string | null; last_name: string | null }>()
+    if (partyIds.length > 0) {
+      const { data: parties } = await supabaseAdmin
+        .from('users')
+        .select('id, first_name, last_name')
+        .in('id', partyIds)
+        .eq('tenant_id', tenantId)
+      for (const row of parties || []) partyById.set(row.id, row)
+    }
+
+    const eventTypeNames = await loadTenantEventTypeNames(
+      supabaseAdmin,
+      tenantId,
+      [...appointmentById.values()].map((row) => row.event_type_code),
+    )
 
     const billedInvoiceData = await applyMissingInvoiceBilling(
       supabaseAdmin,
-      userProfile.tenant_id,
+      tenantId,
       invoiceData
     )
 
@@ -165,7 +262,7 @@ export default defineEventHandler(async (event) => {
       billing_city: billedInvoiceData.billing_city || null,
       billing_country: billedInvoiceData.billing_country || 'CH',
       billing_vat_number: billedInvoiceData.billing_vat_number || null,
-      tenant_id: userProfile.tenant_id,
+      tenant_id: tenantId,
       document_kind: asQuote ? 'quote' : 'invoice',
       invoice_number: invoiceNumber,
       quote_number: asQuote ? invoiceNumber : null,
@@ -251,12 +348,68 @@ export default defineEventHandler(async (event) => {
       }
 
       const invoiceItems = invoiceItemsInput.map((item: any, index: number) => {
-        // Strip internal metadata and computed-only fields before inserting
+        // Strip internal metadata and client-supplied snapshot fields before inserting.
+        // tenant_id / user_id / event_type_code / staff & customer names are server-owned.
         const {
           _open_item_id, _open_item_type, _open_item_source_table,
           payment_method, status,
+          tenant_id: _clientTenant,
+          user_id: _clientUser,
+          event_type_code: _clientEventType,
+          event_type_name: _clientEventName,
+          staff_id: _clientStaff,
+          staff_first_name: _clientStaffName,
+          customer_first_name: _clientCustomerFirst,
+          customer_last_name: _clientCustomerLast,
+          customer_line: _clientCustomerLine,
+          line_title: _clientLineTitle,
           ...cleanItem
         } = item
+
+        const appointment = item.appointment_id ? appointmentById.get(item.appointment_id) : null
+        const payment = paymentById.get(
+          item.payment_id || (item._open_item_source_table === 'payments' ? item._open_item_id : ''),
+        )
+        const snapshotUserId = appointment?.user_id || payment?.user_id || invoiceData.user_id || null
+        const customer = snapshotUserId ? partyById.get(snapshotUserId) : null
+        const staffId = appointment?.staff_id && partyById.has(appointment.staff_id) ? appointment.staff_id : null
+        const staff = staffId ? partyById.get(staffId) : null
+        const eventTypeCode = appointment?.event_type_code ? String(appointment.event_type_code) : null
+        const eventTypeName = eventTypeCode ? eventTypeNames[eventTypeCode] || null : null
+
+        let snapshotFields = {
+          event_type_code: null as string | null,
+          user_id: null as string | null,
+          staff_id: null as string | null,
+          staff_first_name: null as string | null,
+          customer_first_name: null as string | null,
+          customer_last_name: null as string | null,
+        }
+
+        if (!item.product_id && (eventTypeCode || appointment || payment)) {
+          const built = buildServiceLineSnapshot({
+            eventTypeCode,
+            eventTypeName,
+            existingTitle: cleanItem.product_name || appointment?.title,
+            appointmentStatus: appointment?.status,
+            cancellationChargePercentage: appointment?.cancellation_charge_percentage,
+            snapshotUserId,
+            staffId,
+            staffFirstName: staff?.first_name || null,
+            customerFirstName: customer?.first_name || null,
+            customerLastName: customer?.last_name || null,
+          })
+          cleanItem.product_name = built.product_name
+          snapshotFields = {
+            event_type_code: built.event_type_code,
+            user_id: built.user_id,
+            staff_id: built.staff_id,
+            staff_first_name: built.staff_first_name,
+            customer_first_name: built.customer_first_name,
+            customer_last_name: built.customer_last_name,
+          }
+        }
+
         const creditToWallet = !asQuote && Boolean(item.credit_to_wallet)
         const creditAmount = creditToWallet
           ? resolveInvoiceLineCreditRappen(
@@ -273,7 +426,8 @@ export default defineEventHandler(async (event) => {
         return {
           ...cleanItem,
           invoice_id: invoice.id,
-          tenant_id: userProfile.tenant_id,
+          tenant_id: tenantId,
+          ...snapshotFields,
           sort_order: item.sort_order ?? index,
           discount_percent: item.discount_percent || 0,
           unit_price_rappen: toRappen(cleanItem.unit_price_rappen),
@@ -368,7 +522,8 @@ export default defineEventHandler(async (event) => {
 
     return { success: true, data: fullInvoice }
   } catch (err: any) {
+    if (err?.statusCode && err.statusCode < 500) throw err
     console.error('Error creating invoice:', err)
-    throw createError({ statusCode: 500, statusMessage: err.message })
+    throw createError({ statusCode: 500, statusMessage: err.statusMessage || err.message })
   }
 })

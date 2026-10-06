@@ -71,6 +71,14 @@ export interface InvoiceItem {
   product_id?: string
   product_name: string
   product_description?: string
+
+  /** Frozen service-line snapshot (nullable on historical rows). */
+  event_type_code?: string | null
+  user_id?: string | null
+  staff_id?: string | null
+  staff_first_name?: string | null
+  customer_first_name?: string | null
+  customer_last_name?: string | null
   
   // Termin Information
   appointment_id?: string

@@ -197,7 +197,8 @@
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                         </svg>
                         <div>
-                          <p class="text-sm font-semibold text-gray-800">{{ item.product_name }}</p>
+                          <p class="text-sm font-semibold text-gray-800">{{ invoiceLineView(item).product_name }}</p>
+                          <p v-if="invoiceLineView(item).customer_line" class="text-xs text-gray-400 mt-0.5">{{ invoiceLineView(item).customer_line }}</p>
                           <p v-if="item.product_description || item.appointment_date || item.appointment_start_time" class="text-xs text-gray-400 mt-0.5">
                             <span v-if="item.appointment_start_time || item.appointment_date">{{ formatAppointmentDate(item.appointment_start_time || item.appointment_date) }}</span>
                             <span v-if="(item.appointment_start_time || item.appointment_date) && item.appointment_duration_minutes"> · </span>
@@ -477,10 +478,41 @@ import { ref, computed, watch } from 'vue'
 import { billingPersonNameParts, collapseDuplicatePersonName, formatBillingPersonLabel, joinStreetAndNumber } from '~/utils/billing-address-map'
 import { useDynamicBranding } from '~/composables/useDynamicBranding'
 import { openPdf as openPdfUtil } from '~/utils/openPdf'
+import { presentStoredInvoiceLine } from '~/server/utils/invoice-line-snapshot'
+
+function invoiceLineView(item: {
+  product_name?: string | null
+  product_id?: string | null
+  event_type_code?: string | null
+  staff_first_name?: string | null
+  customer_first_name?: string | null
+  customer_last_name?: string | null
+  customer_line?: string | null
+}) {
+  const presented = presentStoredInvoiceLine({
+    productName: item.product_name,
+    productId: item.product_id,
+    eventTypeCode: item.event_type_code,
+    staffFirstName: item.staff_first_name,
+    customerFirstName: item.customer_first_name,
+    customerLastName: item.customer_last_name,
+  })
+  return {
+    product_name: presented.product_name,
+    customer_line: item.customer_line || presented.customer_line,
+  }
+}
 
 interface InvoiceDraftItem {
   product_name: string
   product_description?: string | null
+  event_type_code?: string | null
+  user_id?: string | null
+  staff_id?: string | null
+  staff_first_name?: string | null
+  customer_first_name?: string | null
+  customer_last_name?: string | null
+  customer_line?: string | null
   appointment_date?: string | null
   appointment_start_time?: string | null
   appointment_id?: string | null
