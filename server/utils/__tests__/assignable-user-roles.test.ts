@@ -80,10 +80,12 @@ describe('public.users.role student write/read contract', () => {
 
   it('cash enrollment inserts a client and matches only clients', () => {
     const src = read('server/api/courses/enroll-cash.post.ts')
-    expect(src).toContain("role: 'client'")
-    expect(src).toContain("roles: ['client']")
+    const resolver = read('server/utils/public-course-user.ts')
+    expect(src).toContain('resolvePublicCourseUser')
     expect(src).not.toMatch(/role:\s*['"]student['"]/)
     expect(src).not.toContain("'student'")
+    expect(resolver).toContain("PUBLIC_COURSE_USER_ROLE = 'client'")
+    expect(resolver).not.toMatch(/role:\s*['"]student['"]/)
   })
 
   it('admin participant and create-user insert a client', () => {
@@ -110,7 +112,16 @@ describe('public.users.role student write/read contract', () => {
 
   it('course session binding accepts only client', () => {
     const src = read('server/utils/fulfill-course-wallee-payment.ts')
-    expect(src).toContain("new Set(['client'])")
-    expect(src).not.toContain("'student'")
+    const session = src.slice(
+      src.indexOf('const PUBLIC_COURSE_SESSION_ROLES'),
+      src.indexOf('export function publicCourseSessionPrincipalId'),
+    )
+    expect(session).toContain("const PUBLIC_COURSE_SESSION_ROLES = new Set(['client'])")
+    expect(session).not.toContain('student')
+    const reuse = src.slice(
+      src.indexOf('const PUBLIC_COURSE_CUSTOMER_ROLES'),
+      src.indexOf('export async function ensureGuestUserForCoursePayment'),
+    )
+    expect(reuse).toContain("const PUBLIC_COURSE_CUSTOMER_ROLES = new Set(['client', 'student'])")
   })
 })
