@@ -178,9 +178,17 @@ export function buildServiceLineSnapshot(opts: {
   }
 }
 
+type EventTypeNameRow = { code?: string | null; name?: string | null }
+
+type EventTypeNameQuery = {
+  select: (columns: string) => EventTypeNameQuery
+  eq: (column: string, value: string) => EventTypeNameQuery
+  in: (column: string, values: string[]) => Promise<{ data: EventTypeNameRow[] | null }>
+}
+
 /** Exact tenant event-type names. No fuzzy aliases. */
 export async function loadTenantEventTypeNames(
-  supabase: { from: (table: string) => any },
+  supabase: { from: (table: string) => EventTypeNameQuery },
   tenantId: string,
   codes: Array<string | null | undefined>,
 ): Promise<Record<string, string>> {
