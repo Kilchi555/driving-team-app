@@ -265,7 +265,7 @@
       <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
         <div>
           <p class="text-sm font-semibold text-gray-700">Wallee-Gebühren</p>
-          <p class="text-xs text-gray-400">Pauschal {{ walleeFeeLabel }} auf abgeschlossene Online-Zahlungen · als Aufwand verbuchbar</p>
+          <p class="text-xs text-gray-400">{{ walleeFeeLabel }} auf abgeschlossene Online-Zahlungen · als Aufwand verbuchbar</p>
           <p class="text-xs text-gray-500 leading-relaxed mt-2 max-w-2xl">{{ walleeFeePriceTip }}</p>
         </div>
         <button

@@ -94,10 +94,22 @@ export const PRICE_VAT_STANDARD_FROM = 'Oktober 2026'
 export const PRICE_VAT_NOTE = `Alle Preise exkl. MwSt. Aktuell beträgt die MwSt. ${PRICE_VAT_RATE_PERCENT} %. Ab ${PRICE_VAT_STANDARD_FROM} gilt der offizielle Normalsatz von ${PRICE_VAT_STANDARD_PERCENT} %.`
 export const PRICE_VAT_NOTE_SHORT = `exkl. MwSt. (aktuell ${PRICE_VAT_RATE_PERCENT} %, ab Okt. 2026 ${PRICE_VAT_STANDARD_PERCENT} %)`
 
-export const WALLEE_FEE_PERCENT = '1.7%'
+export const WALLEE_FEE_PERCENT = '1,35 % (TWINT 1,3 %)'
 export const WALLEE_FEE_NOTE =
-  `Online-Zahlungen (TWINT, Karte) über Wallee: ${WALLEE_FEE_PERCENT} Transaktionsgebühr pro Kundenzahlung — kein monatlicher Aufpreis.`
+  `Online-Zahlungen über Wallee: ${WALLEE_FEE_PERCENT} Transaktionsgebühr pro erfolgreicher Kundenzahlung — kein monatlicher Aufpreis. QR-Rechnung und Barzahlung ohne diese Gebühr.`
 export const WALLEE_FEE_PRICE_TIP =
   'Viele Betriebe heben ihre Preise um 2–3 % an. Die App hat laufende Kosten, die Gebühr ist damit gedeckt, es bleibt ein kleiner Gewinn — und automatische Zahlungen sparen Zeit und Nachfassen.'
 export const WALLEE_FEE_FAQ =
-  `Für deine Kunden unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von ${WALLEE_FEE_PERCENT} pro Zahlung an. ${WALLEE_FEE_PRICE_TIP}`
+  `Für deine Kunden unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von ${WALLEE_FEE_PERCENT} pro erfolgreicher Zahlung an. QR-Rechnung und Barzahlung ohne diese Gebühr. ${WALLEE_FEE_PRICE_TIP}`
+
+/** Approved cost claims. "Keine Einrichtungsgebühr" applies to the software subscription only. */
+export const CLAIM_NO_SETUP_SOFTWARE = 'Keine Einrichtungsgebühr für das Software-Abo.'
+export const CLAIM_NO_FEE_PER_CUSTOMER = 'Keine Gebühr pro Kunde.'
+export const CLAIM_UNLIMITED_CUSTOMERS = 'Unbegrenzt viele Kunden.'
+export const CLAIM_NO_FEE_PER_STUDENT = 'Keine Gebühr pro Schüler.'
+export const CLAIM_UNLIMITED_STUDENTS = 'Unbegrenzt viele Schüler.'
+export const CLAIM_COURSES_FROM_PRO = 'Online-Kursverwaltung ab Professional inklusive.'
+export const CLAIM_WALLEE_PRIMARY =
+  `Online-Zahlung ist im Monatspreis enthalten. Keine zusätzliche Monatsgebühr, keine Setup-Gebühr. ${WALLEE_FEE_PERCENT} pro erfolgreicher Wallee-Zahlung. QR-Rechnung und Barzahlung ohne diese Gebühr.`
+/** Public QualiDrive price list checked for the comparison proof on /preise. */
+export const QUALIDRIVE_PRICE_LIST_AS_OF = '4. Oktober 2026'

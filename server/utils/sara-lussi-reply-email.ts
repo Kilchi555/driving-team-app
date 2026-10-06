@@ -111,10 +111,10 @@ export function buildSaraLussiReplyEmail(opts: { test?: boolean } = {}): {
 
             <p style="margin:24px 0 10px;color:#111827;font-size:15px;font-weight:700">Buchhaltung und Kosten</p>
             <p style="margin:0 0 16px;color:#4b5563;font-size:15px;line-height:1.65">
-              In Simy sehen Sie Bruttoumsatz, MWST, einzelne Transaktionen, Rückerstattungen und einen CSV-Export. Die Wallee-Gebühr rechnen wir pauschal mit <strong>1.7&nbsp;%</strong> aus — pro Zahlung und gesammelt — damit Sie sie ohne Handrechnung als Aufwand verbuchen können. Die Auszahlung auf Ihr Bankkonto erfolgt durch Wallee; den detaillierten Settlement-Abgleich macht deren Portal. Einen DATEV- oder Bexio-Direktexport haben wir bewusst noch nicht.
+              In Simy sehen Sie Bruttoumsatz, MWST, einzelne Transaktionen, Rückerstattungen und einen CSV-Export. Die Wallee-Gebühr rechnen wir mit <strong>1,35&nbsp;% (TWINT 1,3&nbsp;%)</strong> aus — pro Zahlung und gesammelt — damit Sie sie ohne Handrechnung als Aufwand verbuchen können. Die Auszahlung auf Ihr Bankkonto erfolgt durch Wallee; den detaillierten Settlement-Abgleich macht deren Portal. Einen DATEV- oder Bexio-Direktexport haben wir bewusst noch nicht.
             </p>
             <p style="margin:0 0 12px;color:#4b5563;font-size:15px;line-height:1.65">
-              Damit nichts überrascht: Es gibt zwei getrennte Kosten. Das <strong>Simy-Abo</strong> zahlen Sie an uns. Die <strong>1.7&nbsp;% Transaktionsgebühr</strong> fällt nur an, wenn eine Kundin online bezahlt. Viele Betriebe heben ihre Preise um 2–3&nbsp;% an: Die App hat laufende Kosten, die Gebühr ist damit gedeckt, es bleibt ein kleiner Gewinn — und automatische Zahlungen sparen Zeit und Nachfassen. Abo-Preise sind <strong>exkl. 8.1&nbsp;% MWST</strong>. Die Preise, die Ihre Kundinnen sehen, sind inkl. MWST. Monatlich kündbar, 30 Tage Frist, keine Mindestlaufzeit.
+              Damit nichts überrascht: Es gibt zwei getrennte Kosten. Das <strong>Simy-Abo</strong> zahlen Sie an uns. Die <strong>Transaktionsgebühr von 1,35&nbsp;% (TWINT 1,3&nbsp;%)</strong> fällt nur an, wenn eine Kundin online bezahlt. Viele Betriebe heben ihre Preise um 2–3&nbsp;% an: Die App hat laufende Kosten, die Gebühr ist damit gedeckt, es bleibt ein kleiner Gewinn — und automatische Zahlungen sparen Zeit und Nachfassen. Abo-Preise sind <strong>exkl. 8.1&nbsp;% MWST</strong>. Die Preise, die Ihre Kundinnen sehen, sind inkl. MWST. Monatlich kündbar, 30 Tage Frist, keine Mindestlaufzeit.
             </p>
 
             <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:#faf8ff;border:1px solid #eee8f8;border-radius:12px">
@@ -128,8 +128,8 @@ export function buildSaraLussiReplyEmail(opts: { test?: boolean } = {}): {
                   ${row('Einrichtung Software', 'keine Gebühr')}
                   ${sectionHead('Zahlungen Ihrer Kundinnen')}
                   ${row('TWINT &amp; Karte (Wallee)', 'kein Monatsaufpreis')}
-                  ${row('Transaktionsgebühr', '1.7 % vom Brutto')}
-                  ${row('Beispiel 1’000 × CHF 180', 'rund CHF 3’060 / Monat')}
+                  ${row('Transaktionsgebühr', '1,35 % (TWINT 1,3 %) vom Brutto')}
+                  ${row('Beispiel 1’000 × CHF 180', 'rund CHF 2’430 / Monat, TWINT rund CHF 2’340')}
                   ${sectionHead('Optional — nur wenn Sie es brauchen')}
                   ${row('Weiterer Mitarbeiter', 'CHF 19 / Monat')}
                   ${row('SMS über Kontingent', 'CHF 0.15 / Segment')}

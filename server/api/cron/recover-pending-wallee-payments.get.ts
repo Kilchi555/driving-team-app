@@ -11,6 +11,7 @@ import { sendOnlinePaymentReceiptsSafe } from '~/server/utils/online-payment-rec
 import { assertCronRequest } from '~/server/utils/cron-auth'
 import { completeCapturedWalleePayment } from '~/server/utils/topup-credit'
 import { normalizePaymentMetadata } from '~/server/utils/payment-metadata'
+import { ensureWalleePaymentMethodId, stampWalleeFeeKind } from '~/server/utils/wallee-fee-kind'
 import {
   capturedAmountChfFromWalleeTx,
   shouldRejectWalleeCaptureMismatch,
@@ -41,18 +42,23 @@ async function recoverToCapturedStatus(
   supabase: any,
   payment: any,
   mappedStatus: string,
-  statusGuard?: string
+  statusGuard?: string,
+  walleeTx?: unknown,
 ): Promise<{ ok: boolean; error?: string }> {
   payment.metadata = normalizePaymentMetadata(payment.metadata)
   const extraUpdate: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   }
   if (mappedStatus === 'completed') extraUpdate.paid_at = new Date().toISOString()
-  return completeCapturedWalleePayment(supabase, payment, {
+  const result = await completeCapturedWalleePayment(supabase, payment, {
     targetStatus: mappedStatus,
     extraUpdate,
     statusGuard,
   })
+  if (result.ok && mappedStatus === 'completed' && payment.payment_status !== 'completed') {
+    await stampWalleeFeeKind(supabase, payment, walleeTx)
+  }
+  return result
 }
 
 async function recoverCompletedCourseViaAtomicFulfillment(opts: {
@@ -62,8 +68,9 @@ async function recoverCompletedCourseViaAtomicFulfillment(opts: {
   phase: string
   paymentStatusBefore: string
   capturedAmountChf: number
+  walleeTx?: unknown
 }): Promise<{ recovered: boolean, status: string }> {
-  const { supabase, payment, walleeState, phase, paymentStatusBefore, capturedAmountChf } = opts
+  const { supabase, payment, walleeState, phase, paymentStatusBefore, capturedAmountChf, walleeTx } = opts
   if (shouldRejectWalleeCaptureMismatch(capturedAmountChf, payment)) {
     logger.error(`❌ Cron ${phase}: remaining-amount mismatch for ${payment.id} — not fulfilling`)
     try {
@@ -117,6 +124,14 @@ async function recoverCompletedCourseViaAtomicFulfillment(opts: {
       await sendCourseFulfillmentConfirmation(result.registrationId, payment.total_amount_rappen)
     } catch (mailErr: any) {
       logger.warn(`⚠️ Cron ${phase}: confirmation email (non-fatal):`, mailErr?.message)
+    }
+  }
+
+  if (paymentStatusBefore !== 'completed') {
+    try {
+      await stampWalleeFeeKind(supabase, payment, walleeTx)
+    } catch (feeErr: any) {
+      logger.warn(`⚠️ Cron ${phase}: Wallee fee kind stamp (non-fatal):`, feeErr?.message)
     }
   }
 
@@ -225,6 +240,7 @@ export default defineEventHandler(async (event) => {
           // Fetch current transaction from Wallee
           const response = await transactionService.read(walleeConfig.spaceId, parseInt(payment.wallee_transaction_id))
           const transaction = response?.body || response
+          await ensureWalleePaymentMethodId(transaction, walleeConfig.spaceId, config)
           let captureTx = transaction
 
           let walleeState = transaction?.state || null
@@ -265,6 +281,7 @@ export default defineEventHandler(async (event) => {
                   try {
                     const histResponse = await transactionService.read(walleeConfig.spaceId, parseInt(record.wallee_transaction_id))
                     const histTx = histResponse?.body || histResponse
+                    await ensureWalleePaymentMethodId(histTx, walleeConfig.spaceId, config)
 
                     if (histTx?.state) {
                       const histStatus = STATUS_MAPPING[histTx.state] || 'pending'
@@ -306,6 +323,7 @@ export default defineEventHandler(async (event) => {
                 phase: 'pending_recovery',
                 paymentStatusBefore: payment.payment_status,
                 capturedAmountChf: capturedAmountChfFromWalleeTx(captureTx),
+                walleeTx: captureTx,
               })
               if (outcome.recovered) recovered++
               else {
@@ -315,7 +333,7 @@ export default defineEventHandler(async (event) => {
               continue
             }
 
-            const recoveredStatus = await recoverToCapturedStatus(supabase, payment, mappedStatus)
+            const recoveredStatus = await recoverToCapturedStatus(supabase, payment, mappedStatus, undefined, captureTx)
 
             if (!recoveredStatus.ok) {
               logger.error(`❌ Phase 1: error updating payment ${payment.id}:`, recoveredStatus.error)
@@ -431,6 +449,7 @@ export default defineEventHandler(async (event) => {
 
             const response = await transactionService.read(walleeConfig.spaceId, parseInt(payment.wallee_transaction_id))
             const transaction = response?.body || response
+            await ensureWalleePaymentMethodId(transaction, walleeConfig.spaceId, config)
             walleeState = transaction?.state
 
             if (!walleeState) {
@@ -490,6 +509,7 @@ export default defineEventHandler(async (event) => {
                   phase: 'processing_complete',
                   paymentStatusBefore: 'processing',
                   capturedAmountChf: capturedAmountChfFromWalleeTx(transaction),
+                  walleeTx: transaction,
                 })
                 if (outcome.recovered) recovered++
                 continue
@@ -499,7 +519,8 @@ export default defineEventHandler(async (event) => {
                 supabase,
                 payment,
                 mappedStatus,
-                'processing'
+                'processing',
+                transaction
               )
 
               if (!recoveredStatus.ok) {
@@ -587,6 +608,7 @@ export default defineEventHandler(async (event) => {
               const transactionService = new Wallee.api.TransactionService(config)
               const response = await transactionService.read(walleeConfig.spaceId, parseInt(payment.wallee_transaction_id))
               const transaction = response?.body || response
+              await ensureWalleePaymentMethodId(transaction, walleeConfig.spaceId, config)
               captureTx = transaction
               walleeState = transaction?.state
 
@@ -609,7 +631,7 @@ export default defineEventHandler(async (event) => {
             const recoveredStatus = shouldAtomicallyFulfillCoursePayment(payment, mappedStatus)
               ? { ok: false as const, skipToAtomic: true as const }
               : mappedStatus === 'completed' || mappedStatus === 'authorized'
-                ? await recoverToCapturedStatus(supabase, payment, mappedStatus, 'failed')
+                ? await recoverToCapturedStatus(supabase, payment, mappedStatus, 'failed', captureTx)
                 : { ok: true as const }
 
             if ('skipToAtomic' in recoveredStatus && recoveredStatus.skipToAtomic) {
@@ -620,6 +642,7 @@ export default defineEventHandler(async (event) => {
                 phase: 'failed_complete',
                 paymentStatusBefore: 'failed',
                 capturedAmountChf: capturedAmountChfFromWalleeTx(captureTx),
+                walleeTx: captureTx,
               })
               if (outcome.recovered) {
                 recovered++

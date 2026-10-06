@@ -53,7 +53,8 @@
             In deinen Farben testen
           </a>
         </div>
-        <p class="text-sm text-gray-400 mb-3">Keine Kreditkarte · Monatlich kündbar · Schweizer Server</p>
+        <p class="text-sm text-gray-400 mb-2">Keine Kreditkarte · Monatlich kündbar · Schweizer Server</p>
+        <p class="text-sm font-semibold text-gray-800 mb-3">{{ claimNoSetup }} {{ claimNoFeePerCustomer }}</p>
         <p class="text-xs text-gray-400 mb-8">50+ Betriebe · Swiss Hosting · DSGVO · 30 Tage Vorschau</p>
 
         <div class="relative mx-auto max-w-2xl pt-10 md:pt-14">
@@ -320,7 +321,7 @@
             <h3 class="font-extrabold text-xl text-gray-900 mb-2">Komplette Betriebssoftware</h3>
             <p class="text-sm text-gray-500 leading-relaxed mb-5 flex-1">Die All-in-One-Lösung für deinen Betrieb: Verwaltung, Buchung, Rechnungen, App und Marketing in einer Plattform. Speziell für die Schweiz.</p>
             <ul class="space-y-1.5 mb-5 text-sm text-gray-600">
-              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Alle Funktionen inklusive</li>
+              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Buchung, Abrechnung und App im Monatspreis</li>
               <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Beste Wahl für Inhaber</li>
               <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Skaliert vom Solo bis 10+ Mitarbeitende</li>
             </ul>
@@ -356,7 +357,7 @@
             <ul class="space-y-1.5 mb-5 text-sm text-gray-600">
               <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> iOS & Android (nativ)</li>
               <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Immer aktuell & synchronisiert</li>
-              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Optional als deine eigene Branded App</li>
+              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Mitarbeiter-App im Software-Abo enthalten</li>
             </ul>
             <span class="inline-flex items-center gap-1 text-sm font-bold group-hover:gap-2 transition-all" :style="{ color: primaryColor }">
               Mehr erfahren
@@ -1023,7 +1024,8 @@
       <div class="max-w-4xl mx-auto text-center">
         <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Preise</p>
         <h2 class="text-4xl font-extrabold text-gray-900 mb-3">Transparent. Flexibel. Fair.</h2>
-        <p class="text-gray-500 text-lg mb-12">Monatlich kündbar, keine Jahresbindung. Starte mit 30 Tagen kostenlos.</p>
+        <p class="text-gray-500 text-lg mb-3">Monatlich kündbar, keine Jahresbindung. Starte mit 30 Tagen kostenlos.</p>
+        <p class="text-gray-800 font-semibold mb-12">{{ claimUnlimitedCustomers }} {{ claimNoFeePerCustomer }} {{ claimNoSetup }}</p>
 
         <div class="grid md:grid-cols-3 gap-5 mb-10">
           <div v-for="plan in pricingPlans" :key="plan.name"
@@ -1482,10 +1484,13 @@ import { useHead, useAsyncData } from 'nuxt/app'
 import { $fetch } from 'ofetch'
 import { getDemoReminderHtml, getDemoInvoiceHtml, getDemoWelcomeHtml } from '../utils/demo-email-templates'
 import { FOUNDER_BLURB_HOME } from '~/data/founder'
-import { PRICE_VAT_NOTE, WALLEE_FEE_FAQ } from '~/data/pricing'
+import { CLAIM_NO_FEE_PER_CUSTOMER, CLAIM_NO_SETUP_SOFTWARE, CLAIM_UNLIMITED_CUSTOMERS, PRICE_VAT_NOTE, WALLEE_FEE_FAQ } from '~/data/pricing'
 import { SIMY_BRAND, SIMY_BRAND_STORAGE_KEY, hexToRgb, simyLogoColorFilter } from '~/utils/brand'
 
 const founderBlurbHome = FOUNDER_BLURB_HOME
+const claimNoSetup = CLAIM_NO_SETUP_SOFTWARE
+const claimNoFeePerCustomer = CLAIM_NO_FEE_PER_CUSTOMER
+const claimUnlimitedCustomers = CLAIM_UNLIMITED_CUSTOMERS
 
 declare function definePageMeta(meta: Record<string, unknown>): void
 
@@ -1638,7 +1643,15 @@ useHead({
             name: 'Was kostet Simy?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: `Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende). ${PRICE_VAT_NOTE}`,
+              text: `Simy bietet Preispläne ab CHF 49/Monat. Unbegrenzt viele Kunden, keine Gebühr pro Kunde, keine Einrichtungsgebühr für das Software-Abo. Online-Buchung und Online-Zahlung sind im Monatspreis. Die ersten 30 Tage sind kostenlos, ohne Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende). ${PRICE_VAT_NOTE}`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Gibt es eine Gebühr pro Kunde?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Nein. Simy berechnet im Planmodell keine Gebühr pro Kunde. Deine Kunden sind im jeweiligen Monatspreis enthalten. Begrenzt sind die Mitarbeiter-Logins: Starter 1, Professional 5, Enterprise 10.',
             },
           },
         ],
@@ -1980,7 +1993,7 @@ const PLAN_STATIC = [
     tagline: 'Für Einzelpersonen & Solo',
     fallbackPrice: '49',
     highlighted: true,
-    featureList: ['1 Mitarbeiter', 'Online-Terminbuchung', 'Kundenverwaltung', 'Rechnungen & Zahlungen', 'E-Mail Support'],
+    featureList: [CLAIM_UNLIMITED_CUSTOMERS, '1 Mitarbeiter', 'Online-Terminbuchung', 'Kundenverwaltung', 'Rechnungen & Zahlungen', 'E-Mail Support'],
   },
   {
     key: 'professional',
@@ -1988,7 +2001,7 @@ const PLAN_STATIC = [
     tagline: 'Für wachsende Betriebe',
     fallbackPrice: '149',
     highlighted: false,
-    featureList: ['Bis 5 Mitarbeiter', 'Alles aus Starter', 'Kursbuchungsseite', 'Prioritäts-Support'],
+    featureList: [CLAIM_UNLIMITED_CUSTOMERS, 'Bis 5 Mitarbeiter', 'Alles aus Starter', 'Kursbuchungsseite', 'Prioritäts-Support'],
   },
   {
     key: 'enterprise',
@@ -1996,7 +2009,7 @@ const PLAN_STATIC = [
     tagline: 'Für Teams & mehrere Standorte',
     fallbackPrice: '259',
     highlighted: false,
-    featureList: ['Bis zu 10 Mitarbeiter', 'Alles aus Professional', 'Affiliate-System', 'Dedizierter Support'],
+    featureList: [CLAIM_UNLIMITED_CUSTOMERS, 'Bis zu 10 Mitarbeiter', 'Alles aus Professional', 'Affiliate-System', 'Dedizierter Support'],
   },
 ]
 
@@ -2013,7 +2026,8 @@ const faqs = reactive([
   { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: WALLEE_FEE_FAQ, open: false },
   { q: 'Kann ich von einem Plan upgraden?', a: 'Ja, jederzeit. Dein Upgrade wird sofort aktiv und anteilig verrechnet. Du verlierst keine Daten.', open: false },
   { q: 'Sind meine Daten sicher?', a: 'Ja. Simy betreibt alle Daten auf Schweizer Servern, ist DSGVO-konform und verwendet Ende-zu-Ende-Verschlüsselung für sensible Daten.', open: false },
-  { q: 'Was kostet Simy?', a: `Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende). ${PRICE_VAT_NOTE}`, open: false },
+  { q: 'Was kostet Simy?', a: `Simy bietet Preispläne ab CHF 49/Monat. Unbegrenzt viele Kunden, keine Gebühr pro Kunde, keine Einrichtungsgebühr für das Software-Abo. Online-Buchung und Online-Zahlung sind im Monatspreis. Die ersten 30 Tage sind kostenlos, ohne Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende). ${PRICE_VAT_NOTE}`, open: false },
+  { q: 'Gibt es eine Gebühr pro Kunde?', a: 'Nein. Simy berechnet im Planmodell keine Gebühr pro Kunde. Deine Kunden sind im jeweiligen Monatspreis enthalten. Begrenzt sind die Mitarbeiter-Logins: Starter 1, Professional 5, Enterprise 10.', open: false },
   { q: 'Was bringt die Google-Business-Automation?', a: `Simy postet den Jahreskalender (1–4×/Woche), verteilt deinen Foto-Pool (1–3×/Woche), beantwortet neue Google-Reviews automatisch und zeigt Insights. CHF 19/Monat. Sonst gehen kostenlose Maps-Klicks verloren. ${PRICE_VAT_NOTE}`, open: false },
 ])
 

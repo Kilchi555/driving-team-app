@@ -193,7 +193,7 @@ const invoiceFeatures = [
   { icon: 'zap', title: 'Automatische Erstellung', desc: 'Nach jedem Termin erstellt Simy automatisch die Rechnung — ohne dein Zutun.' },
   { icon: 'mail', title: 'Direktversand per E-Mail', desc: 'Rechnung direkt per E-Mail an den Kunden — mit Zahlungslink und PDF-Anhang.' },
   { icon: 'bell', title: 'Zahlungserinnerungen', desc: 'Mit Online-Zahlung: vollautomatisch. Bei E-Mail-Rechnung: Mahnung mit wenigen Klicks versenden — schnell und einfach.' },
-  { icon: 'credit-card', title: 'TWINT & Online-Zahlung', desc: `Kunden zahlen per TWINT, Kreditkarte oder QR-Rechnung — ${WALLEE_FEE_PERCENT} Transaktionsgebühr, kein Monatsaufpreis. ${WALLEE_FEE_PRICE_TIP}` },
+  { icon: 'credit-card', title: 'TWINT & Online-Zahlung', desc: `Kunden zahlen per TWINT, Kreditkarte oder QR-Rechnung. ${WALLEE_FEE_PERCENT} nur auf erfolgreiche Wallee-Zahlungen, kein Monatsaufpreis. QR-Rechnung und Barzahlung ohne diese Gebühr. ${WALLEE_FEE_PRICE_TIP}` },
   { icon: 'chart', title: 'Einnahmen-Übersicht', desc: 'Tages-, Wochen- und Monatsumsatz auf einen Blick. Offene und bezahlte Rechnungen sortiert.' },
   { icon: 'package', title: 'Guthaben-System', desc: 'Kunden kaufen Pakete im Voraus. Guthaben wird automatisch abgezogen.' },
   { icon: 'clipboard', title: 'Steuer-Export', desc: 'Alle Transaktionen als CSV exportieren — direkt für die Steuererklärung oder den Treuhänder.' },
