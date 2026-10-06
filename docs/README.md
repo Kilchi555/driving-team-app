@@ -344,6 +344,19 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused ops notes verified against source. Prefer these over stale root `*.md` reports when debugging.
+
+| Doc | Purpose |
+|-----|---------|
+| [BOOKING_WORKING_HOURS_REQUIRED.md](./BOOKING_WORKING_HOURS_REQUIRED.md) | No synthetic Mon–Fri slots; scoped stale cleanup (#157) |
+| [PRIVATE_DOCUMENT_SIGNED_URLS.md](./PRIVATE_DOCUMENT_SIGNED_URLS.md) | Persist storage paths; signed URL access for docs/receipts (#158) |
+
+Also see existing runbooks in this folder (e.g. [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md), [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md), [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md)).
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
