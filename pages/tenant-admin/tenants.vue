@@ -840,6 +840,97 @@
                   <input :value="copiedInviteLink" readonly class="sa-input font-mono text-xs" @focus="($event.target as HTMLInputElement).select()" />
                 </div>
               </template>
+
+              <!-- ═══ DANGER: HARD DELETE ═══ -->
+              <template v-else-if="detailTab === 'danger'">
+                <div class="sa-warn-box">
+                  <div class="sa-warn-title">Permanent tenant deletion</div>
+                  <p class="sa-hint mt-1">
+                    Deletes all tenant-owned SIMY data for this UUID. Cannot be undone.
+                    Backups are not purged by this feature.
+                  </p>
+                </div>
+
+                <h4 class="sa-section-title">Target (UUID only)</h4>
+                <div class="sa-info-row">
+                  <span class="sa-info-label">Tenant</span>
+                  <span class="sa-info-val">{{ detail.tenant.name }}</span>
+                  <span class="sa-info-label">Tenant ID</span>
+                  <span class="sa-info-val font-mono text-xs">{{ detail.tenant.id }}</span>
+                  <span class="sa-info-label">Slug</span>
+                  <span class="sa-info-val font-mono text-xs">{{ detail.tenant.slug }}</span>
+                </div>
+
+                <div class="sa-drawer-actions">
+                  <button
+                    type="button"
+                    class="sa-action-btn"
+                    :disabled="hardDeleteLoading === 'preview'"
+                    @click="loadHardDeletePreview"
+                  >
+                    {{ hardDeleteLoading === 'preview' ? 'Loading preview…' : 'Load deletion preview' }}
+                  </button>
+                </div>
+
+                <div v-if="hardDeleteError" class="text-red-400 mt-3 text-sm">{{ hardDeleteError }}</div>
+
+                <template v-if="hardDeletePreview">
+                  <h4 class="sa-section-title">PERMANENT TENANT DELETION</h4>
+                  <div class="sa-stat-grid">
+                    <div class="sa-stat"><div class="sa-stat-val">{{ hardDeletePreview.totalRecords }}</div><div class="sa-stat-label">Records found</div></div>
+                    <div class="sa-stat"><div class="sa-stat-val">{{ hardDeletePreview.financialRecords }}</div><div class="sa-stat-label">Financial records</div></div>
+                    <div class="sa-stat"><div class="sa-stat-val">{{ hardDeletePreview.pendingPayments }}</div><div class="sa-stat-label">Pending payments</div></div>
+                    <div class="sa-stat"><div class="sa-stat-val">{{ hardDeletePreview.storageObjects?.length || 0 }}</div><div class="sa-stat-label">Storage objects</div></div>
+                    <div class="sa-stat"><div class="sa-stat-val">{{ hardDeletePreview.authUsers?.length || 0 }}</div><div class="sa-stat-label">Auth users</div></div>
+                  </div>
+
+                  <div v-if="hardDeletePreview.warnings?.length" class="sa-warn-box mt-3">
+                    <div class="sa-warn-title">Warnings</div>
+                    <ul class="sa-warn-list">
+                      <li v-for="(w, i) in hardDeletePreview.warnings" :key="i">{{ w }}</li>
+                    </ul>
+                  </div>
+
+                  <div v-if="hardDeletePreview.hardcodedCodeHints?.length" class="sa-hint mt-2">
+                    <div v-for="(h, i) in hardDeletePreview.hardcodedCodeHints" :key="i">{{ h }}</div>
+                  </div>
+
+                  <h4 class="sa-section-title">Explicit confirmation</h4>
+                  <p class="sa-hint mb-2">
+                    Type exactly:
+                    <code class="font-mono text-rose-300">{{ hardDeletePreview.confirmationPhrase }}</code>
+                  </p>
+                  <input
+                    v-model="hardDeleteConfirmation"
+                    class="sa-input font-mono"
+                    autocomplete="off"
+                    spellcheck="false"
+                    :placeholder="hardDeletePreview.confirmationPhrase"
+                  />
+
+                  <div class="sa-drawer-actions mt-3">
+                    <button
+                      type="button"
+                      class="sa-btn-danger"
+                      :disabled="!hardDeleteCanExecute || !!hardDeleteLoading"
+                      @click="executeHardDelete"
+                    >
+                      {{ hardDeleteLoading === 'execute' ? 'Deleting…' : 'Delete tenant permanently' }}
+                    </button>
+                  </div>
+
+                  <div v-if="hardDeleteResult" class="sa-info-card mt-3">
+                    <p class="sa-tenant-name">Status: {{ hardDeleteResult.status }}</p>
+                    <p class="sa-hint">Email sent: {{ hardDeleteResult.emailSent ? 'yes' : 'no' }}</p>
+                    <p v-if="hardDeleteResult.verification && !hardDeleteResult.verification.ok" class="text-amber-400 text-sm mt-2">
+                      Leftovers:
+                      <span v-for="l in hardDeleteResult.verification.leftovers" :key="l.table">
+                        {{ l.table }}={{ l.remaining }};
+                      </span>
+                    </p>
+                  </div>
+                </template>
+              </template>
             </div>
           </aside>
         </div>
@@ -907,7 +998,18 @@ const detailTabs = [
   { id: 'setup' as const, label: 'Setup' },
   { id: 'billing' as const, label: 'Billing' },
   { id: 'support' as const, label: 'Support' },
+  { id: 'danger' as const, label: 'Danger' },
 ]
+
+const hardDeletePreview = ref<any>(null)
+const hardDeleteConfirmation = ref('')
+const hardDeleteLoading = ref<false | 'preview' | 'execute'>(false)
+const hardDeleteError = ref('')
+const hardDeleteResult = ref<any>(null)
+const hardDeleteCanExecute = computed(() => {
+  const phrase = hardDeletePreview.value?.confirmationPhrase
+  return !!phrase && hardDeleteConfirmation.value === phrase
+})
 const detailActionMsg = ref('')
 const actionLoading = ref<string | false>(false)
 const copiedInviteLink = ref('')
@@ -1057,12 +1159,69 @@ const fillEditForm = (t: any) => {
   }
 }
 
+const resetHardDeleteState = () => {
+  hardDeletePreview.value = null
+  hardDeleteConfirmation.value = ''
+  hardDeleteLoading.value = false
+  hardDeleteError.value = ''
+  hardDeleteResult.value = null
+}
+
+const loadHardDeletePreview = async () => {
+  if (!detail.value?.tenant?.id) return
+  hardDeleteLoading.value = 'preview'
+  hardDeleteError.value = ''
+  hardDeleteResult.value = null
+  hardDeleteConfirmation.value = ''
+  try {
+    hardDeletePreview.value = await $fetch(`/api/admin/tenants/${detail.value.tenant.id}/hard-delete/preview`)
+  } catch (e: any) {
+    hardDeletePreview.value = null
+    hardDeleteError.value = e?.data?.statusMessage || e?.data?.message || e?.message || 'Preview failed'
+  } finally {
+    hardDeleteLoading.value = false
+  }
+}
+
+const executeHardDelete = async () => {
+  if (!detail.value?.tenant?.id || !hardDeleteCanExecute.value) return
+  const tenantId = detail.value.tenant.id
+  const tenantName = detail.value.tenant.name
+  if (!window.confirm(`Really permanently delete tenant "${tenantName}" (${tenantId})?`)) return
+
+  hardDeleteLoading.value = 'execute'
+  hardDeleteError.value = ''
+  try {
+    hardDeleteResult.value = await $fetch(`/api/admin/tenants/${tenantId}/hard-delete/execute`, {
+      method: 'POST',
+      body: { confirmation: hardDeleteConfirmation.value },
+    })
+    if (hardDeleteResult.value?.status === 'COMPLETED') {
+      detailActionMsg.value = `Tenant deleted: ${tenantName}`
+      await loadTenants()
+      // Keep drawer open to show result; clear detail entity
+      detail.value = {
+        ...detail.value,
+        tenant: { ...detail.value.tenant, name: `${tenantName} (DELETED)`, is_active: false },
+      }
+    } else {
+      hardDeleteError.value = `Deletion finished with status ${hardDeleteResult.value?.status}`
+    }
+  } catch (e: any) {
+    hardDeleteError.value = e?.data?.statusMessage || e?.data?.message || e?.message || 'Hard delete failed'
+    hardDeleteResult.value = e?.data?.data || null
+  } finally {
+    hardDeleteLoading.value = false
+  }
+}
+
 const openTenantDetail = async (tenant: any) => {
   showDetailDrawer.value = true
   detailTab.value = 'overview'
   detailError.value = ''
   detailActionMsg.value = ''
   copiedInviteLink.value = ''
+  resetHardDeleteState()
   detailLoading.value = true
   detail.value = null
   try {
@@ -1082,6 +1241,7 @@ const closeDetailDrawer = () => {
   detailError.value = ''
   detailActionMsg.value = ''
   copiedInviteLink.value = ''
+  resetHardDeleteState()
 }
 
 const reloadDetail = async () => {
@@ -1752,6 +1912,11 @@ onMounted(() => {
   padding:0.5rem 1.25rem; background:linear-gradient(135deg,#4f46e5,#7c3aed);
   color:white; font-size:0.8rem; font-weight:600; border-radius:8px; border:none; cursor:pointer;
 }
+.sa-btn-danger {
+  padding:0.5rem 1.25rem; background:linear-gradient(135deg,#b91c1c,#e11d48);
+  color:white; font-size:0.8rem; font-weight:600; border-radius:8px; border:none; cursor:pointer;
+}
+.sa-btn-danger:disabled { opacity:0.45; cursor:not-allowed; }
 
 /* Transition */
 .modal-enter-active, .modal-leave-active { transition:all 0.2s ease; }
