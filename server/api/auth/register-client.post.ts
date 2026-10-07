@@ -199,7 +199,8 @@ export default defineEventHandler(async (event) => {
         ? categories.filter((c: any) => typeof c === 'string' && c.trim())
         : []
 
-      // Block if email/phone already belongs to an activated account
+      // Block only Auth-backed customers. No-Auth shadows (including course/VKU
+      // rows with onboarding_status defaulted to 'completed') are reused below.
       if (emailNormalized) {
         const { data: existingEmail } = await serviceSupabase
           .from('users')
@@ -207,7 +208,7 @@ export default defineEventHandler(async (event) => {
           .eq('email', emailNormalized)
           .eq('tenant_id', tenantId)
           .maybeSingle()
-        if (existingEmail?.auth_user_id || existingEmail?.onboarding_status === 'completed') {
+        if (existingEmail?.auth_user_id) {
           throw createError({
             statusCode: 409,
             statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich an.',
@@ -221,7 +222,7 @@ export default defineEventHandler(async (event) => {
           .eq('phone', sanitizedPhone)
           .eq('tenant_id', tenantId)
           .maybeSingle()
-        if (existingPhone?.auth_user_id || existingPhone?.onboarding_status === 'completed') {
+        if (existingPhone?.auth_user_id) {
           throw createError({
             statusCode: 409,
             statusMessage: 'Diese Telefonnummer ist bereits registriert. Bitte melde dich an.',
