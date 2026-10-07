@@ -16,6 +16,14 @@ export type CheckoutStatus = (typeof CHECKOUT_STATUS)[keyof typeof CHECKOUT_STAT
 export type CheckoutClaimOutcome = 'allow_create' | 'reuse' | 'in_progress' | 'recovery' | 'blocked' | 'not_found'
 
 export const CHECKOUT_STALE_AFTER = '90 seconds'
+/** App/cron mirror of CHECKOUT_STALE_AFTER — keep in sync with claim_payment_checkout. */
+export const CHECKOUT_STALE_AFTER_MS = 90_000
+
+/** Claim states whose external Wallee outcome may still be unknown. */
+export const UNKNOWN_OUTCOME_CHECKOUT_STATUSES = [
+  CHECKOUT_STATUS.creating,
+  CHECKOUT_STATUS.recovery_pending,
+] as const
 
 export function paymentMerchantReference(paymentId: string): string {
   return `payment-${paymentId}`
@@ -27,14 +35,35 @@ export function isCheckoutRecoveryPendingError(error: unknown): boolean {
     || err?.data?.error === BOOKING_ERROR.CHECKOUT_IN_PROGRESS
 }
 
+export function isUnknownOutcomeCheckoutStatus(status: string | null | undefined): boolean {
+  return status === CHECKOUT_STATUS.creating
+    || status === CHECKOUT_STATUS.recovery_pending
+}
+
+/** Phase 4 must never cancel payments still in an unknown-outcome claim state. */
+export function checkoutBlocksAbandonment(payment: {
+  checkout_status?: string | null
+} | null | undefined): boolean {
+  return isUnknownOutcomeCheckoutStatus(payment?.checkout_status)
+}
+
 export function checkoutBlocksHoldRelease(payment: {
   checkout_status?: string | null
   wallee_transaction_id?: string | null
 } | null | undefined): boolean {
   if (!payment) return false
   if (payment.wallee_transaction_id) return true
-  return payment.checkout_status === CHECKOUT_STATUS.creating
-    || payment.checkout_status === CHECKOUT_STATUS.recovery_pending
+  return isUnknownOutcomeCheckoutStatus(payment.checkout_status)
+}
+
+/**
+ * Defense-in-depth filter for Phase 4 rows after the SQL predicate.
+ * Keeps idle/created/null statuses eligible; drops creating + recovery_pending.
+ */
+export function filterPaymentsEligibleForAbandonment<T extends { checkout_status?: string | null }>(
+  payments: T[]
+): T[] {
+  return payments.filter(p => !checkoutBlocksAbandonment(p))
 }
 
 export function classifyWalleeCreateFailure(error: unknown): 'rejected' | 'unknown' {

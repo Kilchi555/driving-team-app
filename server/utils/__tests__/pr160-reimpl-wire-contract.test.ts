@@ -59,11 +59,18 @@ describe('PR #160 reimplementation wire contract', () => {
     expect(src).toContain("checkout_status === 'recovery_pending'")
   })
 
-  it('recovery reconciles recovery_pending without create', () => {
+  it('recovery reconciles recovery_pending and stale creating without create', () => {
     const src = read('server/api/cron/recover-pending-wallee-payments.get.ts')
-    expect(src).toContain(".eq('checkout_status', 'recovery_pending')")
+    expect(src).toContain('CHECKOUT_STATUS.recovery_pending')
+    expect(src).toContain('CHECKOUT_STATUS.creating')
+    expect(src).toContain('checkout_claimed_at')
     expect(src).toContain('recoverPaymentCheckout')
-    expect(src).toContain(".neq('checkout_status', 'recovery_pending')")
+    expect(src).toContain('filterPaymentsEligibleForAbandonment')
+    expect(src).toContain(".not('checkout_status', 'in'")
+    expect(src).toContain('CHECKOUT_STATUS.creating')
+    expect(src).toContain('CHECKOUT_STATUS.recovery_pending')
+    // Must not use the old Phase 4 predicate that only excluded recovery_pending.
+    expect(src).not.toContain(".neq('checkout_status', 'recovery_pending')")
   })
 
   it('webhook attaches transaction id only when null and marks claim created', () => {
