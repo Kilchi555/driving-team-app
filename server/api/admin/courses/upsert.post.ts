@@ -8,6 +8,13 @@ import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { zurichLocalToUtcIso } from '~/server/utils/zurich-time'
 import { httpErrorForCourseWrite } from '~/server/utils/course-write-error'
 import { normalizeCourseInvoiceTimingForSave } from '~/server/utils/course-invoice-timing'
+import {
+  buildSessionPatch,
+  reconcileCourseSessions,
+  syncRoomBookingsForSessions,
+  validateCourseSessionReconcilePlan,
+  type SessionPayload,
+} from '~/server/utils/course-session-reconcile'
 
 // ── ICS calendar invite generator ────────────────────────────────────────────
 function toIcsDate(dateStr: string, timeStr: string): string {
@@ -188,6 +195,41 @@ export default defineEventHandler(async (event) => {
     tenant_id: profile.tenant_id,
   }
 
+  const sessionList = (sessions || []) as SessionPayload[]
+  const hasSessions = sessionList.length > 0
+
+  // ── Pre-validate existing non-SARI session reconcile BEFORE mutating course ──
+  // Fail closed on foreign IDs / unsafe removals so production session rows stay intact.
+  if (courseId && hasSessions) {
+    const { data: existingCourse, error: courseLoadErr } = await supabase
+      .from('courses')
+      .select('id, sari_managed')
+      .eq('id', courseId)
+      .eq('tenant_id', profile.tenant_id)
+      .maybeSingle()
+
+    if (courseLoadErr) {
+      throw createError({ statusCode: 500, statusMessage: courseLoadErr.message })
+    }
+    if (!existingCourse) {
+      throw createError({ statusCode: 404, statusMessage: 'Course not found' })
+    }
+
+    if (existingCourse.sari_managed === true) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'SARI-verwaltete Kurssessions dürfen nicht über diesen Pfad geändert werden.',
+      })
+    }
+
+    await validateCourseSessionReconcilePlan({
+      supabase,
+      tenantId: profile.tenant_id,
+      courseId,
+      sessions: sessionList,
+    })
+  }
+
   let savedCourseId: string
 
   if (courseId) {
@@ -223,129 +265,52 @@ export default defineEventHandler(async (event) => {
   }
 
   // Handle sessions
-  if (sessions && sessions.length > 0) {
-    if (courseId) {
-      // Delete existing sessions before re-creating
-      const { error: delError } = await supabase
-        .from('course_sessions')
-        .delete()
-        .eq('course_id', savedCourseId)
-
-      if (delError) {
-        logger.error('❌ Error deleting old sessions:', delError)
-        throw createError({ statusCode: 500, statusMessage: delError.message })
-      }
-    }
-
+  if (hasSessions) {
     const courseRoomId: string | null = courseData.room_id || null
+    let savedSessions: Array<{ id: string; room_id: string | null; start_time: string; end_time: string }>
 
-    const sessionRows = sessions.map((session: any, index: number) => ({
-      course_id: savedCourseId,
-      session_number: index + 1,
-      start_time: zurichLocalToUtcIso(session.date, session.start_time),
-      end_time: zurichLocalToUtcIso(session.date, session.end_time),
-      description: session.description || `Session ${index + 1}`,
-      instructor_type: session.instructor_type,
-      staff_id: session.instructor_type === 'internal' ? session.staff_id : null,
-      external_instructor_name: session.instructor_type === 'external' ? session.external_instructor_name : null,
-      external_instructor_email: session.instructor_type === 'external' ? session.external_instructor_email : null,
-      external_instructor_phone: session.instructor_type === 'external' ? session.external_instructor_phone : null,
-      allow_individual_booking: session.allow_individual_booking ?? false,
-      individual_price_rappen: session.allow_individual_booking ? (Math.round((session.individual_price ?? 0) * 100)) : 0,
-      individual_booking_requires_confirmation: session.individual_booking_requires_confirmation ?? true,
-      individual_booking_confirmation_text: session.individual_booking_confirmation_text || null,
-      // Per-session room override: use session-specific room if provided, else fall back to course-level room
-      room_id: session.room_id || courseRoomId,
-      tenant_id: profile.tenant_id,
-    }))
-
-    const { data: savedSessions, error: sessError } = await supabase
-      .from('course_sessions')
-      .insert(sessionRows)
-      .select('id, room_id, start_time, end_time')
-
-    if (sessError) {
-      logger.error('❌ Error creating sessions:', sessError)
-      throw createError({ statusCode: 500, statusMessage: sessError.message })
-    }
-
-    logger.debug(`✅ ${sessions.length} sessions saved for course ${savedCourseId}`)
-
-    // ── Room bookings per session ──────────────────────────────────────────────
-    // Cancel existing room bookings for this course (on update)
     if (courseId) {
-      await supabase
-        .from('room_bookings')
-        .update({ status: 'cancelled' })
-        .eq('course_id', savedCourseId)
-        .neq('status', 'cancelled')
-    }
-
-    const requiresRoom: boolean = !!courseData.requires_room
-    const sessionsNeedingRoom = (savedSessions || []).filter((s: any) => requiresRoom && s.room_id)
-
-    if (sessionsNeedingRoom.length > 0) {
-      // Load room hourly rates (for billing)
-      const roomIds = [...new Set(sessionsNeedingRoom.map((s: any) => s.room_id))]
-      const { data: roomData } = await supabase
-        .from('rooms')
-        .select('id, hourly_rate_rappen')
-        .in('id', roomIds)
-      const roomRates: Record<string, number> = {}
-      for (const r of roomData || []) roomRates[r.id] = r.hourly_rate_rappen || 0
-
-      // Conflict check per room per session
-      const conflicts: string[] = []
-      for (const s of sessionsNeedingRoom) {
-        const { data: existing } = await supabase
-          .from('room_bookings')
-          .select('id, start_time')
-          .eq('room_id', s.room_id)
-          .neq('status', 'cancelled')
-          .neq('course_id', savedCourseId)
-          .lt('start_time', s.end_time)
-          .gt('end_time', s.start_time)
-
-        if (existing && existing.length > 0) conflicts.push(s.start_time)
-      }
-
-      if (conflicts.length > 0) {
-        const conflictDates = conflicts
-          .map(dt => new Date(dt).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }))
-          .join(', ')
-        throw createError({ statusCode: 409, statusMessage: `Raumkonflikt: Der Raum ist bereits zu folgenden Zeiten gebucht: ${conflictDates}` })
-      }
-
-      const bookingRows = sessionsNeedingRoom.map((s: any) => {
-        const durationMs = new Date(s.end_time).getTime() - new Date(s.start_time).getTime()
-        const durationHours = durationMs / 3_600_000
-        const rate = roomRates[s.room_id] || 0
-        const cost = Math.round(rate * durationHours)
-        return {
-          room_id: s.room_id,
-          tenant_id: profile.tenant_id,
-          course_id: savedCourseId,
-          course_session_id: s.id,
-          start_time: s.start_time,
-          end_time: s.end_time,
-          purpose: 'course',
-          booked_by: profile.id,
-          status: 'confirmed',
-          room_cost_rappen: cost,
-        }
+      // Identity-preserving reconcile — NEVER delete-all + recreate.
+      savedSessions = await reconcileCourseSessions({
+        supabase,
+        tenantId: profile.tenant_id,
+        courseId: savedCourseId,
+        sessions: sessionList,
+        courseRoomId,
       })
+      logger.debug(`✅ ${savedSessions.length} sessions reconciled for course ${savedCourseId}`)
+    } else {
+      // Create path: insert all new sessions (no prior IDs).
+      const sessionRows = sessionList.map((session: SessionPayload, index: number) => ({
+        course_id: savedCourseId,
+        session_number: index + 1,
+        ...buildSessionPatch(session, courseRoomId),
+        description: session.description || `Session ${index + 1}`,
+        tenant_id: profile.tenant_id,
+      }))
 
-      const { error: bookingError } = await supabase
-        .from('room_bookings')
-        .insert(bookingRows)
+      const { data: inserted, error: sessError } = await supabase
+        .from('course_sessions')
+        .insert(sessionRows)
+        .select('id, room_id, start_time, end_time')
 
-      if (bookingError) {
-        logger.error('❌ Error creating room_bookings:', bookingError)
-        logger.warn('⚠️ Course saved but room bookings could not be created')
-      } else {
-        logger.debug(`✅ ${bookingRows.length} room bookings created for course ${savedCourseId}`)
+      if (sessError) {
+        logger.error('❌ Error creating sessions:', sessError)
+        throw createError({ statusCode: 500, statusMessage: sessError.message })
       }
+      savedSessions = inserted || []
+      logger.debug(`✅ ${sessionList.length} sessions created for course ${savedCourseId}`)
     }
+
+    // ── Room bookings: update-in-place by course_session_id (no session CASCADE) ──
+    await syncRoomBookingsForSessions({
+      supabase,
+      tenantId: profile.tenant_id,
+      courseId: savedCourseId,
+      bookedBy: profile.id,
+      requiresRoom: !!courseData.requires_room,
+      sessions: savedSessions,
+    })
   }
 
   // If no sessions were provided and room was removed — cancel existing bookings
