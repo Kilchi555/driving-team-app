@@ -61,8 +61,9 @@ describe('SQLSTATE mapping', () => {
 
   it('never leaks a raw SQLSTATE as the client error code', () => {
     const mapped = mapBookingRpcError({ code: '23P01', message: 'BOOKING_CONFLICT', hint: 'BOOKING_CONFLICT' })
-    expect(mapped.data.error).toBe(BOOKING_ERROR.BOOKING_CONFLICT)
-    expect(mapped.data.error).not.toBe('23P01')
+    const data = mapped.data as { error?: string }
+    expect(data.error).toBe(BOOKING_ERROR.BOOKING_CONFLICT)
+    expect(data.error).not.toBe('23P01')
     expect(mapped.statusMessage).not.toContain('23P01')
   })
 })

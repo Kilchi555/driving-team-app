@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { BOOKING_ERROR } from '../booking-errors'
+import { bookOnlineAppointment } from '../book-online-appointment'
 
-const rpc = vi.fn()
+const rpc = vi.hoisted(() => vi.fn())
 
 vi.mock('~/server/utils/supabase-admin', () => ({
   getSupabaseAdmin: () => ({ rpc }),
 }))
-
-import { bookOnlineAppointment } from '../book-online-appointment'
 
 describe('bookOnlineAppointment', () => {
   beforeEach(() => {

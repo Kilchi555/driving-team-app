@@ -182,7 +182,7 @@ export async function runPaymentCheckoutCreate(
     throw recoveryError()
   }
 
-  let created: { id: string; paymentPageUrl?: string | null }
+  let created: { id: string; paymentPageUrl?: string | null; spaceId?: string | number | null }
   try {
     created = await deps.create({ merchantReference, claim })
   } catch (error) {
@@ -204,7 +204,7 @@ export async function runPaymentCheckoutCreate(
     paymentId: opts.paymentId,
     tenantId: opts.tenantId,
     transactionId: String(created.id),
-    spaceId: String(created.spaceId || claim.wallee_space_id || ''),
+    spaceId: String(created.spaceId ?? claim.wallee_space_id ?? ''),
     claimToken: claim.checkout_claim_token,
     merchantReference,
   })

@@ -95,6 +95,9 @@ interface GuestBookRequest {
   apply_available_credit?: boolean
   discount_code?: string
   discount_amount_rappen?: number
+  /** Client-generated UUID v4 for safe retries (optional; server generates if omitted). */
+  idempotency_key?: string
+  booking_idempotency_key?: string
   // Marketing attribution
   marketing_session_id?: string
   marketing_attribution?: {
