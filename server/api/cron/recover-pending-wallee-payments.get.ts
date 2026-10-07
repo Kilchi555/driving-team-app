@@ -173,6 +173,37 @@ export default defineEventHandler(async (event) => {
     let failed = 0
     let errors: any[] = []
 
+    // ============ PHASE 0: Reconcile checkout claims in recovery_pending ============
+    // SAFETY > LIVENESS: never TransactionService.create for unknown prior outcomes.
+    try {
+      const { data: recoveryClaims } = await supabase
+        .from('payments')
+        .select('id, tenant_id, checkout_status')
+        .eq('checkout_status', 'recovery_pending')
+        .is('wallee_transaction_id', null)
+        .limit(50)
+
+      const { recoverPaymentCheckout } = await import('~/server/utils/wallee-checkout-claim')
+      for (const row of recoveryClaims || []) {
+        if (!row.tenant_id) continue
+        try {
+          const result = await recoverPaymentCheckout({
+            paymentId: row.id,
+            tenantId: row.tenant_id,
+          })
+          if (result?.transactionId) {
+            recovered++
+            logger.info('✅ Checkout claim recovered', { paymentId: row.id, transactionId: result.transactionId })
+          }
+        } catch (claimErr: any) {
+          failed++
+          errors.push({ paymentId: row.id, phase: 'checkout_claim_recovery', error: claimErr?.message })
+        }
+      }
+    } catch (claimPhaseErr: any) {
+      logger.warn('⚠️ Checkout claim recovery phase failed:', claimPhaseErr?.message)
+    }
+
     // ============ PHASE 1: Recover stuck 'pending' payments ============
     // Find payments that are:
     // 1. pending status
@@ -744,10 +775,11 @@ export default defineEventHandler(async (event) => {
 
       const { data: abandonedPayments, error: abandonedError } = await supabase
         .from('payments')
-        .select('id, metadata')
+        .select('id, metadata, checkout_status')
         .eq('payment_status', 'pending')
         .eq('payment_method', 'wallee')
         .is('user_id', null)
+        .neq('checkout_status', 'recovery_pending')
         .lt('created_at', threeHoursAgo)
 
       logger.info(`🗑️ Phase 4: found ${abandonedPayments?.length ?? 0} abandoned checkout(s) (no user_id after 3h)`)

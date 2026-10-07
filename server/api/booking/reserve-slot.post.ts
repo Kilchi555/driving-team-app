@@ -100,16 +100,7 @@ export default defineEventHandler(async (event: H3Event) => {
       })
     }
 
-    // ============ STEP 1: Reserve the primary slot (atomic) ============
-    // Availability check from the data we already fetched – if the slot is taken,
-    // return 409 immediately without hitting the DB again.
-    const isExpired = currentSlot.reserved_until && new Date(currentSlot.reserved_until) < now
-    const isAvailable = !currentSlot.reserved_by_session || isExpired
-
-    if (!isAvailable) {
-      throw createError({ statusCode: 409, statusMessage: 'Slot is no longer available' })
-    }
-
+    // ============ STEP 1: Atomic primary slot claim (DB CAS) ============
     const busyOverlap = await findStaffBusyOverlap(supabaseAdmin, {
       staffId: currentSlot.staff_id,
       startTime: currentSlot.start_time,
@@ -128,20 +119,23 @@ export default defineEventHandler(async (event: H3Event) => {
       })
     }
 
-    // Simple update – admin client bypasses RLS, PostgreSQL row-level locking
-    // ensures the update is atomic even under concurrent requests.
-    const { error: reserveError } = await supabaseAdmin
-      .from('availability_slots')
-      .update({
-        reserved_until: reservedUntil,
-        reserved_by_session: body.session_id,
-        is_primary_reservation: true
-      })
-      .eq('id', body.slot_id)
+    // Conditional UPDATE inside claim_availability_slot_hold — only one concurrent claim wins.
+    const { data: claimedRows, error: reserveError } = await supabaseAdmin.rpc(
+      'claim_availability_slot_hold',
+      {
+        p_slot_id: body.slot_id,
+        p_session_id: body.session_id,
+        p_until: reservedUntil,
+        p_tenant_id: currentSlot.tenant_id,
+      }
+    )
 
     if (reserveError) {
       logger.error('❌ Error reserving slot:', reserveError)
       throw createError({ statusCode: 500, statusMessage: 'Failed to reserve slot' })
+    }
+    if (!claimedRows || (Array.isArray(claimedRows) && claimedRows.length === 0)) {
+      throw createError({ statusCode: 409, statusMessage: 'Slot is no longer available' })
     }
 
     logger.debug('✅ Primary slot reserved')

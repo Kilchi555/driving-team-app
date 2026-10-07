@@ -58,6 +58,8 @@ import {
 } from '~/server/utils/guest-booking-price-rule'
 import { resolveOfferPrice, throwIfUnpriced } from '~/server/utils/resolve-offer-price'
 import { bindPublicSlotOfferIdentity } from '~/server/utils/resolve-booking-offer-identity'
+import { bookOnlineAppointment } from '~/server/utils/book-online-appointment'
+import { mapAppointmentWriteError } from '~/server/utils/booking-errors'
 import { bookingIdentityCode } from '~/utils/booking-offer-identity'
 
 interface GuestBookRequest {
@@ -640,112 +642,96 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { data: newAppointment, error: apptErr } = await supabase
-    .from('appointments')
-    .insert({
-      user_id: newUserId,
-      tenant_id: tenantId,
-      staff_id: slot.staff_id,
-      location_id: slot.location_id,
-      start_time: slot.start_time,
-      end_time: slot.end_time,
-      duration_minutes: slot.duration_minutes,
-      type: identity.categoryCode || resolvedEventTypeCode,
-      event_type_code: resolvedEventTypeCode,
-      title: appointmentTitle,
-      description: sanitizedNotes,
-      status: holdUntilPaid ? 'pending' : 'confirmed',
-      original_price_rappen: totalAmountRappen,
-      source: 'online',
-      created_by: newUserId,
-      marketing_session_id: body.marketing_session_id ?? null,
-      gclid: marketingAttr?.gclid ?? null,
-      gbraid: marketingAttr?.gbraid ?? null,
-      wbraid: marketingAttr?.wbraid ?? null,
-      fbclid: marketingAttr?.fbclid ?? null,
-      fbc: marketingAttr?.fbc ?? null,
-      fbp: marketingAttr?.fbp ?? null,
-      utm_source: marketingAttr?.utm_source ?? null,
-      utm_medium: marketingAttr?.utm_medium ?? null,
-      utm_campaign: marketingAttr?.utm_campaign ?? null,
-      utm_content: marketingAttr?.utm_content ?? null,
-      utm_term: marketingAttr?.utm_term ?? null,
-      customer_pickup_plz: body.customer_pickup_plz?.trim() || null,
-      customer_pickup_address: body.customer_pickup_address?.trim() || null,
-      vehicle_mode: body.vehicle_mode ?? null,
-      room_id: autoAssignedRoomId,
-    })
-    .select()
-    .single()
+  const chosenVehicleOption = vehicleSettings.options?.find(o => o.key === body.vehicle_mode)
+  const createVehicleBooking = !!(body.vehicle_mode && chosenVehicleOption?.requires_school_vehicle)
 
-  if (apptErr || !newAppointment) {
-    logger.error('❌ Appointment creation failed (guest):', apptErr)
-    // Best-effort cleanup: only delete the user if we just created a brand-new
-    // one. If we reused an existing pending account (existingPendingUser), it
-    // has its own booking history — never delete it just because *this*
-    // booking attempt failed.
+  let newAppointment: any
+  let newPayment: any
+  try {
+    const booked = await bookOnlineAppointment({
+      tenantId,
+      idempotencyKey: body.idempotency_key || body.booking_idempotency_key || uuidv4(),
+      sessionId: body.session_id,
+      userId: newUserId,
+      slotId: slot.id,
+      staffId: slot.staff_id,
+      startTime: slot.start_time,
+      endTime: slot.end_time,
+      createVehicleBooking,
+      roomId: autoAssignedRoomId,
+      appointment: {
+        type: identity.categoryCode || resolvedEventTypeCode,
+        event_type_code: resolvedEventTypeCode,
+        title: appointmentTitle,
+        description: sanitizedNotes,
+        status: holdUntilPaid ? 'pending' : 'confirmed',
+        original_price_rappen: totalAmountRappen,
+        source: 'online',
+        created_by: newUserId,
+        marketing_session_id: body.marketing_session_id ?? null,
+        gclid: marketingAttr?.gclid ?? null,
+        gbraid: marketingAttr?.gbraid ?? null,
+        wbraid: marketingAttr?.wbraid ?? null,
+        fbclid: marketingAttr?.fbclid ?? null,
+        fbc: marketingAttr?.fbc ?? null,
+        fbp: marketingAttr?.fbp ?? null,
+        utm_source: marketingAttr?.utm_source ?? null,
+        utm_medium: marketingAttr?.utm_medium ?? null,
+        utm_campaign: marketingAttr?.utm_campaign ?? null,
+        utm_content: marketingAttr?.utm_content ?? null,
+        utm_term: marketingAttr?.utm_term ?? null,
+        customer_pickup_plz: body.customer_pickup_plz?.trim() || null,
+        customer_pickup_address: body.customer_pickup_address?.trim() || null,
+        vehicle_mode: body.vehicle_mode ?? null,
+      },
+      payment: {
+        lesson_price_rappen: totalAmountRappen,
+        admin_fee_rappen: adminFeeRappen,
+        products_price_rappen: 0,
+        discount_amount_rappen: validatedDiscountAmount,
+        total_amount_rappen: netAmountRappen,
+        payment_status: 'pending',
+        payment_method: resolvedPaymentMethod,
+        payment_provider: onlineBookingPaymentProvider(resolvedPaymentMethod),
+        description: appointmentTitle,
+        currency: 'CHF',
+        created_by: newUserId,
+        metadata: {
+          source: 'guest_booking',
+          admin_fee_reason: adminFeeResult.reason,
+          ...(freePublicEvent ? { free_public_event: true, allow_zero_completion: true } : {}),
+          ...(validatedDiscountAmount > 0 && netAmountRappen <= 0
+            ? { allow_zero_completion: true }
+            : {}),
+          ...(holdUntilPaid ? { pay_before_confirm: true } : {}),
+          ...(resolvedDiscount.code ? { discount_code: resolvedDiscount.code } : {}),
+          ...(body.vehicle_mode ? { vehicle_mode: body.vehicle_mode, vehicle_cost_rappen: calculateVehicleCost(vehicleSettings, body.vehicle_mode, slot.duration_minutes) } : {}),
+          ...(travelFeeRappen > 0 ? { travel_fee: { km: travelFee.km, billable_km: travelFee.billable_km, fee_rappen: travelFeeRappen, capped: travelFee.capped, label: travelFee.label } } : {}),
+        },
+      },
+    }, supabase)
+    newAppointment = booked.appointment
+    newPayment = booked.payment
+    if (booked.replayed) {
+      logger.info('♻️ Guest booking idempotent replay', { appointmentId: newAppointment?.id })
+    }
+  } catch (bookErr: any) {
+    logger.error('❌ Appointment creation failed (guest):', bookErr)
     if (!existingPendingUser) {
       supabase.from('users').delete().eq('id', newUserId).then(({ error }) => {
         if (error) logger.warn('⚠️ Could not clean up orphaned guest user:', newUserId, error.message)
       })
     }
-    throw createError({ statusCode: 500, statusMessage: 'Termin konnte nicht erstellt werden' })
+    if (bookErr?.statusCode) throw bookErr
+    throw mapAppointmentWriteError(bookErr, {
+      tenantId,
+      staffId: slot.staff_id,
+      slotId: slot.id,
+    })
   }
 
   logger.debug('✅ Guest appointment created:', newAppointment.id)
-
-  const chosenVehicleOption = vehicleSettings.options?.find(o => o.key === body.vehicle_mode)
-  if (body.vehicle_mode && chosenVehicleOption?.requires_school_vehicle) {
-    const { error: vbErr } = await supabase
-      .from('vehicle_bookings')
-      .insert({
-        vehicle_id: null,
-        tenant_id: tenantId,
-        location_id: slot.location_id,
-        category_code: categoryForAddOns || resolvedEventTypeCode,
-        start_time: slot.start_time,
-        end_time: slot.end_time,
-        purpose: 'lesson',
-        appointment_id: newAppointment.id,
-        booked_by: newUserId,
-        status: 'confirmed',
-      })
-    if (vbErr) {
-      logger.warn('⚠️ Guest vehicle_bookings placeholder failed (non-fatal):', vbErr.message)
-    }
-  }
-
-  if (autoAssignedRoomId) {
-    const { data: roomConflicts } = await supabase
-      .from('room_bookings')
-      .select('id')
-      .eq('room_id', autoAssignedRoomId)
-      .neq('status', 'cancelled')
-      .lt('start_time', slot.end_time)
-      .gt('end_time', slot.start_time)
-      .limit(1)
-    if ((roomConflicts?.length ?? 0) > 0) {
-      logger.warn('⚠️ Guest room conflict — clearing assigned room:', autoAssignedRoomId)
-      await supabase.from('appointments').update({ room_id: null }).eq('id', newAppointment.id)
-      autoAssignedRoomId = null
-    } else {
-      const { error: rbErr } = await supabase.from('room_bookings').insert({
-        room_id: autoAssignedRoomId,
-        tenant_id: tenantId,
-        start_time: slot.start_time,
-        end_time: slot.end_time,
-        purpose: 'lesson',
-        appointment_id: newAppointment.id,
-        booked_by: newUserId,
-        status: 'confirmed',
-      })
-      if (rbErr) {
-        logger.warn('⚠️ Guest room_bookings creation failed (non-fatal):', rbErr.message)
-        await supabase.from('appointments').update({ room_id: null }).eq('id', newAppointment.id)
-        autoAssignedRoomId = null
-      }
-    }
-  }
+  autoAssignedRoomId = newAppointment.room_id || null
 
   // Persist pickup as reusable client location (staff LocationSelector / Treffpunkte)
   if (body.customer_pickup_address?.trim()) {
@@ -761,42 +747,6 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Could not save guest pickup location (non-fatal):', pickupErr?.message)
     }
   }
-
-  // ── Create payment record (pending invoice/wallee — never cash) ───────────
-  const { data: newPayment } = await supabase
-    .from('payments')
-    .insert({
-      appointment_id: newAppointment.id,
-      user_id: newUserId,
-      tenant_id: tenantId,
-      staff_id: slot.staff_id,
-      lesson_price_rappen: totalAmountRappen,
-      admin_fee_rappen: adminFeeRappen,
-      products_price_rappen: 0,
-      discount_amount_rappen: validatedDiscountAmount,
-      total_amount_rappen: netAmountRappen,
-      payment_status: 'pending',
-      payment_method: resolvedPaymentMethod,
-      payment_provider: onlineBookingPaymentProvider(resolvedPaymentMethod),
-      description: appointmentTitle,
-      currency: 'CHF',
-      created_by: newUserId,
-      metadata: {
-        source: 'guest_booking',
-        admin_fee_reason: adminFeeResult.reason,
-        ...(freePublicEvent ? { free_public_event: true, allow_zero_completion: true } : {}),
-        ...(validatedDiscountAmount > 0 && netAmountRappen <= 0
-          ? { allow_zero_completion: true }
-          : {}),
-        ...(holdUntilPaid ? { pay_before_confirm: true } : {}),
-        ...(resolvedDiscount.code ? { discount_code: resolvedDiscount.code } : {}),
-        ...(body.vehicle_mode ? { vehicle_mode: body.vehicle_mode, vehicle_cost_rappen: calculateVehicleCost(vehicleSettings, body.vehicle_mode, slot.duration_minutes) } : {}),
-        ...(travelFeeRappen > 0 ? { travel_fee: { km: travelFee.km, billable_km: travelFee.billable_km, fee_rappen: travelFeeRappen, capped: travelFee.capped, label: travelFee.label } } : {}),
-      },
-    })
-    .select()
-    .single()
-
   if (newPayment?.id && resolvedDiscount.code && validatedDiscountAmount > 0) {
     const locked = await lockCheckoutBenefits({
       supabase,
