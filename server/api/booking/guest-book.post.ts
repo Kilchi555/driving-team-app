@@ -49,6 +49,10 @@ import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit
 import { netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
 import { abortCheckoutAfterBenefitLockFail, benefitLockUnavailablePayload, lockCheckoutBenefits } from '~/server/utils/checkout-benefits'
 import { evaluateClientEmailClaim, pendingContactMismatch } from '~/server/utils/auth-email-claim'
+import {
+  isAuthBackedCustomer,
+  pickReusableGuestCustomer,
+} from '~/server/utils/guest-customer-identity'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
 import { pickAvailableRoomId, resolveRoomSettings, type RoomServiceType } from '~/server/utils/room-availability'
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
@@ -268,27 +272,27 @@ export default defineEventHandler(async (event) => {
   throwIfUnpriced(offer)
 
   // ── Resolve identity by phone/email match ─────────────────────────────────
-  // Loads the full account (not just existence) so we can tell a REAL,
-  // activated account (onboarding_status 'completed', has a password) apart
-  // from a "shadow" account created by an earlier guest booking that was
-  // never activated (onboarding_status 'pending', no password/login at all).
+  // Auth-backed customers (auth_user_id set) must log in. Application-only
+  // shadows (auth_user_id null) — including public course/VKU rows whose
+  // onboarding_status defaulted to 'completed' — are reusable on this
+  // password-less guest path. onboarding_status alone is not proof of Auth.
   const phone = body.phone?.trim() || null
   const email = body.email?.trim() || null
 
   const [phoneCheckResult, emailCheckResult] = await Promise.all([
     phone
-      ? supabase.from('users').select('id, onboarding_status, category, phone, email, onboarding_token, onboarding_token_expires').eq('phone', phone).eq('tenant_id', tenantId).maybeSingle()
+      ? supabase.from('users').select('id, onboarding_status, auth_user_id, category, phone, email, onboarding_token, onboarding_token_expires').eq('phone', phone).eq('tenant_id', tenantId).maybeSingle()
       : Promise.resolve({ data: null }),
     email
-      ? supabase.from('users').select('id, onboarding_status, category, phone, email, onboarding_token, onboarding_token_expires').eq('email', email).eq('tenant_id', tenantId).maybeSingle()
+      ? supabase.from('users').select('id, onboarding_status, auth_user_id, category, phone, email, onboarding_token, onboarding_token_expires').eq('email', email).eq('tenant_id', tenantId).maybeSingle()
       : Promise.resolve({ data: null }),
   ])
 
-  // A match against a REAL, already-activated account is always a hard block —
-  // that person has a password and must log in normally. Otherwise anyone who
-  // merely knows someone else's phone/email could attach a booking to their
-  // account without proving identity.
-  if (phoneCheckResult.data?.onboarding_status === 'completed') {
+  // A match against an Auth-backed account is always a hard block — that
+  // person has a login and must authenticate. Otherwise anyone who merely
+  // knows someone else's phone/email could attach a booking to their account
+  // without proving identity.
+  if (isAuthBackedCustomer(phoneCheckResult.data)) {
     throw createError({
       statusCode: 409,
       statusMessage: 'Diese Telefonnummer ist bereits mit einem Konto verbunden. Bitte melde dich an.',
@@ -296,7 +300,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (emailCheckResult.data?.onboarding_status === 'completed') {
+  if (isAuthBackedCustomer(emailCheckResult.data)) {
     throw createError({
       statusCode: 409,
       statusMessage: 'Diese E-Mail-Adresse ist bereits mit einem Konto verbunden. Bitte melde dich an.',
@@ -304,17 +308,15 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // A match against a still-PENDING "shadow" account is NOT blocked. This
-  // tenant explicitly allows password-less booking (registration_required =
-  // false), so a repeat guest booking under the same contact details should
-  // reuse that same identity instead of spawning yet another duplicate
-  // account. Prefer the email match — that's the identifier the existing
-  // onboarding/activation link is already tied to; the (rare) case where
-  // phone and email each match a *different* pending account is an edge case
-  // we don't try to reconcile automatically, we just merge into the email one.
-  const existingPendingUser =
-    (emailCheckResult.data?.onboarding_status === 'pending' ? emailCheckResult.data : null) ||
-    (phoneCheckResult.data?.onboarding_status === 'pending' ? phoneCheckResult.data : null)
+  // No-Auth shadows are NOT blocked. This tenant allows password-less booking
+  // (registration_required = false), so a repeat guest booking — or a later
+  // driving-lesson booking after VKU/course enrollment — under the same
+  // contact details reuses that identity instead of spawning a duplicate.
+  // Prefer the email match when both resolve.
+  const existingPendingUser = pickReusableGuestCustomer({
+    emailMatch: emailCheckResult.data,
+    phoneMatch: phoneCheckResult.data,
+  })
 
   if (existingPendingUser && pendingContactMismatch({
     storedEmail: existingPendingUser.email,
