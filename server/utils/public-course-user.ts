@@ -4,10 +4,14 @@
  * A course customer is a `public.users` business row. This flow does not
  * create an auth user, password, login, magic link, or onboarding claim.
  *
- * New rows use role `client`. That is the role current main writes for cash
- * enrollment, SARI sync, and admin add-participant. Existing `client` rows,
- * and leftover `student` rows, are reused when the email matches exactly one
- * customer in the course tenant. Their role and profile are not rewritten.
+ * New rows use role `client` with `auth_user_id: null`. They intentionally
+ * omit `onboarding_status` (DB default may be `completed`). Guest booking and
+ * pending-only registration must treat Auth presence (`auth_user_id`) — not
+ * that status flag — as the login boundary so VKU customers can book lessons.
+ * That is the role current main writes for cash enrollment, SARI sync, and
+ * admin add-participant. Existing `client` rows, and leftover `student` rows,
+ * are reused when the email matches exactly one customer in the course tenant.
+ * Their role and profile are not rewritten.
  *
  * Email is the only automatic link. Phone never attaches an existing row.
  * `limit(2)` is an ambiguity detector: two or more rows abort. It is not

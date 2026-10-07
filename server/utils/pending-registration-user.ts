@@ -1,3 +1,5 @@
+import { isAuthBackedCustomer } from '~/server/utils/guest-customer-identity'
+
 type DbError = { code?: string | number; message?: string } | null
 
 export type PendingUserProfile = Record<string, unknown>
@@ -48,35 +50,43 @@ function isUniqueViolation(error: DbError): boolean {
   return String(error?.code || '') === '23505'
 }
 
-function isActiveAccount(row: UserRow | null): boolean {
-  if (!row) return false
-  return Boolean(row.auth_user_id) || row.onboarding_status === 'completed'
-}
-
 async function findUser(
   admin: PendingUserAdmin,
   tenantId: string,
   column: 'email' | 'phone',
   value: string,
-  pendingOnly: boolean,
 ): Promise<UserRow | null> {
-  let query = admin
+  const { data, error } = await admin
     .from('users')
     .select('id, onboarding_status, auth_user_id')
     .eq(column, value)
     .eq('tenant_id', tenantId)
-  if (pendingOnly) query = query.eq('onboarding_status', 'pending')
-  const { data, error } = await query.maybeSingle()
+    .maybeSingle()
   if (error) throw error
   return data
 }
 
+/** Reusable shadow: same tenant contact, no Auth login. */
+async function findReusableNoAuthUser(
+  admin: PendingUserAdmin,
+  tenantId: string,
+  column: 'email' | 'phone',
+  value: string,
+): Promise<UserRow | null> {
+  const row = await findUser(admin, tenantId, column, value)
+  if (!row || isAuthBackedCustomer(row)) return null
+  return row
+}
+
 /**
- * Update an existing pending user, or insert one.
+ * Update an existing no-Auth shadow user, or insert one.
  * `created` is true only when this call's INSERT succeeded.
  * A unique-violation from a parallel insert is an update outcome: no second
  * "Neuer Benutzer" mail. The database unique indexes on (email, tenant_id)
  * and (phone, tenant_id) decide the race, not a prior SELECT.
+ *
+ * Auth-backed rows conflict. No-Auth rows (pending or completed-without-auth
+ * course/VKU customers) are reused.
  */
 export async function upsertPendingRegistrationUser(
   admin: PendingUserAdmin,
@@ -92,10 +102,10 @@ export async function upsertPendingRegistrationUser(
 
   let existingId: string | null = null
   if (email) {
-    existingId = (await findUser(admin, tenantId, 'email', email, true))?.id ?? null
+    existingId = (await findReusableNoAuthUser(admin, tenantId, 'email', email))?.id ?? null
   }
   if (!existingId && phone) {
-    existingId = (await findUser(admin, tenantId, 'phone', phone, true))?.id ?? null
+    existingId = (await findReusableNoAuthUser(admin, tenantId, 'phone', phone))?.id ?? null
   }
 
   if (existingId) {
@@ -110,14 +120,14 @@ export async function upsertPendingRegistrationUser(
   }
   if (!isUniqueViolation(insertError)) throw insertError
 
-  const emailRow = email ? await findUser(admin, tenantId, 'email', email, false) : null
+  const emailRow = email ? await findUser(admin, tenantId, 'email', email) : null
   if (emailRow) {
-    if (isActiveAccount(emailRow)) return { ok: false, conflict: 'email' }
+    if (isAuthBackedCustomer(emailRow)) return { ok: false, conflict: 'email' }
     return { ok: true, userId: emailRow.id, created: false }
   }
-  const phoneRow = phone ? await findUser(admin, tenantId, 'phone', phone, false) : null
+  const phoneRow = phone ? await findUser(admin, tenantId, 'phone', phone) : null
   if (phoneRow) {
-    if (isActiveAccount(phoneRow)) return { ok: false, conflict: 'phone' }
+    if (isAuthBackedCustomer(phoneRow)) return { ok: false, conflict: 'phone' }
     return { ok: true, userId: phoneRow.id, created: false }
   }
 
