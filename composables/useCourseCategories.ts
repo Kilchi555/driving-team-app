@@ -121,17 +121,34 @@ export const useCourseCategories = () => {
   })
 
   const formatCourseDuration = (category: CourseCategory) => {
-    if (!category.session_count || !category.hours_per_session) return 'Dauer nicht definiert'
-    
+    const sessions = Array.isArray(category.session_structure?.sessions)
+      ? category.session_structure.sessions
+      : null
+    if (sessions && sessions.length > 0) {
+      const durations = sessions
+        .map((s: { duration_hours?: unknown }) => Number(s.duration_hours))
+        .filter((n: number) => Number.isFinite(n) && n > 0)
+      if (durations.length) {
+        const total = Math.round(durations.reduce((a: number, b: number) => a + b, 0) * 100) / 100
+        const allEqual = durations.every((h: number) => h === durations[0])
+        if (allEqual) {
+          if (durations.length === 1) return `${durations[0]}h (1 Termin)`
+          return `${durations.length} × ${durations[0]}h (${total}h total)`
+        }
+        return `${durations.map((h: number) => `${h}h`).join(' + ')} (${total}h)`
+      }
+    }
+    if (!category.session_count || !category.hours_per_session) {
+      return category.session_structure?.description || 'Dauer nicht definiert'
+    }
     if (category.session_count === 1) {
       return `${category.total_duration_hours}h (1 Termin)`
-    } else {
-      return `${category.session_count} x ${category.hours_per_session}h (${category.total_duration_hours}h total)`
     }
+    return `${category.session_count} × ${category.hours_per_session}h (${category.total_duration_hours}h total)`
   }
 
   const getSessionStructureDescription = (category: CourseCategory) => {
-    return category.session_structure?.description || formatCourseDuration(category)
+    return formatCourseDuration(category) || category.session_structure?.description || 'Dauer nicht definiert'
   }
 
   const getDurationDefaults = (categoryId: string) => {
