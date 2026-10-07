@@ -12,8 +12,12 @@ export const MAX_CATEGORY_SESSIONS = 10
 export const MIN_SESSION_DURATION_HOURS = 0.5
 export const MAX_SESSION_DURATION_HOURS = 12
 export const SESSION_DURATION_STEP_HOURS = 0.5
-/** DECIMAL(5,2) after migration — hard cap for persisted total. */
-export const MAX_TOTAL_DURATION_HOURS = 99.99
+/**
+ * Product max total = MAX_CATEGORY_SESSIONS × MAX_SESSION_DURATION_HOURS (10 × 12 = 120).
+ * Matches DECIMAL(5,2) after migration (was DECIMAL(4,2) / 99.99 before flexible templates).
+ */
+export const MAX_TOTAL_DURATION_HOURS =
+  MAX_CATEGORY_SESSIONS * MAX_SESSION_DURATION_HOURS
 export const DEFAULT_SEED_HOURS_PER_SESSION = 8
 
 export type CategorySessionTemplateEntry = {
@@ -95,25 +99,33 @@ function coerceSessionCount(value: unknown, fallback: number): number {
   return rounded
 }
 
-function parseDurationHours(raw: unknown, index: number): number {
+function parseDurationHours(raw: unknown, label: string): number {
   const n = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN
   if (!Number.isFinite(n)) {
-    throw new CategorySessionTemplateError(`Ungültige Dauer bei Termin ${index + 1}`)
+    throw new CategorySessionTemplateError(`Ungültige Dauer bei ${label}`)
   }
   if (n <= 0) {
-    throw new CategorySessionTemplateError(`Dauer bei Termin ${index + 1} muss grösser als 0 sein`)
+    throw new CategorySessionTemplateError(`Dauer bei ${label} muss grösser als 0 sein`)
   }
   if (n > MAX_SESSION_DURATION_HOURS) {
     throw new CategorySessionTemplateError(
-      `Dauer bei Termin ${index + 1} darf maximal ${MAX_SESSION_DURATION_HOURS}h sein`,
+      `Dauer bei ${label} darf maximal ${MAX_SESSION_DURATION_HOURS}h sein`,
     )
   }
   if (!isMultipleOfStep(n, SESSION_DURATION_STEP_HOURS)) {
     throw new CategorySessionTemplateError(
-      `Dauer bei Termin ${index + 1} muss in ${SESSION_DURATION_STEP_HOURS}h-Schritten angegeben werden`,
+      `Dauer bei ${label} muss in ${SESSION_DURATION_STEP_HOURS}h-Schritten angegeben werden`,
     )
   }
   return roundHours(n)
+}
+
+/** Compatibility / initializer seed — same limits as a single session duration. */
+function parseSeedHoursPerSession(raw: unknown, fallback: number): number {
+  if (raw === undefined || raw === null || raw === '') {
+    return parseDurationHours(fallback, 'Dauer pro Termin (Initial)')
+  }
+  return parseDurationHours(raw, 'Dauer pro Termin (Initial)')
 }
 
 function validateSessionsArray(sessions: CategorySessionTemplateEntry[]): CategorySessionTemplateEntry[] {
@@ -127,7 +139,7 @@ function validateSessionsArray(sessions: CategorySessionTemplateEntry[]): Catego
     if (!isPlainObject(entry)) {
       throw new CategorySessionTemplateError(`Ungültiger Termineintrag bei Position ${index + 1}`)
     }
-    return { duration_hours: parseDurationHours(entry.duration_hours, index) }
+    return { duration_hours: parseDurationHours(entry.duration_hours, `Termin ${index + 1}`) }
   })
 }
 
@@ -158,7 +170,7 @@ export function normalizeCategorySessionTemplate(
     )
   } else {
     const count = Math.min(Math.max(legacyCount, MIN_CATEGORY_SESSIONS), MAX_CATEGORY_SESSIONS)
-    const duration = parseDurationHours(seedHours, 0)
+    const duration = parseDurationHours(seedHours, 'Dauer pro Termin (Initial)')
     sessions = Array.from({ length: count }, () => ({ duration_hours: duration }))
   }
 
@@ -172,8 +184,10 @@ export function normalizeCategorySessionTemplate(
     )
   }
 
-  const hours_per_session = roundHours(
-    coercePositiveNumber(input.hours_per_session, sessions[0]?.duration_hours ?? DEFAULT_SEED_HOURS_PER_SESSION),
+  // Seed/compat only — never SoT when sessions[] is present, but must still be valid.
+  const hours_per_session = parseSeedHoursPerSession(
+    input.hours_per_session,
+    sessions[0]?.duration_hours ?? DEFAULT_SEED_HOURS_PER_SESSION,
   )
 
   const session_structure: CategorySessionStructure = {

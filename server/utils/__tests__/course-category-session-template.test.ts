@@ -153,6 +153,36 @@ describe('normalizeCategorySessionTemplate', () => {
     expect(result.total_duration_hours).toBe(8)
     expect(result.hours_per_session).toBe(2) // seed preserved
   })
+
+  it('rejects invalid hours_per_session seed even when sessions[] is valid', () => {
+    expect(() =>
+      normalizeCategorySessionTemplate({
+        hours_per_session: 99,
+        session_structure: {
+          sessions: [{ duration_hours: 2 }, { duration_hours: 3 }, { duration_hours: 3 }],
+        },
+      }),
+    ).toThrow(/Dauer pro Termin \(Initial\)/)
+    expect(() =>
+      normalizeCategorySessionTemplate({
+        hours_per_session: 2.25,
+        session_structure: {
+          sessions: [{ duration_hours: 2 }],
+        },
+      }),
+    ).toThrow(/0\.5h-Schritten/)
+  })
+
+  it('allows product max total 10 × 12h = 120h', () => {
+    const result = normalizeCategorySessionTemplate({
+      hours_per_session: 12,
+      session_structure: {
+        sessions: Array.from({ length: 10 }, () => ({ duration_hours: 12 })),
+      },
+    })
+    expect(result.session_count).toBe(10)
+    expect(result.total_duration_hours).toBe(120)
+  })
 })
 
 describe('buildUniformCategorySessionTemplate / customization detect', () => {

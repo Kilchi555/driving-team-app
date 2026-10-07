@@ -6328,11 +6328,6 @@ const resetCategoryForm = () => {
   partialCategoryPrice.value = 0
 }
 
-// Legacy name kept — initializer no longer auto-overwrites customized templates.
-const updateDurationCalculation = () => {
-  // no-op: use applyCategoryTemplateInitializer for explicit reset
-}
-
 // Resource Management Functions
 const createVehicle = async () => {
   if (!currentUser.value?.tenant_id) return
