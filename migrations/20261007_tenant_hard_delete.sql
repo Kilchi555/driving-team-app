@@ -1,9 +1,12 @@
 -- Superadmin tenant hard-delete support
 -- 1) Audit/job table
--- 2) Transactional RPC that clears NO ACTION / no-FK / financial blockers then deletes the tenant root
+-- 2) Schema inventory helper (read-only)
+-- 3) Transactional RPC that clears NO ACTION / no-FK / financial blockers then deletes the tenant root
 --
--- SECURITY: function is SECURITY DEFINER, EXECUTE revoked from PUBLIC/anon/authenticated,
+-- SECURITY: functions are SECURITY DEFINER, EXECUTE revoked from PUBLIC/anon/authenticated,
 -- granted only to service_role. Application layer must authorize super_admin before calling.
+--
+-- IMPORTANT: This migration is shipped in the PR; do not apply to production until re-review passes.
 
 BEGIN;
 
@@ -40,6 +43,49 @@ ALTER TABLE public.tenant_hard_delete_jobs ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS tenant_hard_delete_jobs_service_only ON public.tenant_hard_delete_jobs;
 -- No policies for authenticated/anon → only service_role (bypasses RLS) can access.
+
+-- ── Read-only schema inventory for preview / verification ──────────────────
+CREATE OR REPLACE FUNCTION public.list_tenant_hard_delete_tables()
+RETURNS jsonb
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT COALESCE(jsonb_agg(
+    jsonb_build_object(
+      'table', c.table_name,
+      'delete_rule', COALESCE((
+        SELECT rc.delete_rule
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu
+          ON tc.constraint_name = kcu.constraint_name
+         AND tc.table_schema = kcu.table_schema
+        JOIN information_schema.constraint_column_usage ccu
+          ON ccu.constraint_name = tc.constraint_name
+        JOIN information_schema.referential_constraints rc
+          ON rc.constraint_name = tc.constraint_name
+         AND rc.constraint_schema = tc.table_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+          AND tc.table_schema = 'public'
+          AND tc.table_name = c.table_name
+          AND kcu.column_name = 'tenant_id'
+          AND ccu.table_name = 'tenants'
+        LIMIT 1
+      ), 'NO FK'),
+      'tenant_id_nullable', (c.is_nullable = 'YES')
+    )
+    ORDER BY c.table_name
+  ), '[]'::jsonb)
+  FROM information_schema.columns c
+  JOIN information_schema.tables t
+    ON t.table_schema = c.table_schema
+   AND t.table_name = c.table_name
+   AND t.table_type = 'BASE TABLE'
+  WHERE c.table_schema = 'public'
+    AND c.column_name = 'tenant_id'
+    AND c.table_name <> 'tenant_hard_delete_jobs';
+$$;
 
 CREATE OR REPLACE FUNCTION public.hard_delete_tenant_data(p_tenant_id uuid)
 RETURNS jsonb
@@ -91,7 +137,7 @@ BEGIN
   DELETE FROM public.course_invoice_bindings WHERE tenant_id = p_tenant_id;
   GET DIAGNOSTICS v_n = ROW_COUNT; v_counts := v_counts || jsonb_build_object('course_invoice_bindings', v_n);
 
-  -- ── No-FK tenant_id tables ────────────────────────────────────────────
+  -- ── No-FK tenant_id tables (never touch tenant_id IS NULL globals) ────
   DELETE FROM public.email_campaign_leads
   WHERE campaign_id IN (SELECT id FROM public.email_campaigns WHERE tenant_id = p_tenant_id);
 
@@ -116,6 +162,7 @@ BEGIN
   DELETE FROM public.registration_sari_memberships WHERE tenant_id = p_tenant_id;
   DELETE FROM public.reminder_providers WHERE tenant_id = p_tenant_id;
   DELETE FROM public.reminder_settings WHERE tenant_id = p_tenant_id;
+  -- reminder_templates: tenant_id NULL rows are global shared templates — do NOT delete them
   DELETE FROM public.reminder_templates WHERE tenant_id = p_tenant_id;
   DELETE FROM public.session_confirmation_tokens WHERE tenant_id = p_tenant_id;
   DELETE FROM public.staff_working_hour_exception_intervals WHERE tenant_id = p_tenant_id;
@@ -129,9 +176,26 @@ BEGIN
   DELETE FROM public.meta_capi_uploads WHERE tenant_id = p_tenant_id;
   GET DIAGNOSTICS v_n = ROW_COUNT; v_counts := v_counts || jsonb_build_object('meta_capi_uploads', v_n);
   DELETE FROM public.website_lifecycle_events WHERE tenant_id = p_tenant_id;
-  DELETE FROM public.website_prospects WHERE tenant_id = p_tenant_id OR matched_tenant_id = p_tenant_id;
 
-  -- ── Financial: payments before appointments (payments.appointment_id NO ACTION) ──
+  -- website_prospects: DELETE only rows owned by this tenant.
+  -- Match-only rows owned by another tenant: null matched_tenant_id, preserve the row.
+  DELETE FROM public.website_prospects WHERE tenant_id = p_tenant_id;
+  GET DIAGNOSTICS v_n = ROW_COUNT; v_counts := v_counts || jsonb_build_object('website_prospects', v_n);
+
+  UPDATE public.website_prospects
+  SET matched_tenant_id = NULL
+  WHERE matched_tenant_id = p_tenant_id
+    AND tenant_id IS DISTINCT FROM p_tenant_id;
+  GET DIAGNOSTICS v_n = ROW_COUNT; v_counts := v_counts || jsonb_build_object('website_prospects_matched_nulled', v_n);
+
+  -- ── Financial: clear NO ACTION / RESTRICT refs into payments, then payments ──
+  -- Live FKs into payments (production information_schema):
+  --   CASCADE: payment_access_grants, payment_audit_logs, payment_refunds, payment_reminders, refund_requests
+  --   NO ACTION: discounts.payment_id, reminder_logs.payment_id
+  --   RESTRICT: course_registrations.payment_id
+  --   SET NULL: accounting_entries.linked_payment_id, invoice_items.payment_id, vouchers.payment_id / reserved_for_payment_id
+  -- Plus no-FK: webhook_logs.payment_id, payment_wallee_transactions.payment_id
+
   DELETE FROM public.webhook_logs
   WHERE payment_id IN (SELECT id FROM public.payments WHERE tenant_id = p_tenant_id);
 
@@ -156,13 +220,52 @@ BEGIN
   WHERE payment_id IN (SELECT id FROM public.payments WHERE tenant_id = p_tenant_id)
      OR tenant_id = p_tenant_id;
 
-  -- course_registrations.payment_id is RESTRICT — clear linkage first
+  -- NO ACTION: clear payment refs (nullable columns) before deleting payments
+  UPDATE public.discounts
+  SET payment_id = NULL
+  WHERE payment_id IN (SELECT id FROM public.payments WHERE tenant_id = p_tenant_id);
+
+  UPDATE public.reminder_logs
+  SET payment_id = NULL
+  WHERE payment_id IN (SELECT id FROM public.payments WHERE tenant_id = p_tenant_id);
+
+  -- RESTRICT: clear course_registrations.payment_id first
   UPDATE public.course_registrations
   SET payment_id = NULL
   WHERE tenant_id = p_tenant_id AND payment_id IS NOT NULL;
 
   DELETE FROM public.payments WHERE tenant_id = p_tenant_id;
   GET DIAGNOSTICS v_n = ROW_COUNT; v_counts := v_counts || jsonb_build_object('payments', v_n);
+
+  -- ── Appointment NO ACTION deps (do not rely on cascade ordering) ──────
+  -- Live FKs into appointments with NO ACTION:
+  --   cash_transactions.appointment_id, discount_sales.appointment_id,
+  --   discounts.redeemed_for, invited_customers.appointment_id,
+  --   invoice_items.appointment_id, reminder_logs.appointment_id
+  -- (payments.appointment_id already cleared by deleting payments above)
+  UPDATE public.cash_transactions
+  SET appointment_id = NULL
+  WHERE tenant_id = p_tenant_id AND appointment_id IS NOT NULL;
+
+  UPDATE public.discount_sales
+  SET appointment_id = NULL
+  WHERE tenant_id = p_tenant_id AND appointment_id IS NOT NULL;
+
+  UPDATE public.discounts
+  SET redeemed_for = NULL
+  WHERE tenant_id = p_tenant_id AND redeemed_for IS NOT NULL;
+
+  UPDATE public.invited_customers
+  SET appointment_id = NULL
+  WHERE tenant_id = p_tenant_id AND appointment_id IS NOT NULL;
+
+  UPDATE public.invoice_items
+  SET appointment_id = NULL
+  WHERE tenant_id = p_tenant_id AND appointment_id IS NOT NULL;
+
+  UPDATE public.reminder_logs
+  SET appointment_id = NULL
+  WHERE tenant_id = p_tenant_id AND appointment_id IS NOT NULL;
 
   -- ── Tenant root (CASCADE clears remaining CASCADE children) ───────────
   DELETE FROM public.tenants WHERE id = p_tenant_id;
@@ -178,6 +281,11 @@ BEGIN
   );
 END;
 $$;
+
+REVOKE ALL ON FUNCTION public.list_tenant_hard_delete_tables() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.list_tenant_hard_delete_tables() FROM anon;
+REVOKE ALL ON FUNCTION public.list_tenant_hard_delete_tables() FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.list_tenant_hard_delete_tables() TO service_role;
 
 REVOKE ALL ON FUNCTION public.hard_delete_tenant_data(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.hard_delete_tenant_data(uuid) FROM anon;

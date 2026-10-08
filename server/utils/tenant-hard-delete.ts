@@ -6,20 +6,25 @@
  * - requireSuperAdmin must run in the API layer before calling these helpers.
  * - Service-role client is used only after that authorization.
  * - Confirmation must equal `DELETE ${exactTenantName}`.
+ * - Destructive DB work runs ONLY via transactional RPC hard_delete_tenant_data.
+ * - No weaker client-side delete fallback after RPC failure.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { sendEmail } from '~/server/utils/email'
 import {
-  EXPLICIT_DELETE_ORDER,
   FINANCIAL_TENANT_TABLES,
   PENDING_PAYMENT_STATUSES,
   TENANT_OWNED_TABLES,
+  APPOINTMENT_NO_ACTION_DEPENDENTS,
+  PAYMENT_NO_ACTION_DEPENDENTS,
   expectedHardDeleteConfirmation,
   isHardDeleteConfirmationValid,
   isTenantUuid,
+  mergeLiveTenantTables,
   previewCountTables,
+  type TenantOwnedTable,
 } from '~/server/utils/tenant-hard-delete-inventory'
 
 export type HardDeleteStatus =
@@ -41,6 +46,8 @@ export interface TenantHardDeletePreview {
   financialRecords: number
   pendingPayments: number
   paymentAuditLogs: number
+  inventorySource: 'live_rpc' | 'static_snapshot'
+  inventoryTableCount: number
   authUsers: Array<{
     appUserId: string
     authUserId: string | null
@@ -60,8 +67,11 @@ export interface TenantHardDeletePreview {
   }
   blockersClearedByExplicitDelete: string[]
   noFkTablesWithRows: string[]
+  paymentDependencyClears: string[]
+  appointmentDependencyClears: string[]
   warnings: string[]
   hardcodedCodeHints: string[]
+  deletionStrategy: string
 }
 
 export interface HardDeleteResult {
@@ -74,7 +84,10 @@ export interface HardDeleteResult {
   authSkipped: Array<{ authUserId: string; reason: string }>
   storageDeleted: string[]
   storageFailed: string[]
-  verification: { ok: boolean; leftovers: Array<{ table: string; remaining: number; reason: string }> }
+  verification: {
+    ok: boolean
+    leftovers: Array<{ table: string; remaining: number; reason: string }>
+  }
   emailSent: boolean
   error?: string
 }
@@ -90,7 +103,6 @@ async function countEq(
     .select('*', { count: 'exact', head: true })
     .eq(column, value)
   if (error) {
-    // Missing table / column in some envs — treat as 0 but log
     logger.warn(`[tenant-hard-delete] count failed ${table}.${column}:`, error.message)
     return 0
   }
@@ -103,21 +115,28 @@ function extractStoragePathFromPublicUrl(url: string | null | undefined, bucket:
     const u = new URL(url)
     const marker = `/object/public/${bucket}/`
     const idx = u.pathname.indexOf(marker)
-    if (idx >= 0) return u.pathname.slice(idx + marker.length)
+    if (idx >= 0) return decodeURIComponent(u.pathname.slice(idx + marker.length))
     const authMarker = `/object/authenticated/${bucket}/`
     const idx2 = u.pathname.indexOf(authMarker)
-    if (idx2 >= 0) return u.pathname.slice(idx2 + authMarker.length)
+    if (idx2 >= 0) return decodeURIComponent(u.pathname.slice(idx2 + authMarker.length))
   } catch {
     // ignore
   }
   return null
 }
 
-async function resolveStorageObjects(
+/**
+ * Resolve storage objects with provable ownership only:
+ *  a) tenant logo URL metadata
+ *  b) tenant_assets DB rows for this tenant_id
+ *  c) explicit {tenant_id}/ prefix listing
+ * Never delete by slug filename prefix matching.
+ */
+export async function resolveStorageObjects(
   supabase: SupabaseClient,
   tenant: {
     id: string
-    slug: string
+    slug?: string
     logo_url?: string | null
     logo_square_url?: string | null
     logo_wide_url?: string | null
@@ -131,6 +150,8 @@ async function resolveStorageObjects(
   const add = (bucket: string, path: string, source: string) => {
     const key = `${bucket}:${path}`
     if (!path || seen.has(key)) return
+    // Reject empty / traversal
+    if (path.includes('..')) return
     seen.add(key)
     found.push({ bucket, path, source })
   }
@@ -158,22 +179,10 @@ async function resolveStorageObjects(
     if (path) add(bucket, path, 'tenant_assets')
   }
 
-  // Slug-prefix scan in tenant-logos (verified against this tenant's slug)
-  if (tenant.slug) {
-    const { data: listed } = await supabase.storage.from('tenant-logos').list('', {
-      search: tenant.slug,
-      limit: 100,
-    })
-    for (const obj of listed || []) {
-      if (obj.name && (obj.name.startsWith(`${tenant.slug}-`) || obj.name.startsWith(`${tenant.slug}/`))) {
-        add('tenant-logos', obj.name, 'slug-prefix-list')
-      }
-    }
-    // Also common `{tenant_id}/...` prefix
-    const { data: byId } = await supabase.storage.from('tenant-logos').list(tenant.id, { limit: 100 })
-    for (const obj of byId || []) {
-      if (obj.name) add('tenant-logos', `${tenant.id}/${obj.name}`, 'tenant-id-prefix')
-    }
+  // Explicit {tenant_id}/… prefix only (UUID ownership, not slug)
+  const { data: byId } = await supabase.storage.from('tenant-logos').list(tenant.id, { limit: 1000 })
+  for (const obj of byId || []) {
+    if (obj.name) add('tenant-logos', `${tenant.id}/${obj.name}`, 'tenant-id-prefix')
   }
 
   return found
@@ -198,6 +207,40 @@ async function authExclusivity(
   }
 }
 
+async function loadTenantInventory(
+  supabase: SupabaseClient
+): Promise<{ tables: TenantOwnedTable[]; source: 'live_rpc' | 'static_snapshot' }> {
+  const { data, error } = await supabase.rpc('list_tenant_hard_delete_tables')
+  if (error || !data) {
+    if (error) {
+      logger.warn(
+        '[tenant-hard-delete] list_tenant_hard_delete_tables unavailable, using static snapshot:',
+        error.message
+      )
+    }
+    return {
+      tables: TENANT_OWNED_TABLES.filter((t) => t.classification !== 'financial_child'),
+      source: 'static_snapshot',
+    }
+  }
+  const live = Array.isArray(data) ? data : []
+  return {
+    tables: mergeLiveTenantTables(live as any),
+    source: 'live_rpc',
+  }
+}
+
+function countTablesFromInventory(tables: TenantOwnedTable[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const row of tables) {
+    if (seen.has(row.table)) continue
+    seen.add(row.table)
+    out.push(row.table)
+  }
+  return out.length ? out : previewCountTables()
+}
+
 export async function previewTenantHardDelete(
   supabase: SupabaseClient,
   tenantId: string
@@ -219,8 +262,11 @@ export async function previewTenantHardDelete(
     throw Object.assign(new Error('Tenant not found'), { statusCode: 404 })
   }
 
+  const { tables: inventory, source: inventorySource } = await loadTenantInventory(supabase)
+  const countTables = countTablesFromInventory(inventory)
+
   const counts: Record<string, number> = {}
-  for (const table of previewCountTables()) {
+  for (const table of countTables) {
     counts[table] = await countEq(supabase, table, 'tenant_id', tenantId)
   }
 
@@ -259,6 +305,14 @@ export async function previewTenantHardDelete(
     .select('*', { count: 'exact', head: true })
     .eq('referred_tenant_id', tenantId)
   counts.platform_referrals = (refAsReferrer ?? 0) + (refAsReferred ?? 0)
+
+  // website_prospects matched-only (owned by someone else)
+  const { count: matchedProspects } = await supabase
+    .from('website_prospects')
+    .select('*', { count: 'exact', head: true })
+    .eq('matched_tenant_id', tenantId)
+    .neq('tenant_id', tenantId)
+  counts.website_prospects_matched_other_owner = matchedProspects ?? 0
 
   let financialRecords = 0
   for (const t of FINANCIAL_TENANT_TABLES) {
@@ -299,17 +353,24 @@ export async function previewTenantHardDelete(
 
   const storageObjects = await resolveStorageObjects(supabase, tenant)
 
-  const noFkTablesWithRows = TENANT_OWNED_TABLES
+  const noFkTablesWithRows = inventory
     .filter((t) => t.classification === 'no_fk' && (counts[t.table] || 0) > 0)
     .map((t) => t.table)
 
-  const blockersClearedByExplicitDelete = TENANT_OWNED_TABLES
+  const blockersClearedByExplicitDelete = inventory
     .filter(
       (t) =>
         (t.classification === 'no_action' || t.classification === 'restrict') &&
         (counts[t.table] || 0) > 0
     )
     .map((t) => t.table)
+
+  const paymentDependencyClears = PAYMENT_NO_ACTION_DEPENDENTS.map(
+    (d) => `${d.table}.${d.column} (${d.action})`
+  )
+  const appointmentDependencyClears = APPOINTMENT_NO_ACTION_DEPENDENTS.map(
+    (d) => `${d.table}.${d.column} (${d.action})`
+  )
 
   const warnings: string[] = []
   if (financialRecords > 0) {
@@ -330,7 +391,7 @@ export async function previewTenantHardDelete(
     warnings.push('Some auth identities are shared/cross-referenced and will NOT be deleted.')
   }
   if (storageObjects.length > 0) {
-    warnings.push(`Tenant storage objects (${storageObjects.length}) will be deleted.`)
+    warnings.push(`Provably owned tenant storage objects (${storageObjects.length}) will be deleted.`)
   }
   if (noFkTablesWithRows.length > 0) {
     warnings.push(
@@ -342,16 +403,25 @@ export async function previewTenantHardDelete(
       `NO ACTION/RESTRICT children will be deleted before the tenant row: ${blockersClearedByExplicitDelete.join(', ')}`
     )
   }
+  if ((counts.website_prospects_matched_other_owner || 0) > 0) {
+    warnings.push(
+      `${counts.website_prospects_matched_other_owner} website_prospects owned by other tenants are matched to this tenant; matched_tenant_id will be nulled (rows preserved).`
+    )
+  }
   if (tenant.stripe_customer_id || tenant.stripe_subscription_id || tenant.wallee_space_id) {
     warnings.push(
       'External billing identifiers exist. SIMY will not call destructive external APIs; cancel externally if required.'
+    )
+  }
+  if (inventorySource === 'static_snapshot') {
+    warnings.push(
+      'Schema inventory RPC unavailable — preview uses the shipped static production snapshot. Destructive delete still requires the transactional RPC.'
     )
   }
   warnings.push('This operation cannot be undone.')
   warnings.push('Database backups are not purged by this feature.')
 
   const hardcodedCodeHints: string[] = []
-  // Static known hardcodes (code is never modified by this feature)
   if (tenant.slug === 'sara-lussi-ag' || (tenant.contact_email || '').toLowerCase() === 'info@saralussi.com') {
     hardcodedCodeHints.push(
       'Repository contains server/utils/sara-lussi-reply-email.ts hardcoding info@saralussi.com — not deleted by this feature; remove in a separate PR if obsolete.'
@@ -371,6 +441,8 @@ export async function previewTenantHardDelete(
     financialRecords,
     pendingPayments,
     paymentAuditLogs,
+    inventorySource,
+    inventoryTableCount: countTables.length,
     authUsers,
     storageObjects,
     externalReferences: {
@@ -384,15 +456,24 @@ export async function previewTenantHardDelete(
     },
     blockersClearedByExplicitDelete,
     noFkTablesWithRows,
+    paymentDependencyClears,
+    appointmentDependencyClears,
     warnings,
     hardcodedCodeHints,
+    deletionStrategy:
+      'Transactional RPC hard_delete_tenant_data only. Explicit clears for no-FK / NO ACTION / RESTRICT / payment+appointment deps, then DELETE tenants (CASCADE). Auth/storage outside DB txn. No client destructive fallback.',
   }
 }
 
 export async function verifyTenantHardDelete(
   supabase: SupabaseClient,
   tenantId: string,
-  slug: string | null
+  opts?: {
+    slug?: string | null
+    exclusiveAuthUserIds?: string[]
+    sharedAuthUserIds?: string[]
+    expectedStorageObjects?: Array<{ bucket: string; path: string }>
+  }
 ): Promise<{ ok: boolean; leftovers: Array<{ table: string; remaining: number; reason: string }> }> {
   const leftovers: Array<{ table: string; remaining: number; reason: string }> = []
 
@@ -401,7 +482,8 @@ export async function verifyTenantHardDelete(
     leftovers.push({ table: 'tenants', remaining: 1, reason: 'tenant root still exists' })
   }
 
-  for (const table of previewCountTables()) {
+  const { tables: inventory } = await loadTenantInventory(supabase)
+  for (const table of countTablesFromInventory(inventory)) {
     const remaining = await countEq(supabase, table, 'tenant_id', tenantId)
     if (remaining > 0) {
       leftovers.push({ table, remaining, reason: 'tenant_id rows remain' })
@@ -414,20 +496,99 @@ export async function verifyTenantHardDelete(
     leftovers.push({ table: 'users', remaining: usersLeft, reason: 'app users remain' })
   }
 
-  // Storage: slug-prefix leftovers
-  if (slug) {
-    const { data: listed } = await supabase.storage.from('tenant-logos').list('', {
-      search: slug,
-      limit: 100,
+  // website_prospects: owned gone; no matched_tenant_id leftovers
+  const matchedLeft = await countEq(supabase, 'website_prospects', 'matched_tenant_id', tenantId)
+  if (matchedLeft > 0) {
+    leftovers.push({
+      table: 'website_prospects',
+      remaining: matchedLeft,
+      reason: 'matched_tenant_id still references deleted tenant',
     })
-    const leftoverObjs = (listed || []).filter(
-      (o) => o.name && (o.name.startsWith(`${slug}-`) || o.name.startsWith(`${slug}/`))
+  }
+
+  // platform_referrals either side
+  const { count: refAsReferrer } = await supabase
+    .from('platform_referrals')
+    .select('*', { count: 'exact', head: true })
+    .eq('referrer_tenant_id', tenantId)
+  const { count: refAsReferred } = await supabase
+    .from('platform_referrals')
+    .select('*', { count: 'exact', head: true })
+    .eq('referred_tenant_id', tenantId)
+  const referralsLeft = (refAsReferrer ?? 0) + (refAsReferred ?? 0)
+  if (referralsLeft > 0) {
+    leftovers.push({
+      table: 'platform_referrals',
+      remaining: referralsLeft,
+      reason: 'referral rows still reference deleted tenant',
+    })
+  }
+
+  // website_pages via any leftover website_tenants (also counted above) — belt and suspenders
+  const { data: websites } = await supabase.from('website_tenants').select('id').eq('tenant_id', tenantId)
+  if (websites?.length) {
+    leftovers.push({
+      table: 'website_tenants',
+      remaining: websites.length,
+      reason: 'website_tenants remain (cascade incomplete)',
+    })
+  }
+
+  // Storage: only check provably owned paths captured before delete
+  for (const obj of opts?.expectedStorageObjects || []) {
+    const { data: listed } = await supabase.storage.from(obj.bucket).list(
+      obj.path.includes('/') ? obj.path.split('/').slice(0, -1).join('/') : '',
+      { search: obj.path.split('/').pop(), limit: 20 }
     )
-    if (leftoverObjs.length > 0) {
+    const stillThere = (listed || []).some((o) => {
+      const full = obj.path.includes('/')
+        ? `${obj.path.split('/').slice(0, -1).join('/')}/${o.name}`
+        : o.name
+      return full === obj.path || o.name === obj.path.split('/').pop()
+    })
+    if (stillThere) {
       leftovers.push({
-        table: 'storage.objects:tenant-logos',
-        remaining: leftoverObjs.length,
-        reason: 'slug-prefixed logo objects remain',
+        table: `storage.objects:${obj.bucket}`,
+        remaining: 1,
+        reason: `owned object still present: ${obj.path}`,
+      })
+    }
+  }
+
+  // tenant_id prefix leftovers
+  const { data: byId } = await supabase.storage.from('tenant-logos').list(tenantId, { limit: 100 })
+  if ((byId || []).length > 0) {
+    leftovers.push({
+      table: 'storage.objects:tenant-logos',
+      remaining: byId!.length,
+      reason: 'tenant_id-prefixed objects remain',
+    })
+  }
+
+  // Exclusive auth users should be gone from auth; shared must remain (best-effort via admin getUser)
+  for (const authUserId of opts?.exclusiveAuthUserIds || []) {
+    try {
+      const { data, error } = await supabase.auth.admin.getUserById(authUserId)
+      if (!error && data?.user) {
+        leftovers.push({
+          table: 'auth.users',
+          remaining: 1,
+          reason: `exclusive auth user still exists: ${authUserId}`,
+        })
+      }
+    } catch {
+      // ignore admin API gaps in tests
+    }
+  }
+
+  // Shared auth: ensure still referenced nowhere for this tenant (already checked users), and optionally still exist
+  for (const authUserId of opts?.sharedAuthUserIds || []) {
+    const { data: refs } = await supabase.from('users').select('id').eq('auth_user_id', authUserId).eq('tenant_id', tenantId)
+    if (refs && refs.length > 0) {
+      leftovers.push({
+        table: 'users',
+        remaining: refs.length,
+        reason: `shared auth still linked to deleted tenant: ${authUserId}`,
       })
     }
   }
@@ -463,6 +624,7 @@ async function updateJob(
 
 /**
  * Execute hard delete. Caller MUST have already verified Superadmin.
+ * Destructive DB path is RPC-only (fail closed).
  */
 export async function executeTenantHardDelete(
   supabase: SupabaseClient,
@@ -505,15 +667,24 @@ export async function executeTenantHardDelete(
       financialRecords: preview.financialRecords,
       pendingPayments: preview.pendingPayments,
       warnings: preview.warnings,
+      inventorySource: preview.inventorySource,
+      inventoryTableCount: preview.inventoryTableCount,
       storageObjects: preview.storageObjects.map((s) => ({ bucket: s.bucket, path: s.path })),
       authUserIds: preview.authUsers.map((a) => a.authUserId).filter(Boolean),
       externalReferences: preview.externalReferences,
+      deletionStrategy: preview.deletionStrategy,
     },
     warnings: preview.warnings,
     started_at: new Date().toISOString(),
   })
 
   const contactEmail = preview.contactEmail || preview.fromEmail
+  const exclusiveAuthIds = preview.authUsers
+    .filter((a) => a.authUserId && a.exclusive)
+    .map((a) => a.authUserId as string)
+  const sharedAuthIds = preview.authUsers
+    .filter((a) => a.authUserId && !a.exclusive)
+    .map((a) => a.authUserId as string)
   const authCandidates = preview.authUsers
     .filter((a) => a.authUserId)
     .map((a) => ({ authUserId: a.authUserId as string, exclusive: a.exclusive }))
@@ -526,20 +697,28 @@ export async function executeTenantHardDelete(
   const storageFailed: string[] = []
 
   try {
-    // Prefer transactional RPC; fall back to ordered JS deletes if RPC missing (tests/local).
-    const { error: rpcError } = await supabase.rpc('hard_delete_tenant_data', {
+    // RPC is the ONLY destructive DB path. Fail closed — never fall back to client deletes.
+    const { data: rpcData, error: rpcError } = await supabase.rpc('hard_delete_tenant_data', {
       p_tenant_id: tenantId,
     })
 
     if (rpcError) {
-      logger.warn('[tenant-hard-delete] RPC unavailable, using ordered client deletes:', rpcError.message)
-      await executeOrderedClientDeletes(supabase, tenantId, deletedCounts)
+      throw Object.assign(
+        new Error(
+          `Transactional hard_delete_tenant_data RPC failed (fail-closed, no client fallback): ${rpcError.message}`
+        ),
+        { cause: rpcError }
+      )
+    }
+
+    if (rpcData?.deleted && typeof rpcData.deleted === 'object') {
+      Object.assign(deletedCounts, rpcData.deleted)
     }
 
     // Confirm tenant gone
     const { data: stillThere } = await supabase.from('tenants').select('id').eq('id', tenantId).maybeSingle()
     if (stillThere) {
-      throw new Error('Tenant row still exists after deletion attempt')
+      throw new Error('Tenant row still exists after RPC — treating as FAILED (no partial success)')
     }
   } catch (err: any) {
     await updateJob(supabase, jobId, {
@@ -558,13 +737,16 @@ export async function executeTenantHardDelete(
       authSkipped,
       storageDeleted,
       storageFailed,
-      verification: { ok: false, leftovers: [{ table: 'tenants', remaining: 1, reason: err?.message || 'db failed' }] },
+      verification: {
+        ok: false,
+        leftovers: [{ table: 'tenants', remaining: 1, reason: err?.message || 'db failed' }],
+      },
       emailSent: false,
       error: err?.message || String(err),
     }
   }
 
-  // Auth cleanup (outside DB txn) — re-check exclusivity
+  // Auth cleanup (outside DB txn) — re-check exclusivity via remaining app user refs
   for (const cand of authCandidates) {
     const { data: remaining } = await supabase
       .from('users')
@@ -574,11 +756,14 @@ export async function executeTenantHardDelete(
     if (remaining && remaining.length > 0) {
       authSkipped.push({
         authUserId: cand.authUserId,
-        reason: `app users still reference auth user (${remaining.length})`,
+        reason: remaining.some((r) => r.tenant_id && r.tenant_id !== tenantId)
+          ? 'other tenant still references auth user'
+          : `app users still reference auth user (${remaining.length})`,
       })
       continue
     }
 
+    // Only delete identities that were exclusive at preview OR have zero remaining refs
     const { error: delAuthErr } = await supabase.auth.admin.deleteUser(cand.authUserId)
     if (delAuthErr) {
       authSkipped.push({ authUserId: cand.authUserId, reason: delAuthErr.message })
@@ -587,7 +772,7 @@ export async function executeTenantHardDelete(
     }
   }
 
-  // Storage cleanup
+  // Storage cleanup — only provably owned paths
   for (const obj of storageCandidates) {
     const { error: remErr } = await supabase.storage.from(obj.bucket).remove([obj.path])
     if (remErr) {
@@ -598,18 +783,21 @@ export async function executeTenantHardDelete(
   }
 
   await updateJob(supabase, jobId, { status: 'VERIFYING' })
-  const verification = await verifyTenantHardDelete(supabase, tenantId, preview.slug)
+  const verification = await verifyTenantHardDelete(supabase, tenantId, {
+    slug: preview.slug,
+    exclusiveAuthUserIds: exclusiveAuthIds,
+    sharedAuthUserIds: sharedAuthIds,
+    expectedStorageObjects: storageCandidates.map((s) => ({ bucket: s.bucket, path: s.path })),
+  })
 
   let status: HardDeleteStatus = 'COMPLETED'
-  if (!verification.ok || storageFailed.length > 0 || authSkipped.some((s) => s.reason.includes('still reference'))) {
-    // Auth skip for non-exclusive is OK; leftover DB/storage is PARTIAL
-    if (!verification.ok || storageFailed.length > 0) {
-      status = 'PARTIAL_FAILURE'
-    }
+  if (!verification.ok || storageFailed.length > 0) {
+    status = 'PARTIAL_FAILURE'
   }
 
-  // Non-exclusive auth skips alone → still COMPLETED if verification ok
-  const blockingAuthSkip = authSkipped.filter((s) => !s.reason.includes('other tenant') && s.reason.includes('still reference'))
+  const blockingAuthSkip = authSkipped.filter((s) =>
+    s.reason.includes('still reference') && !s.reason.includes('other tenant')
+  )
   if (blockingAuthSkip.length && verification.ok && storageFailed.length === 0) {
     status = 'PARTIAL_FAILURE'
   }
@@ -660,54 +848,6 @@ export async function executeTenantHardDelete(
     verification,
     emailSent,
   }
-}
-
-async function executeOrderedClientDeletes(
-  supabase: SupabaseClient,
-  tenantId: string,
-  deletedCounts: Record<string, number>
-): Promise<void> {
-  // Clear default_payment_account_id so accounting_accounts can cascade
-  await supabase.from('tenants').update({ default_payment_account_id: null }).eq('id', tenantId)
-
-  for (const table of EXPLICIT_DELETE_ORDER) {
-    if (table === 'webhook_logs' || table === 'payment_audit_logs' || table === 'payment_wallee_transactions' || table === 'payment_refunds' || table === 'payment_reminders' || table === 'payment_access_grants' || table === 'refund_requests') {
-      const { data: pays } = await supabase.from('payments').select('id').eq('tenant_id', tenantId)
-      const ids = (pays || []).map((p) => p.id)
-      if (ids.length === 0) continue
-      if (table === 'webhook_logs') {
-        const { error } = await supabase.from('webhook_logs').delete().in('payment_id', ids)
-        if (error) logger.warn(`[tenant-hard-delete] ${table}:`, error.message)
-        continue
-      }
-      const { error } = await supabase.from(table).delete().in('payment_id', ids)
-      if (error) logger.warn(`[tenant-hard-delete] ${table}:`, error.message)
-      continue
-    }
-
-    if (table === 'email_campaign_leads' || table === 'email_campaign_variants') {
-      const { data: camps } = await supabase.from('email_campaigns').select('id').eq('tenant_id', tenantId)
-      const ids = (camps || []).map((c) => c.id)
-      if (!ids.length) continue
-      const { error } = await supabase.from(table).delete().in('campaign_id', ids)
-      if (error) logger.warn(`[tenant-hard-delete] ${table}:`, error.message)
-      continue
-    }
-
-    const { error, count } = await supabase
-      .from(table)
-      .delete({ count: 'exact' })
-      .eq('tenant_id', tenantId)
-    if (error) {
-      // Some tables may not exist in all envs
-      logger.warn(`[tenant-hard-delete] delete ${table}:`, error.message)
-    } else if (typeof count === 'number') {
-      deletedCounts[table] = count
-    }
-  }
-
-  const { error: tenantErr } = await supabase.from('tenants').delete().eq('id', tenantId)
-  if (tenantErr) throw tenantErr
 }
 
 function buildDeletionEmailHtml(opts: { tenantName: string; deletedAt: string }): string {
