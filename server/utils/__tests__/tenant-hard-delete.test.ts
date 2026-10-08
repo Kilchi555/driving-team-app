@@ -187,7 +187,7 @@ describe('hard-delete service behavior (mocked supabase)', () => {
     vi.resetModules()
   })
 
-  function makeCountBuilder(count = 0): QueryBuilder {
+  function makeCountBuilder(count = 0, error: { message: string } | null = null): QueryBuilder {
     const b = {} as QueryBuilder
     b.select = vi.fn(() => b)
     b.eq = vi.fn(() => b)
@@ -196,7 +196,10 @@ describe('hard-delete service behavior (mocked supabase)', () => {
     b.maybeSingle = vi.fn(async () => ({ data: null, error: null }))
     b.single = vi.fn(async () => ({ data: null, error: null }))
     b.then = (resolve, reject) =>
-      Promise.resolve({ data: [], error: null, count } satisfies ThenableResult).then(resolve, reject)
+      Promise.resolve({ data: [], error, count: error ? undefined : count } satisfies ThenableResult).then(
+        resolve,
+        reject
+      )
     b.delete = vi.fn(() => {
       throw new Error('preview must not delete')
     })
@@ -207,6 +210,36 @@ describe('hard-delete service behavior (mocked supabase)', () => {
       throw new Error('preview must not insert')
     })
     return b
+  }
+
+  function makeVerifyMock(opts: {
+    tenantId: string
+    countForTable?: (table: string) => number
+    errorForTable?: (table: string) => { message: string } | null
+  }): MockSupabase {
+    return {
+      from: vi.fn((table: string) => {
+        const err = opts.errorForTable?.(table) ?? null
+        const count = opts.countForTable?.(table) ?? 0
+        const b = makeCountBuilder(count, err)
+        if (table === 'tenants') {
+          b.maybeSingle = vi.fn(async () => ({ data: null, error: null }))
+        }
+        if (table === 'website_tenants') {
+          b.then = (resolve, reject) =>
+            Promise.resolve({ data: [], error: null, count: 0 } satisfies ThenableResult).then(resolve, reject)
+        }
+        return b
+      }),
+      rpc: vi.fn(async () => ({ data: null, error: { message: 'missing' } })),
+      storage: { from: vi.fn(() => ({ list: vi.fn(async () => ({ data: [] as StorageObject[], error: null })) })) },
+      auth: {
+        admin: {
+          deleteUser: vi.fn(),
+          getUserById: vi.fn(async () => ({ data: { user: null }, error: { message: 'gone' } })),
+        },
+      },
+    }
   }
 
   const baseTenant = (over: Record<string, unknown> = {}) => ({
@@ -465,31 +498,133 @@ describe('hard-delete service behavior (mocked supabase)', () => {
 
   it('verification reports leftovers when tenant_id rows remain', async () => {
     const tenantId = '55555555-5555-4555-8555-555555555555'
-    const supabase: MockSupabase = {
-      from: vi.fn((table: string) => {
-        const b = makeCountBuilder(table === 'leads' ? 3 : 0)
-        if (table === 'tenants') {
-          b.maybeSingle = vi.fn(async () => ({ data: null, error: null }))
-        }
-        if (table === 'website_tenants' || table === 'platform_referrals' || table === 'website_prospects' || table === 'users') {
-          b.then = (resolve, reject) =>
-            Promise.resolve({ data: [], error: null, count: 0 } satisfies ThenableResult).then(resolve, reject)
-        }
-        return b
-      }),
-      rpc: vi.fn(async () => ({ data: null, error: { message: 'missing' } })),
-      storage: { from: vi.fn(() => ({ list: vi.fn(async () => ({ data: [] as StorageObject[], error: null })) })) },
-      auth: {
-        admin: {
-          deleteUser: vi.fn(),
-          getUserById: vi.fn(async () => ({ data: { user: null }, error: { message: 'gone' } })),
-        },
-      },
-    }
+    const supabase = makeVerifyMock({
+      tenantId,
+      countForTable: (table) => (table === 'leads' ? 3 : 0),
+    })
     const { verifyTenantHardDelete } = await import('../tenant-hard-delete')
     const result = await verifyTenantHardDelete(asClient(supabase), tenantId, {})
     expect(result.ok).toBe(false)
     expect(result.leftovers.some((l) => l.table === 'leads' && l.remaining === 3)).toBe(true)
+  })
+
+  it('verification passes when all counts are zero', async () => {
+    const tenantId = '55555555-5555-4555-8555-555555555501'
+    const supabase = makeVerifyMock({ tenantId, countForTable: () => 0 })
+    const { verifyTenantHardDelete } = await import('../tenant-hard-delete')
+    const result = await verifyTenantHardDelete(asClient(supabase), tenantId, {})
+    expect(result.ok).toBe(true)
+    expect(result.leftovers).toEqual([])
+  })
+
+  it('verification fails closed when a count query errors (never treats error as 0)', async () => {
+    const tenantId = '55555555-5555-4555-8555-555555555502'
+    const supabase = makeVerifyMock({
+      tenantId,
+      countForTable: () => 0,
+      errorForTable: (table) => (table === 'leads' ? { message: 'permission denied for table leads' } : null),
+    })
+    const { verifyTenantHardDelete } = await import('../tenant-hard-delete')
+    const result = await verifyTenantHardDelete(asClient(supabase), tenantId, {})
+    expect(result.ok).toBe(false)
+    expect(result.leftovers.length).toBeGreaterThan(0)
+    const leadLeftover = result.leftovers.find((l) => l.table === 'leads')
+    expect(leadLeftover).toBeTruthy()
+    expect(leadLeftover?.remaining).not.toBe(0)
+    expect(leadLeftover?.remaining).toBe(-1)
+    expect(leadLeftover?.reason).toMatch(/verification count query failed/i)
+  })
+
+  it('verification fails closed when platform_referrals count query errors', async () => {
+    const tenantId = '55555555-5555-4555-8555-555555555503'
+    const supabase = makeVerifyMock({
+      tenantId,
+      countForTable: () => 0,
+      errorForTable: (table) =>
+        table === 'platform_referrals' ? { message: 'relation platform_referrals does not exist' } : null,
+    })
+    const { verifyTenantHardDelete } = await import('../tenant-hard-delete')
+    const result = await verifyTenantHardDelete(asClient(supabase), tenantId, {})
+    expect(result.ok).toBe(false)
+    const ref = result.leftovers.find((l) => l.table === 'platform_referrals')
+    expect(ref).toBeTruthy()
+    expect(ref?.remaining).toBe(-1)
+    expect(ref?.reason).toMatch(/verification count query failed/i)
+  })
+
+  it('execute maps verification count failure to PARTIAL_FAILURE without success email', async () => {
+    const tenant = baseTenant({
+      id: '55555555-5555-4555-8555-555555555504',
+      name: 'Verify Fail Tenant',
+      slug: 'verify-fail',
+      contact_email: 'verify-fail@example.com',
+    })
+    let rpcDeleted = false
+
+    const supabase: MockSupabase = {
+      from: vi.fn((table: string) => {
+        if (table === 'tenants') {
+          const b = makeCountBuilder(0)
+          b.maybeSingle = vi.fn(async () => {
+            if (!rpcDeleted) return { data: tenant, error: null }
+            return { data: null, error: null }
+          })
+          return b
+        }
+        if (table === 'tenant_hard_delete_jobs') {
+          const b = makeCountBuilder(0)
+          b.insert = vi.fn(() => b)
+          b.update = vi.fn(() => b)
+          b.select = vi.fn(() => b)
+          b.eq = vi.fn(() => b)
+          b.single = vi.fn(async () => ({ data: { id: 'job-verify-fail' }, error: null }))
+          b.then = (resolve, reject) =>
+            Promise.resolve({ data: { id: 'job-verify-fail' }, error: null } satisfies ThenableResult).then(
+              resolve,
+              reject
+            )
+          return b
+        }
+        // After RPC, verification count for leads fails closed
+        if (rpcDeleted && table === 'leads') {
+          return makeCountBuilder(0, { message: 'timeout counting leads' })
+        }
+        return makeCountBuilder(0)
+      }),
+      rpc: vi.fn(async (name: string) => {
+        if (name === 'list_tenant_hard_delete_tables') return { data: null, error: { message: 'missing' } }
+        if (name === 'hard_delete_tenant_data') {
+          rpcDeleted = true
+          return { data: { tenant_id: tenant.id, deleted: {} }, error: null }
+        }
+        return { data: null, error: null }
+      }),
+      storage: {
+        from: vi.fn(() => ({
+          list: vi.fn(async () => ({ data: [] as StorageObject[], error: null })),
+          remove: vi.fn(async () => ({ data: null, error: null })),
+        })),
+      },
+      auth: {
+        admin: {
+          deleteUser: vi.fn(async () => ({ data: null, error: null })),
+          getUserById: vi.fn(async () => ({ data: { user: null }, error: { message: 'not found' } })),
+        },
+      },
+    }
+
+    const { executeTenantHardDelete } = await import('../tenant-hard-delete')
+    const result = await executeTenantHardDelete(asClient(supabase), {
+      tenantId: String(tenant.id),
+      confirmation: 'DELETE Verify Fail Tenant',
+      requestedByUserId: 'u1',
+      requestedByAuthUserId: 'a1',
+    })
+    expect(result.status).toBe('PARTIAL_FAILURE')
+    expect(result.status).not.toBe('COMPLETED')
+    expect(result.emailSent).toBe(false)
+    expect(result.verification.ok).toBe(false)
+    expect(result.verification.leftovers.some((l) => l.table === 'leads' && l.remaining === -1)).toBe(true)
   })
 
   it('successful RPC path never issues client table deletes', async () => {

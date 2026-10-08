@@ -92,6 +92,10 @@ export interface HardDeleteResult {
   error?: string
 }
 
+/**
+ * Exact equality count. Fail-closed: query errors throw (never interpreted as 0).
+ * A real count of 0 remains a successful empty result.
+ */
 async function countEq(
   supabase: SupabaseClient,
   table: string,
@@ -103,10 +107,35 @@ async function countEq(
     .select('*', { count: 'exact', head: true })
     .eq(column, value)
   if (error) {
-    logger.warn(`[tenant-hard-delete] count failed ${table}.${column}:`, error.message)
-    return 0
+    const message = `count query failed for ${table}.${column}: ${error.message}`
+    logger.warn(`[tenant-hard-delete] ${message}`)
+    throw new Error(message)
   }
   return count ?? 0
+}
+
+/** Verification helper: count errors become leftovers (never ok / never silent 0). */
+async function verificationCountOrLeftover(
+  leftovers: Array<{ table: string; remaining: number; reason: string }>,
+  supabase: SupabaseClient,
+  table: string,
+  column: string,
+  value: string,
+  leftoverReason: string
+): Promise<void> {
+  try {
+    const remaining = await countEq(supabase, table, column, value)
+    if (remaining > 0) {
+      leftovers.push({ table, remaining, reason: leftoverReason })
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    leftovers.push({
+      table,
+      remaining: -1,
+      reason: `verification count query failed (${column}): ${message}`,
+    })
+  }
 }
 
 function extractStoragePathFromPublicUrl(url: string | null | undefined, bucket: string): string | null {
@@ -484,43 +513,54 @@ export async function verifyTenantHardDelete(
 
   const { tables: inventory } = await loadTenantInventory(supabase)
   for (const table of countTablesFromInventory(inventory)) {
-    const remaining = await countEq(supabase, table, 'tenant_id', tenantId)
-    if (remaining > 0) {
-      leftovers.push({ table, remaining, reason: 'tenant_id rows remain' })
-    }
+    await verificationCountOrLeftover(
+      leftovers,
+      supabase,
+      table,
+      'tenant_id',
+      tenantId,
+      'tenant_id rows remain'
+    )
   }
 
   // App users must be gone
-  const usersLeft = await countEq(supabase, 'users', 'tenant_id', tenantId)
-  if (usersLeft > 0) {
-    leftovers.push({ table: 'users', remaining: usersLeft, reason: 'app users remain' })
-  }
+  await verificationCountOrLeftover(
+    leftovers,
+    supabase,
+    'users',
+    'tenant_id',
+    tenantId,
+    'app users remain'
+  )
 
   // website_prospects: owned gone; no matched_tenant_id leftovers
-  const matchedLeft = await countEq(supabase, 'website_prospects', 'matched_tenant_id', tenantId)
-  if (matchedLeft > 0) {
-    leftovers.push({
-      table: 'website_prospects',
-      remaining: matchedLeft,
-      reason: 'matched_tenant_id still references deleted tenant',
-    })
-  }
+  await verificationCountOrLeftover(
+    leftovers,
+    supabase,
+    'website_prospects',
+    'matched_tenant_id',
+    tenantId,
+    'matched_tenant_id still references deleted tenant'
+  )
 
-  // platform_referrals either side
-  const { count: refAsReferrer } = await supabase
-    .from('platform_referrals')
-    .select('*', { count: 'exact', head: true })
-    .eq('referrer_tenant_id', tenantId)
-  const { count: refAsReferred } = await supabase
-    .from('platform_referrals')
-    .select('*', { count: 'exact', head: true })
-    .eq('referred_tenant_id', tenantId)
-  const referralsLeft = (refAsReferrer ?? 0) + (refAsReferred ?? 0)
-  if (referralsLeft > 0) {
+  // platform_referrals either side (CASCADE on delete; verify fail-closed on count errors)
+  try {
+    const refAsReferrer = await countEq(supabase, 'platform_referrals', 'referrer_tenant_id', tenantId)
+    const refAsReferred = await countEq(supabase, 'platform_referrals', 'referred_tenant_id', tenantId)
+    const referralsLeft = refAsReferrer + refAsReferred
+    if (referralsLeft > 0) {
+      leftovers.push({
+        table: 'platform_referrals',
+        remaining: referralsLeft,
+        reason: 'referral rows still reference deleted tenant',
+      })
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
     leftovers.push({
       table: 'platform_referrals',
-      remaining: referralsLeft,
-      reason: 'referral rows still reference deleted tenant',
+      remaining: -1,
+      reason: `verification count query failed: ${message}`,
     })
   }
 
