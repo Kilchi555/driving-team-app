@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Mock } from 'vitest'
 import {
   expectedHardDeleteConfirmation,
   isHardDeleteConfirmationValid,
@@ -12,6 +14,64 @@ import {
   mergeLiveTenantTables,
   classifyDeleteRule,
 } from '../tenant-hard-delete-inventory'
+
+type ThenableResult = {
+  data: unknown
+  error: { message: string } | null
+  count?: number
+}
+
+type QueryBuilder = {
+  select: Mock<(...args: unknown[]) => QueryBuilder>
+  eq: Mock<(...args: unknown[]) => QueryBuilder>
+  neq: Mock<(...args: unknown[]) => QueryBuilder>
+  in: Mock<(...args: unknown[]) => QueryBuilder>
+  maybeSingle: Mock<() => Promise<{ data: unknown; error: null }>>
+  single: Mock<() => Promise<{ data: unknown; error: null }>>
+  then: (
+    resolve: (value: ThenableResult) => unknown,
+    reject?: (reason: unknown) => unknown
+  ) => Promise<unknown>
+  delete: Mock<(...args: unknown[]) => unknown>
+  update: Mock<(...args: unknown[]) => unknown>
+  insert: Mock<(...args: unknown[]) => unknown>
+}
+
+type DeleteChain = {
+  eq: () => DeleteChain
+  in: () => DeleteChain
+  then: (
+    resolve: (value: ThenableResult) => unknown,
+    reject?: (reason: unknown) => unknown
+  ) => Promise<unknown>
+}
+
+type StorageObject = { name: string }
+
+type MockSupabase = {
+  from: Mock<(table: string) => QueryBuilder>
+  rpc: Mock<(name: string, args?: Record<string, unknown>) => Promise<ThenableResult>>
+  storage: {
+    from: Mock<
+      (bucket: string) => {
+        list: Mock<(path?: string, opts?: { search?: string; limit?: number }) => Promise<{ data: StorageObject[]; error: null }>>
+        remove?: Mock<(paths: string[]) => Promise<{ data: null; error: null }>>
+      }
+    >
+  }
+  auth?: {
+    admin: {
+      deleteUser: Mock<(id: string) => Promise<{ data: null; error: null | { message: string } }>>
+      getUserById: Mock<
+        (id: string) => Promise<{ data: { user: null }; error: { message: string } }>
+      >
+    }
+  }
+}
+
+function asClient(mock: MockSupabase): SupabaseClient {
+  return mock as unknown as SupabaseClient
+}
 
 describe('tenant-hard-delete inventory invariants', () => {
   it('accepts only UUID tenant ids', () => {
@@ -27,7 +87,7 @@ describe('tenant-hard-delete inventory invariants', () => {
     expect(isHardDeleteConfirmationValid('DELETE Sara Lussi AG', 'Sara Lussi AG')).toBe(true)
     expect(isHardDeleteConfirmationValid('DELETE', 'Sara Lussi AG')).toBe(false)
     expect(isHardDeleteConfirmationValid('DELETE FAHRSCHULE Sara', 'Sara Lussi AG')).toBe(false)
-    expect(isHardDeleteConfirmationValid(true as any, 'Sara Lussi AG')).toBe(false)
+    expect(isHardDeleteConfirmationValid(true, 'Sara Lussi AG')).toBe(false)
     expect(isHardDeleteConfirmationValid('DELETE Fahrschule-Schlittler', 'Fahrschule-Schlittler')).toBe(true)
   })
 
@@ -127,16 +187,16 @@ describe('hard-delete service behavior (mocked supabase)', () => {
     vi.resetModules()
   })
 
-  function makeCountBuilder(count = 0) {
-    const b: any = {}
+  function makeCountBuilder(count = 0): QueryBuilder {
+    const b = {} as QueryBuilder
     b.select = vi.fn(() => b)
     b.eq = vi.fn(() => b)
     b.neq = vi.fn(() => b)
     b.in = vi.fn(() => b)
     b.maybeSingle = vi.fn(async () => ({ data: null, error: null }))
     b.single = vi.fn(async () => ({ data: null, error: null }))
-    b.then = (resolve: any, reject: any) =>
-      Promise.resolve({ data: [], error: null, count }).then(resolve, reject)
+    b.then = (resolve, reject) =>
+      Promise.resolve({ data: [], error: null, count } satisfies ThenableResult).then(resolve, reject)
     b.delete = vi.fn(() => {
       throw new Error('preview must not delete')
     })
@@ -154,25 +214,25 @@ describe('hard-delete service behavior (mocked supabase)', () => {
     name: 'Test Delete Tenant',
     slug: 'test-delete-tenant',
     contact_email: 'test@example.com',
-    from_email: null,
-    logo_url: null,
-    logo_square_url: null,
-    logo_wide_url: null,
-    logo_dark_url: null,
-    favicon_url: null,
-    stripe_customer_id: null,
-    stripe_subscription_id: null,
-    stripe_connect_account_id: null,
-    wallee_space_id: null,
+    from_email: null as string | null,
+    logo_url: null as string | null,
+    logo_square_url: null as string | null,
+    logo_wide_url: null as string | null,
+    logo_dark_url: null as string | null,
+    favicon_url: null as string | null,
+    stripe_customer_id: null as string | null,
+    stripe_subscription_id: null as string | null,
+    stripe_connect_account_id: null as string | null,
+    wallee_space_id: null as number | null,
     wallee_enabled: false,
-    resend_domain_id: null,
+    resend_domain_id: null as string | null,
     sari_enabled: false,
     ...over,
   })
 
   it('preview is read-only (no delete/update/insert on tenant tables)', async () => {
     const tenant = baseTenant()
-    const supabase: any = {
+    const supabase: MockSupabase = {
       from: vi.fn((table: string) => {
         if (table === 'tenants') {
           const b = makeCountBuilder(0)
@@ -181,8 +241,8 @@ describe('hard-delete service behavior (mocked supabase)', () => {
         }
         if (table === 'users') {
           const b = makeCountBuilder(0)
-          b.then = (resolve: any, reject: any) =>
-            Promise.resolve({ data: [], error: null, count: 0 }).then(resolve, reject)
+          b.then = (resolve, reject) =>
+            Promise.resolve({ data: [], error: null, count: 0 } satisfies ThenableResult).then(resolve, reject)
           return b
         }
         return makeCountBuilder(0)
@@ -190,13 +250,13 @@ describe('hard-delete service behavior (mocked supabase)', () => {
       rpc: vi.fn(async () => ({ data: null, error: { message: 'rpc missing' } })),
       storage: {
         from: vi.fn(() => ({
-          list: vi.fn(async () => ({ data: [], error: null })),
+          list: vi.fn(async () => ({ data: [] as StorageObject[], error: null })),
         })),
       },
     }
 
     const { previewTenantHardDelete } = await import('../tenant-hard-delete')
-    const preview = await previewTenantHardDelete(supabase, tenant.id)
+    const preview = await previewTenantHardDelete(asClient(supabase), tenant.id)
     expect(preview.tenantName).toBe('Test Delete Tenant')
     expect(preview.tenantId).toBe(tenant.id)
     expect(preview.warnings.length).toBeGreaterThan(0)
@@ -218,7 +278,7 @@ describe('hard-delete service behavior (mocked supabase)', () => {
       }
       return { data: null, error: null }
     })
-    const supabase: any = {
+    const supabase: MockSupabase = {
       from: vi.fn((table: string) => {
         if (table === 'tenants') {
           const b = makeCountBuilder(0)
@@ -228,14 +288,14 @@ describe('hard-delete service behavior (mocked supabase)', () => {
         return makeCountBuilder(0)
       }),
       rpc,
-      storage: { from: vi.fn(() => ({ list: async () => ({ data: [] }) })) },
-      auth: { admin: { deleteUser: vi.fn() } },
+      storage: { from: vi.fn(() => ({ list: vi.fn(async () => ({ data: [] as StorageObject[], error: null })) })) },
+      auth: { admin: { deleteUser: vi.fn(), getUserById: vi.fn() } },
     }
 
     const { executeTenantHardDelete } = await import('../tenant-hard-delete')
     await expect(
-      executeTenantHardDelete(supabase, {
-        tenantId: tenant.id,
+      executeTenantHardDelete(asClient(supabase), {
+        tenantId: String(tenant.id),
         confirmation: 'DELETE Wrong Name',
         requestedByUserId: 'u1',
         requestedByAuthUserId: 'a1',
@@ -252,7 +312,7 @@ describe('hard-delete service behavior (mocked supabase)', () => {
     })
 
     let deleteCalls = 0
-    const supabase: any = {
+    const supabase: MockSupabase = {
       from: vi.fn((table: string) => {
         if (table === 'tenants') {
           const b = makeCountBuilder(0)
@@ -266,8 +326,8 @@ describe('hard-delete service behavior (mocked supabase)', () => {
           b.select = vi.fn(() => b)
           b.single = vi.fn(async () => ({ data: { id: 'job-1' }, error: null }))
           b.eq = vi.fn(() => b)
-          b.then = (resolve: any, reject: any) =>
-            Promise.resolve({ data: { id: 'job-1' }, error: null }).then(resolve, reject)
+          b.then = (resolve, reject) =>
+            Promise.resolve({ data: { id: 'job-1' }, error: null } satisfies ThenableResult).then(resolve, reject)
           return b
         }
         const b = makeCountBuilder(0)
@@ -286,13 +346,18 @@ describe('hard-delete service behavior (mocked supabase)', () => {
         }
         return { data: null, error: { message: 'unknown rpc' } }
       }),
-      storage: { from: vi.fn(() => ({ list: async () => ({ data: [] }), remove: vi.fn() })) },
+      storage: {
+        from: vi.fn(() => ({
+          list: vi.fn(async () => ({ data: [] as StorageObject[], error: null })),
+          remove: vi.fn(),
+        })),
+      },
       auth: { admin: { deleteUser: vi.fn(), getUserById: vi.fn() } },
     }
 
     const { executeTenantHardDelete } = await import('../tenant-hard-delete')
-    const result = await executeTenantHardDelete(supabase, {
-      tenantId: tenant.id,
+    const result = await executeTenantHardDelete(asClient(supabase), {
+      tenantId: String(tenant.id),
       confirmation: 'DELETE Fail Closed Tenant',
       requestedByUserId: 'u1',
       requestedByAuthUserId: 'a1',
@@ -302,7 +367,7 @@ describe('hard-delete service behavior (mocked supabase)', () => {
     expect(result.emailSent).toBe(false)
     expect(result.error).toMatch(/fail-closed|RPC failed/i)
     expect(deleteCalls).toBe(0)
-    expect(supabase.auth.admin.deleteUser).not.toHaveBeenCalled()
+    expect(supabase.auth?.admin.deleteUser).not.toHaveBeenCalled()
     // hard_delete called once; list may be called during preview
     expect(supabase.rpc).toHaveBeenCalledWith('hard_delete_tenant_data', { p_tenant_id: tenant.id })
   })
@@ -315,7 +380,7 @@ describe('hard-delete service behavior (mocked supabase)', () => {
       contact_email: 'fin@example.com',
     })
 
-    const supabase: any = {
+    const supabase: MockSupabase = {
       from: vi.fn((table: string) => {
         if (table === 'tenants') {
           const b = makeCountBuilder(0)
@@ -324,22 +389,22 @@ describe('hard-delete service behavior (mocked supabase)', () => {
         }
         if (table === 'payments') {
           const b = makeCountBuilder(2)
-          b.then = (resolve: any, reject: any) =>
+          b.then = (resolve, reject) =>
             Promise.resolve({
               data: [{ id: 'p1' }, { id: 'p2' }],
               error: null,
               count: 2,
-            }).then(resolve, reject)
+            } satisfies ThenableResult).then(resolve, reject)
           return b
         }
         return makeCountBuilder(0)
       }),
       rpc: vi.fn(async () => ({ data: null, error: { message: 'missing' } })),
-      storage: { from: vi.fn(() => ({ list: async () => ({ data: [] }) })) },
+      storage: { from: vi.fn(() => ({ list: vi.fn(async () => ({ data: [] as StorageObject[], error: null })) })) },
     }
 
     const { previewTenantHardDelete } = await import('../tenant-hard-delete')
-    const preview = await previewTenantHardDelete(supabase, tenant.id)
+    const preview = await previewTenantHardDelete(asClient(supabase), tenant.id)
     expect(preview.financialRecords).toBeGreaterThan(0)
     expect(preview.warnings.some((w) => /financial records/i.test(w))).toBe(true)
   })
@@ -348,33 +413,34 @@ describe('hard-delete service behavior (mocked supabase)', () => {
     const tenantA = {
       id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       slug: 'test',
-      logo_url: null,
-      logo_square_url: null,
-      logo_wide_url: null,
-      logo_dark_url: null,
-      favicon_url: null,
+      logo_url: null as string | null,
+      logo_square_url: null as string | null,
+      logo_wide_url: null as string | null,
+      logo_dark_url: null as string | null,
+      favicon_url: null as string | null,
     }
 
-    const listedRoot: any[] = [
+    const listedRoot: StorageObject[] = [
       { name: 'test-school-logo.png' }, // belongs to tenant with slug test-school
       { name: 'test-logo.png' },
     ]
 
-    const supabase: any = {
+    const supabase: MockSupabase = {
       from: vi.fn((table: string) => {
         if (table === 'tenant_assets') {
-          const b: any = {}
+          const b = {} as QueryBuilder
           b.select = vi.fn(() => b)
           b.eq = vi.fn(() => b)
-          b.then = (resolve: any, reject: any) =>
-            Promise.resolve({ data: [], error: null }).then(resolve, reject)
+          b.then = (resolve, reject) =>
+            Promise.resolve({ data: [], error: null } satisfies ThenableResult).then(resolve, reject)
           return b
         }
         return makeCountBuilder(0)
       }),
+      rpc: vi.fn(async () => ({ data: null, error: null })),
       storage: {
         from: vi.fn(() => ({
-          list: vi.fn(async (path: string) => {
+          list: vi.fn(async (path?: string) => {
             // root slug search must not be used; only tenant_id prefix list
             if (!path || path === '') {
               return { data: listedRoot, error: null }
@@ -382,14 +448,14 @@ describe('hard-delete service behavior (mocked supabase)', () => {
             if (path === tenantA.id) {
               return { data: [{ name: 'owned.png' }], error: null }
             }
-            return { data: [], error: null }
+            return { data: [] as StorageObject[], error: null }
           }),
         })),
       },
     }
 
     const { resolveStorageObjects } = await import('../tenant-hard-delete')
-    const objs = await resolveStorageObjects(supabase, tenantA)
+    const objs = await resolveStorageObjects(asClient(supabase), tenantA)
     const paths = objs.map((o) => o.path)
     expect(paths).toContain(`${tenantA.id}/owned.png`)
     expect(paths).not.toContain('test-school-logo.png')
@@ -399,24 +465,29 @@ describe('hard-delete service behavior (mocked supabase)', () => {
 
   it('verification reports leftovers when tenant_id rows remain', async () => {
     const tenantId = '55555555-5555-4555-8555-555555555555'
-    const supabase: any = {
+    const supabase: MockSupabase = {
       from: vi.fn((table: string) => {
         const b = makeCountBuilder(table === 'leads' ? 3 : 0)
         if (table === 'tenants') {
           b.maybeSingle = vi.fn(async () => ({ data: null, error: null }))
         }
         if (table === 'website_tenants' || table === 'platform_referrals' || table === 'website_prospects' || table === 'users') {
-          b.then = (resolve: any, reject: any) =>
-            Promise.resolve({ data: [], error: null, count: 0 }).then(resolve, reject)
+          b.then = (resolve, reject) =>
+            Promise.resolve({ data: [], error: null, count: 0 } satisfies ThenableResult).then(resolve, reject)
         }
         return b
       }),
       rpc: vi.fn(async () => ({ data: null, error: { message: 'missing' } })),
-      storage: { from: vi.fn(() => ({ list: async () => ({ data: [] }) })) },
-      auth: { admin: { getUserById: vi.fn(async () => ({ data: { user: null }, error: { message: 'gone' } })) } },
+      storage: { from: vi.fn(() => ({ list: vi.fn(async () => ({ data: [] as StorageObject[], error: null })) })) },
+      auth: {
+        admin: {
+          deleteUser: vi.fn(),
+          getUserById: vi.fn(async () => ({ data: { user: null }, error: { message: 'gone' } })),
+        },
+      },
     }
     const { verifyTenantHardDelete } = await import('../tenant-hard-delete')
-    const result = await verifyTenantHardDelete(supabase, tenantId, {})
+    const result = await verifyTenantHardDelete(asClient(supabase), tenantId, {})
     expect(result.ok).toBe(false)
     expect(result.leftovers.some((l) => l.table === 'leads' && l.remaining === 3)).toBe(true)
   })
@@ -431,7 +502,7 @@ describe('hard-delete service behavior (mocked supabase)', () => {
     let clientDeletes = 0
     let tenantLookups = 0
     let rpcDeleted = false
-    const supabase: any = {
+    const supabase: MockSupabase = {
       from: vi.fn((table: string) => {
         if (table === 'tenants') {
           const b = makeCountBuilder(0)
@@ -450,18 +521,18 @@ describe('hard-delete service behavior (mocked supabase)', () => {
           b.select = vi.fn(() => b)
           b.eq = vi.fn(() => b)
           b.single = vi.fn(async () => ({ data: { id: 'job-ok' }, error: null }))
-          b.then = (resolve: any, reject: any) =>
-            Promise.resolve({ data: { id: 'job-ok' }, error: null }).then(resolve, reject)
+          b.then = (resolve, reject) =>
+            Promise.resolve({ data: { id: 'job-ok' }, error: null } satisfies ThenableResult).then(resolve, reject)
           return b
         }
         const b = makeCountBuilder(0)
         b.delete = vi.fn(() => {
           clientDeletes += 1
-          const chain: any = {
+          const chain: DeleteChain = {
             eq: () => chain,
             in: () => chain,
-            then: (resolve: any, reject: any) =>
-              Promise.resolve({ data: null, error: null, count: 0 }).then(resolve, reject),
+            then: (resolve, reject) =>
+              Promise.resolve({ data: null, error: null, count: 0 } satisfies ThenableResult).then(resolve, reject),
           }
           return chain
         })
@@ -477,7 +548,7 @@ describe('hard-delete service behavior (mocked supabase)', () => {
       }),
       storage: {
         from: vi.fn(() => ({
-          list: async () => ({ data: [] }),
+          list: vi.fn(async () => ({ data: [] as StorageObject[], error: null })),
           remove: vi.fn(async () => ({ data: null, error: null })),
         })),
       },
@@ -490,8 +561,8 @@ describe('hard-delete service behavior (mocked supabase)', () => {
     }
 
     const { executeTenantHardDelete } = await import('../tenant-hard-delete')
-    const result = await executeTenantHardDelete(supabase, {
-      tenantId: tenant.id,
+    const result = await executeTenantHardDelete(asClient(supabase), {
+      tenantId: String(tenant.id),
       confirmation: 'DELETE Rpc Only Tenant',
       requestedByUserId: 'u1',
       requestedByAuthUserId: 'a1',
@@ -506,30 +577,31 @@ describe('hard-delete service behavior (mocked supabase)', () => {
 
   it('storage resolver includes logo URL metadata and tenant_assets', async () => {
     const tenantId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
-    const supabase: any = {
+    const supabase: MockSupabase = {
       from: vi.fn((table: string) => {
         if (table === 'tenant_assets') {
-          const b: any = {}
+          const b = {} as QueryBuilder
           b.select = vi.fn(() => b)
           b.eq = vi.fn(() => b)
-          b.then = (resolve: any, reject: any) =>
+          b.then = (resolve, reject) =>
             Promise.resolve({
               data: [{ storage_bucket: 'tenant-logos', storage_path: `${tenantId}/asset.webp`, file_path: null }],
               error: null,
-            }).then(resolve, reject)
+            } satisfies ThenableResult).then(resolve, reject)
           return b
         }
         return makeCountBuilder(0)
       }),
+      rpc: vi.fn(async () => ({ data: null, error: null })),
       storage: {
         from: vi.fn(() => ({
-          list: vi.fn(async () => ({ data: [], error: null })),
+          list: vi.fn(async () => ({ data: [] as StorageObject[], error: null })),
         })),
       },
     }
 
     const { resolveStorageObjects } = await import('../tenant-hard-delete')
-    const objs = await resolveStorageObjects(supabase, {
+    const objs = await resolveStorageObjects(asClient(supabase), {
       id: tenantId,
       slug: 'whatever',
       logo_url: `https://xyz.supabase.co/storage/v1/object/public/tenant-logos/${tenantId}/logo.png`,
