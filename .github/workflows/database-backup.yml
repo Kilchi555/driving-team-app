@@ -15,6 +15,13 @@ jobs:
     timeout-minutes: 60
 
     steps:
+      # Needed for scripts/ci/validate-supabase-db-url.mjs (structure preflight only).
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            scripts/ci
+
       - name: Install PostgreSQL 17 client
         run: |
           sudo apt-get update -qq
@@ -26,62 +33,14 @@ jobs:
         id: date
         run: echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
 
-      # Secret-safe preflight: never print URL, password, query, or env values.
-      # Validates structure only; auth correctness still requires a current GitHub secret.
+      # Structure-only preflight. Boolean labels only — never prints URI/host/user/db/password.
+      # Passing preflight does NOT prove auth success or remote reachability.
       - name: Validate SUPABASE_DB_URL (structure only)
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
-          if [ -z "${SUPABASE_DB_URL:-}" ]; then
-            echo "::error::GitHub Actions secret SUPABASE_DB_URL is missing or empty."
-            echo "Human action: set repo secret SUPABASE_DB_URL to the current Supabase DB connection URI"
-            echo "(Dashboard → Project Settings → Database → connection string; URL-encode special characters in the password)."
-            exit 1
-          fi
-          python3 - <<'PY'
-          import os, sys
-          from urllib.parse import urlparse, unquote
-
-          raw = os.environ.get("SUPABASE_DB_URL", "")
-          # Never echo raw / password / query.
-          try:
-              u = urlparse(raw)
-          except Exception:
-              print("::error::SUPABASE_DB_URL is not a parseable URI.")
-              sys.exit(1)
-
-          errors = []
-          if u.scheme not in ("postgresql", "postgres"):
-              errors.append(f"scheme must be postgresql/postgres (got {u.scheme or 'empty'})")
-          if not u.hostname:
-              errors.append("hostname is missing")
-          user = unquote(u.username or "")
-          if not user:
-              errors.append("username is missing")
-          # Password may be empty only if auth is external; for Supabase dumps it must be present.
-          if u.password is None or u.password == "":
-              errors.append("password component is missing (rotate/reset DB password and update the secret)")
-          path = (u.path or "").lstrip("/")
-          dbname = path.split("/")[0] if path else ""
-          if not dbname:
-              errors.append("database name path is missing (expected .../postgres)")
-          port = u.port
-          # Safe diagnostics only — no credentials.
-          print("SUPABASE_DB_URL structure OK:" if not errors else "SUPABASE_DB_URL structure FAILED:")
-          print(f"  scheme={u.scheme or '-'}")
-          print(f"  host={u.hostname or '-'}")
-          print(f"  port={port if port is not None else 'default'}")
-          print(f"  user={user or '-'}")
-          print(f"  dbname={dbname or '-'}")
-          print(f"  password_present={'yes' if (u.password is not None and u.password != '') else 'no'}")
-          print(f"  query_present={'yes' if u.query else 'no'}")
-          if errors:
-              for e in errors:
-                  print(f"::error::{e}")
-              print("Human action: update GitHub Actions secret SUPABASE_DB_URL (do not paste the secret into chat/logs).")
-              sys.exit(1)
-          PY
+          node scripts/ci/validate-supabase-db-url.mjs
 
       - name: Dump schema (plain SQL – lesbar)
         env:
@@ -97,23 +56,39 @@ jobs:
           rc=$?
           set -e
           if [ "$rc" -ne 0 ]; then
-            # Print pg_dump stderr (Postgres never includes the password here).
-            # Strip any accidental URI leakage just in case.
-            sed -E 's#postgresql?://[^@[:space:]]+@#postgres://***:***@#g' pg_dump_schema.err >&2 || true
-            if grep -qiE 'password authentication failed|authentication failed' pg_dump_schema.err; then
-              echo "::error::pg_dump authentication failed for SUPABASE_DB_URL."
-              echo "Likely cause: database password was rotated and GitHub secret SUPABASE_DB_URL was not updated,"
-              echo "or the password in the URI is not URL-encoded."
-              echo "Human action (do not paste secrets into chat):"
-              echo "  1) Supabase Dashboard → Project Settings → Database → confirm/reset DB password"
-              echo "  2) Copy connection URI (direct or Session mode pooler); URL-encode special chars in the password"
-              echo "  3) Update GitHub Actions secret SUPABASE_DB_URL"
-              echo "  4) Re-run workflow_dispatch 'Daily Database Backup' (read-only dump + R2 upload)"
-            else
-              echo "::error::pg_dump schema dump failed (exit $rc). See stderr above."
-            fi
+            # Classify from captured stderr; never reprint raw pg_dump output (may contain hostnames).
+            category="$(node scripts/ci/validate-supabase-db-url.mjs --classify-file pg_dump_schema.err)"
+            rm -f pg_dump_schema.err
+            case "$category" in
+              auth_failed)
+                echo "::error::pg_dump authentication failed for SUPABASE_DB_URL."
+                echo "Structure preflight passed earlier; this is not a malformed-URI diagnosis."
+                echo "Likely cause: database password was rotated and GitHub secret SUPABASE_DB_URL was not updated,"
+                echo "or the password in the URI is not URL-encoded."
+                echo "Human action (do not paste secrets into chat):"
+                echo "  1) Supabase Dashboard → Project Settings → Database → confirm/reset DB password"
+                echo "  2) Copy connection URI (direct or Session mode pooler); URL-encode special chars in the password"
+                echo "  3) Update GitHub Actions secret SUPABASE_DB_URL"
+                echo "  4) Re-run workflow_dispatch Daily Database Backup (read-only dump + R2 upload)"
+                ;;
+              local_socket)
+                echo "::error::pg_dump attempted a local Unix-socket connection instead of a remote host."
+                echo "This usually means the connection argument was not accepted as a postgres:// or postgresql:// URI."
+                echo "This preflight only accepts URI form. Update SUPABASE_DB_URL accordingly. Do not paste the secret into chat/logs."
+                ;;
+              connection_failed)
+                echo "::error::pg_dump could not complete a remote database connection."
+                echo "Structure preflight is not proof of reachability or correct credentials."
+                echo "Verify network/DNS/TLS and SUPABASE_DB_URL without pasting the secret into chat/logs."
+                ;;
+              *)
+                echo "::error::pg_dump schema dump failed (category=${category})."
+                echo "Structure preflight is not proof of authentication or reachability. Do not paste secrets into chat/logs."
+                ;;
+            esac
             exit "$rc"
           fi
+          rm -f pg_dump_schema.err
           echo "✅ Schema: $(du -sh schema.sql | cut -f1)"
 
       - name: Dump full backup (custom format – komprimiert)
@@ -131,15 +106,30 @@ jobs:
           rc=$?
           set -e
           if [ "$rc" -ne 0 ]; then
-            sed -E 's#postgresql?://[^@[:space:]]+@#postgres://***:***@#g' pg_dump_full.err >&2 || true
-            if grep -qiE 'password authentication failed|authentication failed' pg_dump_full.err; then
-              echo "::error::pg_dump authentication failed for SUPABASE_DB_URL."
-              echo "Update GitHub Actions secret SUPABASE_DB_URL with the current DB password (URL-encoded)."
-            else
-              echo "::error::pg_dump full dump failed (exit $rc). See stderr above."
-            fi
+            category="$(node scripts/ci/validate-supabase-db-url.mjs --classify-file pg_dump_full.err)"
+            rm -f pg_dump_full.err
+            case "$category" in
+              auth_failed)
+                echo "::error::pg_dump authentication failed for SUPABASE_DB_URL."
+                echo "Structure preflight passed earlier; this is not a malformed-URI diagnosis."
+                echo "Update GitHub Actions secret SUPABASE_DB_URL with the current DB password (URL-encoded)."
+                ;;
+              local_socket)
+                echo "::error::pg_dump attempted a local Unix-socket connection instead of a remote host."
+                echo "Update SUPABASE_DB_URL to a full postgres:// or postgresql:// URI. Do not paste the secret into chat/logs."
+                ;;
+              connection_failed)
+                echo "::error::pg_dump could not complete a remote database connection."
+                echo "Structure preflight is not proof of reachability or correct credentials."
+                ;;
+              *)
+                echo "::error::pg_dump full dump failed (category=${category})."
+                echo "Structure preflight is not proof of authentication or reachability."
+                ;;
+            esac
             exit "$rc"
           fi
+          rm -f pg_dump_full.err
           echo "✅ Backup: $(du -sh backup.dump | cut -f1)"
 
       - name: Install rclone
