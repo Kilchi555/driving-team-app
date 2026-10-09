@@ -4,6 +4,11 @@ Dieser Guide beschreibt die einmaligen Konfigurationsschritte, damit das neue
 Cross-Domain-Conversion-Tracking (drivingteam.ch → app.simy.ch → Google Ads)
 in Produktion läuft.
 
+> **Click-ID hop:** How `gclid` / `gbraid` / `wbraid` / `fbclid` (+ `fbc` / `fbp`)
+> survive UTMs and the website → `app.simy.ch` redirect is documented in
+> [BOOKING_ATTRIBUTION_HOP.md](./BOOKING_ATTRIBUTION_HOP.md) (#190). This page stays
+> env / conversion-action setup.
+
 ## Architektur (Kurzfassung)
 
 ```
