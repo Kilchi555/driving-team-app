@@ -344,6 +344,16 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Concise, code-verified ops/dev notes. Prefer updating these over inventing parallel pages.
+
+| Doc | Topic |
+|-----|--------|
+| [PUBLIC_MUTATOR_REMOVAL.md](./PUBLIC_MUTATOR_REMOVAL.md) | Removed unauthenticated privileged API mutators; server-only PLZ helper (#304) |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
