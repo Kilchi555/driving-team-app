@@ -98,3 +98,7 @@ Unter dem Schlüssel `app-session-cache`:
 - `plugins/00-session-persist.client.ts` - Session-Wiederherstellung
 - `plugins/01-session-auto-save.client.ts` - Auto-Save beim Anmelden/Logout
 - `utils/session-persistence.ts` - Typen und Dokumentation
+
+## Trial / subscription (#337)
+
+`app-session-cache` must not authorize trial or paid access. Identity-only restore uses `sessionRestorePlan` / `stripCachedSubscriptionProfile`; new writes use `buildPersistentSession` (no `trialInfo`). The access gate is `decideTrialGate` + server `GET /api/tenants/trial-status` — see `docs/TRIAL_CACHE_AUTHORIZATION.md`.
