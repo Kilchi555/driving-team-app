@@ -333,6 +333,16 @@ Dokumentation wichtiger Datenflüsse und Geschäftsprozesse der Anwendung.
 
 ---
 
+## Engineering Runbooks
+
+Concise, code-verified runbooks for recent subsystems. Prefer these over inventing parallel guides.
+
+| File | Topic |
+|------|-------|
+| [TENANT_HARD_DELETE.md](./TENANT_HARD_DELETE.md) | Superadmin UUID-only tenant hard-delete preview/execute (#385) |
+
+---
+
 ## 📝 Wartung dieser Dokumentation
 
 Bei Änderungen am System:
@@ -341,6 +351,7 @@ Bei Änderungen am System:
 - Policy-Änderungen → Aktualisieren Sie RLS_POLICIES.csv
 - Feature-Änderungen → Aktualisieren Sie APP_DOCUMENTATION.csv
 - Prozess-Änderungen → Aktualisieren Sie DATA_FLOWS.csv
+- Neue Engineering-Runbooks → Datei unter `docs/` + Zeile in **Engineering Runbooks** oben
 
 ---
 
