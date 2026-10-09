@@ -243,6 +243,32 @@ BEGIN
   --   discounts.redeemed_for, invited_customers.appointment_id,
   --   invoice_items.appointment_id, reminder_logs.appointment_id
   -- (payments.appointment_id already cleared by deleting payments above)
+  -- NULL-tenant legacy children owned by this tenant's appointments: adopt
+  -- tenant_id from appointments.tenant_id (same ownership rule as 20261009
+  -- backfill). Never touch other tenants' appointments. Never global
+  -- DELETE/UPDATE WHERE tenant_id IS NULL alone.
+  -- After adoption, the tenant_id-scoped appointment clears below + tenants
+  -- CASCADE purge financial rows consistently with non-legacy rows.
+  UPDATE public.cash_transactions ct
+  SET tenant_id = a.tenant_id
+  FROM public.appointments a
+  WHERE ct.tenant_id IS NULL
+    AND ct.appointment_id IS NOT NULL
+    AND a.id = ct.appointment_id
+    AND a.tenant_id = p_tenant_id;
+  GET DIAGNOSTICS v_n = ROW_COUNT;
+  v_counts := v_counts || jsonb_build_object('cash_transactions_null_tenant_adopted', v_n);
+
+  UPDATE public.discount_sales ds
+  SET tenant_id = a.tenant_id
+  FROM public.appointments a
+  WHERE ds.tenant_id IS NULL
+    AND ds.appointment_id IS NOT NULL
+    AND a.id = ds.appointment_id
+    AND a.tenant_id = p_tenant_id;
+  GET DIAGNOSTICS v_n = ROW_COUNT;
+  v_counts := v_counts || jsonb_build_object('discount_sales_null_tenant_adopted', v_n);
+
   UPDATE public.cash_transactions
   SET appointment_id = NULL
   WHERE tenant_id = p_tenant_id AND appointment_id IS NOT NULL;
