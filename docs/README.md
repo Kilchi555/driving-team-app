@@ -333,6 +333,18 @@ Dokumentation wichtiger Datenflüsse und Geschäftsprozesse der Anwendung.
 
 ---
 
+## Engineering Runbooks
+
+Concise, code-verified ops/dev notes. Prefer updating these over inventing parallel pages.
+
+| Doc | Topic |
+|-----|-------|
+| [PROSPECT_DISCOVERY_AUTOMATION.md](./PROSPECT_DISCOVERY_AUTOMATION.md) | Places prospect cron OFF by default + manual run (#303) |
+| [PROPOSAL_FOLLOWUP_CLAIM.md](./PROPOSAL_FOLLOWUP_CLAIM.md) | Booking-proposal follow-up claim-before-send + clear-on-close |
+| [SIMY_E2E_SAFETY_GATE.md](./SIMY_E2E_SAFETY_GATE.md) | Fail-closed demo setup/teardown for simy-test (#326) |
+
+---
+
 ## 📝 Wartung dieser Dokumentation
 
 Bei Änderungen am System:
