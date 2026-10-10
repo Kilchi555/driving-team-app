@@ -25,34 +25,48 @@ ALTER TABLE public.course_categories
 -- Idempotent: skips rows that already have a non-empty sessions array.
 -- Semantics: clamp session_count to [1, 10] to match app MAX_CATEGORY_SESSIONS
 -- (same clamp used by normalizeCategorySessionTemplate legacy path).
+-- Aggregates (string_agg / jsonb_agg) must live in the FROM subquery: PostgreSQL
+-- rejects them in UPDATE SET (ERROR 42803). Description + sessions semantics unchanged.
 UPDATE public.course_categories cc
-SET session_structure = jsonb_build_object(
-  'version', 1,
-  'flexible', true,
-  'description', (
-    SELECT string_agg(round(COALESCE(cc.hours_per_session, 8.0)::numeric, 2)::text || 'h', ' + ')
-    FROM generate_series(
-      1,
-      LEAST(GREATEST(COALESCE(cc.session_count, 1), 1), 10)
-    ) AS g(i)
-  ),
-  'sessions', (
-    SELECT COALESCE(jsonb_agg(
-      jsonb_build_object(
-        'duration_hours', round(COALESCE(cc.hours_per_session, 8.0)::numeric, 2)
+SET
+  session_structure = src.session_structure,
+  updated_at = now()
+FROM (
+  SELECT
+    c.id,
+    jsonb_build_object(
+      'version', 1,
+      'flexible', true,
+      'description', (
+        SELECT string_agg(
+          round(COALESCE(c.hours_per_session, 8.0)::numeric, 2)::text || 'h',
+          ' + '
+          ORDER BY g.i
+        )
+        FROM generate_series(
+          1,
+          LEAST(GREATEST(COALESCE(c.session_count, 1), 1), 10)
+        ) AS g(i)
+      ),
+      'sessions', (
+        SELECT COALESCE(jsonb_agg(
+          jsonb_build_object(
+            'duration_hours', round(COALESCE(c.hours_per_session, 8.0)::numeric, 2)
+          )
+          ORDER BY g.i
+        ), '[]'::jsonb)
+        FROM generate_series(
+          1,
+          LEAST(GREATEST(COALESCE(c.session_count, 1), 1), 10)
+        ) AS g(i)
       )
-      ORDER BY g.i
-    ), '[]'::jsonb)
-    FROM generate_series(
-      1,
-      LEAST(GREATEST(COALESCE(cc.session_count, 1), 1), 10)
-    ) AS g(i)
-  )
-),
-updated_at = now()
-WHERE cc.session_structure IS NULL
-   OR jsonb_typeof(cc.session_structure->'sessions') IS DISTINCT FROM 'array'
-   OR jsonb_array_length(COALESCE(cc.session_structure->'sessions', '[]'::jsonb)) = 0;
+    ) AS session_structure
+  FROM public.course_categories AS c
+  WHERE c.session_structure IS NULL
+     OR jsonb_typeof(c.session_structure->'sessions') IS DISTINCT FROM 'array'
+     OR jsonb_array_length(COALESCE(c.session_structure->'sessions', '[]'::jsonb)) = 0
+) AS src
+WHERE cc.id = src.id;
 
 -- 4) Keep derived scalars aligned with template after backfill (uniform legacy only).
 UPDATE public.course_categories cc
