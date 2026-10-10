@@ -31,17 +31,52 @@ Hard rules:
 
 1. Branch from `origin/main` (not a dirty feature branch). Keep the hotfix small.
 2. Open a PR into `main`. Do not `git push` to `main`.
-3. Non-draft PRs to `main` enable squash auto-merge (`.github/workflows/auto-merge.yml`). GitHub merges only when **Test and lint** and **E2E login** are green. Those come from `.github/workflows/ci.yml`.
-4. Vercel deploys production from `main` after that merge.
+3. Required ruleset checks must pass, and the branch must satisfy the current GitHub ruleset. Today that means the branch is up to date with `main`, review threads are resolved, and history stays linear. The required check contexts are **Test and lint**, **E2E login**, and **Dependency review**.
+4. A green PR does not merge itself. Merging into `main` stays a human action unless a future explicit policy changes that.
+5. Vercel deploys production from `main` after that merge.
+
+## Auto-merge
+
+Global auto-merge is not enabled.
+
+`.github/workflows/auto-merge.yml` was removed in #222 (`security(ci): disable automatic PR merging`). Do not recreate that workflow. Do not enable repository auto-merge as a substitute.
+
+## Human gates
+
+A person decides these unless a future written policy says otherwise:
+
+- Merging into `main`
+- Production SQL and database migrations
+- Payments, Wallee, Stripe, and billing gates
+- RLS and tenant isolation
+- Authentication and authorization
+
+## Review state
+
+`.github/workflows/review-state.yml` is an observer. It publishes a pull request comment marked `<!-- simy-review-state -->`.
+
+That comment is an observation cache, not authority. A consumer must read the live pull request, compare `head_sha`, re-read required checks, merge state, and review threads, revalidate `risk_hint`, and reject a stale, duplicate, malformed, inconsistent, or unknown-schema comment. The canonical comment is the active marker with the greatest `started_at`, then `observed_at`, then `evaluation_id`. A comment that started earlier is not controller state, even if its `observed_at` is later. `next_action` is not the only instruction: also read `blocking_reasons`, `actionable_findings`, `sync_required`, `sync_only`, and `executor.before_acting`.
+
+`executor.may_automate` stays false. `next_action: fix` still requires a fresh read of the head, required checks, and current findings. `next_action: rebase` means synchronize the branch onto its base only, and only when `blocking_reasons` and `actionable_findings` are empty; then re-read review state. `next_action: ready_for_human_merge` is a human decision, not permission to merge, deploy, push, or apply SQL. `next_action: escalate` and `wait` are not automatic actions. `risk_hint` stays `unknown`. `cache.may_merge` and `cache.may_automate` stay false.
+
+The required-check names in the observer are the contexts from ruleset `Protect main — Required CI` as of 2026-09-26: Test and lint, E2E login, and Dependency review. Those names are policy expectations. They must not replace an empty, missing, or unreadable live ruleset. If the live ruleset cannot be verified, has no required checks, or its contexts differ, the observer must not report `ready_for_human_merge`. A missing required check on a verified list stays pending and is not treated as green. A cancelled required check is not a code fix.
+
+CodeQL is not a required ruleset check. `codeql.gate` stays `not_required`. `codeql.clean` is true only when the observed CodeQL status is `pass`. `fail`, `unknown`, and a missing CodeQL check are not clean.
+
+GitHub Actions has no review-thread event. Resolving or reopening a thread does not by itself refresh the comment. `freshness.covers_thread_resolution` stays false and `freshness.live` stays false. `freshness.max_lag_minutes` is 15 only when `freshness.guarantee` is `scheduled`, which the observer sets only after it sees this workflow file on the default branch. Until then `freshness.guarantee` is `none` and `max_lag_minutes` is null. Do not treat a missing guarantee as a 15-minute bound.
+
+Publication is serialized by the `simy-review-state` concurrency group with `cancel-in-progress: false`. One run finishes before the next starts. The publisher appends a new comment instead of patching over an existing observation.
 
 ## Never
 
-- Treat Cursor / Vercel „6/6“ as enough. That is Bugbot + Vercel previews, not the required Actions jobs. Auto-merge waits only for the two Actions checks.
+- Treat Cursor, Vercel, CodeQL, or App Store status rolls as the merge gate. The required ruleset checks are Test and lint, E2E login, and Dependency review. App Store checks such as `App | Default` are not merge blockers. CodeQL `unknown` or `fail` is not a clean result.
+- Treat the review-state comment as permission to merge, push, or start an autonomous fix. Re-read GitHub before acting, and ignore a comment whose `head_sha` is not the live head. Do not treat `rebase` as a content fix or as a clean review. Do not treat `freshness.max_lag_minutes` as a bound when `freshness.guarantee` is `none`.
 - Use git branch `preview` as a staging path. It is stale and is not production.
 - Temporarily drop branch protection to merge, unless the user explicitly asks after Actions failed to start.
 - Open a ready PR into `main` unless it should ship. Keep work-in-progress as a **draft**.
 - Treat a SAFE Impact Gate or green preview as sufficient to mark Ready when Ship/CI floors are unmet.
+- Recreate `.github/workflows/auto-merge.yml` or turn green checks into an automatic merge.
 
 ## If required checks never appear
 
-Open https://github.com/Kilchi555/driving-team-app/actions. If `CI` did not start within a minute, push a follow-up commit or re-run the workflow. Auto-merge cannot complete while GitHub still says required checks are expected.
+Open https://github.com/Kilchi555/driving-team-app/actions. If `CI` did not start within a minute, push a follow-up commit or re-run the workflow. A merge still waits for the required ruleset checks. Nothing in this repository merges the pull request when they turn green.

@@ -1,0 +1,73 @@
+# Observer only. Publishes a <!-- simy-review-state --> comment.
+# Does not merge, approve, push, deploy, or call Supabase.
+#
+# The comment is an observation cache. It is not permission to merge or
+# to modify code. Publication appends a comment and never patches one
+# observation over another. The canonical comment is the greatest
+# started_at. A snapshot that started earlier cannot become authoritative.
+#
+# Review-thread resolution is not an event this workflow receives. The
+# JSON must not claim a finite thread-age bound unless this file is on
+# the default branch, which is what makes the 15-minute schedule real.
+# check_run and schedule run from the default branch.
+#
+# One concurrency group covers every trigger. cancel-in-progress is false:
+# a later run waits until the in-progress run has exited, so two
+# publishers cannot write at the same time. check_run often has no pull
+# request number and schedule has none, so separate groups would overlap.
+# The job name "Publish review state" is not a watched check, so this
+# workflow does not retrigger itself.
+
+name: Review state
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+  pull_request_review_comment:
+    types: [created, edited, deleted]
+  check_run:
+    types: [completed]
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: read
+
+concurrency:
+  group: simy-review-state
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish review state
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    if: >-
+      github.event_name != 'check_run' ||
+      contains(fromJSON('["Test and lint","E2E login","Dependency review","CodeQL","Analyze (javascript-typescript)","Analyze (actions)","Cursor Bugbot"]'), github.event.check_run.name)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Publish review state
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.check_run.head_sha || '' }}
+        run: node scripts/review-state.mjs
