@@ -31,6 +31,7 @@
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Dauer</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Farbe</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sofortzahlung</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Zahlungsart</th>
               <th v-if="showPricingColumns" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Grundpreis</th>
               <th v-if="showPricingColumns" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Gebühr/Termin</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Standard</th>
@@ -68,6 +69,7 @@
                   <span class="ml-2 text-xs text-gray-600">{{ et.require_payment ? 'Beim Buchen' : 'Ohne Sofortzahlung' }}</span>
                 </label>
               </td>
+              <td class="px-4 py-2 text-sm text-gray-700">{{ paymentMethodLabel(et.payment_method) }}</td>
               <td v-if="showPricingColumns" class="px-4 py-2 text-sm text-gray-900">
                 {{ et.require_payment ? (et.default_price_rappen ? `${et.default_price_rappen / 100} CHF` : 'Nicht gesetzt') : '-' }}
               </td>
@@ -206,6 +208,20 @@
                   <span :class="['absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full transition-transform duration-200 ease-in-out shadow-sm', newEventType.public_bookable ? 'translate-x-6' : 'translate-x-0']"></span>
                 </div>
               </label>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Zahlungsart</label>
+              <select
+                v-model="newEventType.payment_method"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Vom Mandanten übernehmen</option>
+                <option value="wallee">Wallee</option>
+                <option value="cash">Bar</option>
+                <option value="invoice">Rechnung</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Leer = Mandanten-Standard. Kein eigener Wert.</p>
             </div>
 
           </div>
@@ -369,6 +385,20 @@
               </label>
             </div>
 
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Zahlungsart</label>
+              <select
+                v-model="editModel.payment_method"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option :value="null">Vom Mandanten übernehmen</option>
+                <option value="wallee">Wallee</option>
+                <option value="cash">Bar</option>
+                <option value="invoice">Rechnung</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Leer = Mandanten-Standard. Kein eigener Wert.</p>
+            </div>
+
           </div>
 
           <!-- Preis-Felder (nur anzeigen wenn App-Preis und nicht Fahrschule) -->
@@ -461,6 +491,7 @@ interface EventTypeRow {
   is_active: boolean
   display_order?: number
   require_payment?: boolean
+  payment_method?: string | null
   public_bookable?: boolean
   is_default?: boolean
   default_price_rappen?: number
@@ -482,6 +513,13 @@ const { currentUser } = useCurrentUser()
 const authStore = useAuthStore()
 
 // Check if tenant is a driving school
+function paymentMethodLabel(value: string | null | undefined) {
+  if (value === 'wallee') return 'Wallee'
+  if (value === 'cash') return 'Bar'
+  if (value === 'invoice') return 'Rechnung'
+  return 'Vom Mandanten'
+}
+
 const isDrivingSchool = computed(() => tenantBusinessType.value === 'driving_school')
 const showPricingColumns = computed(() => !isDrivingSchool.value)
 
@@ -494,6 +532,7 @@ const newEventType = ref({
   default_color: '#666666',
   require_payment: false,
   public_bookable: true,
+  payment_method: '' as string,
   default_price_chf: 0,
   default_fee_chf: 0
 })
@@ -510,6 +549,7 @@ const openCreateModal = () => {
     default_color: '#666666',
     require_payment: false,
     public_bookable: true,
+    payment_method: '',
     default_price_chf: 0,
     default_fee_chf: 0
   }
@@ -570,6 +610,7 @@ const createEventType = async () => {
         default_duration_minutes: newEventType.value.default_duration_minutes,
         default_color: newEventType.value.default_color,
         require_payment: newEventType.value.require_payment,
+        payment_method: newEventType.value.payment_method || null,
         public_bookable: newEventType.value.public_bookable,
         is_active: true, // Event Types sind immer aktiv wenn erstellt
         display_order: nextOrder,
@@ -620,7 +661,7 @@ const load = async () => {
 
     const { data, error } = await supabase
       .from('event_types')
-      .select('id, code, name, emoji, description, default_duration_minutes, default_color, is_active, display_order, require_payment, public_bookable, is_default, default_price_rappen, default_fee_rappen')
+      .select('id, code, name, emoji, description, default_duration_minutes, default_color, is_active, display_order, require_payment, payment_method, public_bookable, is_default, default_price_rappen, default_fee_rappen')
       .eq('tenant_id', tenantId)
       .order('display_order')
 
@@ -689,6 +730,7 @@ const saveEdit = async () => {
       default_color: (editModel.value as any).default_color,
       is_active: editModel.value.is_active,
       require_payment: editModel.value.require_payment ?? false,
+      payment_method: editModel.value.payment_method || null,
       public_bookable: (editModel.value as any).public_bookable ?? true,
       // Convert CHF to Rappen
       default_price_rappen: editModel.value.require_payment ? Math.round((editModel.value.default_price_chf || 0) * 100) : 0,
