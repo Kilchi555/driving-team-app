@@ -2,6 +2,7 @@
  * Server-side ICS feed probe: normalize → shape check → fetch → VCALENDAR check.
  */
 
+import { classifyIcsFeed, type IcsFeedKind } from '~/server/utils/ics-feed-classification'
 import {
   humanizeIcsFetchError,
   inspectIcsUrlShape,
@@ -18,6 +19,7 @@ export interface IcsProbeSuccess {
   url: string
   bytes: number
   veventCount: number
+  feedKind: IcsFeedKind
   /** Raw ICS body — only present when probe fetched successfully. */
   body: string
 }
@@ -31,11 +33,6 @@ export interface IcsProbeFailure {
 }
 
 export type IcsProbeResult = IcsProbeSuccess | IcsProbeFailure
-
-function countVevents(ics: string): number {
-  const matches = ics.match(/BEGIN:VEVENT/gi)
-  return matches?.length ?? 0
-}
 
 export async function probeIcsUrl(rawUrl: string): Promise<IcsProbeResult> {
   const shape = inspectIcsUrlShape(rawUrl)
@@ -89,16 +86,23 @@ export async function probeIcsUrl(rawUrl: string): Promise<IcsProbeResult> {
       return { ok: false, url, code: 'empty_feed', message: human.message, tip: human.tip }
     }
 
-    if (!text.includes('BEGIN:VCALENDAR')) {
-      const human = humanizeIcsFetchError('Response is not a VCALENDAR (HTML or wrong URL?)')
-      return { ok: false, url, code: 'not_vcalendar', message: human.message, tip: human.tip }
+    const classified = classifyIcsFeed(text, response.headers.get('content-type'))
+    if (!classified.ok) {
+      return {
+        ok: false,
+        url,
+        code: classified.code,
+        message: classified.message,
+        tip: classified.tip,
+      }
     }
 
     return {
       ok: true,
       url,
       bytes: text.length,
-      veventCount: countVevents(text),
+      veventCount: classified.veventCount,
+      feedKind: classified.kind,
       body: text,
     }
   } catch (err: any) {
