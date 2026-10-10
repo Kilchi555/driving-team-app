@@ -3,6 +3,10 @@
 #
 # Target is fixed to https://app.simy.ch / e2e-isolation (encoded in the spec).
 # Uses existing repository secret E2E_ISOLATION_PASSWORD only.
+#
+# SAFETY: Dispatch only from main. The job fails closed before Playwright if
+# github.ref is not refs/heads/main, so unmerged PR branches cannot run this
+# against Production even if selected in the Actions UI.
 name: E2E flexible session (Production)
 
 on:
@@ -22,8 +26,41 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: Enforce main branch only
+        run: |
+          echo "github.ref=${GITHUB_REF}"
+          echo "github.sha=${GITHUB_SHA}"
+          echo "github.ref_name=${GITHUB_REF_NAME}"
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "Refused: this Production E2E workflow may only run on refs/heads/main (got ${GITHUB_REF})."
+            echo "Merge the PR first, then dispatch from main."
+            exit 1
+          fi
+          if [ -z "${GITHUB_SHA}" ]; then
+            echo "Refused: missing GITHUB_SHA"
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Verify checked-out commit is main tip
+        run: |
+          git fetch origin main --depth=1
+          MAIN_SHA="$(git rev-parse origin/main)"
+          HEAD_SHA="$(git rev-parse HEAD)"
+          echo "origin/main=${MAIN_SHA}"
+          echo "HEAD=${HEAD_SHA}"
+          if [ "${HEAD_SHA}" != "${MAIN_SHA}" ]; then
+            echo "Refused: checked-out HEAD does not match origin/main"
+            exit 1
+          fi
+          if [ "${HEAD_SHA}" != "${GITHUB_SHA}" ]; then
+            echo "Refused: checked-out HEAD does not match workflow GITHUB_SHA"
+            exit 1
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -45,6 +82,8 @@ jobs:
         env:
           E2E_ISOLATION_PASSWORD: ${{ secrets.E2E_ISOLATION_PASSWORD }}
           E2E_BASE_URL: https://app.simy.ch
+          # Opt into discovering the production-only spec (ignored by default in playwright.config).
+          SIMY_E2E_PRODUCTION_FLEX: '1'
         run: |
           if [ -z "$E2E_ISOLATION_PASSWORD" ]; then
             echo "E2E_ISOLATION_PASSWORD is not set"

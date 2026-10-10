@@ -1,10 +1,18 @@
 import { randomBytes } from 'node:crypto'
 import { expect, test, type Page } from '@playwright/test'
+import {
+  decideCategoryCleanup,
+  formatCombinedTestFailure,
+  type CategoryListLoadState,
+} from '../utils/e2e-flexible-session-safety'
 import { signIn } from './auth'
 
 /**
  * Isolated Production UI E2E for flexible Kursart session templates.
  * Intended for the dedicated workflow_dispatch workflow only.
+ *
+ * Discovery: ignored by default in playwright.config.ts unless
+ * SIMY_E2E_PRODUCTION_FLEX=1 (set only by the dedicated workflow).
  *
  * Cleanup deletes only the exact category created in this run
  * (unique name + confirmed create response id). Never prefix-sweeps.
@@ -34,7 +42,8 @@ test.describe('flexible course-category session template', () => {
 
     let createdId: string | null = null
     let creationConfirmed = false
-    let cleanupCompleted = false
+    let originalError: unknown = null
+    let cleanupError: unknown = null
 
     try {
       await signIn(page, EXPECTED_EMAIL, EXPECTED_TENANT_SLUG, isolationPassword)
@@ -48,6 +57,7 @@ test.describe('flexible course-category session template', () => {
 
       await page.goto('/admin/courses')
       await page.getByRole('button', { name: 'Kursarten' }).click()
+      await waitForCategoryListReady(page)
       await page.getByRole('button', { name: 'Neue Kursart' }).click()
       await expect(page.getByRole('heading', { name: 'Neue Kursart erstellen' })).toBeVisible()
 
@@ -91,6 +101,7 @@ test.describe('flexible course-category session template', () => {
 
       await page.reload()
       await page.getByRole('button', { name: 'Kursarten' }).click()
+      await waitForCategoryListReady(page)
       await openCategoryByExactName(page, categoryName)
       await expectSessionDurations(page, [2, 3.5, 1])
       await expectTotalSummary(page, /2h \+ 3\.5h \+ 1h \(6\.5h\)/)
@@ -100,6 +111,7 @@ test.describe('flexible course-category session template', () => {
       await saveCategoryEdit(page, createdId)
       await page.reload()
       await page.getByRole('button', { name: 'Kursarten' }).click()
+      await waitForCategoryListReady(page)
       await openCategoryByExactName(page, categoryName)
       await expectSessionDurations(page, [2, 4, 1])
       await expectTotalSummary(page, /2h \+ 4h \+ 1h \(7h\)/)
@@ -118,6 +130,7 @@ test.describe('flexible course-category session template', () => {
       await saveCategoryEdit(page, createdId)
       await page.reload()
       await page.getByRole('button', { name: 'Kursarten' }).click()
+      await waitForCategoryListReady(page)
       await openCategoryByExactName(page, categoryName)
       await expect(sessionDurationInputs(page)).toHaveCount(10)
       await expectSessionDurations(page, Array(10).fill(12))
@@ -126,44 +139,98 @@ test.describe('flexible course-category session template', () => {
 
       await page.getByRole('button', { name: 'Abbrechen' }).click()
       await expect(page.getByRole('heading', { name: 'Kursart bearbeiten' })).toHaveCount(0)
+    } catch (err) {
+      originalError = err
     } finally {
-      if (creationConfirmed && createdId) {
-        try {
-          await cleanupCreatedCategory(page, { name: categoryName, id: createdId })
-          cleanupCompleted = true
-        } catch (cleanupErr) {
-          // Fail the test with an actionable orphan marker (no secrets).
-          const message = cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)
-          throw new Error(
-            `CLEANUP_FAILED categoryName=${categoryName} categoryId=${createdId}: ${message}`,
-          )
-        }
-      } else {
-        // Creation unclear — read-only inspect; delete only on exact single match.
-        await page.goto('/admin/courses').catch(() => {})
-        await page.getByRole('button', { name: 'Kursarten' }).click().catch(() => {})
-        const matches = page.getByRole('heading', { name: categoryName, exact: true })
-        const count = await matches.count().catch(() => 0)
-        if (count === 1 && createdId) {
-          await cleanupCreatedCategory(page, { name: categoryName, id: createdId })
-          cleanupCompleted = true
-        } else if (count === 1 && !createdId) {
-          throw new Error(
-            `ORPHAN_UNCONFIRMED categoryName=${categoryName}: UI shows one match but create id was not confirmed; manual follow-up required`,
-          )
-        } else if (count > 1) {
-          throw new Error(
-            `ORPHAN_AMBIGUOUS categoryName=${categoryName}: ${count} UI matches; refusing cleanup`,
-          )
-        }
+      try {
+        await runCleanupDecision(page, {
+          categoryName,
+          createdId,
+          creationConfirmed,
+        })
+      } catch (err) {
+        cleanupError = err
       }
+    }
 
-      if (creationConfirmed && !cleanupCompleted) {
-        throw new Error(`CLEANUP_INCOMPLETE categoryName=${categoryName} categoryId=${createdId}`)
-      }
+    if (originalError || cleanupError) {
+      throw formatCombinedTestFailure({
+        originalError: originalError ?? undefined,
+        cleanupError: cleanupError ?? undefined,
+        categoryName,
+        categoryId: createdId,
+      })
     }
   })
 })
+
+async function runCleanupDecision(
+  page: Page,
+  identity: {
+    categoryName: string
+    createdId: string | null
+    creationConfirmed: boolean
+  },
+) {
+  await page.goto('/admin/courses')
+  await page.getByRole('button', { name: 'Kursarten' }).click()
+  const listState = await waitForCategoryListReady(page)
+  const exactNameMatchCount = await page
+    .getByRole('heading', { name: identity.categoryName, exact: true })
+    .count()
+
+  const decision = decideCategoryCleanup({
+    listState,
+    exactNameMatchCount,
+    createdId: identity.createdId,
+    creationConfirmed: identity.creationConfirmed,
+    categoryName: identity.categoryName,
+  })
+
+  if (decision.action === 'fail') {
+    throw new Error(decision.reason)
+  }
+  if (decision.action === 'noop' || decision.action === 'already_gone') {
+    return
+  }
+  if (!identity.createdId) {
+    throw new Error(`CLEANUP_FAILED categoryName=${identity.categoryName}: missing createdId for delete`)
+  }
+  await cleanupCreatedCategory(page, {
+    name: identity.categoryName,
+    id: identity.createdId,
+    listAlreadyReady: true,
+  })
+}
+
+/**
+ * Fail closed unless the categories tab shows a settled empty or populated state
+ * (not the loading spinner).
+ */
+async function waitForCategoryListReady(page: Page): Promise<CategoryListLoadState> {
+  const loading = page.getByText('Lade Kursarten...', { exact: true })
+  const empty = page.getByText('Keine Kursarten vorhanden', { exact: true })
+  const cards = page.locator('div.group').filter({
+    has: page.getByRole('heading'),
+  })
+
+  await expect.poll(async () => {
+    if (await loading.isVisible().catch(() => false)) return 'loading'
+    if (await empty.isVisible().catch(() => false)) return 'ready_empty'
+    if ((await cards.count().catch(() => 0)) > 0) return 'ready_populated'
+    return 'unknown'
+  }, {
+    timeout: 30_000,
+    message: 'Category list did not leave loading / reach a settled ready state',
+  }).not.toBe('loading')
+
+  if (await loading.isVisible().catch(() => false)) {
+    throw new Error('Category list still loading after wait')
+  }
+  if (await empty.isVisible().catch(() => false)) return 'ready_empty'
+  if ((await cards.count().catch(() => 0)) > 0) return 'ready_populated'
+  throw new Error('Category list state unknown after wait; refusing cleanup success inference')
+}
 
 function sessionDurationInputs(page: Page) {
   return page.locator('span', { hasText: /^Termin \d+$/ }).locator('xpath=..').locator('input[type="number"]')
@@ -279,15 +346,18 @@ async function applyUniformInitializer(page: Page, count: number, hours: number)
 
 async function cleanupCreatedCategory(
   page: Page,
-  identity: { name: string; id: string },
+  identity: { name: string; id: string; listAlreadyReady?: boolean },
 ) {
-  await page.goto('/admin/courses')
-  await page.getByRole('button', { name: 'Kursarten' }).click()
+  if (!identity.listAlreadyReady) {
+    await page.goto('/admin/courses')
+    await page.getByRole('button', { name: 'Kursarten' }).click()
+    await waitForCategoryListReady(page)
+  }
 
   const heading = page.getByRole('heading', { name: identity.name, exact: true })
   const matchCount = await heading.count()
   if (matchCount === 0) {
-    // Already gone — treat as cleaned.
+    // List is ready and exact name absent — confirmed gone.
     return
   }
   if (matchCount !== 1) {
@@ -334,6 +404,10 @@ async function cleanupCreatedCategory(
   expect(deleteBody?.data?.name).toBe(identity.name)
   expect(deleteBody?.data?.is_active).toBe(false)
 
+  // Re-confirm persisted UI state from a settled list — never trust a transient empty view.
+  await page.goto('/admin/courses')
+  await page.getByRole('button', { name: 'Kursarten' }).click()
+  await waitForCategoryListReady(page)
   await expect(page.getByRole('heading', { name: identity.name, exact: true })).toHaveCount(0, {
     timeout: 30_000,
   })
