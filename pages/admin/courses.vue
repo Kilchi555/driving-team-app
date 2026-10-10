@@ -32,7 +32,7 @@
           </div>
           <button
             v-if="activeTab === 'categories'"
-            @click="showCreateCategoryModal = true"
+            @click="openCreateCategoryModal"
             class="px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-1.5 text-sm self-start sm:self-auto text-white hover:opacity-90"
             :style="{ background: primaryColor }"
           >
@@ -571,7 +571,7 @@
         <div v-else-if="activeCategories.length === 0" class="text-center py-8">
           <div class="text-gray-600 mb-4">Keine Kursarten vorhanden</div>
           <button
-            @click="showCreateCategoryModal = true"
+            @click="openCreateCategoryModal"
             class="text-white px-4 py-2 rounded-lg hover:opacity-90" :style="{ background: primaryColor }"
           >
             Erste Kursart erstellen
@@ -645,7 +645,7 @@
               <!-- Footer -->
               <div class="flex items-center justify-between pt-3 border-t border-gray-100">
                 <span class="text-xs text-gray-400">
-                  {{ category.session_count || 1 }} × {{ category.hours_per_session || 8 }}h
+                  {{ formatCategoryCardDuration(category) }}
                 </span>
                 <a
                   :href="`/courses/category/${category.code}`"
@@ -852,9 +852,8 @@
                 </p>
                 <div class="text-sm" :style="{ color: primaryColor }">
                   <strong>Kursdauer:</strong> 
-                  <span v-if="selectedCategoryInfo.session_count && selectedCategoryInfo.hours_per_session">
-                    {{ selectedCategoryInfo.session_count }} x {{ selectedCategoryInfo.hours_per_session }}h 
-                    ({{ selectedCategoryInfo.total_duration_hours }}h total)
+                  <span v-if="selectedCategoryInfo">
+                    {{ formatCategoryCardDuration(selectedCategoryInfo) }}
                   </span>
                   <span v-else>Standard (8h)</span>
                 </div>
@@ -1009,7 +1008,7 @@
                   type="button"
                   class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
                 >
-                  Sessions generieren ({{ selectedCategoryInfo.session_count }})
+                  Sessions generieren ({{ categorySessionTemplateCount(selectedCategoryInfo) }})
                 </button>
               </div>
             </div>
@@ -1018,9 +1017,8 @@
             <div v-if="selectedCategoryInfo" class="p-3 rounded-lg" :style="{ background: `${primaryColor}10` }">
               <div class="text-sm" :style="{ color: primaryColor }">
                 <strong>Kursdauer (aus Kursart):</strong> 
-                <span v-if="selectedCategoryInfo.session_count && selectedCategoryInfo.hours_per_session">
-                  {{ selectedCategoryInfo.session_count }} x {{ selectedCategoryInfo.hours_per_session }}h 
-                  ({{ selectedCategoryInfo.total_duration_hours }}h total)
+                <span v-if="selectedCategoryInfo">
+                  {{ formatCategoryCardDuration(selectedCategoryInfo) }}
                 </span>
                 <span v-else>Standard (8h)</span>
               </div>
@@ -1961,56 +1959,92 @@
               </select>
             </div>
 
-            <!-- Course Duration Settings -->
+            <!-- Course Duration Settings: initializer + always-editable session template -->
             <div class="space-y-4">
               <h4 class="text-md font-semibold text-gray-900 border-b border-gray-200 pb-2">Kursdauer & Termine</h4>
-              
+
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label class="block text-sm font-bold text-black mb-2">Anzahl Termine *</label>
+                  <label class="block text-sm font-bold text-black mb-2">Anzahl Termine (Initial)</label>
                   <input
                     v-model.number="categoryForm.session_count"
                     type="number"
                     min="1"
-                    max="10"
-                    required
-                    @input="updateDurationCalculation"
+                    :max="MAX_CATEGORY_SESSIONS"
                     class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
                   />
                 </div>
-                
+
                 <div>
-                  <label class="block text-sm font-bold text-black mb-2">Stunden pro Termin *</label>
+                  <label class="block text-sm font-bold text-black mb-2">Dauer pro Termin (Initial)</label>
                   <input
                     v-model.number="categoryForm.hours_per_session"
                     type="number"
-                    min="0.5"
-                    max="12"
-                    step="0.5"
-                    required
-                    @input="updateDurationCalculation"
+                    :min="MIN_SESSION_DURATION_HOURS"
+                    :max="MAX_SESSION_DURATION_HOURS"
+                    :step="SESSION_DURATION_STEP_HOURS"
                     class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
                   />
                 </div>
-                
-                <div>
-                  <label class="block text-sm font-bold text-black mb-2">Total Stunden</label>
-                  <input
-                    v-model.number="categoryForm.total_duration_hours"
-                    type="number"
-                    readonly
-                    class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600 cursor-not-allowed"
-                  />
+
+                <div class="flex items-end">
+                  <button
+                    type="button"
+                    @click="applyCategoryTemplateInitializer"
+                    class="w-full px-3 py-2 rounded-lg text-sm font-medium text-white tenant-bg-primary hover:opacity-90"
+                  >
+                    Auf {{ categoryForm.session_count || 1 }} × {{ categoryForm.hours_per_session || 8 }}h setzen
+                  </button>
                 </div>
               </div>
 
+              <p class="text-xs text-gray-500">
+                Die Initialwerte erzeugen die Terminstruktur. Danach kann jeder Termin individuell angepasst werden.
+              </p>
 
-              <!-- Duration Preview -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <h5 class="text-sm font-semibold text-gray-900">Terminstruktur</h5>
+                  <button
+                    type="button"
+                    @click="addCategoryTemplateSession"
+                    class="text-sm font-medium tenant-text-primary hover:opacity-80"
+                    :disabled="categoryTemplateSessions.length >= MAX_CATEGORY_SESSIONS"
+                  >
+                    + Termin
+                  </button>
+                </div>
+
+                <div
+                  v-for="(session, index) in categoryTemplateSessions"
+                  :key="index"
+                  class="flex items-center gap-3"
+                >
+                  <span class="text-sm text-gray-600 w-20">Termin {{ index + 1 }}</span>
+                  <input
+                    v-model.number="session.duration_hours"
+                    type="number"
+                    :min="MIN_SESSION_DURATION_HOURS"
+                    :max="MAX_SESSION_DURATION_HOURS"
+                    :step="SESSION_DURATION_STEP_HOURS"
+                    class="w-28 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
+                  />
+                  <span class="text-sm text-gray-500">h</span>
+                  <button
+                    type="button"
+                    class="text-sm text-red-600 hover:text-red-700 disabled:opacity-40"
+                    :disabled="categoryTemplateSessions.length <= 1"
+                    @click="removeCategoryTemplateSession(index)"
+                  >
+                    Entfernen
+                  </button>
+                </div>
+              </div>
+
               <div class="p-3 rounded-lg" :style="{ background: `${primaryColor}10` }">
                 <div class="text-sm" :style="{ color: primaryColor }">
-                  <strong>Vorschau:</strong> 
-                  {{ categoryForm.session_count }} x {{ categoryForm.hours_per_session }}h 
-                  ({{ categoryForm.total_duration_hours }}h total)
+                  <strong>Gesamtdauer:</strong>
+                  {{ categoryTemplateSummary }}
                 </div>
               </div>
             </div>
@@ -4287,6 +4321,17 @@ import {
   participantDisplayLicenseLabel,
   participantIdentityLine,
 } from '~/utils/participant-identity'
+import {
+  buildUniformCategorySessionTemplate,
+  formatCategorySessionSummary,
+  isCustomizedRelativeToInitializer,
+  normalizeCategorySessionTemplate,
+  type CategorySessionTemplateEntry,
+  MAX_CATEGORY_SESSIONS,
+  MAX_SESSION_DURATION_HOURS,
+  MIN_SESSION_DURATION_HOURS,
+  SESSION_DURATION_STEP_HOURS,
+} from '~/utils/course-category-session-template'
 
 // Warning banner: surface "no online payments" so admins understand all
 // course enrollments will fall back to cash.
@@ -4492,6 +4537,99 @@ const statusChangeOptions = ref({
 const showCreateCategoryModal = ref(false)
 const showEditCategoryModal = ref(false)
 const isSavingCategory = ref(false)
+const categoryTemplateSessions = ref<CategorySessionTemplateEntry[]>([
+  { duration_hours: 8 },
+])
+const categoryTemplateSummary = computed(() => formatCategorySessionSummary(categoryTemplateSessions.value))
+
+const formatCategoryCardDuration = (category: any) => {
+  try {
+    const normalized = normalizeCategorySessionTemplate({
+      session_structure: category?.session_structure,
+      session_count: category?.session_count,
+      hours_per_session: category?.hours_per_session,
+      total_duration_hours: category?.total_duration_hours,
+    })
+    return formatCategorySessionSummary(normalized.session_structure.sessions)
+  } catch {
+    return `${category?.session_count || 1} × ${category?.hours_per_session || 8}h`
+  }
+}
+
+const categorySessionTemplateCount = (category: any) => {
+  try {
+    return normalizeCategorySessionTemplate({
+      session_structure: category?.session_structure,
+      session_count: category?.session_count,
+      hours_per_session: category?.hours_per_session,
+    }).session_count
+  } catch {
+    return category?.session_count || 1
+  }
+}
+
+const syncCategoryFormDerivedFromTemplate = () => {
+  try {
+    const normalized = normalizeCategorySessionTemplate({
+      session_structure: { sessions: categoryTemplateSessions.value },
+      hours_per_session: categoryForm.value.hours_per_session,
+      session_count: categoryTemplateSessions.value.length,
+    })
+    categoryTemplateSessions.value = normalized.session_structure.sessions.map((s) => ({
+      duration_hours: s.duration_hours,
+    }))
+    categoryForm.value.session_count = normalized.session_count
+    categoryForm.value.total_duration_hours = normalized.total_duration_hours
+    categoryForm.value.hours_per_session = normalized.hours_per_session
+  } catch {
+    // keep current UI values; save will surface validation
+  }
+}
+
+const applyCategoryTemplateInitializer = () => {
+  const count = Number(categoryForm.value.session_count) || 1
+  const hours = Number(categoryForm.value.hours_per_session) || 8
+  // isCustomizedRelativeToInitializer → buildUniformCategorySessionTemplate can throw
+  // on invalid typed seeds (e.g. 2.25 / 99). Keep that check inside try/catch so the
+  // banner path runs and form/session state is not mutated.
+  try {
+    const customized = isCustomizedRelativeToInitializer(
+      categoryTemplateSessions.value,
+      count,
+      hours,
+    )
+    if (customized) {
+      const ok = confirm(
+        `Die aktuelle Terminstruktur wird durch ${count} × ${hours}h ersetzt. Fortfahren?`,
+      )
+      if (!ok) return
+    }
+    const uniform = buildUniformCategorySessionTemplate(count, hours)
+    categoryTemplateSessions.value = uniform.session_structure.sessions.map((s) => ({
+      duration_hours: s.duration_hours,
+    }))
+    categoryForm.value.session_count = uniform.session_count
+    categoryForm.value.total_duration_hours = uniform.total_duration_hours
+    categoryForm.value.hours_per_session = uniform.hours_per_session
+  } catch (err: any) {
+    error.value = err?.message || 'Ungültige Terminstruktur'
+  }
+}
+
+const addCategoryTemplateSession = () => {
+  if (categoryTemplateSessions.value.length >= MAX_CATEGORY_SESSIONS) return
+  const last = categoryTemplateSessions.value[categoryTemplateSessions.value.length - 1]
+  categoryTemplateSessions.value.push({
+    duration_hours: last?.duration_hours || Number(categoryForm.value.hours_per_session) || 8,
+  })
+  syncCategoryFormDerivedFromTemplate()
+}
+
+const removeCategoryTemplateSession = (index: number) => {
+  if (categoryTemplateSessions.value.length <= 1) return
+  categoryTemplateSessions.value.splice(index, 1)
+  syncCategoryFormDerivedFromTemplate()
+}
 const editingCategory = ref<any>(null)
 const defaultCategoryPrice = ref(0)
 const partialCategoryPrice = ref(0)
@@ -5776,39 +5914,51 @@ const createExternalInstructor = async () => {
 
 const generateSessionsFromCategory = () => {
   if (!selectedCategoryInfo.value) return
-  
-  const sessionCount = selectedCategoryInfo.value.session_count || 1
-  const hoursPerSession = selectedCategoryInfo.value.hours_per_session || 8
-  
+
+  let template: CategorySessionTemplateEntry[]
+  try {
+    template = normalizeCategorySessionTemplate({
+      session_structure: selectedCategoryInfo.value.session_structure,
+      session_count: selectedCategoryInfo.value.session_count,
+      hours_per_session: selectedCategoryInfo.value.hours_per_session,
+      total_duration_hours: selectedCategoryInfo.value.total_duration_hours,
+    }).session_structure.sessions
+  } catch (err: any) {
+    error.value = err?.message || 'Ungültige Kursart-Terminstruktur'
+    return
+  }
+
   courseSessions.value = []
-  
+
   const today = new Date()
-  
-  for (let i = 0; i < sessionCount; i++) {
+  // Preserve existing semantics: each session on its own day starting 09:00,
+  // with duration taken from the category session template (may be unequal).
+  for (let i = 0; i < template.length; i++) {
     const sessionDate = new Date(today)
     sessionDate.setDate(today.getDate() + i + 1) // Start tomorrow
-    
+
+    const durationHours = template[i].duration_hours
     const startTime = new Date(`2024-01-01 09:00`)
     const endTime = new Date(startTime)
-    endTime.setHours(startTime.getHours() + hoursPerSession)
-    
-      const st = startTime.toTimeString().slice(0, 5)
-      courseSessions.value.push({
-        date: sessionDate.toISOString().split('T')[0],
-        start_time: st,
-        end_time: endTime.toTimeString().slice(0, 5),
-        description: sessionDefaultDescription(i, st),
-        instructor_type: null,
-        staff_id: null,
-        external_instructor_name: null,
-        external_instructor_email: null,
-        external_instructor_phone: null,
-        allow_individual_booking: false,
-        individual_price: 0,
-      })
+    endTime.setMinutes(startTime.getMinutes() + Math.round(durationHours * 60))
+
+    const st = startTime.toTimeString().slice(0, 5)
+    courseSessions.value.push({
+      date: sessionDate.toISOString().split('T')[0],
+      start_time: st,
+      end_time: endTime.toTimeString().slice(0, 5),
+      description: sessionDefaultDescription(i, st),
+      instructor_type: null,
+      staff_id: null,
+      external_instructor_name: null,
+      external_instructor_email: null,
+      external_instructor_phone: null,
+      allow_individual_booking: false,
+      individual_price: 0,
+    })
   }
-  
-  logger.debug(`✅ Generated ${sessionCount} sessions from category:`, courseSessions.value)
+
+  logger.debug(`✅ Generated ${template.length} sessions from category template:`, courseSessions.value)
 }
 
 // Load existing course sessions for editing
@@ -5878,6 +6028,13 @@ const cancelCreateCourse = () => {
 const closeCreateCourseModal = () => {
   showCreateCourseModal.value = false
   resetNewCourse()
+}
+
+const openCreateCategoryModal = () => {
+  resetCategoryForm()
+  editingCategory.value = null
+  showEditCategoryModal.value = false
+  showCreateCategoryModal.value = true
 }
 
 const closeCreateCategoryModal = () => {
@@ -5995,6 +6152,19 @@ const getInstructorName = (course: any) => {
 
 // Category Management Functions
 const editCategoryItem = (category: any) => {
+  let normalized
+  try {
+    normalized = normalizeCategorySessionTemplate({
+      session_structure: category.session_structure,
+      session_count: category.session_count,
+      hours_per_session: category.hours_per_session,
+      total_duration_hours: category.total_duration_hours,
+    })
+  } catch (err: any) {
+    error.value = err?.message || 'Ungültige Kursart-Terminstruktur'
+    return
+  }
+
   editingCategory.value = category
   categoryForm.value = {
     code: category.code,
@@ -6011,10 +6181,10 @@ const editCategoryItem = (category: any) => {
     color: category.color,
     icon: category.icon,
     sort_order: category.sort_order,
-    // Duration fields
-    total_duration_hours: category.total_duration_hours || 8.0,
-    session_count: category.session_count || 1,
-    hours_per_session: category.hours_per_session || 8.0,
+    // Duration fields (initializer / derived — template list is SoT in UI)
+    total_duration_hours: normalized.total_duration_hours,
+    session_count: normalized.session_count,
+    hours_per_session: normalized.hours_per_session,
     // Partial enrollment
     allow_partial_enrollment: category.allow_partial_enrollment || false,
     partial_start_position: category.partial_start_position || 3,
@@ -6027,6 +6197,9 @@ const editCategoryItem = (category: any) => {
     // Email
     email_important_notice: category.email_important_notice || '',
   }
+  categoryTemplateSessions.value = normalized.session_structure.sessions.map((s) => ({
+    duration_hours: s.duration_hours,
+  }))
   categoryInvoiceTimingWritable.value = category.invoice_timing_mode == null
     || category.invoice_timing_mode === 'inherit'
     || category.invoice_timing_mode === 'off'
@@ -6073,21 +6246,28 @@ const saveCategory = async () => {
     categoryForm.value.default_price_rappen = Math.round(defaultCategoryPrice.value * 100)
     categoryForm.value.partial_price_rappen = Math.round(partialCategoryPrice.value * 100)
 
-    // Always recompute total to ensure constraint total = session_count * hours_per_session
-    categoryForm.value.total_duration_hours = (categoryForm.value.session_count || 1) * (categoryForm.value.hours_per_session || 8)
-
     // Sync important notice from the list UI
     categoryForm.value.email_important_notice = importantNoticeToString()
 
-    // Prepare session structure JSON
-    const sessionStructure = {
-      flexible: true,
-      description: `${categoryForm.value.session_count} x ${categoryForm.value.hours_per_session}h`
-    }
+    // Template SoT: send sessions[]; server normalizes derived scalars.
+    const normalized = normalizeCategorySessionTemplate({
+      session_structure: { sessions: categoryTemplateSessions.value },
+      hours_per_session: categoryForm.value.hours_per_session,
+      session_count: categoryTemplateSessions.value.length,
+    })
+    categoryTemplateSessions.value = normalized.session_structure.sessions.map((s) => ({
+      duration_hours: s.duration_hours,
+    }))
+    categoryForm.value.session_count = normalized.session_count
+    categoryForm.value.total_duration_hours = normalized.total_duration_hours
+    categoryForm.value.hours_per_session = normalized.hours_per_session
 
     const categoryData = {
       ...categoryForm.value,
-      session_structure: sessionStructure
+      session_structure: normalized.session_structure,
+      session_count: normalized.session_count,
+      total_duration_hours: normalized.total_duration_hours,
+      hours_per_session: normalized.hours_per_session,
     }
 
     // Remove empty UUID fields to avoid validation errors
@@ -6115,7 +6295,7 @@ const saveCategory = async () => {
 
   } catch (err: any) {
     console.error('Error saving category:', err)
-    error.value = `Fehler beim Speichern: ${err.message}`
+    error.value = `Fehler beim Speichern: ${err.data?.statusMessage || err.statusMessage || err.message}`
   } finally {
     isSavingCategory.value = false
   }
@@ -6145,7 +6325,7 @@ const resetCategoryForm = () => {
     color: '#3B82F6',
     icon: '📚',
     sort_order: 0,
-    // Duration fields
+    // Duration fields (initializer)
     total_duration_hours: 8.0,
     session_count: 1,
     hours_per_session: 8.0,
@@ -6159,16 +6339,10 @@ const resetCategoryForm = () => {
     // Email
     email_important_notice: '',
   }
+  categoryTemplateSessions.value = [{ duration_hours: 8 }]
   emailImportantNoticeItems.value = ['']
   defaultCategoryPrice.value = 0
   partialCategoryPrice.value = 0
-}
-
-// Duration calculation function
-const updateDurationCalculation = () => {
-  const sessionCount = categoryForm.value.session_count || 1
-  const hoursPerSession = categoryForm.value.hours_per_session || 8
-  categoryForm.value.total_duration_hours = sessionCount * hoursPerSession
 }
 
 // Resource Management Functions

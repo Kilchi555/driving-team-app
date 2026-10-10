@@ -3,6 +3,10 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import {
+  CategorySessionTemplateError,
+  normalizeCategorySessionTemplate,
+} from '~/utils/course-category-session-template'
 
 const CATEGORY_INVOICE_TIMING = new Set(['inherit', 'off', 'immediate'])
 
@@ -54,6 +58,40 @@ export default defineEventHandler(async (event) => {
     const fields: Record<string, any> = { updated_at: new Date().toISOString() }
     for (const key of ALLOWED) {
       if (rest[key] !== undefined) fields[key] = rest[key]
+    }
+
+    // Template SoT fields: only normalize/write when the client supplies template input.
+    // Partial updates (e.g. is_active / name / invoice_timing_mode) must not synthesize
+    // defaults or overwrite an existing session_structure.sessions[].
+    const isUpdate = Boolean(categoryId)
+    const hasTemplateInput =
+      rest.session_structure !== undefined
+      || rest.session_count !== undefined
+      || rest.hours_per_session !== undefined
+
+    if (!isUpdate || hasTemplateInput) {
+      try {
+        const normalized = normalizeCategorySessionTemplate({
+          session_structure: fields.session_structure ?? rest.session_structure,
+          session_count: fields.session_count ?? rest.session_count,
+          hours_per_session: fields.hours_per_session ?? rest.hours_per_session,
+          total_duration_hours: fields.total_duration_hours ?? rest.total_duration_hours,
+        })
+        fields.session_structure = normalized.session_structure
+        fields.session_count = normalized.session_count
+        fields.total_duration_hours = normalized.total_duration_hours
+        fields.hours_per_session = normalized.hours_per_session
+      } catch (templateErr: any) {
+        if (templateErr instanceof CategorySessionTemplateError) {
+          throw createError({ statusCode: 400, statusMessage: templateErr.message })
+        }
+        throw templateErr
+      }
+    } else {
+      delete fields.session_structure
+      delete fields.session_count
+      delete fields.hours_per_session
+      delete fields.total_duration_hours
     }
 
     const supabase = getSupabaseAdmin()

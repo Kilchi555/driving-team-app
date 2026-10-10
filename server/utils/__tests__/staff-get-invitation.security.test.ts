@@ -173,7 +173,8 @@ describe('staff get-invitation handler', () => {
     email: 'staff@example.com',
     phone: '+41790000000',
     status: 'pending',
-    expires_at: '2026-10-09T14:35:01.372Z',
+    // Far-future fixed expiry — must stay after CI "now" (do not use a near-term wall clock).
+    expires_at: '2099-01-01T00:00:00.000Z',
     invitation_token: VALID_TOKEN,
     invited_by: 'auth-admin',
     accepted_at: null,

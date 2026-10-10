@@ -1,6 +1,10 @@
 // composables/useCourseCategories.ts
 import { ref, computed } from 'vue'
 import { useCurrentUser } from '~/composables/useCurrentUser'
+import {
+  formatCategorySessionSummary,
+  normalizeCategorySessionTemplate,
+} from '~/utils/course-category-session-template'
 
 interface CourseCategory {
   id: string
@@ -121,17 +125,21 @@ export const useCourseCategories = () => {
   })
 
   const formatCourseDuration = (category: CourseCategory) => {
-    if (!category.session_count || !category.hours_per_session) return 'Dauer nicht definiert'
-    
-    if (category.session_count === 1) {
-      return `${category.total_duration_hours}h (1 Termin)`
-    } else {
-      return `${category.session_count} x ${category.hours_per_session}h (${category.total_duration_hours}h total)`
+    try {
+      const normalized = normalizeCategorySessionTemplate({
+        session_structure: category.session_structure,
+        session_count: category.session_count,
+        hours_per_session: category.hours_per_session,
+        total_duration_hours: category.total_duration_hours,
+      })
+      return formatCategorySessionSummary(normalized.session_structure.sessions)
+    } catch {
+      return category.session_structure?.description || 'Dauer nicht definiert'
     }
   }
 
   const getSessionStructureDescription = (category: CourseCategory) => {
-    return category.session_structure?.description || formatCourseDuration(category)
+    return formatCourseDuration(category) || category.session_structure?.description || 'Dauer nicht definiert'
   }
 
   const getDurationDefaults = (categoryId: string) => {
