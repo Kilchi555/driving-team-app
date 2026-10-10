@@ -6,6 +6,8 @@ import {
   FLEXIBLE_SESSION_SPEC_BASENAME,
   FLEXIBLE_SESSION_SPEC_FILE,
   formatCombinedTestFailure,
+  interpretCourseCategoriesListResponse,
+  matchesCourseCategoriesListRequest,
   playwrightTestIgnoreForFlexibleSession,
 } from '../e2e-flexible-session-safety'
 
@@ -73,11 +75,16 @@ describe('dedicated Production flexible-session E2E workflow', () => {
     expect(spec).toContain('decideCategoryCleanup')
     expect(spec).toContain('formatCombinedTestFailure')
     expect(spec).toContain('waitForCategoryListReady')
+    expect(spec).toContain('matchesCourseCategoriesListRequest')
+    expect(spec).toContain('interpretCourseCategoriesListResponse')
+    expect(spec).toContain('beginCategoryListFetch')
     expect(spec).toContain('categoryId === identity.id')
     expect(spec).toContain('is_active === false')
-    // Delete must fail closed on HTTP failure and re-confirm absence from a settled list.
+    expect(spec).toContain('deleteBody?.data?.tenant_id')
+    expect(spec).toContain('EXPECTED_TENANT_ID')
+    // Delete must fail closed on HTTP failure and re-confirm via successful GET decision.
     expect(spec).toContain('delete save failed:')
-    expect(spec).toMatch(/waitForCategoryListReady\(page\)[\s\S]*toHaveCount\(0/)
+    expect(spec).toContain('post-delete confirmation')
     expect(spec).toContain('formatCombinedTestFailure({')
     expect(spec).toContain('originalError:')
     expect(spec).toContain('cleanupError:')
@@ -87,43 +94,163 @@ describe('dedicated Production flexible-session E2E workflow', () => {
   })
 })
 
+describe('matchesCourseCategoriesListRequest', () => {
+  it('accepts only GET /api/admin/course-categories', () => {
+    expect(
+      matchesCourseCategoriesListRequest({
+        method: 'GET',
+        url: 'https://app.simy.ch/api/admin/course-categories',
+      }),
+    ).toBe(true)
+    expect(
+      matchesCourseCategoriesListRequest({
+        method: 'GET',
+        url: 'https://app.simy.ch/api/admin/course-categories/',
+      }),
+    ).toBe(true)
+  })
+
+  it('rejects unrelated successful GETs and category mutations', () => {
+    expect(
+      matchesCourseCategoriesListRequest({
+        method: 'GET',
+        url: 'https://app.simy.ch/api/admin/courses/full-list',
+      }),
+    ).toBe(false)
+    expect(
+      matchesCourseCategoriesListRequest({
+        method: 'GET',
+        url: 'https://app.simy.ch/api/auth/current-user',
+      }),
+    ).toBe(false)
+    expect(
+      matchesCourseCategoriesListRequest({
+        method: 'POST',
+        url: 'https://app.simy.ch/api/admin/course-categories/save',
+      }),
+    ).toBe(false)
+    expect(
+      matchesCourseCategoriesListRequest({
+        method: 'GET',
+        url: 'https://app.simy.ch/api/admin/course-categories/save',
+      }),
+    ).toBe(false)
+  })
+})
+
+describe('interpretCourseCategoriesListResponse', () => {
+  it('requires ok status and a categories array', () => {
+    expect(
+      interpretCourseCategoriesListResponse({
+        ok: false,
+        status: 500,
+        body: { categories: [] },
+      }),
+    ).toEqual({ status: 'failed', reason: 'HTTP 500' })
+
+    expect(
+      interpretCourseCategoriesListResponse({
+        ok: true,
+        status: 200,
+        body: { items: [] },
+      }),
+    ).toMatchObject({ status: 'failed' })
+
+    expect(
+      interpretCourseCategoriesListResponse({
+        ok: true,
+        status: 200,
+        body: { categories: [{ id: 'a', name: 'n', is_active: true }] },
+      }),
+    ).toEqual({
+      status: 'ok',
+      categories: [{ id: 'a', name: 'n', is_active: true }],
+    })
+  })
+})
+
 describe('decideCategoryCleanup', () => {
+  const createdId = '11111111-1111-4111-8111-111111111111'
+  const categoryName = 'E2E-FlexSess-abc'
   const base = {
-    createdId: '11111111-1111-4111-8111-111111111111',
+    createdId,
     creationConfirmed: true,
-    categoryName: 'E2E-FlexSess-abc',
+    categoryName,
   }
 
-  it('fails closed while the list is still loading (empty-looking)', () => {
+  it('fails closed when category GET fails even if UI looks empty', () => {
     expect(
       decideCategoryCleanup({
         ...base,
+        categoryFetch: { status: 'failed', reason: 'HTTP 500' },
+        listState: 'ready_empty',
+        exactNameMatchCount: 0,
+      }),
+    ).toMatchObject({ action: 'fail', code: 'FETCH_FAILED' })
+  })
+
+  it('fails closed when category GET times out', () => {
+    expect(
+      decideCategoryCleanup({
+        ...base,
+        categoryFetch: { status: 'timeout', reason: 'Timeout 30000ms exceeded' },
+        listState: 'ready_empty',
+        exactNameMatchCount: 0,
+      }),
+    ).toMatchObject({ action: 'fail', code: 'FETCH_FAILED' })
+  })
+
+  it('fails closed while the list UI is still loading after a successful GET', () => {
+    expect(
+      decideCategoryCleanup({
+        ...base,
+        categoryFetch: { status: 'ok', categories: [] },
         listState: 'loading',
         exactNameMatchCount: 0,
       }),
     ).toMatchObject({ action: 'fail', code: 'LIST_NOT_READY' })
   })
 
-  it('fails closed when list state is unknown', () => {
+  it('fails closed when list UI state is unknown after a successful GET', () => {
     expect(
       decideCategoryCleanup({
         ...base,
+        categoryFetch: { status: 'ok', categories: [] },
         listState: 'unknown',
         exactNameMatchCount: 0,
       }),
     ).toMatchObject({ action: 'fail', code: 'LIST_NOT_READY' })
   })
 
-  it('treats ready empty list as already_gone only after confirmed creation', () => {
+  it('allows already_gone only after successful GET and exact identity absence', () => {
     expect(
       decideCategoryCleanup({
         ...base,
+        categoryFetch: {
+          status: 'ok',
+          categories: [
+            { id: 'other', name: 'Other', is_active: true },
+            { id: createdId, name: categoryName, is_active: false },
+          ],
+        },
+        listState: 'ready_populated',
+        exactNameMatchCount: 0,
+      }),
+    ).toEqual({
+      action: 'already_gone',
+      reason: 'exact_identity_absent_after_successful_fetch',
+    })
+
+    expect(
+      decideCategoryCleanup({
+        ...base,
+        categoryFetch: { status: 'ok', categories: [] },
         listState: 'ready_empty',
         exactNameMatchCount: 0,
       }),
     ).toEqual({
       action: 'already_gone',
-      reason: 'exact_name_absent_after_ready_list',
+      reason: 'exact_identity_absent_after_successful_fetch',
     })
   })
 
@@ -133,26 +260,38 @@ describe('decideCategoryCleanup', () => {
         ...base,
         creationConfirmed: false,
         createdId: null,
+        categoryFetch: { status: 'ok', categories: [] },
         listState: 'ready_empty',
         exactNameMatchCount: 0,
       }),
     ).toMatchObject({ action: 'noop' })
   })
 
-  it('deletes only an exact single match with confirmed id', () => {
+  it('deletes only an exact single match with confirmed id after successful GET', () => {
     expect(
       decideCategoryCleanup({
         ...base,
+        categoryFetch: {
+          status: 'ok',
+          categories: [{ id: createdId, name: categoryName, is_active: true }],
+        },
         listState: 'ready_populated',
         exactNameMatchCount: 1,
       }),
-    ).toEqual({ action: 'delete', reason: 'exact_single_match' })
+    ).toEqual({ action: 'delete', reason: 'exact_single_match', matchId: createdId })
   })
 
-  it('refuses ambiguous identity', () => {
+  it('refuses ambiguous identity from API or UI', () => {
     expect(
       decideCategoryCleanup({
         ...base,
+        categoryFetch: {
+          status: 'ok',
+          categories: [
+            { id: createdId, name: categoryName, is_active: true },
+            { id: '22222222-2222-4222-8222-222222222222', name: categoryName, is_active: true },
+          ],
+        },
         listState: 'ready_populated',
         exactNameMatchCount: 2,
       }),
@@ -165,10 +304,28 @@ describe('decideCategoryCleanup', () => {
         ...base,
         createdId: null,
         creationConfirmed: false,
+        categoryFetch: {
+          status: 'ok',
+          categories: [{ id: 'x', name: categoryName, is_active: true }],
+        },
         listState: 'ready_populated',
         exactNameMatchCount: 1,
       }),
     ).toMatchObject({ action: 'fail', code: 'UNCONFIRMED' })
+  })
+
+  it('refuses name match whose id differs from the confirmed create id', () => {
+    expect(
+      decideCategoryCleanup({
+        ...base,
+        categoryFetch: {
+          status: 'ok',
+          categories: [{ id: 'other-id', name: categoryName, is_active: true }],
+        },
+        listState: 'ready_populated',
+        exactNameMatchCount: 1,
+      }),
+    ).toMatchObject({ action: 'fail', code: 'IDENTITY_MISMATCH' })
   })
 })
 
@@ -176,7 +333,7 @@ describe('formatCombinedTestFailure', () => {
   it('preserves original and cleanup errors together', () => {
     const err = formatCombinedTestFailure({
       originalError: new Error('create timed out'),
-      cleanupError: new Error('LIST_NOT_READY'),
+      cleanupError: new Error('CLEANUP_FAILED ORPHAN_UNCONFIRMED category list GET failed'),
       categoryName: 'E2E-FlexSess-x',
       categoryId: 'abc',
     })
@@ -184,7 +341,7 @@ describe('formatCombinedTestFailure', () => {
     expect(err.message).toContain('CLEANUP_FAILURE')
     expect(err.message).toContain('categoryName=E2E-FlexSess-x')
     expect(err.message).toContain('categoryId=abc')
-    expect(err.message).toContain('LIST_NOT_READY')
+    expect(err.message).toContain('CLEANUP_FAILED ORPHAN_UNCONFIRMED')
   })
 
   it('surfaces cleanup-only failures', () => {
@@ -204,5 +361,19 @@ describe('formatCombinedTestFailure', () => {
     })
     expect(err.message).toContain('ORIGINAL_FAILURE: tenant mismatch')
     expect(err.message).not.toContain('CLEANUP_FAILURE')
+  })
+
+  it('does not suppress the original failure when cleanup also fails closed on GET', () => {
+    const err = formatCombinedTestFailure({
+      originalError: new Error('bounds assertion failed'),
+      cleanupError: new Error(
+        'CLEANUP_FAILED ORPHAN_UNCONFIRMED categoryName=E2E-FlexSess-z: category list GET failed (HTTP 500); empty UI is not proof of absence',
+      ),
+      categoryName: 'E2E-FlexSess-z',
+      categoryId: 'zzz',
+    })
+    expect(err.message).toContain('ORIGINAL_FAILURE: bounds assertion failed')
+    expect(err.message).toContain('CLEANUP_FAILURE')
+    expect(err.message).toContain('empty UI is not proof of absence')
   })
 })

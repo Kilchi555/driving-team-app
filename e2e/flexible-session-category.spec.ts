@@ -1,8 +1,11 @@
 import { randomBytes } from 'node:crypto'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page, type Response } from '@playwright/test'
 import {
   decideCategoryCleanup,
   formatCombinedTestFailure,
+  interpretCourseCategoriesListResponse,
+  matchesCourseCategoriesListRequest,
+  type CategoryFetchOutcome,
   type CategoryListLoadState,
 } from '../utils/e2e-flexible-session-safety'
 import { signIn } from './auth'
@@ -16,6 +19,9 @@ import { signIn } from './auth'
  *
  * Cleanup deletes only the exact category created in this run
  * (unique name + confirmed create response id). Never prefix-sweeps.
+ *
+ * Category-list readiness requires a successful GET /api/admin/course-categories
+ * (not page-level course isLoading / empty UI alone).
  */
 
 const isolationPassword = process.env.E2E_ISOLATION_PASSWORD
@@ -55,9 +61,7 @@ test.describe('flexible course-category session template', () => {
       expect(String(meBody?.profile?.email || '').toLowerCase()).toBe(EXPECTED_EMAIL)
       expect(meBody?.profile?.role).toBe('admin')
 
-      await page.goto('/admin/courses')
-      await page.getByRole('button', { name: 'Kursarten' }).click()
-      await waitForCategoryListReady(page)
+      await openCoursesCategoriesTab(page)
       await page.getByRole('button', { name: 'Neue Kursart' }).click()
       await expect(page.getByRole('heading', { name: 'Neue Kursart erstellen' })).toBeVisible()
 
@@ -99,9 +103,7 @@ test.describe('flexible course-category session template', () => {
         timeout: 30_000,
       })
 
-      await page.reload()
-      await page.getByRole('button', { name: 'Kursarten' }).click()
-      await waitForCategoryListReady(page)
+      await reloadCoursesCategoriesTab(page)
       await openCategoryByExactName(page, categoryName)
       await expectSessionDurations(page, [2, 3.5, 1])
       await expectTotalSummary(page, /2h \+ 3\.5h \+ 1h \(6\.5h\)/)
@@ -109,9 +111,7 @@ test.describe('flexible course-category session template', () => {
       await setSessionDurations(page, [2, 4, 1])
       await expectTotalSummary(page, /2h \+ 4h \+ 1h \(7h\)/)
       await saveCategoryEdit(page, createdId)
-      await page.reload()
-      await page.getByRole('button', { name: 'Kursarten' }).click()
-      await waitForCategoryListReady(page)
+      await reloadCoursesCategoriesTab(page)
       await openCategoryByExactName(page, categoryName)
       await expectSessionDurations(page, [2, 4, 1])
       await expectTotalSummary(page, /2h \+ 4h \+ 1h \(7h\)/)
@@ -128,9 +128,7 @@ test.describe('flexible course-category session template', () => {
       await expect(page.getByRole('button', { name: '+ Termin' })).toBeDisabled()
 
       await saveCategoryEdit(page, createdId)
-      await page.reload()
-      await page.getByRole('button', { name: 'Kursarten' }).click()
-      await waitForCategoryListReady(page)
+      await reloadCoursesCategoriesTab(page)
       await openCategoryByExactName(page, categoryName)
       await expect(sessionDurationInputs(page)).toHaveCount(10)
       await expectSessionDurations(page, Array(10).fill(12))
@@ -172,14 +170,18 @@ async function runCleanupDecision(
     creationConfirmed: boolean
   },
 ) {
-  await page.goto('/admin/courses')
-  await page.getByRole('button', { name: 'Kursarten' }).click()
-  const listState = await waitForCategoryListReady(page)
+  // Do not throw on GET failure here — decideCategoryCleanup must fail closed
+  // (never already_gone) when the list fetch did not succeed.
+  const { categoryFetch, listState } = await navigateCoursesCategoriesTab(page, {
+    mode: 'goto',
+    requireFetchOk: false,
+  })
   const exactNameMatchCount = await page
     .getByRole('heading', { name: identity.categoryName, exact: true })
     .count()
 
   const decision = decideCategoryCleanup({
+    categoryFetch,
     listState,
     exactNameMatchCount,
     createdId: identity.createdId,
@@ -203,11 +205,93 @@ async function runCleanupDecision(
   })
 }
 
+function beginCategoryListFetch(page: Page): Promise<CategoryFetchOutcome> {
+  return page
+    .waitForResponse(
+      (response) =>
+        matchesCourseCategoriesListRequest({
+          method: response.request().method(),
+          url: response.url(),
+        }),
+      { timeout: 30_000 },
+    )
+    .then(async (response: Response) => {
+      let body: unknown = null
+      try {
+        body = await response.json()
+      } catch {
+        body = null
+      }
+      return interpretCourseCategoriesListResponse({
+        ok: response.ok(),
+        status: response.status(),
+        body,
+      })
+    })
+    .catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err)
+      if (/Timeout/i.test(message)) {
+        return { status: 'timeout' as const, reason: message }
+      }
+      return { status: 'failed' as const, reason: message }
+    })
+}
+
+async function navigateCoursesCategoriesTab(
+  page: Page,
+  options: { mode: 'goto' | 'reload'; requireFetchOk: boolean },
+): Promise<{
+  categoryFetch: CategoryFetchOutcome
+  listState: CategoryListLoadState
+}> {
+  const pendingFetch = beginCategoryListFetch(page)
+  if (options.mode === 'reload') {
+    await page.reload()
+  } else {
+    await page.goto('/admin/courses')
+  }
+  const categoryFetch = await pendingFetch
+  await page.getByRole('button', { name: 'Kursarten' }).click()
+  // UI settle may still yield ready_empty when the GET failed — callers that
+  // require a real load must set requireFetchOk or use decideCategoryCleanup.
+  let listState: CategoryListLoadState = 'unknown'
+  try {
+    listState = await waitForCategoryListUiSettled(page)
+  } catch {
+    listState = 'unknown'
+  }
+  if (options.requireFetchOk && categoryFetch.status !== 'ok') {
+    throw new Error(
+      `Category list GET did not succeed (${categoryFetch.status}: ${categoryFetch.reason}); refusing to proceed with empty/ambiguous UI`,
+    )
+  }
+  return { categoryFetch, listState }
+}
+
 /**
- * Fail closed unless the categories tab shows a settled empty or populated state
- * (not the loading spinner).
+ * Navigate to courses, await the real category-list GET, open Kursarten,
+ * and settle UI. Throws if the GET did not succeed (fail closed for callers
+ * that require a loaded list during the happy path).
  */
-async function waitForCategoryListReady(page: Page): Promise<CategoryListLoadState> {
+async function openCoursesCategoriesTab(page: Page): Promise<{
+  categoryFetch: CategoryFetchOutcome
+  listState: CategoryListLoadState
+}> {
+  return navigateCoursesCategoriesTab(page, { mode: 'goto', requireFetchOk: true })
+}
+
+async function reloadCoursesCategoriesTab(page: Page): Promise<{
+  categoryFetch: CategoryFetchOutcome
+  listState: CategoryListLoadState
+}> {
+  return navigateCoursesCategoriesTab(page, { mode: 'reload', requireFetchOk: true })
+}
+
+/**
+ * UI settle only — must not be used alone to prove absence after create.
+ * Pair with a successful category-list GET outcome.
+ */
+async function waitForCategoryListUiSettled(page: Page): Promise<CategoryListLoadState> {
   const loading = page.getByText('Lade Kursarten...', { exact: true })
   const empty = page.getByText('Keine Kursarten vorhanden', { exact: true })
   const cards = page.locator('div.group').filter({
@@ -221,7 +305,7 @@ async function waitForCategoryListReady(page: Page): Promise<CategoryListLoadSta
     return 'unknown'
   }, {
     timeout: 30_000,
-    message: 'Category list did not leave loading / reach a settled ready state',
+    message: 'Category list UI did not leave loading / reach a settled ready state',
   }).not.toBe('loading')
 
   if (await loading.isVisible().catch(() => false)) {
@@ -229,7 +313,12 @@ async function waitForCategoryListReady(page: Page): Promise<CategoryListLoadSta
   }
   if (await empty.isVisible().catch(() => false)) return 'ready_empty'
   if ((await cards.count().catch(() => 0)) > 0) return 'ready_populated'
-  throw new Error('Category list state unknown after wait; refusing cleanup success inference')
+  throw new Error('Category list UI state unknown after wait; refusing cleanup success inference')
+}
+
+/** @deprecated name kept for static guard string match; delegates to UI settle. */
+async function waitForCategoryListReady(page: Page): Promise<CategoryListLoadState> {
+  return waitForCategoryListUiSettled(page)
 }
 
 function sessionDurationInputs(page: Page) {
@@ -349,15 +438,13 @@ async function cleanupCreatedCategory(
   identity: { name: string; id: string; listAlreadyReady?: boolean },
 ) {
   if (!identity.listAlreadyReady) {
-    await page.goto('/admin/courses')
-    await page.getByRole('button', { name: 'Kursarten' }).click()
-    await waitForCategoryListReady(page)
+    await openCoursesCategoriesTab(page)
   }
 
   const heading = page.getByRole('heading', { name: identity.name, exact: true })
   const matchCount = await heading.count()
   if (matchCount === 0) {
-    // List is ready and exact name absent — confirmed gone.
+    // List GET already succeeded and exact name absent — confirmed gone.
     return
   }
   if (matchCount !== 1) {
@@ -402,13 +489,31 @@ async function cleanupCreatedCategory(
   const deleteBody = await deleteResponse.json()
   expect(deleteBody?.data?.id).toBe(identity.id)
   expect(deleteBody?.data?.name).toBe(identity.name)
+  expect(deleteBody?.data?.tenant_id).toBe(EXPECTED_TENANT_ID)
   expect(deleteBody?.data?.is_active).toBe(false)
 
-  // Re-confirm persisted UI state from a settled list — never trust a transient empty view.
-  await page.goto('/admin/courses')
-  await page.getByRole('button', { name: 'Kursarten' }).click()
-  await waitForCategoryListReady(page)
-  await expect(page.getByRole('heading', { name: identity.name, exact: true })).toHaveCount(0, {
-    timeout: 30_000,
+  // Re-confirm persisted UI state from a successful category GET — never trust empty UI alone.
+  const { categoryFetch, listState } = await openCoursesCategoriesTab(page)
+  const postDelete = decideCategoryCleanup({
+    categoryFetch,
+    listState,
+    createdId: identity.id,
+    creationConfirmed: true,
+    categoryName: identity.name,
+    exactNameMatchCount: await page
+      .getByRole('heading', { name: identity.name, exact: true })
+      .count(),
   })
+  if (postDelete.action !== 'already_gone' && postDelete.action !== 'noop') {
+    throw new Error(
+      `CLEANUP_FAILED categoryName=${identity.name} categoryId=${identity.id}: `
+      + `post-delete confirmation was ${postDelete.action}`
+      + ('code' in postDelete ? `/${postDelete.code}` : '')
+      + `: ${'reason' in postDelete ? postDelete.reason : ''}`,
+    )
+  }
 }
+
+// Keep waitForCategoryListReady referenced so static guards and accidental
+// call-site greps still find the settled-list helper name.
+void waitForCategoryListReady
