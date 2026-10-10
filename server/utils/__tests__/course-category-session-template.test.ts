@@ -213,6 +213,97 @@ describe('buildUniformCategorySessionTemplate / customization detect', () => {
   })
 })
 
+describe('UI template ops catch invalid seeds without mutating state (Bugbot #384)', () => {
+  /**
+   * Mirrors applyCategoryTemplateInitializer / generateSessionsFromCategory / edit-load:
+   * normalize/build first; only mutate after success; surface err.message on failure.
+   */
+  function runTemplateOpSafely<T>(
+    op: () => T,
+    mutate: (value: T) => void,
+  ): { error: string | null; mutated: boolean } {
+    let error: string | null = null
+    let mutated = false
+    try {
+      const value = op()
+      mutate(value)
+      mutated = true
+    } catch (err: unknown) {
+      error = err instanceof Error ? err.message : 'Ungültige Terminstruktur'
+    }
+    return { error, mutated }
+  }
+
+  it.each([2.25, 99] as const)(
+    'invalid seed %s produces a validation error and does not mutate UI state',
+    (hours) => {
+      const state = {
+        sessions: [{ duration_hours: 2 }, { duration_hours: 3 }, { duration_hours: 3 }],
+        session_count: 3,
+        hours_per_session: 2,
+      }
+      const before = structuredClone(state)
+
+      const result = runTemplateOpSafely(
+        () => buildUniformCategorySessionTemplate(3, hours),
+        (uniform) => {
+          state.sessions = uniform.session_structure.sessions.map((s) => ({
+            duration_hours: s.duration_hours,
+          }))
+          state.session_count = uniform.session_count
+          state.hours_per_session = uniform.hours_per_session
+        },
+      )
+
+      expect(result.mutated).toBe(false)
+      expect(result.error).toMatch(/Dauer pro Termin \(Initial\)|0\.5h-Schritten|maximal 12/)
+      expect(state).toEqual(before)
+    },
+  )
+
+  it('edit-load aborts before opening form state when stored seed is invalid', () => {
+    let editingOpened = false
+    const result = runTemplateOpSafely(
+      () =>
+        normalizeCategorySessionTemplate({
+          hours_per_session: 99,
+          session_structure: {
+            sessions: [{ duration_hours: 2 }, { duration_hours: 3 }, { duration_hours: 3 }],
+          },
+        }),
+      () => {
+        editingOpened = true
+      },
+    )
+
+    expect(result.mutated).toBe(false)
+    expect(editingOpened).toBe(false)
+    expect(result.error).toMatch(/Dauer pro Termin \(Initial\)/)
+  })
+
+  it('generate-sessions aborts before clearing courseSessions when category template is invalid', () => {
+    const courseSessions = [{ date: '2026-11-01', start: '09:00', end: '11:00' }]
+    const before = structuredClone(courseSessions)
+
+    const result = runTemplateOpSafely(
+      () =>
+        normalizeCategorySessionTemplate({
+          hours_per_session: 2.25,
+          session_structure: {
+            sessions: [{ duration_hours: 2 }],
+          },
+        }).session_structure.sessions,
+      () => {
+        courseSessions.length = 0
+      },
+    )
+
+    expect(result.mutated).toBe(false)
+    expect(courseSessions).toEqual(before)
+    expect(result.error).toMatch(/0\.5h-Schritten/)
+  })
+})
+
 describe('formatCategorySessionSummary', () => {
   it('formats equal and unequal', () => {
     expect(formatCategorySessionSummary([{ duration_hours: 2 }, { duration_hours: 2 }])).toContain('×')

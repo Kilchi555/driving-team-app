@@ -273,6 +273,167 @@ describe('category save must not mutate existing courses', () => {
   })
 })
 
+describe('category save partial update must preserve session template [2,3,3]', () => {
+  const SEEDED_SESSIONS = [
+    { duration_hours: 2 },
+    { duration_hours: 3 },
+    { duration_hours: 3 },
+  ]
+
+  let db: ReturnType<typeof buildCategoryDb>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    db = buildCategoryDb()
+    mocks.getAuthenticatedUser.mockResolvedValue({
+      id: 'admin-1',
+      role: 'admin',
+      tenant_id: TENANT,
+      db_user_id: 'db-admin-1',
+    })
+    mocks.getSupabaseAdmin.mockReturnValue({ from: (table: string) => db.from(table) })
+  })
+
+  async function save(body: unknown) {
+    mocks.readBody.mockResolvedValue(body)
+    const handler = (await import('~/server/api/admin/course-categories/save.post')).default as (
+      event: unknown,
+    ) => Promise<{ success: boolean; data: Row }>
+    return handler({})
+  }
+
+  function expectTemplateUnchanged(row: Row) {
+    expect(row.session_count).toBe(3)
+    expect(row.hours_per_session).toBe(2)
+    expect(row.total_duration_hours).toBe(8)
+    expect(row.session_structure).toMatchObject({
+      sessions: SEEDED_SESSIONS,
+      description: '2h + 3h + 3h',
+    })
+  }
+
+  it('is_active-only soft-delete style update does not rewrite sessions[]', async () => {
+    // API contract still requires name (pre-existing); soft-delete callers that omit name
+    // fail earlier. Partial is_active + name must not synthesize defaults over [2,3,3].
+    const result = await save({
+      categoryId: 'cat-own',
+      name: 'VKU Flex',
+      is_active: false,
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.data.is_active).toBe(false)
+    expectTemplateUnchanged(result.data)
+    expect(db.writes).toHaveLength(1)
+    expect(db.writes[0].payload.session_structure).toBeUndefined()
+    expect(db.writes[0].payload.session_count).toBeUndefined()
+    expect(db.writes[0].payload.hours_per_session).toBeUndefined()
+    expect(db.writes[0].payload.total_duration_hours).toBeUndefined()
+    expectTemplateUnchanged(db.tables.course_categories[0])
+  })
+
+  it('name-only rename preserves session_structure.sessions exactly', async () => {
+    const result = await save({
+      categoryId: 'cat-own',
+      name: 'Renamed category',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.data.name).toBe('Renamed category')
+    expectTemplateUnchanged(result.data)
+    expect(db.writes[0].payload.session_structure).toBeUndefined()
+    expectTemplateUnchanged(db.tables.course_categories[0])
+  })
+
+  it('invoice_timing_mode-only update preserves the unequal template', async () => {
+    const result = await save({
+      categoryId: 'cat-own',
+      name: 'VKU Flex',
+      invoice_timing_mode: 'immediate',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.data.invoice_timing_mode).toBe('immediate')
+    expectTemplateUnchanged(result.data)
+    expect(db.writes[0].payload.session_structure).toBeUndefined()
+    expect(db.writes[0].payload.session_count).toBeUndefined()
+    expectTemplateUnchanged(db.tables.course_categories[0])
+  })
+
+  it('explicit full-template update persists the new template', async () => {
+    const result = await save({
+      categoryId: 'cat-own',
+      name: 'VKU Flex',
+      hours_per_session: 4,
+      session_structure: {
+        sessions: [{ duration_hours: 4 }, { duration_hours: 4 }],
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.data.session_count).toBe(2)
+    expect(result.data.total_duration_hours).toBe(8)
+    expect(result.data.hours_per_session).toBe(4)
+    expect(result.data.session_structure).toMatchObject({
+      sessions: [{ duration_hours: 4 }, { duration_hours: 4 }],
+      description: '4h + 4h',
+    })
+    expect(db.writes[0].payload.session_structure).toMatchObject({
+      sessions: [{ duration_hours: 4 }, { duration_hours: 4 }],
+    })
+  })
+
+  it('explicit empty sessions[] synthesizes from count × hours (legacy API semantics)', async () => {
+    // Omitting sessions is different from session_structure.sessions: [] — the latter is
+    // explicit template input and falls back to legacy uniform synthesis, not a wipe.
+    const result = await save({
+      categoryId: 'cat-own',
+      name: 'VKU Flex',
+      session_count: 2,
+      hours_per_session: 4,
+      session_structure: { flexible: true, sessions: [] },
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.data.session_count).toBe(2)
+    expect(result.data.total_duration_hours).toBe(8)
+    expect(result.data.session_structure).toMatchObject({
+      sessions: [{ duration_hours: 4 }, { duration_hours: 4 }],
+    })
+  })
+
+  it('create without template input still synthesizes the default 1 × 8h template', async () => {
+    const result = await save({
+      name: 'Brand new category',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.data.session_count).toBe(1)
+    expect(result.data.hours_per_session).toBe(8)
+    expect(result.data.total_duration_hours).toBe(8)
+    expect(result.data.session_structure).toMatchObject({
+      sessions: [{ duration_hours: 8 }],
+    })
+    expect(db.writes.some((w) => w.op === 'insert')).toBe(true)
+  })
+
+  it('rejects invalid template seed on explicit template update without writing', async () => {
+    await expect(
+      save({
+        categoryId: 'cat-own',
+        name: 'VKU Flex',
+        hours_per_session: 99,
+        session_structure: {
+          sessions: [{ duration_hours: 2 }, { duration_hours: 3 }, { duration_hours: 3 }],
+        },
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 })
+
+    expect(db.writes).toEqual([])
+    expectTemplateUnchanged(db.tables.course_categories[0])
+  })
+})
+
 describe('room booking unequal template [2h,3h,3h]', () => {
   type Filter =
     | { type: 'eq' | 'neq' | 'is' | 'lt' | 'gt'; args: [string, unknown] }

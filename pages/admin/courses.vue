@@ -4600,13 +4600,17 @@ const applyCategoryTemplateInitializer = () => {
     )
     if (!ok) return
   }
-  const uniform = buildUniformCategorySessionTemplate(count, hours)
-  categoryTemplateSessions.value = uniform.session_structure.sessions.map((s) => ({
-    duration_hours: s.duration_hours,
-  }))
-  categoryForm.value.session_count = uniform.session_count
-  categoryForm.value.total_duration_hours = uniform.total_duration_hours
-  categoryForm.value.hours_per_session = uniform.hours_per_session
+  try {
+    const uniform = buildUniformCategorySessionTemplate(count, hours)
+    categoryTemplateSessions.value = uniform.session_structure.sessions.map((s) => ({
+      duration_hours: s.duration_hours,
+    }))
+    categoryForm.value.session_count = uniform.session_count
+    categoryForm.value.total_duration_hours = uniform.total_duration_hours
+    categoryForm.value.hours_per_session = uniform.hours_per_session
+  } catch (err: any) {
+    error.value = err?.message || 'Ungültige Terminstruktur'
+  }
 }
 
 const addCategoryTemplateSession = () => {
@@ -5908,12 +5912,18 @@ const createExternalInstructor = async () => {
 const generateSessionsFromCategory = () => {
   if (!selectedCategoryInfo.value) return
 
-  const template = normalizeCategorySessionTemplate({
-    session_structure: selectedCategoryInfo.value.session_structure,
-    session_count: selectedCategoryInfo.value.session_count,
-    hours_per_session: selectedCategoryInfo.value.hours_per_session,
-    total_duration_hours: selectedCategoryInfo.value.total_duration_hours,
-  }).session_structure.sessions
+  let template: CategorySessionTemplateEntry[]
+  try {
+    template = normalizeCategorySessionTemplate({
+      session_structure: selectedCategoryInfo.value.session_structure,
+      session_count: selectedCategoryInfo.value.session_count,
+      hours_per_session: selectedCategoryInfo.value.hours_per_session,
+      total_duration_hours: selectedCategoryInfo.value.total_duration_hours,
+    }).session_structure.sessions
+  } catch (err: any) {
+    error.value = err?.message || 'Ungültige Kursart-Terminstruktur'
+    return
+  }
 
   courseSessions.value = []
 
@@ -6139,6 +6149,19 @@ const getInstructorName = (course: any) => {
 
 // Category Management Functions
 const editCategoryItem = (category: any) => {
+  let normalized
+  try {
+    normalized = normalizeCategorySessionTemplate({
+      session_structure: category.session_structure,
+      session_count: category.session_count,
+      hours_per_session: category.hours_per_session,
+      total_duration_hours: category.total_duration_hours,
+    })
+  } catch (err: any) {
+    error.value = err?.message || 'Ungültige Kursart-Terminstruktur'
+    return
+  }
+
   editingCategory.value = category
   categoryForm.value = {
     code: category.code,
@@ -6156,9 +6179,9 @@ const editCategoryItem = (category: any) => {
     icon: category.icon,
     sort_order: category.sort_order,
     // Duration fields (initializer / derived — template list is SoT in UI)
-    total_duration_hours: category.total_duration_hours || 8.0,
-    session_count: category.session_count || 1,
-    hours_per_session: category.hours_per_session || 8.0,
+    total_duration_hours: normalized.total_duration_hours,
+    session_count: normalized.session_count,
+    hours_per_session: normalized.hours_per_session,
     // Partial enrollment
     allow_partial_enrollment: category.allow_partial_enrollment || false,
     partial_start_position: category.partial_start_position || 3,
@@ -6171,18 +6194,9 @@ const editCategoryItem = (category: any) => {
     // Email
     email_important_notice: category.email_important_notice || '',
   }
-  const normalized = normalizeCategorySessionTemplate({
-    session_structure: category.session_structure,
-    session_count: category.session_count,
-    hours_per_session: category.hours_per_session,
-    total_duration_hours: category.total_duration_hours,
-  })
   categoryTemplateSessions.value = normalized.session_structure.sessions.map((s) => ({
     duration_hours: s.duration_hours,
   }))
-  categoryForm.value.session_count = normalized.session_count
-  categoryForm.value.total_duration_hours = normalized.total_duration_hours
-  categoryForm.value.hours_per_session = normalized.hours_per_session
   categoryInvoiceTimingWritable.value = category.invoice_timing_mode == null
     || category.invoice_timing_mode === 'inherit'
     || category.invoice_timing_mode === 'off'
