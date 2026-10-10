@@ -503,16 +503,30 @@ export default defineEventHandler(async (event) => {
             if (!foundError && foundPayment) {
               payments = [foundPayment]
               
-              // Update wallee_transaction_id if not set
+              // Attach wallee_transaction_id only when null (tenant-bound paymentId from merchantRef).
+              // Also mark checkout claim created — never overwrite a different existing id.
               if (!foundPayment.wallee_transaction_id) {
-                await supabase
+                const { error: attachError } = await supabase
                   .from('payments')
-                  .update({ 
+                  .update({
                     wallee_transaction_id: transactionId,
+                    checkout_status: 'created',
+                    checkout_merchant_reference: `payment-${paymentId}`,
                     updated_at: new Date().toISOString()
                   })
                   .eq('id', paymentId)
-                logger.debug('✅ Updated payment with wallee_transaction_id')
+                  .is('wallee_transaction_id', null)
+                if (attachError) {
+                  logger.warn('⚠️ Webhook could not attach wallee_transaction_id:', attachError.message)
+                } else {
+                  logger.debug('✅ Updated payment with wallee_transaction_id')
+                }
+              } else if (String(foundPayment.wallee_transaction_id) !== String(transactionId)) {
+                logger.error('🚨 Webhook transaction id differs from payment id — not overwriting', {
+                  paymentId,
+                  existing: foundPayment.wallee_transaction_id,
+                  webhook: transactionId,
+                })
               }
             }
           }

@@ -26,6 +26,11 @@ import {
   cancelStalePendingWalleePaymentIds,
   partitionStalePendingWalleePayments,
 } from '~/server/utils/wallee-identity-block'
+import {
+  CHECKOUT_STALE_AFTER_MS,
+  CHECKOUT_STATUS,
+  filterPaymentsEligibleForAbandonment,
+} from '~/server/utils/wallee-checkout-claim'
 
 const STATUS_MAPPING: Record<string, string> = {
   'PENDING': 'pending',
@@ -172,6 +177,69 @@ export default defineEventHandler(async (event) => {
     let recovered = 0
     let failed = 0
     let errors: any[] = []
+
+    // ============ PHASE 0: Reconcile unknown-outcome checkout claims ============
+    // SAFETY > LIVENESS: never TransactionService.create for unknown prior outcomes.
+    // Include stale `creating` (claimed older than CHECKOUT_STALE_AFTER_MS) so a
+    // process death after external create cannot leave a row that Phase 4 abandons.
+    // recoverPaymentCheckout → claim_payment_checkout promotes stale creating →
+    // recovery_pending, then search/attach only (no Wallee create).
+    try {
+      const staleBefore = new Date(Date.now() - CHECKOUT_STALE_AFTER_MS).toISOString()
+
+      const [{ data: recoveryPendingRows }, { data: staleCreatingRows }] = await Promise.all([
+        supabase
+          .from('payments')
+          .select('id, tenant_id, checkout_status')
+          .eq('checkout_status', CHECKOUT_STATUS.recovery_pending)
+          .is('wallee_transaction_id', null)
+          .limit(50),
+        supabase
+          .from('payments')
+          .select('id, tenant_id, checkout_status')
+          .eq('checkout_status', CHECKOUT_STATUS.creating)
+          .is('wallee_transaction_id', null)
+          .lt('checkout_claimed_at', staleBefore)
+          .limit(50),
+      ])
+
+      const seen = new Set<string>()
+      const recoveryClaims = [...(recoveryPendingRows || []), ...(staleCreatingRows || [])]
+        .filter((row) => {
+          if (!row?.id || seen.has(row.id)) return false
+          seen.add(row.id)
+          return true
+        })
+
+      const { recoverPaymentCheckout } = await import('~/server/utils/wallee-checkout-claim')
+      for (const row of recoveryClaims) {
+        if (!row.tenant_id) continue
+        try {
+          const result = await recoverPaymentCheckout({
+            paymentId: row.id,
+            tenantId: row.tenant_id,
+          })
+          if (result?.transactionId) {
+            recovered++
+            logger.info('✅ Checkout claim recovered', {
+              paymentId: row.id,
+              transactionId: result.transactionId,
+              priorStatus: row.checkout_status,
+            })
+          } else {
+            logger.info('⏳ Checkout claim still unresolved after reconcile (kept recoverable)', {
+              paymentId: row.id,
+              priorStatus: row.checkout_status,
+            })
+          }
+        } catch (claimErr: any) {
+          failed++
+          errors.push({ paymentId: row.id, phase: 'checkout_claim_recovery', error: claimErr?.message })
+        }
+      }
+    } catch (claimPhaseErr: any) {
+      logger.warn('⚠️ Checkout claim recovery phase failed:', claimPhaseErr?.message)
+    }
 
     // ============ PHASE 1: Recover stuck 'pending' payments ============
     // Find payments that are:
@@ -742,17 +810,22 @@ export default defineEventHandler(async (event) => {
     try {
       const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
 
-      const { data: abandonedPayments, error: abandonedError } = await supabase
+      // Never abandon unknown-outcome claim states (creating / recovery_pending).
+      // A Wallee create may have succeeded externally while local persist died.
+      const { data: abandonedCandidates, error: abandonedError } = await supabase
         .from('payments')
-        .select('id, metadata')
+        .select('id, metadata, checkout_status')
         .eq('payment_status', 'pending')
         .eq('payment_method', 'wallee')
         .is('user_id', null)
+        .not('checkout_status', 'in', `(${CHECKOUT_STATUS.creating},${CHECKOUT_STATUS.recovery_pending})`)
         .lt('created_at', threeHoursAgo)
 
-      logger.info(`🗑️ Phase 4: found ${abandonedPayments?.length ?? 0} abandoned checkout(s) (no user_id after 3h)`)
+      const abandonedPayments = filterPaymentsEligibleForAbandonment(abandonedCandidates || [])
 
-      if (!abandonedError && abandonedPayments && abandonedPayments.length > 0) {
+      logger.info(`🗑️ Phase 4: found ${abandonedPayments.length} abandoned checkout(s) (no user_id after 3h)`)
+
+      if (!abandonedError && abandonedPayments.length > 0) {
         const {
           identityBlocked,
           genuineFailure,

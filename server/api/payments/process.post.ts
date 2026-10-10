@@ -730,161 +730,61 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       }
     ]
 
-    // Build merchant reference with payment ID prefix (CRITICAL for webhook fallback!)
-    let merchantReference: string
-    if (body.orderId) {
-      merchantReference = body.orderId
-    } else {
-      const baseMerchantRef = buildMerchantReference({
-        staffName: `${userData.first_name || ''}-${userData.last_name || ''}`.trim() || undefined,
-        startTime: payment.appointments?.start_time,
-        durationMinutes: payment.appointments?.duration_minutes,
-        appointmentId: payment.appointments?.id
+    const { livePaymentCheckoutDeps, runPaymentCheckoutCreate } = await import('~/server/utils/wallee-checkout-claim')
+    const checkout = await runPaymentCheckoutCreate(
+      { paymentId: payment.id, tenantId },
+      livePaymentCheckoutDeps(async ({ merchantReference }) => {
+        const transactionCreate: Wallee.model.TransactionCreate = {
+          lineItems: lineItems,
+          spaceViewId: null,
+          currency: 'CHF',
+          autoConfirmationEnabled: true,
+          chargeRetryEnabled: false,
+          customersEmailAddress: userData.email,
+          customerId: `dt-${tenantId}-${userData.id}`,
+          shippingAddress: null,
+          billingAddress: null,
+          deviceSessionIdentifier: null,
+          merchantReference,
+          successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
+          failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`
+        }
+        const createdTransaction = await transactionService.create(spaceId, transactionCreate)
+        const transaction = createdTransaction?.body || createdTransaction
+        const transactionId = transaction?.id
+        if (!transactionId) {
+          throw new Error('Failed to create Wallee transaction. No ID in response.')
+        }
+        return {
+          id: String(transactionId),
+          paymentPageUrl: transaction?.paymentPageUrl || transaction?.paymentPageEndpoint || null,
+          spaceId,
+        }
+      }, {
+        resolveUrl: async (transactionId) => {
+          try {
+            const paymentService: Wallee.api.TransactionPaymentPageService = new Wallee.api.TransactionPaymentPageService(config)
+            const urlResponse = await paymentService.paymentPageUrl(spaceId, Number(transactionId))
+            const paymentPageUrl = urlResponse?.body || urlResponse
+            return typeof paymentPageUrl === 'string' && paymentPageUrl ? paymentPageUrl : null
+          } catch {
+            return null
+          }
+        },
+        loadAppointmentStatus: async (appointmentId, apptTenantId) => {
+          const { data } = await supabaseAdmin
+            .from('appointments')
+            .select('status')
+            .eq('id', appointmentId)
+            .eq('tenant_id', apptTenantId)
+            .maybeSingle()
+          return data?.status || null
+        },
       })
-      merchantReference = `payment-${payment.id} | ${baseMerchantRef}`
-      if (merchantReference.length > 100) {
-        merchantReference = merchantReference.substring(0, 97) + '...'
-      }
-    }
+    )
 
-    logger.debug('📋 Generated merchant reference:', merchantReference)
-
-    // Create transaction (let Wallee show ALL available payment methods)
-    const transactionCreate: Wallee.model.TransactionCreate = {
-      lineItems: lineItems,
-      spaceViewId: null,
-      currency: 'CHF',
-      autoConfirmationEnabled: true,
-      chargeRetryEnabled: false,
-      customersEmailAddress: userData.email,
-      customerId: `dt-${tenantId}-${userData.id}`,
-      shippingAddress: null,
-      billingAddress: null,
-      deviceSessionIdentifier: null,
-      merchantReference: merchantReference,
-      // ✅ Don't set tokenizationMode - let Wallee decide per payment method
-      // Wallee honors payment method configuration (TWINT: no token, Cards: auto token)
-      successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
-      failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`
-    }
-
-    logger.info('🔧 TokenizationMode value:', transactionCreate.tokenizationMode)
-    const createdTransaction = await transactionService.create(spaceId, transactionCreate)
-
-    // Extract the actual transaction from the SDK response wrapper
-    // The SDK returns { response, body } where body is the Transaction object
-    const transaction = createdTransaction?.body || createdTransaction
-    const transactionId = transaction?.id
-
-    logger.info('✅ WALLEE TRANSACTION CREATED:', {
-      paymentId: payment.id,
-      transactionId: transactionId,
-      state: transaction?.state,
-      merchantReference: transaction?.merchantReference
-    })
-
-    logger.debug('🔍 Wallee response - extracted transaction:', {
-      transactionId: transactionId,
-      state: transaction?.state,
-      paymentPageUrl: transaction?.paymentPageUrl,
-      paymentPageEndpoint: transaction?.paymentPageEndpoint,
-      allKeys: transaction ? Object.keys(transaction).slice(0, 20) : 'null'
-    })
-
-    if (!transactionId) {
-      logger.error('❌ Failed to create Wallee transaction - no transaction ID returned', {
-        transactionId,
-        hasBody: !!createdTransaction?.body
-      })
-      throw new Error(`Failed to create Wallee transaction. No ID in response.`)
-    }
-
-    logger.debug('✅ Wallee transaction created:', {
-      transactionId: transactionId,
-      state: transaction?.state
-    })
-
-    // ============ LAYER 10: GET PAYMENT URL & UPDATE PAYMENT ============
-    // Prefer the URL already embedded in the create-transaction response — avoids a
-    // second round-trip to the Wallee API (saves ~2-3 seconds).
-    let paymentPageUrl: string | undefined =
-      (transaction?.paymentPageUrl as string | undefined) ||
-      (transaction?.paymentPageEndpoint as string | undefined)
-
-    if (paymentPageUrl) {
-      logger.debug('✅ Payment page URL from transaction response (no extra API call):', paymentPageUrl.substring(0, 100) + '...')
-    } else {
-      // Fallback: ask the dedicated service — only if the create response had no URL
-      try {
-        const paymentService: Wallee.api.TransactionPaymentPageService = new Wallee.api.TransactionPaymentPageService(config)
-        const urlResponse = await paymentService.paymentPageUrl(spaceId, transactionId)
-        paymentPageUrl = urlResponse?.body || urlResponse
-        logger.debug('✅ Payment page URL from service (fallback):', paymentPageUrl?.substring(0, 100) + '...')
-      } catch (urlError: any) {
-        logger.warn('⚠️ Could not get payment page URL from service, constructing manually:', urlError.message)
-        paymentPageUrl = `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceId}&transactionId=${transactionId}`
-      }
-    }
-
-    if (!paymentPageUrl || typeof paymentPageUrl !== 'string') {
-      throw new Error('Failed to generate Wallee payment URL')
-    }
-
-    // Update payment with Wallee transaction ID - CRITICAL: Must succeed for webhook to work!
-    const now = new Date().toISOString()
-    let updateSuccess = false
-    let lastUpdateError: any = null
-    
-    // ✅ RETRY LOGIC: Try 3 times to save wallee_transaction_id
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const { error: updateError } = await supabaseAdmin
-        .from('payments')
-        .update({
-          wallee_transaction_id: transactionId.toString(),
-          wallee_space_id: spaceId.toString(),
-          updated_at: now
-        })
-        .eq('id', payment.id)
-
-      if (!updateError) {
-        updateSuccess = true
-        logger.debug(`✅ wallee_transaction_id saved on attempt ${attempt}`)
-        break
-      }
-      
-      lastUpdateError = updateError
-      logger.warn(`⚠️ Attempt ${attempt}/3 to save wallee_transaction_id failed:`, updateError.message)
-      
-      if (attempt < 3) {
-        // Wait before retry (100ms, 200ms)
-        await new Promise(resolve => setTimeout(resolve, attempt * 100))
-      }
-    }
-
-    if (!updateSuccess) {
-      // CRITICAL: Log this prominently so we can investigate
-      logger.error('🚨 CRITICAL: Failed to save wallee_transaction_id after 3 attempts!', {
-        paymentId: payment.id,
-        transactionId: transactionId.toString(),
-        error: lastUpdateError?.message
-      })
-      // Continue anyway - customer should be able to pay, webhook will use fallback
-    }
-
-    // Save new transaction ID to history table for webhook reliability
-    try {
-      const { error: historyError } = await supabaseAdmin.from('payment_wallee_transactions').insert({
-        payment_id: payment.id,
-        wallee_transaction_id: transactionId.toString(),
-        wallee_space_id: spaceId,
-        merchant_reference: merchantReference
-      })
-      if (historyError) {
-        logger.warn('⚠️ Could not save transaction to history:', historyError.message)
-      }
-    } catch (historyErr: any) {
-      logger.warn('⚠️ Transaction history save failed:', historyErr.message)
-    }
+    const transactionId = checkout.transactionId
+    const paymentPageUrl = checkout.paymentUrl
 
     // ============ AUDIT LOGGING & RESPONSE ============
     auditDetails.transaction_id = transactionId

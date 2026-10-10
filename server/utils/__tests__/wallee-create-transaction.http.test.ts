@@ -77,8 +77,64 @@ function paymentSupabase(payment: Record<string, unknown> | null) {
       chain.eq = () => chain
       chain.update = () => chain
       chain.delete = () => chain
+      chain.insert = () => chain
+      chain.is = () => chain
       chain.maybeSingle = async () => ({ data: payment, error: payment ? null : { message: 'missing' } })
+      chain.then = (resolve: (value: unknown) => unknown) =>
+        Promise.resolve({ data: [], error: null }).then(resolve)
       return chain
+    },
+    async rpc(name: string, args: Record<string, unknown> = {}) {
+      if (name === 'claim_payment_checkout') {
+        if (!payment || payment.tenant_id !== args.p_tenant_id || payment.id !== args.p_payment_id) {
+          return { data: { outcome: 'not_found' }, error: null }
+        }
+        if (payment.wallee_transaction_id) {
+          return {
+            data: {
+              outcome: 'reuse',
+              allow_create: false,
+              payment_id: payment.id,
+              tenant_id: payment.tenant_id,
+              payment_status: payment.payment_status,
+              checkout_status: 'created',
+              wallee_transaction_id: payment.wallee_transaction_id,
+              wallee_space_id: payment.wallee_space_id,
+              appointment_id: payment.appointment_id ?? null,
+            },
+            error: null,
+          }
+        }
+        return {
+          data: {
+            outcome: 'allow_create',
+            allow_create: true,
+            payment_id: payment.id,
+            tenant_id: payment.tenant_id,
+            payment_status: payment.payment_status,
+            checkout_status: 'creating',
+            checkout_claim_token: '550e8400-e29b-41d4-a716-446655440000',
+            checkout_merchant_reference: `payment-${payment.id}`,
+            wallee_transaction_id: null,
+            appointment_id: payment.appointment_id ?? null,
+          },
+          error: null,
+        }
+      }
+      if (name === 'persist_payment_checkout') {
+        return {
+          data: {
+            outcome: 'created',
+            wallee_transaction_id: args.p_wallee_transaction_id,
+            checkout_status: 'created',
+          },
+          error: null,
+        }
+      }
+      if (name === 'mark_payment_checkout_recovery' || name === 'release_payment_checkout_claim') {
+        return { data: { outcome: 'ok' }, error: null }
+      }
+      return { data: null, error: { message: `unknown rpc ${name}` } }
     },
   }
 }
