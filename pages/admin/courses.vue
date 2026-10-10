@@ -4589,18 +4589,21 @@ const syncCategoryFormDerivedFromTemplate = () => {
 const applyCategoryTemplateInitializer = () => {
   const count = Number(categoryForm.value.session_count) || 1
   const hours = Number(categoryForm.value.hours_per_session) || 8
-  const customized = isCustomizedRelativeToInitializer(
-    categoryTemplateSessions.value,
-    count,
-    hours,
-  )
-  if (customized) {
-    const ok = confirm(
-      `Die aktuelle Terminstruktur wird durch ${count} × ${hours}h ersetzt. Fortfahren?`,
-    )
-    if (!ok) return
-  }
+  // isCustomizedRelativeToInitializer → buildUniformCategorySessionTemplate can throw
+  // on invalid typed seeds (e.g. 2.25 / 99). Keep that check inside try/catch so the
+  // banner path runs and form/session state is not mutated.
   try {
+    const customized = isCustomizedRelativeToInitializer(
+      categoryTemplateSessions.value,
+      count,
+      hours,
+    )
+    if (customized) {
+      const ok = confirm(
+        `Die aktuelle Terminstruktur wird durch ${count} × ${hours}h ersetzt. Fortfahren?`,
+      )
+      if (!ok) return
+    }
     const uniform = buildUniformCategorySessionTemplate(count, hours)
     categoryTemplateSessions.value = uniform.session_structure.sessions.map((s) => ({
       duration_hours: s.duration_hours,

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   buildUniformCategorySessionTemplate,
@@ -234,6 +236,66 @@ describe('UI template ops catch invalid seeds without mutating state (Bugbot #38
     return { error, mutated }
   }
 
+  /**
+   * Faithful control-flow mirror of pages/admin/courses.vue
+   * applyCategoryTemplateInitializer — customized check MUST stay inside try/catch.
+   */
+  function applyCategoryTemplateInitializerMirror(
+    state: {
+      sessions: { duration_hours: number }[]
+      session_count: number
+      hours_per_session: number
+      total_duration_hours?: number
+    },
+    opts?: { confirmResult?: boolean },
+  ): { error: string | null } {
+    let error: string | null = null
+    const count = Number(state.session_count) || 1
+    const hours = Number(state.hours_per_session) || 8
+    try {
+      const customized = isCustomizedRelativeToInitializer(state.sessions, count, hours)
+      if (customized) {
+        const ok = opts?.confirmResult !== false
+        if (!ok) return { error: null }
+      }
+      const uniform = buildUniformCategorySessionTemplate(count, hours)
+      state.sessions = uniform.session_structure.sessions.map((s) => ({
+        duration_hours: s.duration_hours,
+      }))
+      state.session_count = uniform.session_count
+      state.total_duration_hours = uniform.total_duration_hours
+      state.hours_per_session = uniform.hours_per_session
+    } catch (err: unknown) {
+      error = err instanceof Error ? err.message : 'Ungültige Terminstruktur'
+    }
+    return { error }
+  }
+
+  /** Pre-fix order that Bugbot discussion_r4236018608 caught. */
+  function applyCategoryTemplateInitializerBrokenPreTry(
+    state: {
+      sessions: { duration_hours: number }[]
+      session_count: number
+      hours_per_session: number
+    },
+  ) {
+    const count = Number(state.session_count) || 1
+    const hours = Number(state.hours_per_session) || 8
+    // Throws here for 2.25 / 99 — outside any catch.
+    const customized = isCustomizedRelativeToInitializer(state.sessions, count, hours)
+    if (customized) {
+      /* confirm omitted in repro */
+    }
+    try {
+      const uniform = buildUniformCategorySessionTemplate(count, hours)
+      state.sessions = uniform.session_structure.sessions.map((s) => ({
+        duration_hours: s.duration_hours,
+      }))
+    } catch {
+      // unreachable for invalid seeds — throw already escaped above
+    }
+  }
+
   it.each([2.25, 99] as const)(
     'invalid seed %s produces a validation error and does not mutate UI state',
     (hours) => {
@@ -260,6 +322,56 @@ describe('UI template ops catch invalid seeds without mutating state (Bugbot #38
       expect(state).toEqual(before)
     },
   )
+
+  it.each([2.25, 99] as const)(
+    'pre-try failure repro: isCustomizedRelativeToInitializer throws uncaught for seed %s',
+    (hours) => {
+      const state = {
+        sessions: [{ duration_hours: 2 }, { duration_hours: 3 }, { duration_hours: 3 }],
+        session_count: 3,
+        hours_per_session: hours,
+      }
+      expect(() => applyCategoryTemplateInitializerBrokenPreTry(state)).toThrow(
+        /Dauer pro Termin \(Initial\)|0\.5h-Schritten|maximal 12/,
+      )
+    },
+  )
+
+  it.each([2.25, 99] as const)(
+    'applyCategoryTemplateInitializer mirror: invalid seed %s sets banner and does not mutate',
+    (hours) => {
+      const state = {
+        sessions: [{ duration_hours: 2 }, { duration_hours: 3 }, { duration_hours: 3 }],
+        session_count: 3,
+        hours_per_session: hours,
+        total_duration_hours: 8,
+      }
+      const before = structuredClone(state)
+
+      expect(() => {
+        const result = applyCategoryTemplateInitializerMirror(state)
+        expect(result.error).toMatch(/Dauer pro Termin \(Initial\)|0\.5h-Schritten|maximal 12/)
+      }).not.toThrow()
+
+      expect(state).toEqual(before)
+    },
+  )
+
+  it('courses.vue keeps isCustomizedRelativeToInitializer inside applyCategoryTemplateInitializer try', () => {
+    const src = readFileSync(resolve(process.cwd(), 'pages/admin/courses.vue'), 'utf8')
+    const fnStart = src.indexOf('const applyCategoryTemplateInitializer = () => {')
+    expect(fnStart).toBeGreaterThan(-1)
+    const fnEnd = src.indexOf('\nconst addCategoryTemplateSession', fnStart)
+    expect(fnEnd).toBeGreaterThan(fnStart)
+    const body = src.slice(fnStart, fnEnd)
+    const tryAt = body.indexOf('try {')
+    const customizedAt = body.indexOf('isCustomizedRelativeToInitializer(')
+    const catchAt = body.indexOf('} catch')
+    expect(tryAt).toBeGreaterThan(-1)
+    expect(customizedAt).toBeGreaterThan(tryAt)
+    expect(catchAt).toBeGreaterThan(customizedAt)
+    expect(body).toContain("error.value = err?.message || 'Ungültige Terminstruktur'")
+  })
 
   it('edit-load aborts before opening form state when stored seed is invalid', () => {
     let editingOpened = false
