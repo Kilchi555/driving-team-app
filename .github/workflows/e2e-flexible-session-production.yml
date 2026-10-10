@@ -1,0 +1,59 @@
+# Manually triggered Production UI E2E for flexible Kursart session templates.
+# Does NOT run on pull_request or push. Do not use for general CI.
+#
+# Target is fixed to https://app.simy.ch / e2e-isolation (encoded in the spec).
+# Uses existing repository secret E2E_ISOLATION_PASSWORD only.
+name: E2E flexible session (Production)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-flexible-session-production
+  cancel-in-progress: false
+
+jobs:
+  flexible-session:
+    name: Flexible session category UI
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list \
+            /etc/apt/sources.list.d/microsoft-prod.list \
+            /etc/apt/sources.list.d/msprod.list || true
+          npx playwright install --with-deps chromium
+
+      - name: Playwright flexible-session category
+        env:
+          E2E_ISOLATION_PASSWORD: ${{ secrets.E2E_ISOLATION_PASSWORD }}
+          E2E_BASE_URL: https://app.simy.ch
+        run: |
+          if [ -z "$E2E_ISOLATION_PASSWORD" ]; then
+            echo "E2E_ISOLATION_PASSWORD is not set"
+            exit 1
+          fi
+          if [ "$E2E_BASE_URL" != "https://app.simy.ch" ]; then
+            echo "E2E_BASE_URL must be https://app.simy.ch"
+            exit 1
+          fi
+          # retries=0: each attempt creates Production data; isolation is per unique name,
+          # but retries would leave orphans if cleanup then fails on a later attempt.
+          npx playwright test e2e/flexible-session-category.spec.ts --retries=0
