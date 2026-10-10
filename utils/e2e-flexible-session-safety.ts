@@ -83,9 +83,40 @@ export function interpretCourseCategoriesListResponse(input: {
   return { status: 'ok', categories: categories as CategoryListItem[] }
 }
 
-/** Active rows only — matches UI `activeCategories` (soft-deleted excluded). */
+/**
+ * Active rows only — must match UI `activeCategories`
+ * (`categories.filter(cat => cat.is_active)` in useCourseCategories).
+ * Soft-deleted / falsy `is_active` are excluded.
+ */
+export function isActiveCategoryRow(category: CategoryListItem): boolean {
+  return Boolean(category.is_active)
+}
+
 export function activeCategoryRows(categories: CategoryListItem[]): CategoryListItem[] {
-  return categories.filter((c) => c.is_active !== false)
+  return categories.filter(isActiveCategoryRow)
+}
+
+/**
+ * After an API cleanup decision of `delete`, the UI must show exactly one
+ * exact-name match before issuing delete. Zero matches must never mean success.
+ */
+export function requireUiMatchForApiDeleteDecision(input: {
+  uiExactNameMatchCount: number
+  categoryName: string
+  categoryId: string
+}): void {
+  if (input.uiExactNameMatchCount === 0) {
+    throw new Error(
+      `CLEANUP_FAILED categoryName=${input.categoryName} categoryId=${input.categoryId}: `
+      + 'API cleanup decision required delete but UI matchCount=0; refusing silent cleanup success',
+    )
+  }
+  if (input.uiExactNameMatchCount !== 1) {
+    throw new Error(
+      `CLEANUP_FAILED categoryName=${input.categoryName} categoryId=${input.categoryId}: `
+      + `expected exactly one UI card for delete, found ${input.uiExactNameMatchCount}`,
+    )
+  }
 }
 
 /**

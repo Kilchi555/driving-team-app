@@ -1,14 +1,17 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
+  activeCategoryRows,
   decideCategoryCleanup,
   FLEXIBLE_SESSION_PRODUCTION_E2E_ENV,
   FLEXIBLE_SESSION_SPEC_BASENAME,
   FLEXIBLE_SESSION_SPEC_FILE,
   formatCombinedTestFailure,
   interpretCourseCategoriesListResponse,
+  isActiveCategoryRow,
   matchesCourseCategoriesListRequest,
   playwrightTestIgnoreForFlexibleSession,
+  requireUiMatchForApiDeleteDecision,
 } from '../e2e-flexible-session-safety'
 
 const readRepo = (relativeFromUtilsTests: string) =>
@@ -78,6 +81,7 @@ describe('dedicated Production flexible-session E2E workflow', () => {
     expect(spec).toContain('matchesCourseCategoriesListRequest')
     expect(spec).toContain('interpretCourseCategoriesListResponse')
     expect(spec).toContain('beginCategoryListFetch')
+    expect(spec).toContain('requireUiMatchForApiDeleteDecision')
     expect(spec).toContain('categoryId === identity.id')
     expect(spec).toContain('is_active === false')
     expect(spec).toContain('deleteBody?.data?.tenant_id')
@@ -91,6 +95,83 @@ describe('dedicated Production flexible-session E2E workflow', () => {
     expect(spec).not.toContain('E2E_DEMO_PASSWORD')
     expect(spec).not.toContain('updateUserById')
     expect(spec).not.toMatch(/ilike|startsWith\(['"]E2E/)
+    // Former fail-open: UI matchCount===0 must not return success after API delete decision.
+    expect(spec).not.toMatch(/if \(matchCount === 0\) \{\s*\/\/ List GET already succeeded[\s\S]*?return\s*\}/)
+  })
+})
+
+describe('isActiveCategoryRow / activeCategoryRows', () => {
+  it('matches UI truthy is_active filtering (not merely !== false)', () => {
+    expect(isActiveCategoryRow({ is_active: true })).toBe(true)
+    expect(isActiveCategoryRow({ is_active: false })).toBe(false)
+    expect(isActiveCategoryRow({ is_active: null })).toBe(false)
+    expect(isActiveCategoryRow({ is_active: undefined })).toBe(false)
+    expect(
+      activeCategoryRows([
+        { id: '1', name: 'a', is_active: true },
+        { id: '2', name: 'b', is_active: false },
+        { id: '3', name: 'c', is_active: null },
+        { id: '4', name: 'd' },
+      ]).map((c) => c.id),
+    ).toEqual(['1'])
+  })
+})
+
+describe('requireUiMatchForApiDeleteDecision', () => {
+  const id = '11111111-1111-4111-8111-111111111111'
+  const name = 'E2E-FlexSess-abc'
+
+  it('fails closed when API required delete but UI matchCount is 0', () => {
+    expect(() =>
+      requireUiMatchForApiDeleteDecision({
+        uiExactNameMatchCount: 0,
+        categoryName: name,
+        categoryId: id,
+      }),
+    ).toThrow(/CLEANUP_FAILED[\s\S]*matchCount=0[\s\S]*refusing silent cleanup success/)
+  })
+
+  it('fails closed on ambiguous UI match counts', () => {
+    expect(() =>
+      requireUiMatchForApiDeleteDecision({
+        uiExactNameMatchCount: 2,
+        categoryName: name,
+        categoryId: id,
+      }),
+    ).toThrow(/CLEANUP_FAILED[\s\S]*found 2/)
+  })
+
+  it('allows exactly one UI match to proceed toward delete', () => {
+    expect(() =>
+      requireUiMatchForApiDeleteDecision({
+        uiExactNameMatchCount: 1,
+        categoryName: name,
+        categoryId: id,
+      }),
+    ).not.toThrow()
+  })
+
+  it('preserves original failure alongside UI zero-match cleanup failure', () => {
+    let cleanupError: unknown
+    try {
+      requireUiMatchForApiDeleteDecision({
+        uiExactNameMatchCount: 0,
+        categoryName: name,
+        categoryId: id,
+      })
+    } catch (err) {
+      cleanupError = err
+    }
+    const combined = formatCombinedTestFailure({
+      originalError: new Error('bounds assertion failed'),
+      cleanupError,
+      categoryName: name,
+      categoryId: id,
+    })
+    expect(combined.message).toContain('ORIGINAL_FAILURE: bounds assertion failed')
+    expect(combined.message).toContain('CLEANUP_FAILURE')
+    expect(combined.message).toContain('matchCount=0')
+    expect(combined.message).toContain(`categoryId=${id}`)
   })
 })
 

@@ -5,6 +5,7 @@ import {
   formatCombinedTestFailure,
   interpretCourseCategoriesListResponse,
   matchesCourseCategoriesListRequest,
+  requireUiMatchForApiDeleteDecision,
   type CategoryFetchOutcome,
   type CategoryListLoadState,
 } from '../utils/e2e-flexible-session-safety'
@@ -206,13 +207,28 @@ async function runCleanupDecision(
 }
 
 function beginCategoryListFetch(page: Page): Promise<CategoryFetchOutcome> {
+  // Registered immediately before goto/reload so completed prior GETs are not
+  // reused. Residual risk: a rare in-flight GET that started on the previous
+  // document and finishes after arming could still match — Playwright cannot
+  // bind response↔navigation without app-level request IDs. Main-frame filter
+  // rejects iframe/worker noise; it does not prove navigation epoch.
   return page
     .waitForResponse(
-      (response) =>
-        matchesCourseCategoriesListRequest({
-          method: response.request().method(),
-          url: response.url(),
-        }),
+      (response) => {
+        if (
+          !matchesCourseCategoriesListRequest({
+            method: response.request().method(),
+            url: response.url(),
+          })
+        ) {
+          return false
+        }
+        try {
+          return response.frame() === page.mainFrame()
+        } catch {
+          return false
+        }
+      },
       { timeout: 30_000 },
     )
     .then(async (response: Response) => {
@@ -244,6 +260,7 @@ async function navigateCoursesCategoriesTab(
   categoryFetch: CategoryFetchOutcome
   listState: CategoryListLoadState
 }> {
+  // Arm waiter immediately before navigation for this lifecycle stage.
   const pendingFetch = beginCategoryListFetch(page)
   if (options.mode === 'reload') {
     await page.reload()
@@ -443,13 +460,13 @@ async function cleanupCreatedCategory(
 
   const heading = page.getByRole('heading', { name: identity.name, exact: true })
   const matchCount = await heading.count()
-  if (matchCount === 0) {
-    // List GET already succeeded and exact name absent — confirmed gone.
-    return
-  }
-  if (matchCount !== 1) {
-    throw new Error(`Expected exactly one card for ${identity.name}, found ${matchCount}`)
-  }
+  // API decision already required delete (exact active row present). A zero UI
+  // match must fail closed — never report successful cleanup or skip deletion.
+  requireUiMatchForApiDeleteDecision({
+    uiExactNameMatchCount: matchCount,
+    categoryName: identity.name,
+    categoryId: identity.id,
+  })
 
   const card = page.locator('div.group').filter({
     has: page.getByRole('heading', { name: identity.name, exact: true }),
