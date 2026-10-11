@@ -26,6 +26,7 @@ import { allowsCustomerAccountActivation } from '~/server/utils/customer-account
 import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
 import { assertSameTenant } from '~/server/utils/require-tenant-auth'
 import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
+import { buildCourseImportantNoticeListItems } from '~/server/utils/course-important-notice'
 
 type ConfirmationPaymentMethod = 'wallee' | 'cash' | 'admin' | 'invoice' | 'paid' | 'reserve'
 
@@ -313,42 +314,34 @@ export default defineEventHandler(async (event) => {
     const tenantSlug = tenant?.slug || ''
     const agbUrl = `https://app.simy.ch/reglemente/agb?tenant=${tenantSlug}`
 
-    // Build the list items for importantNotice
-    let importantListItems = ''
+    // Admin-configured notice first; otherwise category-code fallbacks
+    let importantListItems = buildCourseImportantNoticeListItems(
+      courseCategory?.email_important_notice,
+    )
 
-    if (courseCategory?.email_important_notice?.trim()) {
-      // Admin-configured notice: support both plain-text lines and legacy <li> HTML
-      const raw = courseCategory.email_important_notice.trim()
-      if (raw.includes('<li>')) {
-        importantListItems = raw
-      } else {
-        importantListItems = raw.split('\n')
-          .map((s: string) => s.trim())
-          .filter((s: string) => s)
-          .map((s: string) => `\n                <li>${s}</li>`)
-          .join('')
-      }
-    } else if (isVKU) {
-      importantListItems = `
+    if (!importantListItems) {
+      if (isVKU) {
+        importantListItems = `
                 <li>Gültiger Lern- und/oder Fahrausweis mitnehmen</li>
                 <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>`
-    } else if (isPGS) {
-      importantListItems = `
+      } else if (isPGS) {
+        importantListItems = `
                 <li>Eigenes betriebssicheres Fahrzeug ist Pflicht</li>
                 <li>Eigene Sicherheitsbekleidung inkl. Helm und Handschuhe mitnehmen</li>
                 <li>Selbständiges Fahren ist Voraussetzung für die Teilnahme</li>
                 <li>Bei unsicherem Fahren: Fahrstunden beim Fahrlehrer vor dem Grundkurs empfohlen</li>
                 <li>Gültiger Lern- und/oder Fahrausweis mitnehmen</li>`
-      if (isEinsiedeln && isCashPayment) {
-        importantListItems += `
+        if (isEinsiedeln && isCashPayment) {
+          importantListItems += `
                 <li><strong>Kursgeld in bar mitnehmen (CHF ${price})</strong></li>`
-      }
-      importantListItems += `
+        }
+        importantListItems += `
                 <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>`
-    } else {
-      importantListItems = `
+      } else {
+        importantListItems = `
                 <li>Gültiger Lern- und/oder Fahrausweis mitnehmen</li>
                 <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>`
+      }
     }
 
     const importantNotice = emailStatusBox({
