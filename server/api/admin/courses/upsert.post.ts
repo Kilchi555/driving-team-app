@@ -8,8 +8,15 @@ import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { zurichLocalToUtcIso } from '~/server/utils/zurich-time'
 import { httpErrorForCourseWrite } from '~/server/utils/course-write-error'
 import { normalizeCourseInvoiceTimingForSave } from '~/server/utils/course-invoice-timing'
-import { getTenantInvoicePaymentsEnabled } from '~/server/utils/tenant-default-payment-method'
-import { assertInvoicePaymentMethodAllowed } from '~/utils/category-default-payment-method'
+import {
+  getTenantDefaultPaymentMethod,
+  getTenantInvoicePaymentsEnabled,
+} from '~/server/utils/tenant-default-payment-method'
+import {
+  assertInvoicePaymentMethodAllowed,
+  parseCoursePaymentMethodInput,
+  resolveNewCoursePaymentMethod,
+} from '~/utils/category-default-payment-method'
 import {
   buildSessionPatch,
   reconcileCourseSessions,
@@ -181,6 +188,51 @@ export default defineEventHandler(async (event) => {
       }
     }
   }
+
+  // Persist a concrete payment_method on create when the client omits it:
+  // category default wins; NULL category default → tenant Standard-Zahlungsart.
+  // Updates never inherit from the category (existing course snapshots stay).
+  const isCreate = !courseId
+  let resolvedPaymentMethod: string | null
+  try {
+    resolvedPaymentMethod = parseCoursePaymentMethodInput(courseData.payment_method)
+  } catch (parseErr: any) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: parseErr?.message || 'Ungültige Zahlungsart.',
+    })
+  }
+
+  if (isCreate && resolvedPaymentMethod === null) {
+    let categoryDefault: string | null = null
+    const categoryId = courseData.course_category_id
+      ? String(courseData.course_category_id)
+      : ''
+    if (categoryId) {
+      const { data: categoryRow, error: categoryErr } = await supabase
+        .from('course_categories')
+        .select('id, default_payment_method')
+        .eq('id', categoryId)
+        .eq('tenant_id', profile.tenant_id)
+        .maybeSingle()
+      if (categoryErr) {
+        throw createError({ statusCode: 500, statusMessage: categoryErr.message })
+      }
+      if (!categoryRow) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Kurskategorie nicht gefunden oder gehört nicht zu diesem Unternehmen.',
+        })
+      }
+      categoryDefault = (categoryRow as any).default_payment_method ?? null
+    }
+    const tenantDefault = await getTenantDefaultPaymentMethod(supabase, profile.tenant_id)
+    resolvedPaymentMethod = resolveNewCoursePaymentMethod({
+      categoryDefaultPaymentMethod: categoryDefault as any,
+      tenantDefaultPaymentMethod: tenantDefault,
+    })
+  }
+  courseData.payment_method = resolvedPaymentMethod
 
   // Persist INVOICE only when the tenant invoice feature flag is enabled.
   // Do not silently rewrite to Wallee/cash on the admin write path.

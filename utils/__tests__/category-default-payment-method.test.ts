@@ -3,6 +3,7 @@ import {
   INVOICE_PAYMENT_DISABLED_MESSAGE,
   assertInvoicePaymentMethodAllowed,
   parseCategoryDefaultPaymentMethod,
+  parseCoursePaymentMethodInput,
   resolveNewCoursePaymentMethod,
   shouldApplyCategoryPaymentDefault,
 } from '~/utils/category-default-payment-method'
@@ -28,6 +29,52 @@ describe('parseCategoryDefaultPaymentMethod', () => {
   it('rejects invalid values', () => {
     expect(() => parseCategoryDefaultPaymentMethod('wallee')).toThrow(/Ungültige Standard-Zahlungsart/)
     expect(() => parseCategoryDefaultPaymentMethod('invoice')).toThrow(/Ungültige Standard-Zahlungsart/)
+  })
+})
+
+describe('parseCoursePaymentMethodInput', () => {
+  it('maps empty values to null and accepts course enums', () => {
+    expect(parseCoursePaymentMethodInput(null)).toBeNull()
+    expect(parseCoursePaymentMethodInput(undefined)).toBeNull()
+    expect(parseCoursePaymentMethodInput('')).toBeNull()
+    expect(parseCoursePaymentMethodInput('WALLEE')).toBe('WALLEE')
+    expect(parseCoursePaymentMethodInput('CASH_ON_SITE')).toBe('CASH_ON_SITE')
+    expect(parseCoursePaymentMethodInput('INVOICE')).toBe('INVOICE')
+  })
+
+  it('rejects invalid values', () => {
+    expect(() => parseCoursePaymentMethodInput('wallee')).toThrow(/Ungültige Zahlungsart/)
+    expect(() => parseCoursePaymentMethodInput('cash')).toThrow(/Ungültige Zahlungsart/)
+  })
+})
+
+describe('category → course → public booking payment method', () => {
+  it('resolves each category default into the persisted course method used by public booking', () => {
+    for (const method of ['WALLEE', 'CASH_ON_SITE', 'INVOICE'] as const) {
+      const persisted = resolveNewCoursePaymentMethod({
+        categoryDefaultPaymentMethod: method,
+        tenantDefaultPaymentMethod: 'wallee',
+      })
+      expect(persisted).toBe(method)
+      expect(getCoursePaymentMethod(
+        { payment_method: persisted, city: 'Zürich' },
+        true,
+        method === 'INVOICE' ? true : false,
+      )).toBe(method)
+    }
+  })
+
+  it('resolves null category default to the tenant default for public booking', () => {
+    const persisted = resolveNewCoursePaymentMethod({
+      categoryDefaultPaymentMethod: null,
+      tenantDefaultPaymentMethod: 'cash',
+    })
+    expect(persisted).toBe('CASH_ON_SITE')
+    expect(getCoursePaymentMethod(
+      { payment_method: persisted, city: 'Zürich' },
+      true,
+      true,
+    )).toBe('CASH_ON_SITE')
   })
 })
 
@@ -150,6 +197,15 @@ describe('category default payment method wiring', () => {
     const src = read('server/api/admin/courses/upsert.post.ts')
     expect(src).toContain('assertInvoicePaymentMethodAllowed')
     expect(src).toContain("courseData.payment_method === 'INVOICE'")
+  })
+
+  it('resolves category/tenant payment defaults server-side on course create only', () => {
+    const src = read('server/api/admin/courses/upsert.post.ts')
+    expect(src).toContain('parseCoursePaymentMethodInput')
+    expect(src).toContain('resolveNewCoursePaymentMethod')
+    expect(src).toContain('getTenantDefaultPaymentMethod')
+    expect(src).toContain('isCreate && resolvedPaymentMethod === null')
+    expect(src).toContain(".eq('tenant_id', profile.tenant_id)")
   })
 
   it('keeps invoice_timing_mode separate from Standard-Zahlungsart in the admin UI', () => {

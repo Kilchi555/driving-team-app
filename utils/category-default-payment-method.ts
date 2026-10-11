@@ -35,6 +35,22 @@ export function parseCategoryDefaultPaymentMethod(
 }
 
 /**
+ * Parse courses.payment_method on admin upsert.
+ * null / undefined / '' → NULL (resolve from category/tenant on create only).
+ */
+export function parseCoursePaymentMethodInput(
+  value: unknown,
+): CoursePaymentMethod | null {
+  if (value === null || value === undefined || value === '') return null
+  if (value === 'WALLEE' || value === 'CASH_ON_SITE' || value === 'INVOICE') {
+    return value
+  }
+  throw new Error(
+    'Ungültige Zahlungsart. Erlaubt sind Online-Zahlung, Barzahlung oder Rechnung.',
+  )
+}
+
+/**
  * Resolve the payment method for a newly created course.
  * Category non-null wins; NULL falls back to the existing tenant mapping.
  */

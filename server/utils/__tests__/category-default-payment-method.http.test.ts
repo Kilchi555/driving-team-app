@@ -123,6 +123,32 @@ vi.mock('~/server/utils/supabase-admin', () => ({
               },
             }
           },
+          select() {
+            const filters: Record<string, string> = {}
+            const api = {
+              eq(col: string, val: string) {
+                filters[col] = val
+                return api
+              },
+              maybeSingle: async () => {
+                const row = db.categories.find(
+                  (c) =>
+                    (!filters.id || c.id === filters.id)
+                    && (!filters.tenant_id || c.tenant_id === filters.tenant_id),
+                )
+                return { data: row || null, error: null }
+              },
+              single: async () => {
+                const row = db.categories.find(
+                  (c) =>
+                    (!filters.id || c.id === filters.id)
+                    && (!filters.tenant_id || c.tenant_id === filters.tenant_id),
+                )
+                return { data: row || null, error: row ? null : { code: 'PGRST116' } }
+              },
+            }
+            return api
+          },
         }
       }
 
@@ -335,6 +361,155 @@ describe('course upsert INVOICE gate', () => {
       statusCode: 400,
       statusMessage: INVOICE_PAYMENT_DISABLED_MESSAGE,
     })
+    expect(db.courses).toHaveLength(0)
+  })
+})
+
+describe('course upsert category → payment_method inheritance', () => {
+  beforeEach(() => {
+    db = createDb()
+    auth = {
+      id: 'user-a',
+      tenant_id: TENANT,
+      role: 'admin',
+      db_user_id: 'profile-a',
+    }
+    vi.resetModules()
+  })
+
+  async function seedCategory(defaultPaymentMethod: string | null) {
+    const row: CategoryRow = {
+      id: `cat-${db.categories.length + 1}`,
+      tenant_id: TENANT,
+      name: 'Cat',
+      code: `C${db.categories.length + 1}`,
+      default_payment_method: defaultPaymentMethod,
+    }
+    db.categories.push(row)
+    return row
+  }
+
+  it('inherits WALLEE / CASH_ON_SITE / INVOICE from category when payment_method is omitted', async () => {
+    const handler = (await import('~/server/api/admin/courses/upsert.post')).default as CourseUpsertHandler
+
+    for (const method of ['WALLEE', 'CASH_ON_SITE'] as const) {
+      db.courses = []
+      const cat = await seedCategory(method)
+      await handler(event({
+        courseData: {
+          name: `Course ${method}`,
+          city: 'Zürich',
+          course_category_id: cat.id,
+          status: 'draft',
+        },
+        sessions: [],
+      }))
+      expect(db.courses[0]?.payment_method).toBe(method)
+      expect(db.courses[0]?.tenant_id).toBe(TENANT)
+    }
+
+    auth = { id: 'user-b', tenant_id: OTHER, role: 'admin', db_user_id: 'profile-b' }
+    db.courses = []
+    const invoiceCat: CategoryRow = {
+      id: 'cat-invoice',
+      tenant_id: OTHER,
+      default_payment_method: 'INVOICE',
+    }
+    db.categories.push(invoiceCat)
+    await handler(event({
+      courseData: {
+        name: 'Invoice course',
+        city: 'Zürich',
+        course_category_id: invoiceCat.id,
+        status: 'draft',
+      },
+      sessions: [],
+    }))
+    expect(db.courses[0]?.payment_method).toBe('INVOICE')
+    expect(db.courses[0]?.tenant_id).toBe(OTHER)
+  })
+
+  it('inherits tenant default when category default is NULL', async () => {
+    const cat = await seedCategory(null)
+    const handler = (await import('~/server/api/admin/courses/upsert.post')).default as CourseUpsertHandler
+    await handler(event({
+      courseData: {
+        name: 'Tenant default course',
+        city: 'Zürich',
+        course_category_id: cat.id,
+        status: 'draft',
+      },
+      sessions: [],
+    }))
+    // TENANT settings default_payment_method = wallee
+    expect(db.courses[0]?.payment_method).toBe('WALLEE')
+  })
+
+  it('keeps an explicit course payment_method and does not overwrite from category', async () => {
+    const cat = await seedCategory('CASH_ON_SITE')
+    const handler = (await import('~/server/api/admin/courses/upsert.post')).default as CourseUpsertHandler
+    await handler(event({
+      courseData: {
+        name: 'Explicit',
+        city: 'Zürich',
+        course_category_id: cat.id,
+        payment_method: 'WALLEE',
+        status: 'draft',
+      },
+      sessions: [],
+    }))
+    expect(db.courses[0]?.payment_method).toBe('WALLEE')
+  })
+
+  it('does not change an existing course payment_method when category default differs', async () => {
+    const cat = await seedCategory('CASH_ON_SITE')
+    db.courses.push({
+      id: 'course-existing',
+      tenant_id: TENANT,
+      name: 'Existing',
+      payment_method: 'WALLEE',
+      status: 'draft',
+    })
+    const handler = (await import('~/server/api/admin/courses/upsert.post')).default as CourseUpsertHandler
+    await handler(event({
+      courseId: 'course-existing',
+      courseData: {
+        name: 'Existing',
+        city: 'Zürich',
+        course_category_id: cat.id,
+        payment_method: 'WALLEE',
+        status: 'draft',
+      },
+      sessions: [],
+    }))
+    expect(db.courses[0]?.payment_method).toBe('WALLEE')
+  })
+
+  it('rejects foreign category ids and invalid payment methods', async () => {
+    const handler = (await import('~/server/api/admin/courses/upsert.post')).default as CourseUpsertHandler
+    db.categories.push({
+      id: 'cat-other',
+      tenant_id: OTHER,
+      default_payment_method: 'CASH_ON_SITE',
+    })
+    await expect(handler(event({
+      courseData: {
+        name: 'Cross tenant',
+        course_category_id: 'cat-other',
+        status: 'draft',
+      },
+      sessions: [],
+    }))).rejects.toMatchObject({ statusCode: 400 })
+    expect(db.courses).toHaveLength(0)
+
+    await expect(handler(event({
+      courseData: {
+        name: 'Bad method',
+        payment_method: 'wallee',
+        status: 'draft',
+      },
+      sessions: [],
+    }))).rejects.toMatchObject({ statusCode: 400 })
     expect(db.courses).toHaveLength(0)
   })
 })
