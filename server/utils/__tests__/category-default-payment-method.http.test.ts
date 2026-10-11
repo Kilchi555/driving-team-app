@@ -3,7 +3,6 @@
  * Does not touch Production.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { INVOICE_PAYMENT_DISABLED_MESSAGE } from '~/utils/category-default-payment-method'
 
 type SettingRow = { tenant_id: string; setting_value: Record<string, unknown> }
 type CategoryRow = Record<string, unknown>
@@ -297,18 +296,17 @@ describe('category default_payment_method HTTP save', () => {
     expect(createdWallee.data.default_payment_method).toBe('WALLEE')
   })
 
-  it('rejects INVOICE when tenant invoice payments are disabled', async () => {
+  it('allows INVOICE category override when tenant invoice payment option is disabled', async () => {
     const handler = (await import('~/server/api/admin/course-categories/save.post')).default as CategorySaveHandler
-    await expect(handler(event({
-      name: 'VKU Invoice',
+    const created = await handler(event({
+      name: 'VKU Invoice Override',
       code: 'VKUI',
       default_payment_method: 'INVOICE',
       session_structure: { sessions: [{ duration_hours: 8 }] },
-    }))).rejects.toMatchObject({
-      statusCode: 400,
-      statusMessage: INVOICE_PAYMENT_DISABLED_MESSAGE,
-    })
-    expect(db.categories).toHaveLength(0)
+    }))
+    expect(created.data.default_payment_method).toBe('INVOICE')
+    expect(created.data.tenant_id).toBe(TENANT)
+    expect(db.categories).toHaveLength(1)
   })
 
   it('allows INVOICE when tenant invoice payments are enabled', async () => {
@@ -335,7 +333,7 @@ describe('category default_payment_method HTTP save', () => {
   })
 })
 
-describe('course upsert INVOICE gate', () => {
+describe('course upsert INVOICE admin override', () => {
   beforeEach(() => {
     db = createDb()
     auth = {
@@ -347,9 +345,9 @@ describe('course upsert INVOICE gate', () => {
     vi.resetModules()
   })
 
-  it('rejects creating a course with INVOICE when invoices are disabled', async () => {
+  it('allows creating a course with INVOICE when customer invoice option is disabled', async () => {
     const handler = (await import('~/server/api/admin/courses/upsert.post')).default as CourseUpsertHandler
-    await expect(handler(event({
+    await handler(event({
       courseData: {
         name: 'Course',
         city: 'Zürich',
@@ -357,11 +355,29 @@ describe('course upsert INVOICE gate', () => {
         status: 'draft',
       },
       sessions: [],
-    }))).rejects.toMatchObject({
-      statusCode: 400,
-      statusMessage: INVOICE_PAYMENT_DISABLED_MESSAGE,
+    }))
+    expect(db.courses).toHaveLength(1)
+    expect(db.courses[0]?.payment_method).toBe('INVOICE')
+    expect(db.courses[0]?.tenant_id).toBe(TENANT)
+  })
+
+  it('inherits INVOICE from category override when customer invoice option is disabled', async () => {
+    db.categories.push({
+      id: 'cat-invoice-disabled',
+      tenant_id: TENANT,
+      default_payment_method: 'INVOICE',
     })
-    expect(db.courses).toHaveLength(0)
+    const handler = (await import('~/server/api/admin/courses/upsert.post')).default as CourseUpsertHandler
+    await handler(event({
+      courseData: {
+        name: 'Inherited invoice',
+        city: 'Zürich',
+        course_category_id: 'cat-invoice-disabled',
+        status: 'draft',
+      },
+      sessions: [],
+    }))
+    expect(db.courses[0]?.payment_method).toBe('INVOICE')
   })
 })
 
@@ -392,7 +408,8 @@ describe('course upsert category → payment_method inheritance', () => {
   it('inherits WALLEE / CASH_ON_SITE / INVOICE from category when payment_method is omitted', async () => {
     const handler = (await import('~/server/api/admin/courses/upsert.post')).default as CourseUpsertHandler
 
-    for (const method of ['WALLEE', 'CASH_ON_SITE'] as const) {
+    // TENANT has invoice_payments_enabled=false; INVOICE still inherits as admin override.
+    for (const method of ['WALLEE', 'CASH_ON_SITE', 'INVOICE'] as const) {
       db.courses = []
       const cat = await seedCategory(method)
       await handler(event({
@@ -407,26 +424,6 @@ describe('course upsert category → payment_method inheritance', () => {
       expect(db.courses[0]?.payment_method).toBe(method)
       expect(db.courses[0]?.tenant_id).toBe(TENANT)
     }
-
-    auth = { id: 'user-b', tenant_id: OTHER, role: 'admin', db_user_id: 'profile-b' }
-    db.courses = []
-    const invoiceCat: CategoryRow = {
-      id: 'cat-invoice',
-      tenant_id: OTHER,
-      default_payment_method: 'INVOICE',
-    }
-    db.categories.push(invoiceCat)
-    await handler(event({
-      courseData: {
-        name: 'Invoice course',
-        city: 'Zürich',
-        course_category_id: invoiceCat.id,
-        status: 'draft',
-      },
-      sessions: [],
-    }))
-    expect(db.courses[0]?.payment_method).toBe('INVOICE')
-    expect(db.courses[0]?.tenant_id).toBe(OTHER)
   })
 
   it('inherits tenant default when category default is NULL', async () => {

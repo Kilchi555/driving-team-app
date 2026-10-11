@@ -7,11 +7,7 @@ import {
   CategorySessionTemplateError,
   normalizeCategorySessionTemplate,
 } from '~/utils/course-category-session-template'
-import {
-  assertInvoicePaymentMethodAllowed,
-  parseCategoryDefaultPaymentMethod,
-} from '~/utils/category-default-payment-method'
-import { getTenantInvoicePaymentsEnabled } from '~/server/utils/tenant-default-payment-method'
+import { parseCategoryDefaultPaymentMethod } from '~/utils/category-default-payment-method'
 
 const CATEGORY_INVOICE_TIMING = new Set(['inherit', 'off', 'immediate'])
 
@@ -126,22 +122,10 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // INVOICE as category default requires the tenant invoice feature flag.
-    // Never silently downgrade to Wallee/cash.
-    if (fields.default_payment_method === 'INVOICE') {
-      const invoiceEnabled = await getTenantInvoicePaymentsEnabled(supabase, tenantId)
-      try {
-        assertInvoicePaymentMethodAllowed({
-          paymentMethod: fields.default_payment_method,
-          invoicePaymentsEnabled: invoiceEnabled,
-        })
-      } catch (invoiceErr: any) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: invoiceErr?.message || 'Rechnung ist für diesen Mandanten nicht erlaubt.',
-        })
-      }
-    }
+    // Category Standard-Zahlungsart may explicitly override the tenant default,
+    // including INVOICE. "Rechnung als Zahlungsoption erlauben" gates customer
+    // booking/enrollment only (see enroll-cash / enroll-wallee), not admin config.
+    // Never silently rewrite INVOICE to Wallee/cash here.
 
     let result
     if (categoryId) {

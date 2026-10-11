@@ -916,7 +916,7 @@
             </select>
             <p v-if="newCourse.payment_method === 'INVOICE' && !invoicePaymentsEnabledForTenant" class="text-xs text-amber-700 mt-1">
               Hinweis: „Rechnung als Zahlungsoption erlauben“ ist in den Zahlungseinstellungen deaktiviert.
-              Speichern und Anmeldung mit Rechnung sind erst nach Aktivierung möglich — es erfolgt kein automatischer Wechsel auf Online-Zahlung oder Barzahlung.
+              Die Kurs-Zahlungsart Rechnung kann als Admin-Override gespeichert werden; öffentliche Anmeldung mit Rechnung bleibt blockiert, bis die Option aktiviert ist — es erfolgt kein automatischer Wechsel auf Online-Zahlung oder Barzahlung.
             </p>
             <p
               v-if="!newCourse.payment_method"
@@ -2119,7 +2119,7 @@
                 class="text-xs text-amber-700 mt-1"
               >
                 „Rechnung als Zahlungsoption erlauben“ ist in den Zahlungseinstellungen deaktiviert.
-                Speichern mit Rechnung ist erst nach Aktivierung möglich.
+                Die Kursart-Override Rechnung kann trotzdem gespeichert werden; öffentliche Anmeldung mit Rechnung bleibt blockiert, bis die Option aktiviert ist.
               </p>
             </div>
 

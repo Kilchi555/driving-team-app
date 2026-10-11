@@ -11,6 +11,11 @@ export const CATEGORY_DEFAULT_PAYMENT_METHODS = ['WALLEE', 'CASH_ON_SITE', 'INVO
 
 export type CategoryDefaultPaymentMethod = (typeof CATEGORY_DEFAULT_PAYMENT_METHODS)[number]
 
+/**
+ * Message for customer-facing payment-option gates (booking/enrollment).
+ * Admin category/course Standard-Zahlungsart overrides must not use this as a
+ * save blocker — that toggle only controls whether customers may choose invoice.
+ */
 export const INVOICE_PAYMENT_DISABLED_MESSAGE =
   'Rechnung kann nicht gespeichert werden: „Rechnung als Zahlungsoption erlauben“ ist in den Zahlungseinstellungen deaktiviert. Bitte aktivieren Sie die Option dort oder wählen Sie eine andere Zahlungsart.'
 
@@ -78,8 +83,10 @@ export function shouldApplyCategoryPaymentDefault(opts: {
 }
 
 /**
- * Block configuring INVOICE when the tenant invoice feature flag is off.
+ * Fail closed when a customer-facing flow would take INVOICE while the tenant
+ * "Rechnung als Zahlungsoption erlauben" toggle is off.
  * Does not silently downgrade to Wallee/cash.
+ * Not used to block admin category/course payment-method overrides.
  */
 export function assertInvoicePaymentMethodAllowed(opts: {
   paymentMethod: string | null | undefined
