@@ -201,12 +201,15 @@ describe('syncCourseParticipants membership', () => {
 describe('cancel and remove unresolved semantics', () => {
   it('does not count a zero-membership registration as SARI-unenrolled', () => {
     const cancel = readFileSync('server/api/admin/courses/cancel-course.post.ts', 'utf8')
-    expect(cancel).toContain('unresolved: sariUnresolved')
-    expect(cancel).toContain('localOnly: sariLocalOnly')
-    expect(cancel).toContain('failed: sariFailedCount')
+    expect(cancel).toContain('cancelCourseWithFollowUps')
+    expect(cancel).toContain('unresolved: followUps.sari.unresolved')
+    expect(cancel).toContain('localOnly: followUps.sari.localOnly')
+    expect(cancel).toContain('failed: followUps.sari.failed')
     expect(cancel).not.toContain('.length - sariFailedCount')
+    const followups = readFileSync('server/utils/course-cancel-followups.ts', 'utf8')
     // After financial cascade, failed SARI unenrolls stay cancelled and are warned — not restored to confirmed.
-    expect(cancel).toContain('SARI-Status unklar')
+    expect(followups).toContain('SARI-Status unklar')
+    expect(followups).not.toContain('restoreRegistrationsThatStillHaveMemberships')
     expect(cancel).not.toContain('restoreRegistrationsThatStillHaveMemberships')
     const remove = readFileSync('server/api/admin/courses/remove-participant.post.ts', 'utf8')
     expect(remove).toContain('SARI membership status unknown')

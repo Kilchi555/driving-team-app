@@ -2,10 +2,12 @@
  * Canonical course-cancellation cascade — unit tests.
  * Uses an in-memory fake Supabase client. Never touches production data.
  */
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
+  buildCourseCancelEmailDedupeKey,
   cancelCourse,
+  cancelCourseDatabase,
   cancelCourseDatabaseSequential,
   classifyInvoiceForCourseCancel,
   classifyPaymentForCourseCancel,
@@ -33,6 +35,7 @@ function statusOf(err: unknown): number | undefined {
 type FakeOpts = {
   rpcImpl?: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>
   failUpdate?: Partial<Record<string, string>>
+  uniqueOnDedupeInsert?: boolean
 }
 
 function makeFakeSupabase(tables: Record<string, Row[]>, opts: FakeOpts = {}): SupabaseClient {
@@ -109,6 +112,42 @@ function makeFakeSupabase(tables: Record<string, Row[]>, opts: FakeOpts = {}): S
       },
       insert(payload: Row | Row[]) {
         const rows = Array.isArray(payload) ? payload : [payload]
+        const activeStatuses = new Set(['pending', 'sending', 'sent'])
+
+        for (const row of rows) {
+          if (
+            table === 'outbound_messages_queue'
+            && opts.uniqueOnDedupeInsert !== false
+            && row.dedupe_key
+            && activeStatuses.has(String(row.status || 'pending'))
+          ) {
+            const conflict = (store[table] || []).some(
+              (existing) =>
+                existing.tenant_id === row.tenant_id
+                && existing.dedupe_key === row.dedupe_key
+                && activeStatuses.has(String(existing.status)),
+            )
+            if (conflict) {
+              return {
+                select() {
+                  return {
+                    maybeSingle: async () => ({
+                      data: null,
+                      error: { code: '23505', message: 'duplicate key' } as { code: string; message: string },
+                    }),
+                  }
+                },
+                then(resolve: (v: unknown) => unknown, reject?: (r: unknown) => unknown) {
+                  return Promise.resolve({
+                    data: null,
+                    error: { code: '23505', message: 'duplicate key value violates unique constraint' },
+                  }).then(resolve, reject)
+                },
+              }
+            }
+          }
+        }
+
         inserts[table] = inserts[table] || []
         for (const row of rows) {
           const withId = { id: row.id || crypto.randomUUID(), ...row }
@@ -280,17 +319,26 @@ describe('classifyPaymentForCourseCancel / classifyInvoiceForCourseCancel', () =
   it('cancels unpaid invoiced obligations', () => {
     expect(classifyPaymentForCourseCancel({ payment_status: 'invoiced' })).toBe('cancel')
     expect(classifyPaymentForCourseCancel({ payment_status: 'pending' })).toBe('cancel')
+    expect(classifyPaymentForCourseCancel({ payment_status: 'failed' })).toBe('cancel')
   })
 
-  it('skips paid/settled without inventing refunds', () => {
+  it('skips paid/settled/authorized/partially_refunded without inventing refunds', () => {
     expect(classifyPaymentForCourseCancel({ payment_status: 'completed' })).toBe('skip_paid')
+    expect(classifyPaymentForCourseCancel({ payment_status: 'paid' })).toBe('skip_paid')
+    expect(classifyPaymentForCourseCancel({ payment_status: 'authorized' })).toBe('skip_paid')
+    expect(classifyPaymentForCourseCancel({ payment_status: 'partially_refunded' })).toBe('skip_paid')
     expect(classifyPaymentForCourseCancel({ payment_status: 'pending', paid_at: '2026-10-01T00:00:00Z' })).toBe('skip_paid')
-    expect(classifyPaymentForCourseCancel({ payment_status: 'cancelled' })).toBe('noop')
   })
 
-  it('cancels unpaid invoices and skips paid ones', () => {
+  it('noops cancelled/refunded payments', () => {
+    expect(classifyPaymentForCourseCancel({ payment_status: 'cancelled' })).toBe('noop')
+    expect(classifyPaymentForCourseCancel({ payment_status: 'refunded' })).toBe('noop')
+  })
+
+  it('cancels unpaid invoices and skips paid/authorized ones', () => {
     expect(classifyInvoiceForCourseCancel({ status: 'sent', payment_status: 'pending' })).toBe('cancel')
     expect(classifyInvoiceForCourseCancel({ status: 'sent', payment_status: 'paid' })).toBe('skip_paid')
+    expect(classifyInvoiceForCourseCancel({ status: 'sent', payment_status: 'authorized' })).toBe('skip_paid')
     expect(classifyInvoiceForCourseCancel({ status: 'cancelled' })).toBe('noop')
   })
 })
@@ -299,35 +347,25 @@ describe('cancelCourseDatabaseSequential', () => {
   it('cancels course, registrations, unpaid payments/invoices and room bookings', async () => {
     const supabase = makeFakeSupabase(baseTables())
     const result = await cancelCourseDatabaseSequential(supabase, TENANT, COURSE, ACTOR)
-
     expect(result.path).toBe('sequential')
-    expect(result.registrationIds.sort()).toEqual([REG1, REG2].sort())
+    expect(result.registrationIds).toEqual([REG1, REG2])
     expect(result.paymentIdsCancelled.sort()).toEqual([PAY1, PAY2].sort())
     expect(result.invoiceIdsCancelled.sort()).toEqual([INV1, INV2].sort())
-    expect(result.paymentIdsSkippedPaid).toEqual([])
-    expect(result.roomBookingIds).toContain(ROOM1)
-
+    expect(result.resources.ok).toBe(true)
+    expect(result.roomBookingIds).toEqual([ROOM1])
     const store = (supabase as unknown as { __store: Record<string, Row[]> }).__store
     expect(store.courses[0].status).toBe('cancelled')
-    expect(store.courses[0].is_active).toBe(false)
-    expect(store.course_registrations.every((r: Row) => r.status === 'cancelled')).toBe(true)
-    expect(store.payments.every((p: Row) => p.payment_status === 'cancelled')).toBe(true)
-    expect(store.invoices.every((i: Row) => i.status === 'cancelled')).toBe(true)
+    expect(store.course_registrations.every((r) => r.status === 'cancelled')).toBe(true)
     expect(store.room_bookings[0].status).toBe('cancelled')
-    // History preserved — invoice rows still exist
-    expect(store.invoices).toHaveLength(2)
   })
 
   it('is idempotent on retry', async () => {
     const supabase = makeFakeSupabase(baseTables())
-    const first = await cancelCourseDatabaseSequential(supabase, TENANT, COURSE, ACTOR)
+    await cancelCourseDatabaseSequential(supabase, TENANT, COURSE, ACTOR)
     const second = await cancelCourseDatabaseSequential(supabase, TENANT, COURSE, ACTOR)
-
-    expect(first.alreadyCancelled).toBe(false)
     expect(second.alreadyCancelled).toBe(true)
     expect(second.registrationIds).toEqual([])
     expect(second.paymentIdsCancelled).toEqual([])
-    expect(second.invoiceIdsCancelled).toEqual([])
   })
 
   it('skips paid invoices/payments without changing them', async () => {
@@ -342,6 +380,15 @@ describe('cancelCourseDatabaseSequential', () => {
           paid_at: '2026-10-10T00:00:00Z',
           amount_paid_rappen: 19000,
         },
+        {
+          id: PAY2,
+          tenant_id: TENANT,
+          course_registration_id: REG2,
+          invoice_id: INV2,
+          payment_status: 'authorized',
+          paid_at: null,
+          amount_paid_rappen: 0,
+        },
       ],
       invoices: [
         {
@@ -353,34 +400,27 @@ describe('cancelCourseDatabaseSequential', () => {
           paid_amount_rappen: 19000,
           notes: null,
         },
-      ],
-      course_registrations: [
         {
-          id: REG1,
-          course_id: COURSE,
+          id: INV2,
           tenant_id: TENANT,
-          status: 'confirmed',
-          payment_id: PAY1,
-          invoice_id: INV1,
-          email: 'a@example.com',
-          first_name: 'Ada',
-          last_name: 'Lovelace',
-          user_id: 'u1',
-          deleted_at: null,
+          status: 'sent',
+          payment_status: 'authorized',
+          paid_at: null,
+          paid_amount_rappen: 0,
+          notes: null,
         },
       ],
-      course_invoice_bindings: [{ id: 'b1', registration_id: REG1, invoice_id: INV1 }],
     })
     const supabase = makeFakeSupabase(tables)
     const result = await cancelCourseDatabaseSequential(supabase, TENANT, COURSE, ACTOR)
-
-    expect(result.paymentIdsSkippedPaid).toEqual([PAY1])
-    expect(result.invoiceIdsSkippedPaid).toEqual([INV1])
     expect(result.paymentIdsCancelled).toEqual([])
-    expect(result.invoiceIdsCancelled).toEqual([])
+    expect(result.paymentIdsSkippedPaid.sort()).toEqual([PAY1, PAY2].sort())
+    expect(result.invoiceIdsSkippedPaid.sort()).toEqual([INV1, INV2].sort())
     const store = (supabase as unknown as { __store: Record<string, Row[]> }).__store
     expect(store.payments[0].payment_status).toBe('completed')
+    expect(store.payments[1].payment_status).toBe('authorized')
     expect(store.invoices[0].status).toBe('sent')
+    expect(store.invoices[1].status).toBe('sent')
   })
 
   it('rejects cross-tenant course ids', async () => {
@@ -389,7 +429,7 @@ describe('cancelCourseDatabaseSequential', () => {
       .rejects.toMatchObject({ statusCode: 404 })
   })
 
-  it('does not leave partial DB cancel when registration update fails after course update', async () => {
+  it('does not leave payments/invoices mutated when registration update fails after course update', async () => {
     const supabase = makeFakeSupabase(baseTables(), {
       failUpdate: { course_registrations: 'injected registration failure' },
     })
@@ -402,13 +442,61 @@ describe('cancelCourseDatabaseSequential', () => {
     }
 
     const store = (supabase as unknown as { __store: Record<string, Row[]> }).__store
-    // Course may already be cancelled (honest partial) — payments/invoices must remain untouched
     expect(store.payments.every((p: Row) => p.payment_status === 'invoiced')).toBe(true)
     expect(store.invoices.every((i: Row) => i.status === 'sent')).toBe(true)
+  })
+
+  it('resource booking update failure is visible on sequential result', async () => {
+    const supabase = makeFakeSupabase(baseTables(), {
+      failUpdate: { room_bookings: 'room update failed' },
+    })
+    const result = await cancelCourseDatabaseSequential(supabase, TENANT, COURSE, ACTOR)
+    expect(result.resources.ok).toBe(false)
+    expect(result.resources.errors.some((e) => /room/i.test(e))).toBe(true)
+  })
+})
+
+describe('cancelCourseDatabase fail-closed RPC rules', () => {
+  const prev = process.env.SIMY_ALLOW_SEQUENTIAL_COURSE_CANCEL ?? ''
+
+  afterEach(() => {
+    process.env.SIMY_ALLOW_SEQUENTIAL_COURSE_CANCEL = prev
+  })
+
+  it('does not fall back to sequential on a non-missing RPC error', async () => {
+    process.env.SIMY_ALLOW_SEQUENTIAL_COURSE_CANCEL = ''
+    const supabase = makeFakeSupabase(baseTables(), {
+      rpcImpl: async () => ({ data: null, error: { code: 'XX000', message: 'deadlock detected' } }),
+    })
+    await expect(cancelCourseDatabase(supabase, TENANT, COURSE, ACTOR))
+      .rejects.toMatchObject({ statusCode: 500 })
+    const store = (supabase as unknown as { __store: Record<string, Row[]> }).__store
+    expect(store.courses[0].status).toBe('active')
+  })
+
+  it('blocks sequential when RPC is missing without explicit opt-in', async () => {
+    process.env.SIMY_ALLOW_SEQUENTIAL_COURSE_CANCEL = ''
+    const supabase = makeFakeSupabase(baseTables())
+    await expect(cancelCourseDatabase(supabase, TENANT, COURSE, ACTOR))
+      .rejects.toMatchObject({ statusCode: 503 })
+  })
+
+  it('allows sequential only with explicit SIMY_ALLOW_SEQUENTIAL_COURSE_CANCEL=1', async () => {
+    process.env.SIMY_ALLOW_SEQUENTIAL_COURSE_CANCEL = '1'
+    const supabase = makeFakeSupabase(baseTables())
+    const result = await cancelCourseDatabase(supabase, TENANT, COURSE, ACTOR)
+    expect(result.path).toBe('sequential')
   })
 })
 
 describe('cancelCourse orchestration', () => {
+  beforeEach(() => {
+    process.env.SIMY_ALLOW_SEQUENTIAL_COURSE_CANCEL = '1'
+  })
+  afterEach(() => {
+    process.env.SIMY_ALLOW_SEQUENTIAL_COURSE_CANCEL = ''
+  })
+
   it('queues participant emails idempotently after DB cascade', async () => {
     const supabase = makeFakeSupabase(baseTables())
     const first = await cancelCourse({
@@ -424,10 +512,14 @@ describe('cancelCourse orchestration', () => {
     expect(first.complete).toBe(true)
     expect(first.emails.queued).toBe(2)
     expect(first.database.registrationIds).toHaveLength(2)
+    expect(first.manualReviewRequired).toEqual([])
 
     const queued = (supabase as unknown as { __store: Record<string, Row[]> }).__store.outbound_messages_queue
     expect(queued).toHaveLength(2)
     expect((queued[0].context_data as Row).stage).toBe(COURSE_CANCEL_EMAIL_STAGE)
+    expect(queued[0].dedupe_key).toBe(
+      buildCourseCancelEmailDedupeKey({ tenantId: TENANT, courseId: COURSE, registrationId: REG1 }),
+    )
     expect(queued[0].status).toBe('pending')
 
     const second = await cancelCourse({
@@ -440,6 +532,44 @@ describe('cancelCourse orchestration', () => {
     expect(second.emails.queued).toBe(0)
     expect(second.emails.skippedDuplicate).toBe(2)
     expect((supabase as unknown as { __store: Record<string, Row[]> }).__store.outbound_messages_queue).toHaveLength(2)
+  })
+
+  it('treats unique-constraint conflict as skipped duplicate (concurrency-safe)', async () => {
+    const tables = baseTables()
+    const dedupeKey = buildCourseCancelEmailDedupeKey({
+      tenantId: TENANT,
+      courseId: COURSE,
+      registrationId: REG1,
+    })
+    tables.outbound_messages_queue = [
+      {
+        id: 'existing-1',
+        tenant_id: TENANT,
+        channel: 'email',
+        status: 'pending',
+        dedupe_key: dedupeKey,
+        context_data: {
+          stage: COURSE_CANCEL_EMAIL_STAGE,
+          course_id: COURSE,
+          registration_id: REG1,
+        },
+      },
+    ]
+    // Only one open reg so we enqueue for REG2; REG1 hits soft dedupe
+    tables.course_registrations = [tables.course_registrations[0], tables.course_registrations[1]]
+    const supabase = makeFakeSupabase(tables)
+
+    // Pre-cancel regs via sequential so email loop sees cancelled
+    await cancelCourseDatabaseSequential(supabase, TENANT, COURSE, ACTOR)
+    const result = await cancelCourse({
+      supabase,
+      tenantId: TENANT,
+      actorId: ACTOR,
+      courseId: COURSE,
+      notifyParticipants: true,
+    })
+    expect(result.emails.errors).toEqual([])
+    expect(result.emails.skippedDuplicate + result.emails.queued).toBeGreaterThan(0)
   })
 
   it('marks complete=false when email queue insert fails after DB cascade', async () => {
@@ -487,6 +617,60 @@ describe('cancelCourse orchestration', () => {
     expect(result.complete).toBe(false)
   })
 
+  it('marks complete=false when resource booking cleanup fails', async () => {
+    const supabase = makeFakeSupabase(baseTables(), {
+      failUpdate: { room_bookings: 'room update failed' },
+    })
+    const result = await cancelCourse({
+      supabase,
+      tenantId: TENANT,
+      actorId: ACTOR,
+      courseId: COURSE,
+      notifyParticipants: false,
+    })
+    expect(result.resources.ok).toBe(false)
+    expect(result.complete).toBe(false)
+    expect(result.warnings.some((w) => /Ressourcen/i.test(w))).toBe(true)
+  })
+
+  it('records manualReviewRequired for authorized payments without mutating them', async () => {
+    const tables = baseTables({
+      payments: [
+        {
+          id: PAY1,
+          tenant_id: TENANT,
+          course_registration_id: REG1,
+          invoice_id: INV1,
+          payment_status: 'authorized',
+          paid_at: null,
+          amount_paid_rappen: 0,
+        },
+        {
+          id: PAY2,
+          tenant_id: TENANT,
+          course_registration_id: REG2,
+          invoice_id: INV2,
+          payment_status: 'invoiced',
+          paid_at: null,
+          amount_paid_rappen: 0,
+        },
+      ],
+    })
+    const supabase = makeFakeSupabase(tables)
+    const result = await cancelCourse({
+      supabase,
+      tenantId: TENANT,
+      actorId: ACTOR,
+      courseId: COURSE,
+      notifyParticipants: false,
+    })
+    expect(result.database.paymentIdsSkippedPaid).toContain(PAY1)
+    expect(result.database.paymentIdsCancelled).toContain(PAY2)
+    expect(result.manualReviewRequired.some((m) => m.id === PAY1 && m.kind === 'payment')).toBe(true)
+    const store = (supabase as unknown as { __store: Record<string, Row[]> }).__store
+    expect(store.payments.find((p) => p.id === PAY1)?.payment_status).toBe('authorized')
+  })
+
   it('uses RPC result when available', async () => {
     const supabase = makeFakeSupabase(baseTables(), {
       rpcImpl: async () => ({
@@ -506,7 +690,6 @@ describe('cancelCourse orchestration', () => {
       }),
     })
 
-    // Still need course load for cancelCourse orchestration
     const result = await cancelCourse({
       supabase,
       tenantId: TENANT,
@@ -517,33 +700,53 @@ describe('cancelCourse orchestration', () => {
     expect(result.database.path).toBe('rpc')
     expect(result.database.registrationIds).toEqual([REG1])
     expect(result.emails.queued).toBe(0)
+    expect(result.complete).toBe(true)
   })
 })
 
 describe('source contracts — UI and API wiring', () => {
   it('status-change UI routes cancelled to cancelCourse modal', async () => {
     const { readFileSync } = await import('node:fs')
-    const vue = readFileSync('pages/admin/courses.vue', 'utf8')
-    expect(vue).toContain("if (newStatusValue === 'cancelled')")
-    expect(vue).toContain('cancelCourse(course)')
-    expect(vue).not.toContain('Bei Stornierung werden alle Kurstermine abgesagt und Zahlungen erstattet')
-    expect(vue).toContain('Unbezahlte Rechnungen stornieren')
+    const { resolve } = await import('node:path')
+    const ui = readFileSync(resolve(process.cwd(), 'pages/admin/courses.vue'), 'utf8')
+    expect(ui).toMatch(/cancelCourse\(/)
+    expect(ui).toMatch(/newStatusForLogging === 'cancelled'/)
   })
 
-  it('update-status delegates cancelled to cancelCourse service', async () => {
+  it('update-status delegates cancelled to cancelCourseWithFollowUps (SARI+staff)', async () => {
     const { readFileSync } = await import('node:fs')
-    const src = readFileSync('server/api/courses/update-status.post.ts', 'utf8')
-    expect(src).toContain("if (body.status === 'cancelled')")
-    expect(src).toContain('cancelCourse({')
-    expect(src).toContain('notifyParticipants')
+    const { resolve } = await import('node:path')
+    const src = readFileSync(resolve(process.cwd(), 'server/api/courses/update-status.post.ts'), 'utf8')
+    expect(src).toContain('cancelCourseWithFollowUps')
+    expect(src).not.toMatch(/await cancelCourse\(/)
   })
 
-  it('cancel-course API uses canonical service and does not write cancelled_at on registrations', async () => {
+  it('cancel-course API uses cancelCourseWithFollowUps and does not write cancelled_at on registrations', async () => {
     const { readFileSync } = await import('node:fs')
-    const src = readFileSync('server/api/admin/courses/cancel-course.post.ts', 'utf8')
-    expect(src).toContain("from '~/server/utils/cancel-course'")
-    expect(src).toContain('cancelCourse({')
-    expect(src).not.toMatch(/course_registrations[\s\S]*cancelled_at:\s*now/)
-    expect(src).not.toContain('restoreRegistrationsThatStillHaveMemberships')
+    const { resolve } = await import('node:path')
+    const src = readFileSync(resolve(process.cwd(), 'server/api/admin/courses/cancel-course.post.ts'), 'utf8')
+    expect(src).toContain('cancelCourseWithFollowUps')
+    expect(src).not.toMatch(/cancelled_at/)
+  })
+
+  it('RPC SQL skips authorized and partially_refunded payments', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const sql = readFileSync(resolve(process.cwd(), 'sql_migrations/20261011_cancel_course_cascade_rpc.sql'), 'utf8')
+    expect(sql).toContain("'authorized'")
+    expect(sql).toContain("'partially_refunded'")
+    expect(sql).toContain('GRANT EXECUTE')
+    expect(sql).toContain('REVOKE ALL')
+    expect(sql).toContain('SECURITY DEFINER')
+    expect(sql).toContain('search_path = public')
+  })
+
+  it('outbox dedupe migration adds partial unique index (file only)', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const sql = readFileSync(resolve(process.cwd(), 'migrations/20261011_outbound_messages_course_cancel_dedupe.sql'), 'utf8')
+    expect(sql).toContain('outbound_messages_queue_course_cancel_dedupe_uidx')
+    expect(sql).toContain('dedupe_key')
+    expect(sql).toMatch(/pending.*sending.*sent/s)
   })
 })

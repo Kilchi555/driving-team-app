@@ -7039,9 +7039,14 @@ const executeCourseCancellation = async () => {
       if (emails.errors?.length) parts.push(`⚠️ E-Mail-Warteschlange: ${emails.errors.length} Fehler.`)
     }
     if (res?.manualReviewRequired?.length) {
-      parts.push(`⚠️ ${res.manualReviewRequired.length} bezahlte Position(en) brauchen manuelle Prüfung (keine Auto-Rückerstattung).`)
+      parts.push(`⚠️ ${res.manualReviewRequired.length} bezahlte/autorisierte Position(en) brauchen manuelle Prüfung (keine Auto-Stornierung/Rückerstattung).`)
     }
-    if (res?.staff?.instructorsCleared) {
+    if (res?.resources && res.resources.ok === false) {
+      parts.push(`⚠️ Ressourcen-Cleanup unvollständig (${(res.resources.errors || []).length} Fehler).`)
+    }
+    if (res?.staff?.ok === false) {
+      parts.push(`⚠️ Staff-Kalender-Cleanup unvollständig.`)
+    } else if (res?.staff?.instructorsCleared) {
       let staffMsg = `Staff-Kalendertermine entfernt`
       if (res.staff.notified) staffMsg += ` (${res.staff.notified} benachrichtigt)`
       parts.push(staffMsg + '.')

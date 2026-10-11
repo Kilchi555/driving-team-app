@@ -89,10 +89,15 @@ BEGIN
     SELECT id,
       CASE
         WHEN payment_status IN ('cancelled', 'refunded') THEN 'noop'
-        WHEN payment_status IN ('completed', 'paid')
+        -- Provider-committed / settled: never auto-cancel without verified void/refund.
+        WHEN payment_status IN ('completed', 'paid', 'authorized', 'partially_refunded')
           OR paid_at IS NOT NULL
           OR amount_paid_rappen > 0 THEN 'skip_paid'
-        ELSE 'cancel'
+        WHEN payment_status IN ('pending', 'invoiced', 'invoice', 'open', 'processing', 'failed')
+          OR payment_status IS NULL
+          OR btrim(payment_status) = '' THEN 'cancel'
+        -- Unknown statuses: skip (manual review) rather than invent local cancel.
+        ELSE 'skip_paid'
       END AS action
     FROM linked
   ),
@@ -140,7 +145,7 @@ BEGIN
     SELECT id,
       CASE
         WHEN status = 'cancelled' THEN 'noop'
-        WHEN payment_status IN ('paid', 'completed')
+        WHEN payment_status IN ('paid', 'completed', 'authorized', 'partially_refunded')
           OR paid_at IS NOT NULL
           OR paid_amount_rappen > 0 THEN 'skip_paid'
         ELSE 'cancel'

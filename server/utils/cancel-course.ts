@@ -1,12 +1,16 @@
 /**
  * Canonical course cancellation workflow.
  *
- * All UI / API paths that cancel a course must go through `cancelCourse`.
- * Database transitions prefer the transactional RPC `cancel_course_database_cascade`
- * and fall back to an idempotent sequential path when the RPC is not yet deployed.
+ * All UI / API paths that cancel a course must go through `cancelCourse` /
+ * `cancelCourseWithFollowUps`. Database transitions require the transactional
+ * RPC `cancel_course_database_cascade` unless an explicit sequential opt-in
+ * is set for verified non-production test contexts.
  *
  * External side effects (participant email) are queued AFTER database commit via
- * `outbound_messages_queue` (deduped). Provider refunds are never invented here.
+ * `outbound_messages_queue` (deduped). Provider refunds/voids are never invented here.
+ *
+ * Production atomic cascade remains blocked until the RPC migration is separately
+ * authorized, applied, and verified. Do not treat the sequential path as atomic.
  */
 
 import { createError } from 'h3'
@@ -14,9 +18,15 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { generateCourseRegistrationCancellationEmail } from '~/server/utils/email-templates'
 import { formatCourseSessionLine } from '~/utils/format-course-sessions'
-import { cancelResourceBookingsForCourse } from '~/server/utils/resource-bookings'
+import {
+  cancelResourceBookingsForCourse,
+  type CourseResourceCancelResult,
+} from '~/server/utils/resource-bookings'
 
 export const COURSE_CANCEL_EMAIL_STAGE = 'course_cancelled' as const
+
+/** Explicit opt-in only — never enable via NODE_ENV / generic heuristics. */
+export const ALLOW_SEQUENTIAL_COURSE_CANCEL_ENV = 'SIMY_ALLOW_SEQUENTIAL_COURSE_CANCEL'
 
 const UNPAID_PAYMENT_STATUSES = new Set([
   'pending',
@@ -27,7 +37,19 @@ const UNPAID_PAYMENT_STATUSES = new Set([
   'failed',
 ])
 
-const PAID_PAYMENT_STATUSES = new Set(['completed', 'paid', 'refunded'])
+/** Local noop — already terminal without further financial mutation. */
+const NOOP_PAYMENT_STATUSES = new Set(['cancelled', 'refunded'])
+
+/**
+ * Provider-committed / settled-looking statuses that must not be auto-cancelled
+ * without a verified provider void/refund workflow (not implemented here).
+ */
+const PROVIDER_COMMITTED_PAYMENT_STATUSES = new Set([
+  'completed',
+  'paid',
+  'authorized',
+  'partially_refunded',
+])
 
 export type CourseCancelDbResult = {
   courseId: string
@@ -41,6 +63,7 @@ export type CourseCancelDbResult = {
   roomBookingIds: string[]
   vehicleBookingIds: string[]
   path: 'rpc' | 'sequential'
+  resources: CourseResourceCancelResult
 }
 
 export type CourseCancelEmailResult = {
@@ -51,14 +74,22 @@ export type CourseCancelEmailResult = {
   errors: string[]
 }
 
+export type CourseCancelManualReviewItem = {
+  kind: 'payment' | 'invoice'
+  id: string
+  reason: string
+}
+
 export type CourseCancelResult = {
   success: boolean
+  /** True only when required auto cascade + email queue + resource cleanup succeeded. */
   complete: boolean
   courseId: string
   tenantId: string
   database: CourseCancelDbResult
   emails: CourseCancelEmailResult
-  manualReviewRequired: Array<{ kind: 'payment' | 'invoice'; id: string; reason: string }>
+  resources: CourseResourceCancelResult
+  manualReviewRequired: CourseCancelManualReviewItem[]
   warnings: string[]
   auditId: string | null
 }
@@ -74,12 +105,30 @@ export type CancelCourseInput = {
   participants?: Array<{ user_id?: string; email?: string; first_name?: string; last_name?: string }>
 }
 
+export function isSequentialCourseCancelAllowed(
+  env: NodeJS.Dict<string | undefined> = process.env,
+): boolean {
+  return env[ALLOW_SEQUENTIAL_COURSE_CANCEL_ENV] === '1'
+}
+
+export function buildCourseCancelEmailDedupeKey(input: {
+  tenantId: string
+  courseId: string
+  registrationId: string
+}): string {
+  return `course_cancelled:${input.tenantId}:${input.courseId}:${input.registrationId}`
+}
+
 function asUuidArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return value.filter((v): v is string => typeof v === 'string' && v.length > 0)
 }
 
-function mapRpcResult(raw: Record<string, unknown>, path: 'rpc' | 'sequential'): CourseCancelDbResult {
+function mapRpcResult(
+  raw: Record<string, unknown>,
+  path: 'rpc' | 'sequential',
+  resources: CourseResourceCancelResult,
+): CourseCancelDbResult {
   return {
     courseId: String(raw.course_id || raw.courseId),
     tenantId: String(raw.tenant_id || raw.tenantId),
@@ -89,9 +138,14 @@ function mapRpcResult(raw: Record<string, unknown>, path: 'rpc' | 'sequential'):
     paymentIdsSkippedPaid: asUuidArray(raw.payment_ids_skipped_paid ?? raw.paymentIdsSkippedPaid),
     invoiceIdsCancelled: asUuidArray(raw.invoice_ids_cancelled ?? raw.invoiceIdsCancelled),
     invoiceIdsSkippedPaid: asUuidArray(raw.invoice_ids_skipped_paid ?? raw.invoiceIdsSkippedPaid),
-    roomBookingIds: asUuidArray(raw.room_booking_ids ?? raw.roomBookingIds),
-    vehicleBookingIds: asUuidArray(raw.vehicle_booking_ids ?? raw.vehicleBookingIds),
+    roomBookingIds: resources.roomBookingIds.length
+      ? resources.roomBookingIds
+      : asUuidArray(raw.room_booking_ids ?? raw.roomBookingIds),
+    vehicleBookingIds: resources.vehicleBookingIds.length
+      ? resources.vehicleBookingIds
+      : asUuidArray(raw.vehicle_booking_ids ?? raw.vehicleBookingIds),
     path,
+    resources,
   }
 }
 
@@ -101,18 +155,25 @@ export function classifyPaymentForCourseCancel(payment: {
   amount_paid_rappen?: number | null
 }): 'cancel' | 'skip_paid' | 'noop' {
   const status = String(payment.payment_status || '').toLowerCase()
-  if (status === 'cancelled' || status === 'refunded') return 'noop'
+  if (NOOP_PAYMENT_STATUSES.has(status)) return 'noop'
   if (
-    PAID_PAYMENT_STATUSES.has(status)
+    PROVIDER_COMMITTED_PAYMENT_STATUSES.has(status)
     || payment.paid_at
     || (payment.amount_paid_rappen != null && payment.amount_paid_rappen > 0)
   ) {
     return 'skip_paid'
   }
   if (UNPAID_PAYMENT_STATUSES.has(status) || !status) return 'cancel'
-  // Unknown settled-looking statuses: never invent refunds
-  if (status.includes('paid') || status.includes('complete')) return 'skip_paid'
-  return 'cancel'
+  // Unknown statuses: never invent local cancel / refund / void
+  if (
+    status.includes('paid')
+    || status.includes('complete')
+    || status.includes('authoriz')
+    || status.includes('refund')
+  ) {
+    return 'skip_paid'
+  }
+  return 'skip_paid'
 }
 
 export function classifyInvoiceForCourseCancel(invoice: {
@@ -127,6 +188,8 @@ export function classifyInvoiceForCourseCancel(invoice: {
   if (
     payStatus === 'paid'
     || payStatus === 'completed'
+    || payStatus === 'authorized'
+    || payStatus === 'partially_refunded'
     || invoice.paid_at
     || (invoice.paid_amount_rappen != null && invoice.paid_amount_rappen > 0)
   ) {
@@ -135,7 +198,14 @@ export function classifyInvoiceForCourseCancel(invoice: {
   return 'cancel'
 }
 
-/** Exported for unit tests — sequential cascade without RPC. */
+function isUniqueViolation(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false
+  const code = String(error.code || '')
+  const message = String(error.message || '')
+  return code === '23505' || /duplicate key|unique constraint/i.test(message)
+}
+
+/** Exported for unit tests — sequential cascade without RPC. Not production-safe. */
 export async function cancelCourseDatabaseSequential(
   supabase: SupabaseClient,
   tenantId: string,
@@ -208,7 +278,6 @@ export async function cancelCourseDatabaseSequential(
     }
   }
 
-  // All registrations for the course (including already cancelled) for financial linkage
   const { data: allRegs, error: allRegsError } = await supabase
     .from('course_registrations')
     .select('id, payment_id, invoice_id')
@@ -347,22 +416,7 @@ export async function cancelCourseDatabaseSequential(
     }
   }
 
-  // Resource bookings — use helper then re-read counts for reporting
-  await cancelResourceBookingsForCourse(supabase, courseId, tenantId)
-
-  const { data: rooms } = await supabase
-    .from('room_bookings')
-    .select('id')
-    .eq('course_id', courseId)
-    .eq('tenant_id', tenantId)
-    .eq('status', 'cancelled')
-
-  const { data: vehicles } = await supabase
-    .from('vehicle_bookings')
-    .select('id')
-    .eq('course_id', courseId)
-    .eq('tenant_id', tenantId)
-    .eq('status', 'cancelled')
+  const resources = await cancelResourceBookingsForCourse(supabase, courseId, tenantId)
 
   return {
     courseId,
@@ -373,13 +427,14 @@ export async function cancelCourseDatabaseSequential(
     paymentIdsSkippedPaid,
     invoiceIdsCancelled,
     invoiceIdsSkippedPaid,
-    roomBookingIds: (rooms || []).map((r) => r.id),
-    vehicleBookingIds: (vehicles || []).map((v) => v.id),
+    roomBookingIds: resources.roomBookingIds,
+    vehicleBookingIds: resources.vehicleBookingIds,
     path: 'sequential',
+    resources,
   }
 }
 
-async function cancelCourseDatabase(
+export async function cancelCourseDatabase(
   supabase: SupabaseClient,
   tenantId: string,
   courseId: string,
@@ -392,7 +447,15 @@ async function cancelCourseDatabase(
   })
 
   if (!error && data && typeof data === 'object') {
-    return mapRpcResult(data as Record<string, unknown>, 'rpc')
+    // RPC cancels room/vehicle inside the transaction; re-read is unnecessary for IDs
+    // but we still run structured resource helper only when RPC omitted them — prefer RPC IDs.
+    const resources: CourseResourceCancelResult = {
+      ok: true,
+      roomBookingIds: asUuidArray((data as Record<string, unknown>).room_booking_ids),
+      vehicleBookingIds: asUuidArray((data as Record<string, unknown>).vehicle_booking_ids),
+      errors: [],
+    }
+    return mapRpcResult(data as Record<string, unknown>, 'rpc', resources)
   }
 
   const message = String(error?.message || '')
@@ -406,12 +469,37 @@ async function cancelCourseDatabase(
     if (/course_not_found_or_wrong_tenant/i.test(message)) {
       throw createError({ statusCode: 404, statusMessage: 'Kurs nicht gefunden.' })
     }
-    logger.warn('⚠️ cancel_course_database_cascade RPC failed; falling back to sequential path:', message)
-  } else if (missingFn) {
-    logger.info('ℹ️ cancel_course_database_cascade RPC not available — using sequential cascade')
+    // Fail closed — never discard RPC atomicity by falling back after a real DB error.
+    logger.error('❌ cancel_course_database_cascade RPC failed (no sequential fallback):', message)
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Kursabsage fehlgeschlagen (Datenbank-Kaskade). Bitte erneut versuchen.',
+    })
   }
 
-  return cancelCourseDatabaseSequential(supabase, tenantId, courseId, actorId)
+  if (missingFn) {
+    if (!isSequentialCourseCancelAllowed()) {
+      logger.error(
+        '❌ cancel_course_database_cascade RPC missing — sequential production cancel blocked. '
+        + `Set ${ALLOW_SEQUENTIAL_COURSE_CANCEL_ENV}=1 only for verified non-production test contexts.`,
+      )
+      throw createError({
+        statusCode: 503,
+        statusMessage:
+          'Kursabsage vorübergehend nicht verfügbar (atomare DB-Kaskade fehlt). '
+          + 'Bitte später erneut versuchen oder Support kontaktieren.',
+      })
+    }
+    logger.warn(
+      `⚠️ cancel_course_database_cascade RPC missing — sequential path allowed via ${ALLOW_SEQUENTIAL_COURSE_CANCEL_ENV}=1 (non-atomic)`,
+    )
+    return cancelCourseDatabaseSequential(supabase, tenantId, courseId, actorId)
+  }
+
+  throw createError({
+    statusCode: 500,
+    statusMessage: 'Kursabsage fehlgeschlagen (unerwartete DB-Antwort).',
+  })
 }
 
 async function queueCourseCancellationEmails(opts: {
@@ -472,8 +560,29 @@ async function queueCourseCancellationEmails(opts: {
       continue
     }
 
-    // Dedup: any prior queue row for this registration + stage
+    const dedupeKey = buildCourseCancelEmailDedupeKey({
+      tenantId: opts.tenantId,
+      courseId: opts.courseId,
+      registrationId: reg.id,
+    })
+
+    // Soft check (fast path); uniqueness index is the concurrency backstop.
     const { data: existing } = await opts.supabase
+      .from('outbound_messages_queue')
+      .select('id, status')
+      .eq('tenant_id', opts.tenantId)
+      .eq('channel', 'email')
+      .eq('dedupe_key', dedupeKey)
+      .in('status', ['pending', 'sending', 'sent'])
+      .limit(1)
+
+    if (existing && existing.length > 0) {
+      result.skippedDuplicate++
+      continue
+    }
+
+    // Legacy rows without dedupe_key (pre-migration)
+    const { data: legacyExisting } = await opts.supabase
       .from('outbound_messages_queue')
       .select('id, status')
       .eq('tenant_id', opts.tenantId)
@@ -486,7 +595,7 @@ async function queueCourseCancellationEmails(opts: {
       .in('status', ['pending', 'sending', 'sent'])
       .limit(1)
 
-    if (existing && existing.length > 0) {
+    if (legacyExisting && legacyExisting.length > 0) {
       result.skippedDuplicate++
       continue
     }
@@ -512,6 +621,7 @@ async function queueCourseCancellationEmails(opts: {
       body: html,
       status: 'pending',
       send_at: now,
+      dedupe_key: dedupeKey,
       context_data: {
         stage: COURSE_CANCEL_EMAIL_STAGE,
         course_id: opts.courseId,
@@ -519,10 +629,15 @@ async function queueCourseCancellationEmails(opts: {
         registration_id: reg.id,
         user_id: reg.user_id,
         reason: opts.reason || null,
+        dedupe_key: dedupeKey,
       },
     })
 
     if (insertError) {
+      if (isUniqueViolation(insertError)) {
+        result.skippedDuplicate++
+        continue
+      }
       result.errors.push(`${reg.id}: ${insertError.message}`)
       continue
     }
@@ -542,6 +657,7 @@ async function writeCancelAudit(
     emails: CourseCancelEmailResult
     complete: boolean
     warnings: string[]
+    manualReviewRequired: CourseCancelManualReviewItem[]
   },
 ): Promise<string | null> {
   const { data, error } = await supabase
@@ -557,6 +673,7 @@ async function writeCancelAudit(
         database: input.database,
         emails: input.emails,
         warnings: input.warnings,
+        manualReviewRequired: input.manualReviewRequired,
       },
     })
     .select('id')
@@ -569,10 +686,21 @@ async function writeCancelAudit(
   return data?.id || null
 }
 
+function paymentManualReviewReason(statusHint?: string | null): string {
+  const status = String(statusHint || '').toLowerCase()
+  if (status === 'authorized') {
+    return 'Zahlung autorisiert (Provider) — keine automatische Stornierung/Void; manuelle Prüfung erforderlich'
+  }
+  if (status === 'partially_refunded') {
+    return 'Teilweise erstattet — keine automatische Mutation; manuelle Prüfung erforderlich'
+  }
+  return 'Bereits bezahlte/settled Zahlung — keine automatische Rückerstattung'
+}
+
 /**
- * Canonical entry point. Throws only for auth/not-found/hard DB failures before
- * a durable cancellation state exists. After DB cascade succeeds, email failures
- * are returned as incomplete/partial — not silent success.
+ * Canonical DB + email + resource entry point (no SARI/staff).
+ * Throws for auth/not-found/hard DB failures. After DB cascade succeeds,
+ * email/resource failures are returned as incomplete — not silent success.
  */
 export async function cancelCourse(input: CancelCourseInput): Promise<CourseCancelResult> {
   const {
@@ -605,28 +733,32 @@ export async function cancelCourse(input: CancelCourseInput): Promise<CourseCanc
     throw createError({ statusCode: 404, statusMessage: 'Kurs nicht gefunden.' })
   }
 
-  // ── Database cascade (no external I/O) ────────────────────────────────────
   const database = await cancelCourseDatabase(supabase, tenantId, courseId, actorId)
 
   const warnings: string[] = []
-  const manualReviewRequired: CourseCancelResult['manualReviewRequired'] = []
+  const manualReviewRequired: CourseCancelManualReviewItem[] = []
 
   for (const id of database.paymentIdsSkippedPaid) {
     manualReviewRequired.push({
       kind: 'payment',
       id,
-      reason: 'Bereits bezahlte/settled Zahlung — keine automatische Rückerstattung',
+      reason: paymentManualReviewReason(null),
     })
   }
   for (const id of database.invoiceIdsSkippedPaid) {
     manualReviewRequired.push({
       kind: 'invoice',
       id,
-      reason: 'Bereits bezahlte Rechnung — keine automatische Stornierung/Rückerstattung',
+      reason: 'Bereits bezahlte/settled Rechnung — keine automatische Stornierung/Rückerstattung',
     })
   }
 
-  // ── Email outbox AFTER DB commit ──────────────────────────────────────────
+  if (!database.resources.ok) {
+    for (const err of database.resources.errors) {
+      warnings.push(`Ressourcen: ${err}`)
+    }
+  }
+
   type TenantEmailBits = {
     name?: string | null
     contact_email?: string | null
@@ -665,8 +797,9 @@ export async function cancelCourse(input: CancelCourseInput): Promise<CourseCanc
     warnings.push(`E-Mail-Warteschlange: ${emails.errors.length} Fehler`)
   }
 
-  // Email queue failures do not roll back DB; mark incomplete so UI stays honest
-  const complete = emails.errors.length === 0
+  // Manual review is expected for paid/authorized skips — does not alone fail complete.
+  // Required auto work: DB cascade returned + resources ok + email enqueue without errors.
+  const complete = database.resources.ok && emails.errors.length === 0
 
   const auditId = await writeCancelAudit(supabase, {
     tenantId,
@@ -676,6 +809,7 @@ export async function cancelCourse(input: CancelCourseInput): Promise<CourseCanc
     emails,
     complete,
     warnings,
+    manualReviewRequired,
   })
 
   return {
@@ -685,6 +819,7 @@ export async function cancelCourse(input: CancelCourseInput): Promise<CourseCanc
     tenantId,
     database,
     emails,
+    resources: database.resources,
     manualReviewRequired,
     warnings,
     auditId,

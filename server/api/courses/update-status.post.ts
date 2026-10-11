@@ -4,7 +4,7 @@ import { requireAdminProfile } from '~/server/utils/auth'
 import { generateWaitlistAvailableEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
-import { cancelCourse } from '~/server/utils/cancel-course'
+import { cancelCourseWithFollowUps } from '~/server/utils/course-cancel-followups'
 
 const VALID_STATUSES = ['draft', 'active', 'scheduled', 'completed', 'cancelled', 'waitlist', 'full', 'running'] as const
 type CourseStatus = typeof VALID_STATUSES[number]
@@ -12,8 +12,8 @@ type CourseStatus = typeof VALID_STATUSES[number]
 /**
  * POST /api/courses/update-status
  * Updates the status of a course (admin/staff only).
- * When status=cancelled, delegates to the canonical cancelCourse workflow
- * (registrations, unpaid payments/invoices, resources, email outbox).
+ * When status=cancelled, delegates to cancelCourseWithFollowUps (DB cascade,
+ * email outbox, staff calendar cleanup, SARI unenroll) — same as cancel-course.
  * When notifyWaitlist=true and status changes from 'waitlist' to active/scheduled,
  * sends "now available" emails to all waiting entries.
  */
@@ -49,14 +49,16 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Kurs nicht gefunden.' })
   }
 
-  // Cancelled status must run the full cascade — never a status-only update.
+  // Cancelled status must run the full canonical workflow (DB + email + staff + SARI).
+  // Never a status-only update and never a cascade that skips follow-ups.
   if (body.status === 'cancelled') {
-    const cancelResult = await cancelCourse({
+    const { cancelResult, followUps, complete, warnings } = await cancelCourseWithFollowUps({
       supabase,
       tenantId: profile.tenant_id,
       actorId: profile.id,
       courseId: body.courseId,
       notifyParticipants: body.notifyParticipants !== false,
+      notifyStaff: false,
       reason: body.reason || null,
     })
 
@@ -69,9 +71,15 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      complete: cancelResult.complete,
+      complete,
       course: updated,
-      cancellation: cancelResult,
+      cancellation: {
+        ...cancelResult,
+        complete,
+        warnings,
+        staff: followUps.staff,
+        sari: followUps.sari,
+      },
       waitlist: null,
     }
   }
