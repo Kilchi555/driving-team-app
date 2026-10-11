@@ -15,6 +15,17 @@ export type InvoiceCreditLine = {
   quantity?: number | null
 }
 
+export type ApplyInvoiceWalletCreditRpcResult = {
+  ok?: boolean
+  outcome?: string
+  applied_rappen?: number
+  skipped?: boolean
+  credit_applied_rappen?: number
+  ledger_id?: string | null
+  balance_before_rappen?: number
+  balance_after_rappen?: number
+}
+
 export function toInvoiceRappen(value: unknown): number {
   const num = Number(value) || 0
   if (!Number.isFinite(num)) return 0
@@ -53,24 +64,56 @@ export function sumInvoiceCreditRappen(items: InvoiceCreditLine[]): number {
   }, 0)
 }
 
-function isUniqueViolation(err: { code?: string } | null | undefined): boolean {
-  return err?.code === '23505'
+function isMissingRpc(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false
+  if (error.code === 'PGRST202') return true
+  return /could not find the function|schema cache|PGRST202|does not exist/i.test(error.message || '')
+}
+
+function firstRpcPayload(
+  data: ApplyInvoiceWalletCreditRpcResult | ApplyInvoiceWalletCreditRpcResult[] | null
+): ApplyInvoiceWalletCreditRpcResult | null {
+  if (Array.isArray(data)) {
+    const row = data[0]
+    return row && typeof row === 'object' ? row : null
+  }
+  if (data && typeof data === 'object') return data
+  return null
+}
+
+function mapRpcFailureMessage(error: { message?: string } | null | undefined): string {
+  const message = error?.message || ''
+  if (/user_mismatch|ledger_mismatch/i.test(message)) {
+    return 'Rechnung gehört nicht zum angegebenen Benutzer oder widerspricht dem Ledger'
+  }
+  if (/invoice_not_found/i.test(message)) {
+    return 'Rechnung für Gutschrift nicht gefunden'
+  }
+  if (/invoice_not_paid/i.test(message)) {
+    return 'Gutschrift nur für bezahlte Rechnungen möglich'
+  }
+  if (/service_role_only|42501/i.test(message)) {
+    return 'Guthaben-Gutschrift nicht autorisiert'
+  }
+  return message || 'Guthaben konnte nicht gutgeschrieben werden'
 }
 
 /**
  * Credits the customer wallet for flagged invoice lines after full payment.
  *
- * Idempotency markers (durable):
- * - invoices.credit_applied_rappen > 0
- * - completed credit_transactions for this invoice reference
- * - partial unique index credit_transactions_invoice_deposit_uidx (migration file;
- *   when applied, concurrent duplicate ledger inserts fail closed)
+ * Financial mutation lives entirely in `apply_invoice_wallet_credit` (one DB
+ * transaction: invoice lock, wallet lock, ledger insert, balance increment,
+ * credit_applied stamp). This TypeScript wrapper does not read-modify-write
+ * the wallet and fails closed if the RPC is missing.
  *
- * Crash / concurrency honesty:
- * - Ledger insert unique conflict → treat as already applied (stamp invoice, skip).
- * - A crash after wallet upsert and before ledger insert can still double-credit on
- *   retry until the unique index is applied AND/OR an atomic SQL helper exists.
- *   This function does not claim exactly-once wallet mutation under that crash window.
+ * Idempotency (database):
+ * - invoices.credit_applied_rappen > 0
+ * - completed credit_transactions for (tenant_id, invoice reference)
+ * - partial unique index credit_transactions_invoice_deposit_uidx
+ *
+ * Exactly-once wallet credit for a given paid invoice is guaranteed only after
+ * the migration that creates apply_invoice_wallet_credit (+ unique index) is
+ * applied. Until then this function throws rather than falling back to RMW.
  */
 export async function applyInvoiceCreditOnPaid(opts: {
   supabase: any
@@ -78,160 +121,56 @@ export async function applyInvoiceCreditOnPaid(opts: {
   tenantId: string
   userId: string
   actorUserId?: string | null
-}): Promise<{ applied_rappen: number; skipped: boolean }> {
+}): Promise<{ applied_rappen: number; skipped: boolean; outcome?: string; ledger_id?: string | null }> {
   const { supabase, invoiceId, tenantId, userId, actorUserId } = opts
 
   if (!invoiceId || !tenantId || !userId) {
-    return { applied_rappen: 0, skipped: true }
+    return { applied_rappen: 0, skipped: true, outcome: 'missing_args' }
   }
 
-  const { data: invoice, error: invoiceError } = await supabase
-    .from('invoices')
-    .select('id, user_id, tenant_id, payment_status, credit_applied_rappen, invoice_number')
-    .eq('id', invoiceId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle()
+  const { data, error } = await supabase.rpc('apply_invoice_wallet_credit', {
+    p_tenant_id: tenantId,
+    p_invoice_id: invoiceId,
+    p_user_id: userId,
+    p_actor_user_id: actorUserId || null,
+  })
 
-  if (invoiceError || !invoice) {
-    logger.warn('applyInvoiceCreditOnPaid: invoice missing', invoiceError?.message)
-    return { applied_rappen: 0, skipped: true }
-  }
-
-  if (invoice.user_id && invoice.user_id !== userId) {
-    throw new Error('Rechnung gehört nicht zum angegebenen Benutzer')
-  }
-
-  if (invoice.payment_status !== 'paid') {
-    return { applied_rappen: 0, skipped: true }
-  }
-
-  if ((invoice.credit_applied_rappen || 0) > 0) {
-    return { applied_rappen: 0, skipped: true }
-  }
-
-  const { data: existingTx } = await supabase
-    .from('credit_transactions')
-    .select('id, amount_rappen')
-    .eq('tenant_id', tenantId)
-    .eq('reference_id', invoiceId)
-    .eq('reference_type', 'invoice')
-    .in('transaction_type', ['deposit', 'credit_product_purchase'])
-    .eq('status', 'completed')
-    .limit(1)
-    .maybeSingle()
-
-  if (existingTx) {
-    const stampAmount = Math.max(0, Number(existingTx.amount_rappen) || 0)
-    if (stampAmount > 0) {
-      await supabase
-        .from('invoices')
-        .update({
-          credit_applied_rappen: stampAmount,
-          credit_applied_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', invoiceId)
-        .eq('tenant_id', tenantId)
-        .eq('credit_applied_rappen', 0)
+  if (error) {
+    if (isMissingRpc(error)) {
+      logger.error('applyInvoiceCreditOnPaid: apply_invoice_wallet_credit RPC missing — fail closed', {
+        invoiceId,
+        tenantId,
+        message: error.message,
+      })
+      throw new Error('Guthaben-Gutschrift nicht verfügbar (RPC fehlt)')
     }
-    return { applied_rappen: 0, skipped: true }
-  }
-
-  const { data: items, error: itemsError } = await supabase
-    .from('invoice_items')
-    .select('product_id, credit_to_wallet, credit_amount_rappen, total_price_rappen, quantity, product_name')
-    .eq('invoice_id', invoiceId)
-    .eq('credit_to_wallet', true)
-
-  if (itemsError) {
-    logger.warn('applyInvoiceCreditOnPaid: items load failed', itemsError.message)
-    throw new Error('Guthaben-Positionen konnten nicht geladen werden')
-  }
-
-  const amountRappen = sumInvoiceCreditRappen(items || [])
-  if (amountRappen <= 0) {
-    return { applied_rappen: 0, skipped: true }
-  }
-
-  const { data: currentCredit } = await supabase
-    .from('student_credits')
-    .select('id, balance_rappen')
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .maybeSingle()
-
-  const currentBalance = currentCredit?.balance_rappen || 0
-  const newBalance = currentBalance + amountRappen
-  const now = new Date().toISOString()
-  const invoiceNumber = invoice.invoice_number || invoiceId
-
-  const { error: creditError } = await supabase
-    .from('student_credits')
-    .upsert({
-      user_id: userId,
-      tenant_id: tenantId,
-      balance_rappen: newBalance,
-      notes: `Guthaben aus Rechnung ${invoiceNumber}`,
-      updated_at: now,
-    }, { onConflict: 'user_id,tenant_id' })
-
-  if (creditError) {
-    logger.error('applyInvoiceCreditOnPaid: wallet update failed', creditError)
-    throw new Error('Guthaben konnte nicht gutgeschrieben werden')
-  }
-
-  const { error: txError } = await supabase
-    .from('credit_transactions')
-    .insert({
-      user_id: userId,
-      tenant_id: tenantId,
-      transaction_type: 'deposit',
-      amount_rappen: amountRappen,
-      balance_before_rappen: currentBalance,
-      balance_after_rappen: newBalance,
-      payment_method: 'invoice',
-      reference_id: invoiceId,
-      reference_type: 'invoice',
-      created_by: actorUserId || null,
-      notes: `Guthaben aus Rechnung ${invoiceNumber}`,
-      status: 'completed',
-      created_at: now,
+    logger.error('applyInvoiceCreditOnPaid: RPC failed', {
+      invoiceId,
+      tenantId,
+      message: error.message,
+      code: error.code,
     })
-
-  if (txError) {
-    if (isUniqueViolation(txError)) {
-      // Concurrent retry already wrote the ledger; do not fail the settlement path.
-      await supabase
-        .from('invoices')
-        .update({
-          credit_applied_rappen: amountRappen,
-          credit_applied_at: now,
-          updated_at: now,
-        })
-        .eq('id', invoiceId)
-        .eq('tenant_id', tenantId)
-        .eq('credit_applied_rappen', 0)
-      return { applied_rappen: 0, skipped: true }
-    }
-    logger.error('applyInvoiceCreditOnPaid: transaction log failed', txError)
-    throw new Error('Guthaben-Buchung konnte nicht protokolliert werden')
+    throw new Error(mapRpcFailureMessage(error))
   }
 
-  const { error: stampError } = await supabase
-    .from('invoices')
-    .update({
-      credit_applied_rappen: amountRappen,
-      credit_applied_at: now,
-      updated_at: now,
-    })
-    .eq('id', invoiceId)
-    .eq('tenant_id', tenantId)
-    .eq('credit_applied_rappen', 0)
-
-  if (stampError) {
-    logger.warn('applyInvoiceCreditOnPaid: invoice stamp failed', stampError.message)
+  const row = firstRpcPayload(data)
+  if (!row || row.ok !== true) {
+    logger.error('applyInvoiceCreditOnPaid: RPC returned unexpected payload', { invoiceId, data })
+    throw new Error('Guthaben-Gutschrift lieferte kein gültiges Ergebnis')
   }
 
-  logger.info(`Invoice credit applied: invoice=${invoiceId} amount=${amountRappen}`)
-  return { applied_rappen: amountRappen, skipped: false }
+  const applied = Math.max(0, Number(row.applied_rappen) || 0)
+  const skipped = row.skipped === true || applied === 0
+  const outcome = typeof row.outcome === 'string' ? row.outcome : (skipped ? 'skipped' : 'applied')
+
+  if (outcome === 'applied') {
+    logger.info(`Invoice credit applied: invoice=${invoiceId} amount=${applied}`)
+  }
+
+  return {
+    applied_rappen: applied,
+    skipped,
+    outcome,
+    ledger_id: row.ledger_id ?? null,
+  }
 }

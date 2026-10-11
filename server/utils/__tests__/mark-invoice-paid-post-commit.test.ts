@@ -14,6 +14,51 @@ const actorId = '33333333-3333-4333-8333-333333333333'
 const userId = '44444444-4444-4444-8444-444444444444'
 const paymentId = '55555555-5555-4555-8555-555555555555'
 
+function walletCreditRpc(opts: {
+  failOnce?: boolean
+  alreadyApplied?: boolean
+  amountRappen?: number
+  ledgerId?: string
+} = {}) {
+  let walletFails = opts.failOnce === true
+  const amount = opts.amountRappen ?? 5000
+  const ledgerId = opts.ledgerId || '66666666-6666-4666-8666-666666666666'
+  return vi.fn(async (fn: string, _args?: Record<string, unknown>) => {
+    if (fn !== 'apply_invoice_wallet_credit') {
+      throw new Error(`unexpected rpc ${fn}`)
+    }
+    if (walletFails) {
+      walletFails = false
+      return { data: null, error: { message: 'wallet_boom' } }
+    }
+    if (opts.alreadyApplied) {
+      return {
+        data: {
+          ok: true,
+          outcome: 'already_applied',
+          applied_rappen: 0,
+          skipped: true,
+          credit_applied_rappen: amount,
+          ledger_id: ledgerId,
+        },
+        error: null,
+      }
+    }
+    return {
+      data: {
+        ok: true,
+        outcome: 'applied',
+        applied_rappen: amount,
+        skipped: false,
+        balance_before_rappen: 0,
+        balance_after_rappen: amount,
+        ledger_id: ledgerId,
+      },
+      error: null,
+    }
+  })
+}
+
 function createSupabaseMock(opts: {
   tracking?: Record<string, any> | null
   trackingUnavailable?: boolean
@@ -25,7 +70,6 @@ function createSupabaseMock(opts: {
   paymentsSyncFailOnce?: boolean
 }) {
   let tracking = opts.tracking === undefined ? null : opts.tracking
-  let walletFails = opts.walletFailOnce === true
   let staffFails = opts.staffPosFailOnce === true
   let paymentsFail = opts.paymentsSyncFailOnce === true
   let creditApplied = opts.creditAppliedRappen || 0
@@ -35,6 +79,11 @@ function createSupabaseMock(opts: {
     tenant_id: tenantId,
     metadata: { source: 'staff_product_sale' },
   }
+  const rpc = walletCreditRpc({
+    failOnce: opts.walletFailOnce,
+    alreadyApplied: (opts.creditAppliedRappen || 0) > 0 || !!opts.existingTx,
+    amountRappen: opts.existingTx?.amount_rappen || opts.creditAppliedRappen || 5000,
+  })
 
   const from = vi.fn((table: string) => {
     if (table === 'invoice_settlement_post_commit') {
@@ -241,6 +290,7 @@ function createSupabaseMock(opts: {
 
   return {
     from,
+    rpc,
     _state: {
       get tracking() { return tracking },
       get staffFails() { return staffFails },
@@ -273,21 +323,11 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
 
     supabase.from.mockImplementation((table: string) => {
       if (table === 'invoice_items') {
-        const creditResult = {
-          data: [{ credit_to_wallet: true, credit_amount_rappen: 5000 }],
-          error: null,
-        }
         return {
           select: () => ({
-            eq: (col: string) => {
-              if (col === 'invoice_id') {
-                return {
-                  eq: () => Promise.resolve(creditResult),
-                  not: async () => ({ data: [], error: null }),
-                }
-              }
-              return Promise.resolve(creditResult)
-            },
+            eq: () => ({
+              not: async () => ({ data: [], error: null }),
+            }),
           }),
         }
       }
@@ -338,70 +378,6 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
           }),
         }
       }
-      if (table === 'invoices') {
-        let creditApplied = 0
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                maybeSingle: async () => ({
-                  data: {
-                    id: invoiceId,
-                    user_id: userId,
-                    tenant_id: tenantId,
-                    payment_status: 'paid',
-                    credit_applied_rappen: creditApplied,
-                    invoice_number: 'RE-1',
-                  },
-                  error: null,
-                }),
-              }),
-            }),
-          }),
-          update: (patch: any) => ({
-            eq: () => ({
-              eq: () => ({
-                eq: async () => {
-                  if (patch.credit_applied_rappen) creditApplied = patch.credit_applied_rappen
-                  return { error: null }
-                },
-              }),
-            }),
-          }),
-        }
-      }
-      if (table === 'credit_transactions') {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                eq: () => ({
-                  in: () => ({
-                    eq: () => ({
-                      limit: () => ({
-                        maybeSingle: async () => ({ data: null, error: null }),
-                      }),
-                    }),
-                  }),
-                }),
-              }),
-            }),
-          }),
-          insert: async () => ({ error: null }),
-        }
-      }
-      if (table === 'student_credits') {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                maybeSingle: async () => ({ data: { balance_rappen: 0 }, error: null }),
-              }),
-            }),
-          }),
-          upsert: async () => ({ error: null }),
-        }
-      }
       return createSupabaseMock({}).from(table)
     })
 
@@ -423,6 +399,14 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
     expect(result.staff_pos.status).toBe('completed')
     expect(result.wallet_credit.status).toBe('completed')
     expect(staffPosRpc).toHaveBeenCalledTimes(1)
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'apply_invoice_wallet_credit',
+      expect.objectContaining({
+        p_tenant_id: tenantId,
+        p_invoice_id: invoiceId,
+        p_user_id: userId,
+      })
+    )
   })
 
   it('resumes staff-pos after failure without re-requiring core settlement', async () => {
@@ -511,6 +495,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
     }
 
     const supabase: any = {
+      rpc: walletCreditRpc({ amountRappen: 2500 }),
       from: (table: string) => {
         if (table === 'invoice_settlement_post_commit') {
           return {
@@ -528,86 +513,6 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
                   return { error: null }
                 },
               }),
-            }),
-          }
-        }
-        if (table === 'invoices') {
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  maybeSingle: async () => ({
-                    data: {
-                      id: invoiceId,
-                      user_id: userId,
-                      tenant_id: tenantId,
-                      payment_status: 'paid',
-                      credit_applied_rappen: 0,
-                      invoice_number: 'RE-1',
-                    },
-                    error: null,
-                  }),
-                }),
-              }),
-            }),
-            update: () => ({
-              eq: () => ({
-                eq: () => ({
-                  eq: async () => ({ error: null }),
-                }),
-              }),
-            }),
-          }
-        }
-        if (table === 'credit_transactions') {
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  eq: () => ({
-                    in: () => ({
-                      eq: () => ({
-                        limit: () => ({
-                          maybeSingle: async () => ({ data: null, error: null }),
-                        }),
-                      }),
-                    }),
-                  }),
-                }),
-              }),
-            }),
-            insert: async () => ({ error: null }),
-          }
-        }
-        if (table === 'student_credits') {
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  maybeSingle: async () => ({ data: { balance_rappen: 0 }, error: null }),
-                }),
-              }),
-            }),
-            upsert: async () => ({ error: null }),
-          }
-        }
-        if (table === 'invoice_items') {
-          return {
-            select: () => ({
-              eq: (col: string) => {
-                if (col === 'invoice_id') {
-                  return {
-                    eq: () => Promise.resolve({
-                      data: [{ credit_to_wallet: true, credit_amount_rappen: 2500 }],
-                      error: null,
-                    }),
-                  }
-                }
-                return Promise.resolve({
-                  data: [{ credit_to_wallet: true, credit_amount_rappen: 2500 }],
-                  error: null,
-                })
-              },
             }),
           }
         }
@@ -630,6 +535,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
     })
 
     expect(staffPosRpc).not.toHaveBeenCalled()
+    expect(supabase.rpc).toHaveBeenCalledTimes(1)
     expect(result.staff_pos.status).toBe('completed')
     expect(result.wallet_credit.status).toBe('completed')
     expect(result.downstream_complete).toBe(true)
@@ -682,6 +588,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
   it('still runs idempotent side effects when tracking table is unavailable', async () => {
     const staffPosRpc = vi.fn(async () => ({ ok: true, credit_applied: true, replayed: true }))
     const supabase: any = {
+      rpc: walletCreditRpc({ alreadyApplied: true, amountRappen: 100 }),
       from: (table: string) => {
         if (table === 'invoice_settlement_post_commit') {
           return {
@@ -722,27 +629,6 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
             }),
           }
         }
-        if (table === 'invoices') {
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  maybeSingle: async () => ({
-                    data: {
-                      id: invoiceId,
-                      user_id: userId,
-                      tenant_id: tenantId,
-                      payment_status: 'paid',
-                      credit_applied_rappen: 100,
-                      invoice_number: 'RE-1',
-                    },
-                    error: null,
-                  }),
-                }),
-              }),
-            }),
-          }
-        }
         throw new Error(table)
       },
     }
@@ -764,6 +650,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
     expect(result.payments_sync.status).toBe('completed')
     expect(result.staff_pos.status).toBe('completed')
     expect(result.wallet_credit.status).toBe('completed')
+    expect(supabase.rpc).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -779,6 +666,7 @@ describe('independent step failure isolation', () => {
     }
 
     const supabase: any = {
+      rpc: walletCreditRpc({ amountRappen: 1000 }),
       from: (table: string) => {
         if (table === 'invoice_settlement_post_commit') {
           return {
@@ -811,83 +699,12 @@ describe('independent step failure isolation', () => {
             }),
           }
         }
-        if (table === 'invoices') {
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  maybeSingle: async () => ({
-                    data: {
-                      id: invoiceId,
-                      user_id: userId,
-                      tenant_id: tenantId,
-                      payment_status: 'paid',
-                      credit_applied_rappen: 0,
-                      invoice_number: 'RE-1',
-                    },
-                    error: null,
-                  }),
-                }),
-              }),
-            }),
-            update: () => ({
-              eq: () => ({
-                eq: () => ({
-                  eq: async () => ({ error: null }),
-                }),
-              }),
-            }),
-          }
-        }
-        if (table === 'credit_transactions') {
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  eq: () => ({
-                    in: () => ({
-                      eq: () => ({
-                        limit: () => ({
-                          maybeSingle: async () => ({ data: null, error: null }),
-                        }),
-                      }),
-                    }),
-                  }),
-                }),
-              }),
-            }),
-            insert: async () => ({ error: null }),
-          }
-        }
-        if (table === 'student_credits') {
-          return {
-            select: () => ({
-              eq: () => ({
-                eq: () => ({
-                  maybeSingle: async () => ({ data: { balance_rappen: 0 }, error: null }),
-                }),
-              }),
-            }),
-            upsert: async () => ({ error: null }),
-          }
-        }
         if (table === 'invoice_items') {
           return {
             select: () => ({
-              eq: (col: string) => {
-                if (col === 'invoice_id') {
-                  return {
-                    eq: () => Promise.resolve({
-                      data: [{ credit_to_wallet: true, credit_amount_rappen: 1000 }],
-                      error: null,
-                    }),
-                  }
-                }
-                return Promise.resolve({
-                  data: [{ credit_to_wallet: true, credit_amount_rappen: 1000 }],
-                  error: null,
-                })
-              },
+              eq: () => ({
+                not: async () => ({ data: [], error: null }),
+              }),
             }),
           }
         }
@@ -917,6 +734,7 @@ describe('independent step failure isolation', () => {
     expect(result.downstream_complete).toBe(false)
     expect(tracking.staff_pos_status).toBe('failed')
     expect(tracking.wallet_credit_status).toBe('completed')
+    expect(supabase.rpc).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -937,5 +755,19 @@ describe('handler wiring for post-commit resume', () => {
     expect(migration).toContain('CREATE TABLE IF NOT EXISTS public.invoice_settlement_post_commit')
     expect(migration).toContain('credit_transactions_invoice_deposit_uidx')
     expect(migration).toContain('NOT applied by this PR')
+  })
+
+  it('wires wallet credit through apply_invoice_wallet_credit RPC (no client RMW)', () => {
+    const creditSrc = readFileSync(resolve(process.cwd(), 'server/utils/invoice-credit.ts'), 'utf8')
+    const walletMigration = readFileSync(
+      resolve(process.cwd(), 'migrations/20261011_apply_invoice_wallet_credit.sql'),
+      'utf8'
+    )
+    expect(creditSrc).toContain("rpc('apply_invoice_wallet_credit'")
+    expect(creditSrc).toContain('RPC fehlt')
+    expect(creditSrc).not.toContain(".from('student_credits')")
+    expect(creditSrc).not.toContain(".from('credit_transactions')")
+    expect(walletMigration).toContain('apply_invoice_wallet_credit')
+    expect(walletMigration).toContain('balance_rappen = balance_rappen + v_amount')
   })
 })

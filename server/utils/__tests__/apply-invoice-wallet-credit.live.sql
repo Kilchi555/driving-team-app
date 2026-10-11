@@ -1,0 +1,42 @@
+-- LIVE / MANUAL PostgreSQL concurrency & atomicity checks for
+-- public.apply_invoice_wallet_credit.
+--
+-- NOT executed by CI or by the wallet atomicity remediation agent.
+-- Do NOT run against production. Use a disposable local/staging clone only.
+-- Requires migration 20261011_apply_invoice_wallet_credit.sql already applied.
+--
+-- Scenarios covered (manual):
+-- 1) Successful credit: ledger + balance + credit_applied_rappen in one commit.
+-- 2) Retry after success: outcome already_applied, balance unchanged.
+-- 3) Simulated failure before commit: BEGIN … credit … RAISE → ROLLBACK; no ledger/balance change.
+-- 4) Two concurrent sessions same invoice: exactly one applied credit.
+-- 5) Two concurrent sessions distinct invoices same wallet: both credits retained.
+-- 6) Cross-tenant / user mismatch: exception, no writes.
+-- 7) Existing ledger for invoice: already_applied after identity verify.
+
+-- Example scaffolding (replace UUIDs with fixtures in a disposable DB):
+--
+-- BEGIN;
+--   SELECT set_config('role', 'service_role', true);
+--   SELECT public.apply_invoice_wallet_credit(
+--     '<tenant_id>'::uuid,
+--     '<invoice_id>'::uuid,
+--     '<user_id>'::uuid,
+--     '<actor_id>'::uuid
+--   );
+-- COMMIT;
+--
+-- Concurrent same-invoice (two psql sessions):
+--   Session A/B: BEGIN; SELECT apply_invoice_wallet_credit(...same...); COMMIT;
+--   Expect: one outcome=applied, one already_applied; one ledger row; balance += amount once.
+--
+-- Simulated mid-transaction failure:
+--   BEGIN;
+--     SELECT apply_invoice_wallet_credit(...);
+--     RAISE EXCEPTION 'simulated_abort';
+--   ROLLBACK;
+--   Expect: no new credit_transactions row; balance unchanged; credit_applied_rappen unchanged.
+--
+-- Distinct invoices same wallet:
+--   Session A: apply for invoice_1; Session B: apply for invoice_2 concurrently.
+--   Expect: balance increased by sum of both amounts; two ledger rows.
