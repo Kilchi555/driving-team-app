@@ -765,9 +765,75 @@ describe('handler wiring for post-commit resume', () => {
     )
     expect(creditSrc).toContain("rpc('apply_invoice_wallet_credit'")
     expect(creditSrc).toContain('RPC fehlt')
+    expect(creditSrc).toContain('reconciliation_required')
     expect(creditSrc).not.toContain(".from('student_credits')")
     expect(creditSrc).not.toContain(".from('credit_transactions')")
     expect(walletMigration).toContain('apply_invoice_wallet_credit')
     expect(walletMigration).toContain('balance_rappen = balance_rappen + v_amount')
+    expect(walletMigration).toContain('reconciliation_required_marker_without_ledger')
+  })
+})
+
+describe('core settlement vs wallet downstream', () => {
+  it('marks wallet failed on reconciliation error without claiming downstream complete', async () => {
+    let tracking: any = {
+      invoice_id: invoiceId,
+      tenant_id: tenantId,
+      payments_sync_status: 'completed',
+      staff_pos_status: 'completed',
+      wallet_credit_status: 'pending',
+      attempts: 0,
+    }
+
+    const supabase: any = {
+      rpc: vi.fn(async () => ({
+        data: null,
+        error: {
+          message: 'apply_invoice_wallet_credit_reconciliation_required_marker_without_ledger',
+          code: 'P0001',
+        },
+      })),
+      from: (table: string) => {
+        if (table === 'invoice_settlement_post_commit') {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: async () => ({ data: tracking, error: null }),
+                }),
+              }),
+            }),
+            update: (patch: any) => ({
+              eq: () => ({
+                eq: async () => {
+                  tracking = { ...tracking, ...patch }
+                  return { error: null }
+                },
+              }),
+            }),
+          }
+        }
+        throw new Error(table)
+      },
+    }
+
+    const result = await runMarkInvoicePaidPostCommit({
+      supabase,
+      invoiceId,
+      tenantId,
+      actorUserId: actorId,
+      userId,
+      isPartial: false,
+      paidAt: new Date().toISOString(),
+      now: new Date().toISOString(),
+      resumedFromAlreadySettled: true,
+      staffPosRpc: vi.fn(),
+    })
+
+    expect(result.wallet_credit.status).toBe('failed')
+    expect(result.downstream_complete).toBe(false)
+    expect(result.staff_pos.status).toBe('completed')
+    expect(tracking.wallet_credit_status).toBe('failed')
+    expect(String(result.wallet_credit.error || '')).toMatch(/Abstimmung|Inkonsistenz|reconciliation/i)
   })
 })

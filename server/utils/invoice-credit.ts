@@ -24,6 +24,92 @@ export type ApplyInvoiceWalletCreditRpcResult = {
   ledger_id?: string | null
   balance_before_rappen?: number
   balance_after_rappen?: number
+  evidence?: string
+}
+
+/**
+ * Classification of invoice-wallet evidence before mutate.
+ * Mirrors apply_invoice_wallet_credit decision points for unit tests.
+ * A ledger row alone never proves the wallet balance was incremented.
+ */
+export type InvoiceWalletCreditEvidence = {
+  markerRappen: number
+  hasLedger: boolean
+  ledgerAmountRappen?: number | null
+  ledgerUserId?: string | null
+  ledgerTenantId?: string | null
+  ledgerReferenceId?: string | null
+  ledgerReferenceType?: string | null
+  ledgerStatus?: string | null
+  ledgerTransactionType?: string | null
+  expectedAmountRappen: number
+  invoiceUserId: string
+  tenantId: string
+  invoiceId: string
+}
+
+export type InvoiceWalletCreditDecision =
+  | { action: 'already_applied'; evidence: 'marker_and_ledger' }
+  | { action: 'apply' }
+  | { action: 'skipped_no_credit' }
+  | {
+      action: 'reconciliation_required'
+      reason:
+        | 'marker_without_ledger'
+        | 'ledger_without_marker'
+        | 'marker_ledger_amount'
+        | 'amount_mismatch'
+        | 'ledger_mismatch'
+    }
+
+export function classifyInvoiceWalletCreditState(
+  e: InvoiceWalletCreditEvidence
+): InvoiceWalletCreditDecision {
+  const marker = Math.max(0, Math.round(Number(e.markerRappen) || 0))
+  const expected = Math.max(0, Math.round(Number(e.expectedAmountRappen) || 0))
+
+  if (e.hasLedger) {
+    const ledgerAmount = Math.round(Number(e.ledgerAmountRappen) || 0)
+    const identityOk =
+      e.ledgerTenantId === e.tenantId
+      && e.ledgerUserId === e.invoiceUserId
+      && e.ledgerReferenceId === e.invoiceId
+      && e.ledgerReferenceType === 'invoice'
+      && e.ledgerStatus === 'completed'
+      && (e.ledgerTransactionType === 'deposit' || e.ledgerTransactionType === 'credit_product_purchase')
+
+    if (!identityOk) {
+      return { action: 'reconciliation_required', reason: 'ledger_mismatch' }
+    }
+
+    if (marker > 0) {
+      if (ledgerAmount !== marker) {
+        return { action: 'reconciliation_required', reason: 'marker_ledger_amount' }
+      }
+      if (expected > 0 && ledgerAmount !== expected) {
+        return { action: 'reconciliation_required', reason: 'amount_mismatch' }
+      }
+      return { action: 'already_applied', evidence: 'marker_and_ledger' }
+    }
+
+    // marker == 0 && ledger present
+    if (expected > 0 && ledgerAmount !== expected) {
+      return { action: 'reconciliation_required', reason: 'amount_mismatch' }
+    }
+    return { action: 'reconciliation_required', reason: 'ledger_without_marker' }
+  }
+
+  if (marker > 0) {
+    return { action: 'reconciliation_required', reason: 'marker_without_ledger' }
+  }
+
+  if (expected <= 0) {
+    return { action: 'skipped_no_credit' }
+  }
+
+  // No marker, no ledger: apply. Balance-without-ledger orphans are NOT
+  // detectable from current schema and must be audited separately.
+  return { action: 'apply' }
 }
 
 export function toInvoiceRappen(value: unknown): number {
@@ -83,6 +169,9 @@ function firstRpcPayload(
 
 function mapRpcFailureMessage(error: { message?: string } | null | undefined): string {
   const message = error?.message || ''
+  if (/reconciliation_required/i.test(message)) {
+    return 'Guthaben-Gutschrift erfordert manuelle Abstimmung (Inkonsistenz erkannt)'
+  }
   if (/user_mismatch|ledger_mismatch/i.test(message)) {
     return 'Rechnung gehört nicht zum angegebenen Benutzer oder widerspricht dem Ledger'
   }
@@ -102,18 +191,8 @@ function mapRpcFailureMessage(error: { message?: string } | null | undefined): s
  * Credits the customer wallet for flagged invoice lines after full payment.
  *
  * Financial mutation lives entirely in `apply_invoice_wallet_credit` (one DB
- * transaction: invoice lock, wallet lock, ledger insert, balance increment,
- * credit_applied stamp). This TypeScript wrapper does not read-modify-write
- * the wallet and fails closed if the RPC is missing.
- *
- * Idempotency (database):
- * - invoices.credit_applied_rappen > 0
- * - completed credit_transactions for (tenant_id, invoice reference)
- * - partial unique index credit_transactions_invoice_deposit_uidx
- *
- * Exactly-once wallet credit for a given paid invoice is guaranteed only after
- * the migration that creates apply_invoice_wallet_credit (+ unique index) is
- * applied. Until then this function throws rather than falling back to RMW.
+ * transaction). Idempotent success requires marker + matching ledger evidence.
+ * Incomplete/orphan states fail closed (reconciliation_required). No RMW fallback.
  */
 export async function applyInvoiceCreditOnPaid(opts: {
   supabase: any
