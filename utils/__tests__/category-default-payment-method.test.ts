@@ -185,18 +185,19 @@ describe('category default payment method wiring', () => {
     expect(sql).not.toMatch(/DROP COLUMN/i)
   })
 
-  it('whitelists and validates the field on category save', () => {
+  it('whitelists and validates the field on category save without invoice-option hard block', () => {
     const src = read('server/api/admin/course-categories/save.post.ts')
     expect(src).toContain("'default_payment_method'")
     expect(src).toContain('parseCategoryDefaultPaymentMethod')
-    expect(src).toContain('assertInvoicePaymentMethodAllowed')
-    expect(src).toContain('getTenantInvoicePaymentsEnabled')
+    expect(src).not.toContain('assertInvoicePaymentMethodAllowed')
+    expect(src).not.toContain('getTenantInvoicePaymentsEnabled')
   })
 
-  it('rejects INVOICE on course upsert when invoices are disabled', () => {
+  it('allows admin course upsert to persist INVOICE without the customer invoice-option gate', () => {
     const src = read('server/api/admin/courses/upsert.post.ts')
-    expect(src).toContain('assertInvoicePaymentMethodAllowed')
-    expect(src).toContain("courseData.payment_method === 'INVOICE'")
+    expect(src).not.toContain('assertInvoicePaymentMethodAllowed')
+    expect(src).not.toContain('getTenantInvoicePaymentsEnabled')
+    expect(src).toContain('resolveNewCoursePaymentMethod')
   })
 
   it('resolves category/tenant payment defaults server-side on course create only', () => {
@@ -224,7 +225,9 @@ describe('category default payment method wiring', () => {
     const src = read('pages/admin/courses.vue')
     expect(src).not.toContain('automatisch auf Online-Zahlung/Barzahlung zurückgefallen')
     expect(src).toContain('kein automatischer Wechsel auf Online-Zahlung oder Barzahlung')
-    expect(src).toContain('Speichern und Anmeldung mit Rechnung sind erst nach Aktivierung möglich')
+    expect(src).toContain('Admin-Override gespeichert werden')
+    expect(src).toContain('öffentliche Anmeldung mit Rechnung bleibt blockiert')
+    expect(src).not.toContain('Speichern mit Rechnung ist erst nach Aktivierung möglich')
   })
 
   it('uses persisted course payment_method on public enrollment and waits for invoice settings', () => {
@@ -249,5 +252,15 @@ describe('category default payment method wiring', () => {
     expect(src).toContain('INVOICE_ENROLLMENT_DISABLED_MESSAGE')
     expect(src).toContain("explicitMethod === 'INVOICE'")
     expect(src).not.toContain('auto-degrade')
+  })
+
+  it('keeps enrollment fail-closed on cash/invoice path when invoice option is disabled', () => {
+    const enrollCash = read('server/api/courses/enroll-cash.post.ts')
+    expect(enrollCash).toContain('assertInvoiceEnrollmentAllowed')
+    expect(enrollCash).toContain('invoice_payments_enabled')
+    const enrollHelper = read('server/utils/course-enrollment-payment-method.ts')
+    expect(enrollHelper).toContain('INVOICE_ENROLLMENT_DISABLED_MESSAGE')
+    expect(enrollHelper).toContain('assertInvoiceEnrollmentAllowed')
+    expect(enrollHelper).toContain("return 'cash_on_site'")
   })
 })

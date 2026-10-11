@@ -8,12 +8,8 @@ import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { zurichLocalToUtcIso } from '~/server/utils/zurich-time'
 import { httpErrorForCourseWrite } from '~/server/utils/course-write-error'
 import { normalizeCourseInvoiceTimingForSave } from '~/server/utils/course-invoice-timing'
+import { getTenantDefaultPaymentMethod } from '~/server/utils/tenant-default-payment-method'
 import {
-  getTenantDefaultPaymentMethod,
-  getTenantInvoicePaymentsEnabled,
-} from '~/server/utils/tenant-default-payment-method'
-import {
-  assertInvoicePaymentMethodAllowed,
   parseCoursePaymentMethodInput,
   resolveNewCoursePaymentMethod,
 } from '~/utils/category-default-payment-method'
@@ -239,22 +235,10 @@ export default defineEventHandler(async (event) => {
     }
     courseData.payment_method = resolvedPaymentMethod
 
-    // Persist INVOICE only when the tenant invoice feature flag is enabled.
-    // Do not silently rewrite to Wallee/cash on the admin write path.
-    if (courseData.payment_method === 'INVOICE') {
-      const invoiceEnabled = await getTenantInvoicePaymentsEnabled(supabase, profile.tenant_id)
-      try {
-        assertInvoicePaymentMethodAllowed({
-          paymentMethod: courseData.payment_method,
-          invoicePaymentsEnabled: invoiceEnabled,
-        })
-      } catch (invoiceErr: any) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: invoiceErr?.message || 'Rechnung ist für diesen Mandanten nicht erlaubt.',
-        })
-      }
-    }
+    // Admin may persist INVOICE as an explicit course/category override of the
+    // tenant Standard-Zahlungsart even when "Rechnung als Zahlungsoption erlauben"
+    // is off. That toggle gates customer booking/enrollment only — enrollment
+    // endpoints fail closed without silently rewriting to Wallee/cash.
 
     const courseTiming = normalizeCourseInvoiceTimingForSave({
       paymentMethod: courseData.payment_method,
