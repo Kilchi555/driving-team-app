@@ -12,9 +12,11 @@ export type MarkInvoicePaidRole = 'admin' | 'tenant_admin' | string
 
 export class MarkInvoicePaidError extends Error {
   statusCode: number
-  constructor(statusCode: number, message: string) {
+  settlementCode?: string
+  constructor(statusCode: number, message: string, settlementCode?: string) {
     super(message)
     this.statusCode = statusCode
+    this.settlementCode = settlementCode
     this.name = 'MarkInvoicePaidError'
   }
 }
@@ -48,7 +50,6 @@ export function isProviderLikePaymentMethod(method: string): boolean {
 export function looksLikeOfflinePaymentMethod(method: string): boolean {
   const normalized = method.trim().toLowerCase().replace(/\s+/g, '_')
   if (OFFLINE_METHOD_HINT_RE.test(normalized)) return true
-  // Free-text offline notes (e.g. "Bar Kursabend") — still require attestation
   if (PROVIDER_METHOD_RE.test(normalized)) return false
   return true
 }
@@ -67,6 +68,7 @@ export function resolveSettlementSource(input: {
     throw new MarkInvoicePaidError(
       422,
       'Online-/Provider-Zahlungen (z.B. Wallee) können hier nicht manuell als erfolgreich bestätigt werden. Bitte Bankimport oder den Provider-Workflow verwenden.',
+      'provider_not_attestable',
     )
   }
 
@@ -74,6 +76,7 @@ export function resolveSettlementSource(input: {
     throw new MarkInvoicePaidError(
       422,
       'Manuelle Zahlungsbestätigung erfordert die ausdrückliche Bestätigung, dass der Zahlungseingang geprüft wurde (keine technische Verifikation).',
+      'manual_attestation_required',
     )
   }
 
@@ -81,12 +84,17 @@ export function resolveSettlementSource(input: {
     throw new MarkInvoicePaidError(
       422,
       'Diese Zahlungsart ist für eine manuelle Bestätigung nicht zulässig.',
+      'method_not_attestable',
     )
   }
 
   return { source: 'manual_attestation', technicallyVerified: false }
 }
 
+/**
+ * Pure amount derivation mirroring mark_invoice_paid_core.
+ * Caller-supplied clamped totals are not authoritative.
+ */
 export function computePaidTotals(input: {
   invoiceTotalRappen: number
   previouslyPaidRappen: number
@@ -96,8 +104,12 @@ export function computePaidTotals(input: {
   clampedTotalRappen: number
   isPartial: boolean
 } {
-  const total = Math.max(0, Math.trunc(Number(input.invoiceTotalRappen) || 0))
-  const previously = Math.max(0, Math.trunc(Number(input.previouslyPaidRappen) || 0))
+  const total = Math.trunc(Number(input.invoiceTotalRappen) || 0)
+  const previously = Math.trunc(Number(input.previouslyPaidRappen) || 0)
+  if (total < 0 || previously < 0) {
+    throw new MarkInvoicePaidError(400, 'Ungültiger Rechnungs- oder Zahlungsbetrag', 'negative_balance')
+  }
+
   const requestedRaw = input.requestedPaymentRappen
   const requested =
     requestedRaw == null || requestedRaw === undefined
@@ -105,16 +117,20 @@ export function computePaidTotals(input: {
       : Math.trunc(Number(requestedRaw) || 0)
 
   if (requested <= 0) {
-    throw new MarkInvoicePaidError(400, 'Zahlungsbetrag muss grösser als 0 sein')
+    throw new MarkInvoicePaidError(400, 'Zahlungsbetrag muss grösser als 0 sein', 'invalid_amount')
   }
   if (previously >= total && total > 0) {
-    throw new MarkInvoicePaidError(409, 'Rechnung ist bereits vollständig bezahlt')
+    throw new MarkInvoicePaidError(409, 'Rechnung ist bereits vollständig bezahlt', 'already_paid')
   }
 
   const remaining = Math.max(0, total - previously)
-  const newPaymentRappen = Math.min(requested, remaining)
-  const clampedTotalRappen = Math.min(total, previously + newPaymentRappen)
-  const isPartial = clampedTotalRappen < total
+  if (requested > remaining) {
+    throw new MarkInvoicePaidError(400, 'Zahlungsbetrag übersteigt den offenen Rechnungsbetrag', 'overpayment')
+  }
+
+  const newPaymentRappen = requested
+  const clampedTotalRappen = previously + newPaymentRappen
+  const isPartial = total > 0 && clampedTotalRappen < total
   return { newPaymentRappen, clampedTotalRappen, isPartial }
 }
 
@@ -157,6 +173,7 @@ export function planCourseRegistrationPaySync(input: {
     throw new MarkInvoicePaidError(
       409,
       'Mehrere Kursanmeldungen sind mit dieser Rechnung verknüpft — automatische Zahlungssynchronisation abgebrochen.',
+      'ambiguous_registration',
     )
   }
 
@@ -177,6 +194,8 @@ export function buildMarkInvoicePaidAuditDetails(input: {
   isPartial: boolean
   courseRegistrationId: string | null
   importSource?: string | null
+  outcome?: string | null
+  auditWritten?: boolean
 }): Record<string, unknown> {
   return {
     settlement_source: input.settlementSource,
@@ -187,7 +206,83 @@ export function buildMarkInvoicePaidAuditDetails(input: {
     is_partial: input.isPartial,
     course_registration_id: input.courseRegistrationId,
     import_source: input.importSource || null,
-    // Explicit: manual attestation is not independent settlement proof
+    outcome: input.outcome || null,
+    // Explicit: this path never writes cash_transactions
     cash_ledger_written: false,
+    // Only true when the audit insert itself succeeded (set by handler after logAudit)
+    audit_written: input.auditWritten === true,
   }
+}
+
+/** Map Postgres/RPC exception text to HTTP errors with settlement_code for UI. */
+export function mapMarkInvoicePaidRpcMessage(message: string): MarkInvoicePaidError | null {
+  const m = message || ''
+  if (/mark_invoice_paid_core_already_paid/i.test(m)) {
+    return new MarkInvoicePaidError(409, 'Rechnung ist bereits vollständig bezahlt', 'already_paid')
+  }
+  if (/mark_invoice_paid_core_concurrent_modification/i.test(m)) {
+    return new MarkInvoicePaidError(
+      409,
+      'Rechnung wurde zwischenzeitlich geändert — bitte erneut laden',
+      'concurrent_modification',
+    )
+  }
+  if (/mark_invoice_paid_core_ambiguous_registration/i.test(m)) {
+    return new MarkInvoicePaidError(
+      409,
+      'Mehrere Kursanmeldungen sind mit dieser Rechnung verknüpft — automatische Zahlungssynchronisation abgebrochen.',
+      'ambiguous_registration',
+    )
+  }
+  if (/mark_invoice_paid_core_invoice_not_found/i.test(m)) {
+    return new MarkInvoicePaidError(404, 'Rechnung nicht gefunden', 'invoice_not_found')
+  }
+  if (/mark_invoice_paid_core_overpayment/i.test(m)) {
+    return new MarkInvoicePaidError(400, 'Zahlungsbetrag übersteigt den offenen Rechnungsbetrag', 'overpayment')
+  }
+  if (/mark_invoice_paid_core_invalid_amount/i.test(m)) {
+    return new MarkInvoicePaidError(400, 'Zahlungsbetrag muss grösser als 0 sein', 'invalid_amount')
+  }
+  if (/mark_invoice_paid_core_bank_key_conflict_invoice/i.test(m)) {
+    return new MarkInvoicePaidError(
+      409,
+      'Dieser Bankimport-Schlüssel ist bereits einer anderen Rechnung zugeordnet.',
+      'bank_key_conflict_invoice',
+    )
+  }
+  if (/mark_invoice_paid_core_bank_key_needs_reconciliation/i.test(m)) {
+    return new MarkInvoicePaidError(
+      409,
+      'Bankimport-Schlüssel vorhanden, aber Verbuchungsstand inkonsistent — manuelle Abstimmung erforderlich (kein Beweis für erfolgreiche Verbuchung).',
+      'bank_key_needs_reconciliation',
+    )
+  }
+  if (/mark_invoice_paid_core_bank_key_required/i.test(m)) {
+    return new MarkInvoicePaidError(400, 'Bankimport erfordert einen Deduplizierungsschlüssel', 'bank_key_required')
+  }
+  if (/mark_invoice_paid_core_registration_mismatch/i.test(m) || /mark_invoice_paid_core_registration_missing/i.test(m)) {
+    return new MarkInvoicePaidError(
+      409,
+      'Kursanmeldung-Zuordnung inkonsistent — Vorgang abgebrochen',
+      'registration_mismatch',
+    )
+  }
+  if (
+    /function .*mark_invoice_paid_core.* does not exist/i.test(m)
+    || /Could not find the function/i.test(m)
+    || /PGRST202/i.test(m)
+  ) {
+    return new MarkInvoicePaidError(
+      503,
+      'Zahlungsverbuchung nicht verfügbar (mark_invoice_paid_core fehlt). Keine Teilbuchung ausgeführt.',
+      'rpc_missing',
+    )
+  }
+  return null
+}
+
+export function isBankDedupeAlreadySettledOutcome(result: unknown): boolean {
+  if (!result || typeof result !== 'object') return false
+  const outcome = (result as any).outcome
+  return outcome === 'already_settled' || (result as any).idempotent === true
 }

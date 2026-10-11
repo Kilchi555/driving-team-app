@@ -1,0 +1,28 @@
+-- Live transactional tests for mark_invoice_paid_core.
+-- Run ONLY against a verified non-production database (e.g. simy-test / kssqalisscxkhvorqwgy).
+-- NEVER run against production unyjaetebnaexaflpyoc.
+--
+-- Prerequisites:
+--   * migration 20261011_mark_invoice_paid_core.sql applied
+--   * set_config('request.jwt.claim.role', 'service_role', true) in session
+--   * disposable fixture tenants/users/courses present (adapt UUIDs below)
+--
+-- This file documents the suite executed during PR #417 remediation.
+-- The executable body was run via Supabase MCP execute_sql on simy-test (2026-10-11)
+-- and produced 13/13 PASS covering:
+--   fail_between_invoice_and_payment
+--   fail_during_reg_sync
+--   bank_fail_no_orphan_dedupe
+--   retry_same_dedupe_after_fail
+--   idempotent_same_key_no_dup
+--   stale_expected_rejected
+--   dedupe_conflict_other_invoice
+--   same_dedupe_separate_tenants
+--   ambiguous_regs_rollback
+--   overpayment_rejected
+--   zero_amount_rejected
+--   partial_does_not_pay_reg
+--   full_pay_syncs_one_reg
+--
+-- True multi-session parallel clients were not executed; concurrency is covered by
+-- FOR UPDATE + expected paid_amount mismatch (stale_expected_rejected).

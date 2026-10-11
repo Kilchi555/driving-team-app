@@ -1,7 +1,8 @@
 // server/api/invoices/mark-invoice-paid.post.ts
 // Markiert eine Rechnung als bezahlt — NUR für Admins.
 // Bankimport = technisch verifiziert; sonst nur mit ausdrücklicher manueller Attestierung.
-// Schreibt keine cash_transactions und synct Kursanmeldungen tenant-sicher bei Vollzahlung.
+// Finanzielle Writes NUR über mark_invoice_paid_core (atomar). Kein sequential Fallback.
+// Schreibt keine cash_transactions. Staff-POS/Credits/Audit sind post-commit.
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
@@ -14,6 +15,8 @@ import {
   assertMarkInvoicePaidRole,
   buildMarkInvoicePaidAuditDetails,
   computePaidTotals,
+  isBankDedupeAlreadySettledOutcome,
+  mapMarkInvoicePaidRpcMessage,
   normalizePaymentMethodLabel,
   planCourseRegistrationPaySync,
   resolveSettlementSource,
@@ -21,23 +24,27 @@ import {
 
 function httpErrorFromMark(err: unknown) {
   if (err instanceof MarkInvoicePaidError) {
-    return createError({ statusCode: err.statusCode, statusMessage: err.message })
-  }
-  const message = err && typeof err === 'object' && 'message' in err ? String((err as any).message) : ''
-  if (/mark_invoice_paid_core_already_paid/i.test(message)) {
-    return createError({ statusCode: 409, statusMessage: 'Rechnung ist bereits vollständig bezahlt' })
-  }
-  if (/mark_invoice_paid_core_concurrent_modification/i.test(message)) {
-    return createError({ statusCode: 409, statusMessage: 'Rechnung wurde zwischenzeitlich geändert — bitte erneut laden' })
-  }
-  if (/mark_invoice_paid_core_ambiguous_registration/i.test(message)) {
     return createError({
-      statusCode: 409,
-      statusMessage: 'Mehrere Kursanmeldungen sind mit dieser Rechnung verknüpft — automatische Zahlungssynchronisation abgebrochen.',
+      statusCode: err.statusCode,
+      statusMessage: err.message,
+      data: err.settlementCode ? { settlement_code: err.settlementCode } : undefined,
     })
   }
-  if (/mark_invoice_paid_core_invoice_not_found/i.test(message)) {
-    return createError({ statusCode: 404, statusMessage: 'Rechnung nicht gefunden' })
+  const message = err && typeof err === 'object' && 'message' in err ? String((err as any).message) : ''
+  const mapped = mapMarkInvoicePaidRpcMessage(message)
+  if (mapped) {
+    return createError({
+      statusCode: mapped.statusCode,
+      statusMessage: mapped.message,
+      data: mapped.settlementCode ? { settlement_code: mapped.settlementCode } : undefined,
+    })
+  }
+  if ((err as any)?.code === 'PGRST202') {
+    return createError({
+      statusCode: 503,
+      statusMessage: 'Zahlungsverbuchung nicht verfügbar (mark_invoice_paid_core fehlt). Keine Teilbuchung ausgeführt.',
+      data: { settlement_code: 'rpc_missing' },
+    })
   }
   return null
 }
@@ -127,36 +134,6 @@ export default defineEventHandler(async (event) => {
     throw err
   }
 
-  // Bank import dedupe BEFORE money movement — unique (tenant_id, dedupe_key) prevents doubles.
-  if (settlement.source === 'bank_import') {
-    const { error: dedupeError } = await supabase
-      .from('bank_import_records')
-      .insert({
-        tenant_id: staffUser.tenant_id,
-        dedupe_key: String(camt_dedupe_key).trim(),
-        bank_ref: camt_bank_ref || null,
-        entry_date: paid_at ? paidAt.substring(0, 10) : null,
-        amount_rappen: totals.newPaymentRappen,
-        reference: camt_reference || null,
-        debtor_name: camt_debtor_name || null,
-        invoice_id,
-        imported_by: staffUser.id,
-        source: import_source === 'csv' ? 'csv' : 'camt',
-      })
-    if (dedupeError) {
-      if (dedupeError.code === '23505') {
-        throw createError({
-          statusCode: 409,
-          statusMessage: 'Diese Bank-Transaktion wurde bereits importiert und verbucht.',
-        })
-      }
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Bankimport-Deduplizierung fehlgeschlagen',
-      })
-    }
-  }
-
   const { data: linkedRegs, error: regLoadError } = await supabase
     .from('course_registrations')
     .select('id, tenant_id, invoice_id')
@@ -190,111 +167,66 @@ export default defineEventHandler(async (event) => {
       ? [noteText, '[manual_attestation]'].filter(Boolean).join(' ')
       : noteText
 
-  const rpcArgs = {
+  const bankKey =
+    settlement.source === 'bank_import' && typeof camt_dedupe_key === 'string'
+      ? camt_dedupe_key.trim()
+      : null
+
+  const rpcArgs: Record<string, unknown> = {
     p_tenant_id: staffUser.tenant_id,
     p_invoice_id: invoice_id,
     p_actor_user_id: staffUser.id,
     p_expected_paid_amount_rappen: invoice.paid_amount_rappen || 0,
-    p_new_payment_rappen: totals.newPaymentRappen,
-    p_clamped_total_rappen: totals.clampedTotalRappen,
-    p_is_partial: totals.isPartial,
+    p_requested_payment_rappen: totals.newPaymentRappen,
     p_paid_at: paidAt,
     p_payment_method: methodLabel,
     p_notes: settlementNote,
     p_internal_notes: noteText,
     p_settlement_source: settlement.source,
     p_sync_registration_id: syncPlan.action === 'sync' ? syncPlan.registrationId : null,
-    p_sync_amount_paid_rappen: syncPlan.action === 'sync' ? syncPlan.amountPaidRappen : null,
+    p_bank_dedupe_key: bankKey,
+    p_bank_ref: bankKey ? (camt_bank_ref || null) : null,
+    p_bank_entry_date: bankKey && paid_at ? paidAt.substring(0, 10) : null,
+    p_bank_reference: bankKey ? (camt_reference || null) : null,
+    p_bank_debtor_name: bankKey ? (camt_debtor_name || null) : null,
+    p_bank_import_source: bankKey ? (import_source === 'csv' ? 'csv' : 'camt') : null,
   }
 
+  // Fail closed BEFORE any settlement write if the atomic RPC is missing.
   const { data: rpcResult, error: rpcError } = await supabase.rpc('mark_invoice_paid_core', rpcArgs)
 
   if (rpcError) {
     const mapped = httpErrorFromMark(rpcError)
     if (mapped) throw mapped
-
-    // Fallback when migration is not yet applied: optimistic sequential writes.
-    // Prefer the RPC in production once migrated.
-    if (!/function .*mark_invoice_paid_core.* does not exist/i.test(rpcError.message || '')
-      && rpcError.code !== 'PGRST202'
-      && !/Could not find the function/i.test(rpcError.message || '')) {
-      throw createError({ statusCode: 500, statusMessage: rpcError.message || 'Zahlung konnte nicht verbucht werden' })
-    }
-
-    const isPartial = totals.isPartial
-    const paymentStatus = isPartial ? 'partial' : 'paid'
-    const invoiceStatus = isPartial ? 'sent' : 'paid'
-
-    const { data: updatedRows, error: invoiceUpdateError } = await supabase
-      .from('invoices')
-      .update({
-        payment_status: paymentStatus,
-        status: invoiceStatus,
-        paid_at: paidAt,
-        paid_amount_rappen: totals.clampedTotalRappen,
-        ...(noteText ? { internal_notes: noteText } : {}),
-        ...(!isPartial ? { dunning_level: 0, dunning_paused: false } : {}),
-        updated_at: now,
-      })
-      .eq('id', invoice_id)
-      .eq('tenant_id', invoice.tenant_id)
-      .eq('paid_amount_rappen', invoice.paid_amount_rappen || 0)
-      .select('id')
-
-    if (invoiceUpdateError) {
-      throw createError({ statusCode: 500, statusMessage: invoiceUpdateError.message })
-    }
-    if (!updatedRows || updatedRows.length === 0) {
-      throw createError({
-        statusCode: 409,
-        statusMessage: 'Rechnung wurde zwischenzeitlich geändert — bitte erneut laden',
-      })
-    }
-
-    const { error: payInsertError } = await supabase
-      .from('invoice_payments')
-      .insert({
-        invoice_id,
-        tenant_id: staffUser.tenant_id,
-        amount_rappen: totals.newPaymentRappen,
-        payment_date: paidAt,
-        payment_method: methodLabel,
-        notes: settlementNote,
-        status: 'completed',
-        currency: 'CHF',
-      })
-
-    if (payInsertError) {
-      throw createError({ statusCode: 500, statusMessage: payInsertError.message })
-    }
-
-    if (syncPlan.action === 'sync') {
-      const { data: synced, error: syncError } = await supabase
-        .from('course_registrations')
-        .update({
-          payment_status: 'paid',
-          amount_paid_rappen: syncPlan.amountPaidRappen,
-          updated_at: now,
-        })
-        .eq('id', syncPlan.registrationId)
-        .eq('tenant_id', staffUser.tenant_id)
-        .eq('invoice_id', invoice_id)
-        .select('id')
-
-      if (syncError) {
-        throw createError({ statusCode: 500, statusMessage: 'Kursanmeldung konnte nicht synchronisiert werden' })
-      }
-      if (!synced || synced.length !== 1) {
-        throw createError({
-          statusCode: 409,
-          statusMessage: 'Kursanmeldung-Zuordnung inkonsistent — Vorgang abgebrochen',
-        })
-      }
-    }
+    throw createError({
+      statusCode: 500,
+      statusMessage: rpcError.message || 'Zahlung konnte nicht verbucht werden',
+      data: { settlement_code: 'rpc_error' },
+    })
   }
 
-  // Linked payments table rows: complete only on full invoice settlement.
-  if (!totals.isPartial) {
+  const alreadySettled = isBankDedupeAlreadySettledOutcome(rpcResult)
+  const settledPaidRappen =
+    typeof (rpcResult as any)?.paid_amount_rappen === 'number'
+      ? (rpcResult as any).paid_amount_rappen
+      : totals.clampedTotalRappen
+  const settledIsPartial =
+    typeof (rpcResult as any)?.is_partial === 'boolean'
+      ? (rpcResult as any).is_partial
+      : totals.isPartial
+  const settledNewPayment =
+    typeof (rpcResult as any)?.new_payment_rappen === 'number'
+      ? (rpcResult as any).new_payment_rappen
+      : alreadySettled
+        ? 0
+        : totals.newPaymentRappen
+  const courseRegistrationId =
+    (rpcResult as any)?.course_registration_id
+    || (syncPlan.action === 'sync' ? syncPlan.registrationId : null)
+
+  // Post-commit side effects only after atomic settlement succeeded.
+  // These are intentionally outside the DB transaction (no cash ledger here).
+  if (!alreadySettled && !settledIsPartial) {
     await supabase
       .from('payments')
       .update({ payment_status: 'completed', paid_at: paidAt, updated_at: now })
@@ -352,7 +284,7 @@ export default defineEventHandler(async (event) => {
   }
 
   let creditAppliedRappen = 0
-  if (!totals.isPartial && invoice.user_id) {
+  if (!alreadySettled && !settledIsPartial && invoice.user_id) {
     try {
       const creditResult = await applyInvoiceCreditOnPaid({
         supabase,
@@ -367,9 +299,20 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const courseRegistrationId = syncPlan.action === 'sync' ? syncPlan.registrationId : null
+  const auditDetails = buildMarkInvoicePaidAuditDetails({
+    settlementSource: settlement.source,
+    technicallyVerified: settlement.technicallyVerified,
+    paymentMethod: methodLabel,
+    newPaymentRappen: settledNewPayment,
+    clampedTotalRappen: settledPaidRappen,
+    isPartial: settledIsPartial,
+    courseRegistrationId,
+    importSource: import_source || null,
+    outcome: alreadySettled ? 'already_settled' : 'settled',
+    auditWritten: false,
+  })
 
-  await logAudit({
+  const auditWritten = await logAudit({
     user_id: staffUser.id,
     auth_user_id: authUser.id,
     action: 'mark_invoice_paid',
@@ -378,28 +321,30 @@ export default defineEventHandler(async (event) => {
     status: 'success',
     tenant_id: staffUser.tenant_id,
     ip_address: ipAddress,
-    details: buildMarkInvoicePaidAuditDetails({
-      settlementSource: settlement.source,
-      technicallyVerified: settlement.technicallyVerified,
-      paymentMethod: methodLabel,
-      newPaymentRappen: totals.newPaymentRappen,
-      clampedTotalRappen: totals.clampedTotalRappen,
-      isPartial: totals.isPartial,
-      courseRegistrationId,
-      importSource: import_source || null,
-    }),
+    details: { ...auditDetails, audit_written: true },
   }, event)
+
+  if (!auditWritten) {
+    console.warn('⚠️ mark_invoice_paid settled but audit log was not written', {
+      invoice_id,
+      tenant_id: staffUser.tenant_id,
+      settlement_source: settlement.source,
+    })
+  }
 
   return {
     success: true,
     invoice_id,
-    paid_amount_rappen: totals.clampedTotalRappen,
-    is_partial: totals.isPartial,
+    paid_amount_rappen: settledPaidRappen,
+    new_payment_rappen: settledNewPayment,
+    is_partial: settledIsPartial,
     credit_applied_rappen: creditAppliedRappen,
     settlement_source: settlement.source,
     technically_verified: settlement.technicallyVerified,
     course_registration_id: courseRegistrationId,
-    // Explicit product signal for UI
+    outcome: alreadySettled ? 'already_settled' : 'settled',
+    idempotent: alreadySettled,
+    audit_written: auditWritten,
     payment_confirmation_kind:
       settlement.source === 'bank_import' ? 'technically_verified' : 'manual_attestation',
   }

@@ -6,7 +6,9 @@ import {
   assertMarkInvoicePaidRole,
   buildMarkInvoicePaidAuditDetails,
   computePaidTotals,
+  isBankDedupeAlreadySettledOutcome,
   isProviderLikePaymentMethod,
+  mapMarkInvoicePaidRpcMessage,
   normalizePaymentMethodLabel,
   planCourseRegistrationPaySync,
   resolveSettlementSource,
@@ -91,14 +93,31 @@ describe('paid totals', () => {
     ).toThrow(/bereits vollständig/)
   })
 
-  it('clamps overpayment to remaining balance', () => {
-    expect(
+  it('rejects overpayment instead of silently inventing a higher total', () => {
+    expect(() =>
       computePaidTotals({
         invoiceTotalRappen: 25000,
         previouslyPaidRappen: 20000,
         requestedPaymentRappen: 99999,
       }),
-    ).toEqual({ newPaymentRappen: 5000, clampedTotalRappen: 25000, isPartial: false })
+    ).toThrow(/übersteigt/)
+  })
+
+  it('rejects zero and negative amounts', () => {
+    expect(() =>
+      computePaidTotals({
+        invoiceTotalRappen: 25000,
+        previouslyPaidRappen: 0,
+        requestedPaymentRappen: 0,
+      }),
+    ).toThrow(/grösser als 0/)
+    expect(() =>
+      computePaidTotals({
+        invoiceTotalRappen: 25000,
+        previouslyPaidRappen: 0,
+        requestedPaymentRappen: -100,
+      }),
+    ).toThrow(/grösser als 0/)
   })
 })
 
@@ -175,8 +194,8 @@ describe('course registration sync plan', () => {
   })
 })
 
-describe('audit details', () => {
-  it('records actor-independent settlement metadata without claiming cash ledger writes', () => {
+describe('audit details and rpc mapping', () => {
+  it('records settlement metadata without claiming cash ledger or unaudited writes', () => {
     expect(
       buildMarkInvoicePaidAuditDetails({
         settlementSource: 'manual_attestation',
@@ -186,13 +205,31 @@ describe('audit details', () => {
         clampedTotalRappen: 25000,
         isPartial: false,
         courseRegistrationId: 'reg-1',
+        auditWritten: false,
       }),
     ).toMatchObject({
       settlement_source: 'manual_attestation',
       technically_verified: false,
       cash_ledger_written: false,
+      audit_written: false,
       course_registration_id: 'reg-1',
     })
+  })
+
+  it('maps bank-key and rpc-missing errors to distinct settlement codes', () => {
+    expect(mapMarkInvoicePaidRpcMessage('mark_invoice_paid_core_bank_key_conflict_invoice')?.settlementCode)
+      .toBe('bank_key_conflict_invoice')
+    expect(mapMarkInvoicePaidRpcMessage('mark_invoice_paid_core_bank_key_needs_reconciliation')?.settlementCode)
+      .toBe('bank_key_needs_reconciliation')
+    expect(mapMarkInvoicePaidRpcMessage('function public.mark_invoice_paid_core(…) does not exist')?.settlementCode)
+      .toBe('rpc_missing')
+    expect(mapMarkInvoicePaidRpcMessage('mark_invoice_paid_core_overpayment')?.settlementCode)
+      .toBe('overpayment')
+  })
+
+  it('detects idempotent already_settled outcomes', () => {
+    expect(isBankDedupeAlreadySettledOutcome({ outcome: 'already_settled', idempotent: true })).toBe(true)
+    expect(isBankDedupeAlreadySettledOutcome({ outcome: 'settled', idempotent: false })).toBe(false)
   })
 })
 
@@ -206,39 +243,63 @@ describe('normalizePaymentMethodLabel', () => {
 describe('handler wiring (source contract)', () => {
   const src = read('server/api/invoices/mark-invoice-paid.post.ts')
   const ui = read('components/admin/InvoiceDetailModal.vue')
+  const camt = read('components/admin/CamtImportModal.vue')
   const migration = read('migrations/20261011_mark_invoice_paid_core.sql')
 
   it('keeps tenant-scoped invoice load and staff-pos credit after full payment', () => {
     expect(src).toContain(".eq('tenant_id', staffUser.tenant_id)")
     expect(src).toContain(".eq('tenant_id', invoice.tenant_id)")
     expect(src).toContain('applyStaffPosCreditsForPaidInvoice')
-    expect(src.indexOf('if (!totals.isPartial)')).toBeLessThan(src.indexOf('await applyStaffPosCreditsForPaidInvoice'))
+    expect(src.indexOf('if (!alreadySettled && !settledIsPartial)')).toBeLessThan(
+      src.indexOf('await applyStaffPosCreditsForPaidInvoice'),
+    )
     expect(src).toContain('applyInvoiceCreditOnPaid')
   })
 
-  it('requires settlement resolution and audit logging', () => {
+  it('requires settlement resolution and truthful audit_written reporting', () => {
     expect(src).toContain('resolveSettlementSource')
     expect(src).toContain('planCourseRegistrationPaySync')
     expect(src).toContain("action: 'mark_invoice_paid'")
     expect(src).toContain('logAudit')
+    expect(src).toContain('audit_written: auditWritten')
     expect(src).toContain('manual_payment_attested')
     expect(src).not.toContain("from('cash_transactions')")
   })
 
-  it('uses atomic core RPC when available and optimistic concurrency in fallback', () => {
+  it('uses atomic core RPC only — no sequential PostgREST settlement fallback', () => {
     expect(src).toContain("rpc('mark_invoice_paid_core'")
-    expect(src).toContain(".eq('paid_amount_rappen', invoice.paid_amount_rappen || 0)")
+    expect(src).not.toContain('Fallback when migration is not yet applied')
+    expect(src).not.toContain(".eq('paid_amount_rappen', invoice.paid_amount_rappen || 0)")
+    expect(src).toContain('rpc_missing')
+    expect(src).toContain('p_requested_payment_rappen')
+    expect(src).toContain('p_bank_dedupe_key')
+    // Bank claim must not be inserted outside the RPC
+    expect(src).not.toMatch(/from\('bank_import_records'\)\s*\n\s*\.insert/)
+  })
+
+  it('RPC migration validates amounts, bank claim, and service_role', () => {
     expect(migration).toContain('CREATE OR REPLACE FUNCTION public.mark_invoice_paid_core')
     expect(migration).toContain('FOR UPDATE')
+    expect(migration).toContain('mark_invoice_paid_core_overpayment')
+    expect(migration).toContain('mark_invoice_paid_core_bank_key_conflict_invoice')
+    expect(migration).toContain('mark_invoice_paid_core_bank_key_needs_reconciliation')
+    expect(migration).toContain('already_settled')
+    expect(migration).toContain('INSERT INTO public.bank_import_records')
     expect(migration).toContain("payment_status = 'paid'")
     expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.mark_invoice_paid_core')
     expect(migration).toContain('service_role')
+    expect(migration).toContain('SET search_path TO pg_catalog, public')
+    expect(migration).toContain('(array_agg(id ORDER BY id))[1]')
+    expect(migration).not.toContain('MIN(id)')
   })
 
-  it('UI requires attestation and does not claim technical verification', () => {
+  it('UI requires attestation and CAMT does not treat every 409 as booked', () => {
     expect(ui).toContain('manualPaymentAttested')
     expect(ui).toContain('manual_payment_attested: true')
     expect(ui).toContain('keine technische Verifikation')
-    expect(ui).toContain('!manualPaymentAttested')
+    expect(camt).toContain('settlement_code')
+    expect(camt).toContain('bank_key_needs_reconciliation')
+    expect(camt).toContain('nicht als verbucht markiert')
+    expect(camt).not.toContain('r.already_imported = true\n        continue\n      }\n      confirmError')
   })
 })

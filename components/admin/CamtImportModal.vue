@@ -617,12 +617,32 @@ async function confirmPayments() {
       })
       count++
     } catch (err: any) {
-      if (err?.status === 409 || err?.response?.status === 409) {
-        // Wurde zwischenzeitlich (z.B. in einem parallelen Import) bereits verbucht
+      const status = err?.status || err?.response?.status
+      const settlementCode = err?.data?.settlement_code || err?.data?.data?.settlement_code || ''
+      const msg = err?.data?.statusMessage || err?.statusMessage || err?.message || ''
+
+      // Only treat as already-booked when the API explicitly says settlement completed
+      // (or idempotent already_settled). Generic 409 is NOT proof of successful booking.
+      if (
+        settlementCode === 'already_paid'
+        || /bereits vollständig bezahlt/i.test(msg)
+      ) {
         r.already_imported = true
         continue
       }
-      confirmError.value = `Fehler bei Rechnung ${r.invoice_number}: ${err?.data?.statusMessage || err?.message}`
+
+      if (
+        settlementCode === 'bank_key_needs_reconciliation'
+        || settlementCode === 'bank_key_conflict_invoice'
+        || settlementCode === 'concurrent_modification'
+        || settlementCode === 'ambiguous_registration'
+        || status === 409
+      ) {
+        confirmError.value = `Fehler bei Rechnung ${r.invoice_number}: ${msg || 'Konflikt — nicht als verbucht markiert'}`
+        continue
+      }
+
+      confirmError.value = `Fehler bei Rechnung ${r.invoice_number}: ${msg}`
     }
   }
 
