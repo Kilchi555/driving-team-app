@@ -74,4 +74,27 @@ describe('callCreateInvoiceWithSettlement', () => {
       settlements: [],
     })).rejects.toMatchObject({ statusCode: 400 })
   })
+
+  it('maps idempotency_conflict to 409', async () => {
+    const rpc = vi.fn(async () => ({
+      data: null,
+      error: { message: 'idempotency_conflict', code: '23505' },
+    }))
+
+    await expect(callCreateInvoiceWithSettlement({
+      supabase: { rpc } as RpcClient,
+      actorUserId: 'actor-1',
+      idempotencyKey: '550e8400-e29b-41d4-a716-446655440000',
+      invoice: { total_amount_rappen: 9999 },
+      items: [{ product_name: 'Conflict', total_price_rappen: 9999 }],
+      settlements: [{
+        item_index: 0,
+        payment_method: 'twint',
+        payment_date: '2026-10-11T00:00:00.000Z',
+        amount_rappen: 9999,
+        linked_payment_id: null,
+        notes: null,
+      }],
+    })).rejects.toMatchObject({ statusCode: 409, statusMessage: 'idempotency_conflict' })
+  })
 })

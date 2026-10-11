@@ -1,6 +1,7 @@
 -- DRAFT. Do not apply from application code / cloud agents.
 -- Additive schema + atomic create-and-settle RPC for prepaid invoice line items.
 -- Contract A–H (PR #414 readiness report).
+-- Includes request_hash conflict detection for settle idempotency keys.
 
 -- 1) Per-line allocation link on invoice_payments
 ALTER TABLE public.invoice_payments
@@ -34,9 +35,13 @@ CREATE TABLE IF NOT EXISTS public.invoice_create_idempotency (
   idempotency_key text NOT NULL,
   invoice_id uuid NOT NULL REFERENCES public.invoices(id) ON DELETE CASCADE,
   actor_user_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
+  request_hash text,
   created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (tenant_id, idempotency_key)
 );
+
+ALTER TABLE public.invoice_create_idempotency
+  ADD COLUMN IF NOT EXISTS request_hash text;
 
 CREATE INDEX IF NOT EXISTS idx_invoice_create_idempotency_invoice_id
   ON public.invoice_create_idempotency (invoice_id);
@@ -49,7 +54,124 @@ REVOKE ALL ON public.invoice_create_idempotency FROM authenticated;
 GRANT ALL ON public.invoice_create_idempotency TO service_role;
 
 COMMENT ON TABLE public.invoice_create_idempotency IS
-  'Tenant-scoped idempotency for atomic invoice create+settle. One key → one invoice.';
+  'Tenant-scoped idempotency for atomic invoice create+settle. One key → one invoice; request_hash detects payload conflicts.';
+
+COMMENT ON COLUMN public.invoice_create_idempotency.request_hash IS
+  'md5 of canonical settle request (invoice+items+settlements). Same key + different hash → idempotency_conflict.';
+
+-- Canonical semantic payload hash (deterministic jsonb key order + strip_nulls).
+CREATE OR REPLACE FUNCTION public.invoice_create_settlement_request_hash(
+  p_invoice jsonb,
+  p_items jsonb,
+  p_settlements jsonb
+) RETURNS text
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path TO pg_catalog, public
+AS $hash$
+DECLARE
+  v_invoice jsonb;
+  v_items jsonb := '[]'::jsonb;
+  v_settlements jsonb := '[]'::jsonb;
+  v_elem jsonb;
+  v_ord integer;
+BEGIN
+  v_invoice := jsonb_strip_nulls(jsonb_build_object(
+    'document_kind', NULLIF(p_invoice->>'document_kind', ''),
+    'billing_type', NULLIF(p_invoice->>'billing_type', ''),
+    'billing_company_name', NULLIF(p_invoice->>'billing_company_name', ''),
+    'billing_contact_person', NULLIF(p_invoice->>'billing_contact_person', ''),
+    'billing_email', NULLIF(p_invoice->>'billing_email', ''),
+    'billing_street', NULLIF(p_invoice->>'billing_street', ''),
+    'billing_street_number', NULLIF(p_invoice->>'billing_street_number', ''),
+    'billing_zip', NULLIF(p_invoice->>'billing_zip', ''),
+    'billing_city', NULLIF(p_invoice->>'billing_city', ''),
+    'billing_country', NULLIF(p_invoice->>'billing_country', ''),
+    'billing_vat_number', NULLIF(p_invoice->>'billing_vat_number', ''),
+    'status', NULLIF(p_invoice->>'status', ''),
+    'notes', NULLIF(p_invoice->>'notes', ''),
+    'payment_terms', NULLIF(p_invoice->>'payment_terms', ''),
+    'footer_text', NULLIF(p_invoice->>'footer_text', ''),
+    'internal_notes', NULLIF(p_invoice->>'internal_notes', ''),
+    'invoice_date', NULLIF(p_invoice->>'invoice_date', ''),
+    'due_date', NULLIF(p_invoice->>'due_date', ''),
+    'valid_until', NULLIF(p_invoice->>'valid_until', ''),
+    'vat_rate', CASE WHEN NULLIF(p_invoice->>'vat_rate', '') IS NULL THEN NULL ELSE (p_invoice->>'vat_rate')::numeric END,
+    'subtotal_rappen', CASE WHEN NULLIF(p_invoice->>'subtotal_rappen', '') IS NULL THEN NULL ELSE (p_invoice->>'subtotal_rappen')::bigint END,
+    'vat_amount_rappen', CASE WHEN NULLIF(p_invoice->>'vat_amount_rappen', '') IS NULL THEN NULL ELSE (p_invoice->>'vat_amount_rappen')::bigint END,
+    'discount_amount_rappen', CASE WHEN NULLIF(p_invoice->>'discount_amount_rappen', '') IS NULL THEN NULL ELSE (p_invoice->>'discount_amount_rappen')::bigint END,
+    'total_amount_rappen', CASE WHEN NULLIF(p_invoice->>'total_amount_rappen', '') IS NULL THEN NULL ELSE (p_invoice->>'total_amount_rappen')::bigint END,
+    'user_id', NULLIF(p_invoice->>'user_id', ''),
+    'company_id', NULLIF(p_invoice->>'company_id', ''),
+    'staff_id', NULLIF(p_invoice->>'staff_id', ''),
+    'product_sale_id', NULLIF(p_invoice->>'product_sale_id', ''),
+    'appointment_id', NULLIF(p_invoice->>'appointment_id', '')
+  ));
+
+  IF jsonb_typeof(p_items) = 'array' THEN
+    FOR v_elem, v_ord IN
+      SELECT value, ordinality
+      FROM jsonb_array_elements(p_items) WITH ORDINALITY AS t(value, ordinality)
+    LOOP
+      v_items := v_items || jsonb_build_array(jsonb_strip_nulls(jsonb_build_object(
+        'ord', v_ord,
+        'product_id', NULLIF(v_elem->>'product_id', ''),
+        'product_name', NULLIF(v_elem->>'product_name', ''),
+        'product_description', NULLIF(v_elem->>'product_description', ''),
+        'appointment_id', NULLIF(v_elem->>'appointment_id', ''),
+        'appointment_title', NULLIF(v_elem->>'appointment_title', ''),
+        'appointment_date', NULLIF(v_elem->>'appointment_date', ''),
+        'appointment_duration_minutes', CASE WHEN NULLIF(v_elem->>'appointment_duration_minutes', '') IS NULL THEN NULL ELSE (v_elem->>'appointment_duration_minutes')::integer END,
+        'quantity', CASE WHEN NULLIF(v_elem->>'quantity', '') IS NULL THEN NULL ELSE (v_elem->>'quantity')::numeric END,
+        'unit_price_rappen', CASE WHEN NULLIF(v_elem->>'unit_price_rappen', '') IS NULL THEN NULL ELSE (v_elem->>'unit_price_rappen')::bigint END,
+        'total_price_rappen', CASE WHEN NULLIF(v_elem->>'total_price_rappen', '') IS NULL THEN NULL ELSE (v_elem->>'total_price_rappen')::bigint END,
+        'vat_rate', CASE WHEN NULLIF(v_elem->>'vat_rate', '') IS NULL THEN NULL ELSE (v_elem->>'vat_rate')::numeric END,
+        'vat_amount_rappen', CASE WHEN NULLIF(v_elem->>'vat_amount_rappen', '') IS NULL THEN NULL ELSE (v_elem->>'vat_amount_rappen')::bigint END,
+        'sort_order', CASE WHEN NULLIF(v_elem->>'sort_order', '') IS NULL THEN NULL ELSE (v_elem->>'sort_order')::integer END,
+        'notes', NULLIF(v_elem->>'notes', ''),
+        'payment_id', NULLIF(v_elem->>'payment_id', ''),
+        'linked_payment_id', NULLIF(v_elem->>'linked_payment_id', ''),
+        'event_type_code', NULLIF(v_elem->>'event_type_code', ''),
+        'user_id', NULLIF(v_elem->>'user_id', ''),
+        'staff_id', NULLIF(v_elem->>'staff_id', ''),
+        'staff_first_name', NULLIF(v_elem->>'staff_first_name', ''),
+        'customer_first_name', NULLIF(v_elem->>'customer_first_name', ''),
+        'customer_last_name', NULLIF(v_elem->>'customer_last_name', ''),
+        'credit_to_wallet', CASE WHEN NULLIF(v_elem->>'credit_to_wallet', '') IS NULL THEN NULL ELSE (v_elem->>'credit_to_wallet')::boolean END,
+        'credit_amount_rappen', CASE WHEN NULLIF(v_elem->>'credit_amount_rappen', '') IS NULL THEN NULL ELSE (v_elem->>'credit_amount_rappen')::bigint END
+      )));
+    END LOOP;
+  END IF;
+
+  IF jsonb_typeof(COALESCE(p_settlements, '[]'::jsonb)) = 'array' THEN
+    FOR v_elem, v_ord IN
+      SELECT value, ordinality
+      FROM jsonb_array_elements(COALESCE(p_settlements, '[]'::jsonb)) WITH ORDINALITY AS t(value, ordinality)
+    LOOP
+      v_settlements := v_settlements || jsonb_build_array(jsonb_strip_nulls(jsonb_build_object(
+        'ord', v_ord,
+        'item_index', CASE WHEN NULLIF(v_elem->>'item_index', '') IS NULL THEN NULL ELSE (v_elem->>'item_index')::integer END,
+        'payment_method', lower(NULLIF(v_elem->>'payment_method', '')),
+        'payment_date', NULLIF(v_elem->>'payment_date', ''),
+        'amount_rappen', CASE WHEN NULLIF(v_elem->>'amount_rappen', '') IS NULL THEN NULL ELSE (v_elem->>'amount_rappen')::bigint END,
+        'linked_payment_id', NULLIF(v_elem->>'linked_payment_id', ''),
+        'notes', NULLIF(v_elem->>'notes', '')
+      )));
+    END LOOP;
+  END IF;
+
+  RETURN md5(jsonb_build_object(
+    'invoice', v_invoice,
+    'items', v_items,
+    'settlements', v_settlements
+  )::text);
+END;
+$hash$;
+
+REVOKE ALL ON FUNCTION public.invoice_create_settlement_request_hash(jsonb, jsonb, jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.invoice_create_settlement_request_hash(jsonb, jsonb, jsonb) FROM anon;
+REVOKE ALL ON FUNCTION public.invoice_create_settlement_request_hash(jsonb, jsonb, jsonb) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.invoice_create_settlement_request_hash(jsonb, jsonb, jsonb) TO service_role;
 
 -- 3) Atomic create + optional line settlements
 CREATE OR REPLACE FUNCTION public.create_invoice_with_settlement(
@@ -89,6 +211,8 @@ DECLARE
   v_result jsonb;
   v_settled_item_ids uuid[] := ARRAY[]::uuid[];
   v_notes text;
+  v_request_hash text;
+  v_existing_hash text;
 BEGIN
   IF p_actor_user_id IS NULL THEN
     RAISE EXCEPTION 'forbidden_actor' USING ERRCODE = '42501';
@@ -114,6 +238,25 @@ BEGIN
     RAISE EXCEPTION 'forbidden_settle_role' USING ERRCODE = '42501';
   END IF;
 
+  IF jsonb_typeof(p_invoice) <> 'object' OR jsonb_typeof(p_items) <> 'array' OR jsonb_array_length(p_items) < 1 THEN
+    RAISE EXCEPTION 'invalid_payload';
+  END IF;
+
+  IF (p_invoice->>'tenant_id') IS NOT NULL AND (p_invoice->>'tenant_id')::uuid IS DISTINCT FROM v_tenant THEN
+    RAISE EXCEPTION 'forbidden_tenant' USING ERRCODE = '42501';
+  END IF;
+
+  v_invoice_total := COALESCE((p_invoice->>'total_amount_rappen')::integer, 0);
+  IF v_invoice_total < 0 THEN
+    RAISE EXCEPTION 'invalid_total';
+  END IF;
+
+  v_request_hash := public.invoice_create_settlement_request_hash(
+    p_invoice,
+    p_items,
+    COALESCE(p_settlements, '[]'::jsonb)
+  );
+
   IF v_has_settlements THEN
     IF p_idempotency_key IS NULL
       OR p_idempotency_key !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
@@ -121,15 +264,22 @@ BEGIN
       RAISE EXCEPTION 'invalid_idempotency_key';
     END IF;
 
-    -- Serialize concurrent retries for the same tenant key
+    -- Serialize concurrent retries / conflicting payloads for the same tenant key
     PERFORM pg_advisory_xact_lock(hashtext(v_tenant::text), hashtext(p_idempotency_key));
 
-    SELECT i.invoice_id INTO v_invoice_id
+    SELECT i.invoice_id, i.request_hash
+      INTO v_invoice_id, v_existing_hash
     FROM public.invoice_create_idempotency i
     WHERE i.tenant_id = v_tenant
       AND i.idempotency_key = p_idempotency_key;
 
     IF FOUND THEN
+      IF v_existing_hash IS DISTINCT FROM v_request_hash THEN
+        RAISE EXCEPTION 'idempotency_conflict'
+          USING ERRCODE = '23505',
+                DETAIL = 'same idempotency_key with different request payload';
+      END IF;
+
       v_replayed := true;
       SELECT jsonb_build_object(
         'ok', true,
@@ -151,19 +301,6 @@ BEGIN
       END IF;
       RETURN v_result;
     END IF;
-  END IF;
-
-  IF jsonb_typeof(p_invoice) <> 'object' OR jsonb_typeof(p_items) <> 'array' OR jsonb_array_length(p_items) < 1 THEN
-    RAISE EXCEPTION 'invalid_payload';
-  END IF;
-
-  IF (p_invoice->>'tenant_id') IS NOT NULL AND (p_invoice->>'tenant_id')::uuid IS DISTINCT FROM v_tenant THEN
-    RAISE EXCEPTION 'forbidden_tenant' USING ERRCODE = '42501';
-  END IF;
-
-  v_invoice_total := COALESCE((p_invoice->>'total_amount_rappen')::integer, 0);
-  IF v_invoice_total < 0 THEN
-    RAISE EXCEPTION 'invalid_total';
   END IF;
 
   -- Allocate number server-side (ignore client-supplied invoice_number)
@@ -418,6 +555,7 @@ BEGIN
     jsonb_build_object(
       'invoice_number', v_invoice_number,
       'idempotency_key', p_idempotency_key,
+      'request_hash', v_request_hash,
       'paid_amount_rappen', v_paid_total,
       'total_amount_rappen', v_invoice_total,
       'settlement_count', COALESCE(jsonb_array_length(p_settlements), 0),
@@ -430,9 +568,9 @@ BEGIN
 
   IF v_has_settlements THEN
     INSERT INTO public.invoice_create_idempotency (
-      tenant_id, idempotency_key, invoice_id, actor_user_id
+      tenant_id, idempotency_key, invoice_id, actor_user_id, request_hash
     ) VALUES (
-      v_tenant, p_idempotency_key, v_invoice_id, v_actor.id
+      v_tenant, p_idempotency_key, v_invoice_id, v_actor.id, v_request_hash
     );
   END IF;
 
@@ -450,7 +588,7 @@ END;
 $fn$;
 
 COMMENT ON FUNCTION public.create_invoice_with_settlement(uuid, text, jsonb, jsonb, jsonb) IS
-  'Atomically create invoice + items + optional per-line settlements. Service role only.';
+  'Atomically create invoice + items + optional per-line settlements. Service role only. Idempotent settle keys conflict on request_hash mismatch.';
 
 REVOKE ALL ON FUNCTION public.create_invoice_with_settlement(uuid, text, jsonb, jsonb, jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.create_invoice_with_settlement(uuid, text, jsonb, jsonb, jsonb) FROM anon;

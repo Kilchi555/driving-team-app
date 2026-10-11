@@ -39,8 +39,8 @@ export async function callCreateInvoiceWithSettlement(opts: {
     const msg = error.message || 'Invoice create RPC failed'
     const status =
       /forbidden|42501/i.test(msg) ? 403
-        : /invalid_|overpayment|duplicate_/i.test(msg) ? 400
-          : /idempotency/i.test(msg) ? 409
+        : /idempotency_conflict|idempotency_orphan|idempotency/i.test(msg) ? 409
+          : /invalid_|overpayment|duplicate_/i.test(msg) ? 400
             : 500
     throw Object.assign(new Error(msg), {
       statusCode: status,
