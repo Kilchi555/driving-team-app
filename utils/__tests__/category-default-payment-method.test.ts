@@ -227,6 +227,7 @@ describe('category default payment method wiring', () => {
     expect(src).toContain('kein automatischer Wechsel auf Online-Zahlung oder Barzahlung')
     expect(src).toContain('Admin-Override gespeichert werden')
     expect(src).toContain('öffentliche Anmeldung mit Rechnung bleibt blockiert')
+    expect(src).toContain('Rechnung als Zahlungsoption für Kurse erlauben')
     expect(src).not.toContain('Speichern mit Rechnung ist erst nach Aktivierung möglich')
   })
 
@@ -236,6 +237,7 @@ describe('category default payment method wiring', () => {
     expect(modal).toContain('invoiceEnrollmentBlocked')
     expect(modal).toContain('getCoursePaymentMethod')
     expect(modal).toContain("paymentMethod.value === 'WALLEE'")
+    expect(modal).toContain('courseInvoiceEnabled: invoiceEnabled')
     const publicApi = read('server/api/courses/public.get.ts')
     expect(publicApi).toContain('payment_method')
   })
@@ -257,7 +259,7 @@ describe('category default payment method wiring', () => {
   it('keeps enrollment fail-closed on cash/invoice path when invoice option is disabled', () => {
     const enrollCash = read('server/api/courses/enroll-cash.post.ts')
     expect(enrollCash).toContain('assertInvoiceEnrollmentAllowed')
-    expect(enrollCash).toContain('invoice_payments_enabled')
+    expect(enrollCash).toContain('resolveCourseInvoicePaymentsEnabled')
     const enrollHelper = read('server/utils/course-enrollment-payment-method.ts')
     expect(enrollHelper).toContain('INVOICE_ENROLLMENT_DISABLED_MESSAGE')
     expect(enrollHelper).toContain('assertInvoiceEnrollmentAllowed')

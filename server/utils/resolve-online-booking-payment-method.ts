@@ -1,20 +1,28 @@
 import {
   normalizeTenantPaymentMethod,
   parsePaymentSettings,
+  resolveIndividualAppointmentInvoicePaymentsEnabled,
 } from '~/server/utils/tenant-default-payment-method'
 
 /**
  * Public online booking payment methods, driven by tenant settings:
  *   - wallee  when the tenant has Wallee enabled (default)
- *   - invoice when invoice_payments_enabled
+ *   - invoice when individual_appointment_invoice_payments_enabled
+ *     (falls back to legacy invoice_payments_enabled when the new key is absent)
  *   - cash    when cash is enabled AND visible to customers
  *
  * Staff-only cash must never land on a public booking just because the
  * client sent payment_method=cash.
+ *
+ * Explicit payment_method=invoice must fail closed when appointment invoices
+ * are disabled — never silently rewrite to wallee/cash.
  */
 export type OnlineBookingCheckoutMethod = 'wallee' | 'invoice' | 'cash'
 
 const METHOD_ORDER: OnlineBookingCheckoutMethod[] = ['wallee', 'invoice', 'cash']
+
+export const APPOINTMENT_INVOICE_PAYMENT_DISABLED_MESSAGE =
+  'Rechnungszahlung ist für Einzeltermine derzeit nicht freigeschaltet. Bitte wähle eine andere Zahlungsart oder kontaktiere das Unternehmen.'
 
 export type OnlineBookingPaymentPolicy = {
   walleeEnabled: boolean
@@ -30,7 +38,7 @@ export function paymentPolicyFromTenantSettings(opts: {
   const settings = opts.settings || {}
   return {
     walleeEnabled: opts.walleeEnabled !== false,
-    invoiceEnabled: settings.invoice_payments_enabled === true,
+    invoiceEnabled: resolveIndividualAppointmentInvoicePaymentsEnabled(settings),
     cashEnabledForCustomers:
       settings.cash_payments_enabled !== false
       && settings.cash_payment_visibility === 'customers_and_staff',
@@ -62,6 +70,8 @@ export function resolveOnlineBookingPaymentMethod(opts: {
 }): {
   method: OnlineBookingCheckoutMethod
   rejectedRequest: boolean
+  /** True when the client explicitly asked for invoice and it is not allowed. */
+  invoiceRequestRejected: boolean
   allowed: OnlineBookingCheckoutMethod[]
 } {
   const allowed = onlineBookingAllowedMethods(opts.policy)
@@ -73,11 +83,35 @@ export function resolveOnlineBookingPaymentMethod(opts: {
     || requested === 'cash'
   ) {
     if (allowed.includes(requested)) {
-      return { method: requested, rejectedRequest: false, allowed }
+      return {
+        method: requested,
+        rejectedRequest: false,
+        invoiceRequestRejected: false,
+        allowed,
+      }
     }
-    return { method: fallback, rejectedRequest: true, allowed }
+    // Invoice-specific fail-closed: never silently substitute another method.
+    if (requested === 'invoice') {
+      return {
+        method: fallback,
+        rejectedRequest: true,
+        invoiceRequestRejected: true,
+        allowed,
+      }
+    }
+    return {
+      method: fallback,
+      rejectedRequest: true,
+      invoiceRequestRejected: false,
+      allowed,
+    }
   }
-  return { method: fallback, rejectedRequest: false, allowed }
+  return {
+    method: fallback,
+    rejectedRequest: false,
+    invoiceRequestRejected: false,
+    allowed,
+  }
 }
 
 export function onlineBookingPaymentProvider(

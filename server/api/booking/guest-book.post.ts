@@ -40,6 +40,7 @@ import { quoteTravelFee } from '~/server/utils/travel-fee-quote'
 import { findStaffBusyOverlap } from '~/server/utils/time-range-overlap'
 import { shouldHoldAppointmentUntilPaid } from '~/server/utils/pay-before-confirm'
 import {
+  APPOINTMENT_INVOICE_PAYMENT_DISABLED_MESSAGE,
   loadOnlineBookingPaymentPolicy,
   onlineBookingPaymentProvider,
   resolveOnlineBookingPaymentMethod,
@@ -558,6 +559,18 @@ export default defineEventHandler(async (event) => {
     requested: body.payment_method,
     policy: paymentPolicy,
   })
+  if (paymentResolve.invoiceRequestRejected) {
+    logger.warn('🚫 Guest requested invoice but appointment invoices are disabled', {
+      tenantId,
+      requested: body.payment_method,
+      allowed: paymentResolve.allowed,
+    })
+    throw createError({
+      statusCode: 400,
+      statusMessage: APPOINTMENT_INVOICE_PAYMENT_DISABLED_MESSAGE,
+      data: { code: 'APPOINTMENT_INVOICE_DISABLED' },
+    })
+  }
   if (paymentResolve.rejectedRequest) {
     logger.warn('⚠️ Guest requested a payment method that is not enabled for online booking — using tenant default', {
       tenantId,

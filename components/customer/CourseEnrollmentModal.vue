@@ -949,7 +949,7 @@ const { t } = useTerminology()
 const { walleeEnabled: walleeEnabledFromStore, loadWalleeStatus } = useWalleeStatus()
 const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer', () => props.tenantSlug)
 const {
-  invoiceEnabled,
+  courseInvoiceEnabled: invoiceEnabled,
   loaded: invoiceSettingsLoaded,
 } = useInvoicePaymentSettings(() => props.tenantSlug)
 

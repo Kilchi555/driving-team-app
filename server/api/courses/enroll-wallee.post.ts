@@ -37,6 +37,10 @@ import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/up
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { INVOICE_ENROLLMENT_DISABLED_MESSAGE } from '~/server/utils/course-enrollment-payment-method'
 import {
+  parsePaymentSettings,
+  resolveCourseInvoicePaymentsEnabled,
+} from '~/server/utils/tenant-default-payment-method'
+import {
   assertCustomSessionsForTenant,
   loadPublicCourseForEnrollment,
 } from '~/server/utils/course-custom-sessions'
@@ -165,10 +169,8 @@ const handler = defineEventHandler(async (event) => {
         .eq('category', 'payment')
         .eq('setting_key', 'payment_settings')
         .maybeSingle()
-      const tenantPaymentSettings = paymentSettingRow?.setting_value
-        ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
-        : {}
-      const invoiceEnabled = tenantPaymentSettings.invoice_payments_enabled === true
+      const tenantPaymentSettings = parsePaymentSettings(paymentSettingRow?.setting_value)
+      const invoiceEnabled = resolveCourseInvoicePaymentsEnabled(tenantPaymentSettings)
       if (invoiceEnabled) {
         logger.warn('🚫 Wallee enrollment blocked: course is admin-marked invoice-only', { courseId, tenantId })
         throw createError({
