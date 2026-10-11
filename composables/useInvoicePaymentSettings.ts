@@ -43,5 +43,5 @@ export function useInvoicePaymentSettings(slug?: string | Ref<string | undefined
 
   const invoiceVisible = computed(() => loaded.value && enabled.value)
 
-  return { invoiceVisible, invoiceEnabled: enabled, reload: load }
+  return { invoiceVisible, invoiceEnabled: enabled, loaded, reload: load }
 }

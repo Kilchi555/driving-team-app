@@ -935,7 +935,10 @@ const { tenantPrimaryColor } = useTenant()
 const { t } = useTerminology()
 const { walleeEnabled: walleeEnabledFromStore, loadWalleeStatus } = useWalleeStatus()
 const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer', () => props.tenantSlug)
-const { invoiceEnabled } = useInvoicePaymentSettings(() => props.tenantSlug)
+const {
+  invoiceEnabled,
+  loaded: invoiceSettingsLoaded,
+} = useInvoicePaymentSettings(() => props.tenantSlug)
 
 // Prefer the prop value (from public API) over the store value to avoid an auth-required
 // API call that would redirect unauthenticated public users.
@@ -1025,7 +1028,10 @@ const paymentMethod = computed(() => {
   // Honors `course.payment_method` (admin override), falls back to city +
   // tenant Wallee status. Server-side handlers use the same helper to keep
   // UI and API in sync.
-  return getCoursePaymentMethod(props.course as any, walleeEnabled.value, invoiceEnabled.value)
+  // Until invoice settings have loaded, pass undefined (not false) so an
+  // explicit course INVOICE is not temporarily degraded to WALLEE/cash.
+  const invoiceFlag = invoiceSettingsLoaded.value ? invoiceEnabled.value : undefined
+  return getCoursePaymentMethod(props.course as any, walleeEnabled.value, invoiceFlag)
 })
 
 const paymentMethodLabel = computed(() => getPaymentMethodLabel(paymentMethod.value))
