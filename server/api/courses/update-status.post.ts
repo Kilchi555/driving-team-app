@@ -4,6 +4,7 @@ import { requireAdminProfile } from '~/server/utils/auth'
 import { generateWaitlistAvailableEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
+import { cancelCourse } from '~/server/utils/cancel-course'
 
 const VALID_STATUSES = ['draft', 'active', 'scheduled', 'completed', 'cancelled', 'waitlist', 'full', 'running'] as const
 type CourseStatus = typeof VALID_STATUSES[number]
@@ -11,13 +12,21 @@ type CourseStatus = typeof VALID_STATUSES[number]
 /**
  * POST /api/courses/update-status
  * Updates the status of a course (admin/staff only).
+ * When status=cancelled, delegates to the canonical cancelCourse workflow
+ * (registrations, unpaid payments/invoices, resources, email outbox).
  * When notifyWaitlist=true and status changes from 'waitlist' to active/scheduled,
  * sends "now available" emails to all waiting entries.
  */
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
 
-  const body = await readBody<{ courseId: string; status: CourseStatus; notifyWaitlist?: boolean }>(event)
+  const body = await readBody<{
+    courseId: string
+    status: CourseStatus
+    notifyWaitlist?: boolean
+    notifyParticipants?: boolean
+    reason?: string
+  }>(event)
 
   if (!body?.courseId) {
     throw createError({ statusCode: 400, statusMessage: 'Kurs-ID fehlt.' })
@@ -38,6 +47,33 @@ export default defineEventHandler(async (event) => {
 
   if (!course) {
     throw createError({ statusCode: 404, statusMessage: 'Kurs nicht gefunden.' })
+  }
+
+  // Cancelled status must run the full cascade — never a status-only update.
+  if (body.status === 'cancelled') {
+    const cancelResult = await cancelCourse({
+      supabase,
+      tenantId: profile.tenant_id,
+      actorId: profile.id,
+      courseId: body.courseId,
+      notifyParticipants: body.notifyParticipants !== false,
+      reason: body.reason || null,
+    })
+
+    const { data: updated } = await supabase
+      .from('courses')
+      .select('*')
+      .eq('id', body.courseId)
+      .eq('tenant_id', profile.tenant_id)
+      .single()
+
+    return {
+      success: true,
+      complete: cancelResult.complete,
+      course: updated,
+      cancellation: cancelResult,
+      waitlist: null,
+    }
   }
 
   // Business rule: course can only be set to active if instructor and price are set
@@ -67,12 +103,6 @@ export default defineEventHandler(async (event) => {
     status: body.status,
     status_changed_at: new Date().toISOString(),
     status_changed_by: profile.id,
-  }
-
-  if (body.status === 'cancelled') {
-    updateData.cancelled_at = new Date().toISOString()
-    updateData.cancelled_by = profile.id
-    updateData.is_active = false
   }
 
   if (body.status === 'active' || body.status === 'scheduled') {

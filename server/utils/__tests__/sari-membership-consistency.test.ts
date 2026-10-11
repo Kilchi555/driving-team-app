@@ -205,7 +205,9 @@ describe('cancel and remove unresolved semantics', () => {
     expect(cancel).toContain('localOnly: sariLocalOnly')
     expect(cancel).toContain('failed: sariFailedCount')
     expect(cancel).not.toContain('.length - sariFailedCount')
-    expect(cancel).toContain("status: 'confirmed'")
+    // After financial cascade, failed SARI unenrolls stay cancelled and are warned — not restored to confirmed.
+    expect(cancel).toContain('SARI-Status unklar')
+    expect(cancel).not.toContain('restoreRegistrationsThatStillHaveMemberships')
     const remove = readFileSync('server/api/admin/courses/remove-participant.post.ts', 'utf8')
     expect(remove).toContain('SARI membership status unknown')
     expect(remove.indexOf('SARI membership status unknown')).toBeLessThan(remove.indexOf('deleted_at: new Date'))
