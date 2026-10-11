@@ -69,7 +69,7 @@ describe('enroll-cash / enroll-wallee non-SARI field policy', () => {
   })
 
   it('server rejects missing required fields (cash + wallee share policy)', () => {
-    for (const key of ['street', 'zip', 'city', 'licenseNumber', 'birthdate'] as const) {
+    for (const key of ['street', 'streetNr', 'zip', 'city', 'licenseNumber', 'birthdate'] as const) {
       expect(() =>
         validateNonSariEnrollmentPayload({
           enrollment_fields: DEFAULT_CATEGORY_ENROLLMENT_FIELDS,
@@ -78,6 +78,53 @@ describe('enroll-cash / enroll-wallee non-SARI field policy', () => {
         }),
       ).toThrow(/erforderlich|ungültig/i)
     }
+  })
+
+  it('street_nr optional/hidden is not forced required (manipulated client)', () => {
+    const optionalOut = validateNonSariEnrollmentPayload({
+      enrollment_fields: {
+        ...DEFAULT_CATEGORY_ENROLLMENT_FIELDS,
+        street_nr: 'optional',
+      },
+      ...valid,
+      streetNr: '',
+    })
+    expect(optionalOut.streetNr).toBeNull()
+    expect(optionalOut.street).toBe('Bahnhofstrasse')
+
+    expect(() =>
+      validateNonSariEnrollmentPayload({
+        enrollment_fields: {
+          ...DEFAULT_CATEGORY_ENROLLMENT_FIELDS,
+          street_nr: 'hidden',
+        },
+        ...valid,
+        streetNr: '99',
+      }),
+    ).toThrow(/nicht erlaubt/)
+
+    const hiddenOk = validateNonSariEnrollmentPayload({
+      enrollment_fields: {
+        ...DEFAULT_CATEGORY_ENROLLMENT_FIELDS,
+        street_nr: 'hidden',
+      },
+      ...valid,
+      streetNr: '',
+    })
+    expect(hiddenOk.streetNr).toBeNull()
+  })
+
+  it('optional field with invalid format is rejected (cash/wallee parity)', () => {
+    expect(() =>
+      validateNonSariEnrollmentPayload({
+        enrollment_fields: {
+          ...DEFAULT_CATEGORY_ENROLLMENT_FIELDS,
+          zip: 'optional',
+        },
+        ...valid,
+        zip: '12',
+      }),
+    ).toThrow(/PLZ ist ungültig/)
   })
 
   it('optional fields may be empty; hidden fields persist as null', () => {
