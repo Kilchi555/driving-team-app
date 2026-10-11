@@ -140,7 +140,8 @@ export default defineEventHandler(async (event) => {
           name,
           allow_partial_enrollment,
           partial_start_position,
-          partial_price_rappen
+          partial_price_rappen,
+          enrollment_fields
         ),
         ${courseSessionsEmbed(PUBLIC_COURSE_SESSION_COLUMNS)}
       `)

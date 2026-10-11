@@ -350,7 +350,7 @@ export async function loadPublicCourseForEnrollment(
     .from('courses')
     .select(`
       *,
-      course_category:course_categories(code, name, allow_partial_enrollment, partial_start_position, partial_price_rappen),
+      course_category:course_categories(code, name, allow_partial_enrollment, partial_start_position, partial_price_rappen, enrollment_fields),
       ${courseSessionsEmbed(ENROLL_COURSE_SESSION_COLUMNS)}
     `)
     .eq('id', courseId as string)

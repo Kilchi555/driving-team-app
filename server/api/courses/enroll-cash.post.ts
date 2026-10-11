@@ -44,6 +44,11 @@ import {
   resolveCourseInvoicePaymentsEnabled,
 } from '~/server/utils/tenant-default-payment-method'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
+import {
+  applyCategoryEnrollmentFieldPolicy,
+  CategoryEnrollmentFieldsError,
+  resolveCategoryEnrollmentFields,
+} from '~/utils/category-enrollment-fields'
 import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
 import {
@@ -400,11 +405,44 @@ const handler = defineEventHandler(async (event) => {
         }
       }
     } else {
-      // Non-SARI course
+      // Non-SARI course — category enrollment_fields drive address/license/birthdate
       if (!firstName || !lastName) {
         throw createError({ statusCode: 400, statusMessage: 'Vor- und Nachname erforderlich' })
       }
-      customerData = { firstname: firstName.trim(), lastname: lastName.trim(), email, phone, street, streetNr, zip, city, licenseNumber, birthdate }
+      const enrollmentFields = resolveCategoryEnrollmentFields(
+        course.course_category?.enrollment_fields,
+      )
+      let sanitizedFields
+      try {
+        sanitizedFields = applyCategoryEnrollmentFieldPolicy(enrollmentFields, {
+          street,
+          streetNr,
+          zip,
+          city,
+          licenseNumber,
+          birthdate,
+        })
+      } catch (fieldErr: any) {
+        if (fieldErr instanceof CategoryEnrollmentFieldsError || fieldErr?.statusCode === 400) {
+          throw createError({
+            statusCode: 400,
+            statusMessage: fieldErr.message || 'Ungültige Anmeldefelder',
+          })
+        }
+        throw fieldErr
+      }
+      customerData = {
+        firstname: firstName.trim(),
+        lastname: lastName.trim(),
+        email,
+        phone,
+        street: sanitizedFields.street,
+        streetNr: sanitizedFields.streetNr,
+        zip: sanitizedFields.zip,
+        city: sanitizedFields.city,
+        licenseNumber: sanitizedFields.licenseNumber,
+        birthdate: sanitizedFields.birthdate,
+      }
       logger.debug('✅ Non-SARI cash enrollment:', `${firstName} ${lastName}`)
     }
 

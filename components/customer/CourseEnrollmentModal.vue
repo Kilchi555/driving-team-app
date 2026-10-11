@@ -489,9 +489,15 @@
                   <p v-if="formData.phone && !isValidPhone" class="text-xs text-red-500 mt-1">Bitte gib eine gültige Telefonnummer ein</p>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3">
-                  <div class="col-span-2">
-                    <label for="ce-street" class="block text-sm font-medium text-slate-700 mb-1">Strasse *</label>
+                <div
+                  v-if="isEnrollmentFieldVisible('street') || isEnrollmentFieldVisible('street_nr')"
+                  class="grid gap-3"
+                  :class="isEnrollmentFieldVisible('street') && isEnrollmentFieldVisible('street_nr') ? 'grid-cols-3' : 'grid-cols-1'"
+                >
+                  <div v-if="isEnrollmentFieldVisible('street')" :class="isEnrollmentFieldVisible('street_nr') ? 'col-span-2' : ''">
+                    <label for="ce-street" class="block text-sm font-medium text-slate-700 mb-1">
+                      Strasse <span v-if="isEnrollmentFieldRequired('street')">*</span>
+                    </label>
                     <input
                       id="ce-street"
                       v-model="formData.street"
@@ -500,14 +506,16 @@
                       autocomplete="address-line1"
                       autocapitalize="words"
                       enterkeyhint="next"
-                      required
+                      :required="isEnrollmentFieldRequired('street')"
                       placeholder="Musterstrasse"
                       class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
                       :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
                     />
                   </div>
-                  <div>
-                    <label for="ce-street-nr" class="block text-sm font-medium text-slate-700 mb-1">Nr. *</label>
+                  <div v-if="isEnrollmentFieldVisible('street_nr')">
+                    <label for="ce-street-nr" class="block text-sm font-medium text-slate-700 mb-1">
+                      Nr. <span v-if="isEnrollmentFieldRequired('street_nr')">*</span>
+                    </label>
                     <input
                       id="ce-street-nr"
                       v-model="formData.streetNr"
@@ -515,7 +523,7 @@
                       name="address-line2"
                       autocomplete="address-line2"
                       enterkeyhint="next"
-                      required
+                      :required="isEnrollmentFieldRequired('street_nr')"
                       placeholder="12"
                       class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
                       :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
@@ -523,9 +531,15 @@
                   </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3">
-                  <div>
-                    <label for="ce-zip" class="block text-sm font-medium text-slate-700 mb-1">PLZ *</label>
+                <div
+                  v-if="isEnrollmentFieldVisible('zip') || isEnrollmentFieldVisible('city')"
+                  class="grid gap-3"
+                  :class="isEnrollmentFieldVisible('zip') && isEnrollmentFieldVisible('city') ? 'grid-cols-3' : 'grid-cols-1'"
+                >
+                  <div v-if="isEnrollmentFieldVisible('zip')">
+                    <label for="ce-zip" class="block text-sm font-medium text-slate-700 mb-1">
+                      PLZ <span v-if="isEnrollmentFieldRequired('zip')">*</span>
+                    </label>
                     <input
                       id="ce-zip"
                       v-model="formData.zip"
@@ -534,14 +548,16 @@
                       autocomplete="postal-code"
                       inputmode="numeric"
                       enterkeyhint="next"
-                      required
+                      :required="isEnrollmentFieldRequired('zip')"
                       placeholder="8000"
                       class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
                       :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
                     />
                   </div>
-                  <div class="col-span-2">
-                    <label for="ce-city" class="block text-sm font-medium text-slate-700 mb-1">Ort *</label>
+                  <div v-if="isEnrollmentFieldVisible('city')" :class="isEnrollmentFieldVisible('zip') ? 'col-span-2' : ''">
+                    <label for="ce-city" class="block text-sm font-medium text-slate-700 mb-1">
+                      Ort <span v-if="isEnrollmentFieldRequired('city')">*</span>
+                    </label>
                     <input
                       id="ce-city"
                       v-model="formData.city"
@@ -550,7 +566,7 @@
                       autocomplete="address-level2"
                       autocapitalize="words"
                       enterkeyhint="next"
-                      required
+                      :required="isEnrollmentFieldRequired('city')"
                       placeholder="Zürich"
                       class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
                       :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
@@ -558,9 +574,15 @@
                   </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label for="ce-license" class="block text-sm font-medium text-slate-700 mb-1">Führerausweis-Nr. *</label>
+                <div
+                  v-if="isEnrollmentFieldVisible('license_number') || isEnrollmentFieldVisible('birthdate')"
+                  class="grid gap-3"
+                  :class="isEnrollmentFieldVisible('license_number') && isEnrollmentFieldVisible('birthdate') ? 'grid-cols-2' : 'grid-cols-1'"
+                >
+                  <div v-if="isEnrollmentFieldVisible('license_number')">
+                    <label for="ce-license" class="block text-sm font-medium text-slate-700 mb-1">
+                      Führerausweis-Nr. <span v-if="isEnrollmentFieldRequired('license_number')">*</span>
+                    </label>
                     <input
                       id="ce-license"
                       v-model="formData.licenseNumber"
@@ -569,14 +591,16 @@
                       autocomplete="off"
                       inputmode="numeric"
                       enterkeyhint="next"
-                      required
+                      :required="isEnrollmentFieldRequired('license_number')"
                       placeholder="123456789"
                       class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
                       :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
                     />
                   </div>
-                  <div>
-                    <label for="ce-birthdate" class="block text-sm font-medium text-slate-700 mb-1">Geburtsdatum *</label>
+                  <div v-if="isEnrollmentFieldVisible('birthdate')">
+                    <label for="ce-birthdate" class="block text-sm font-medium text-slate-700 mb-1">
+                      Geburtsdatum <span v-if="isEnrollmentFieldRequired('birthdate')">*</span>
+                    </label>
                     <input
                       id="ce-birthdate"
                       v-model="formData.birthdateNonSari"
@@ -584,7 +608,7 @@
                       name="bday"
                       autocomplete="bday"
                       enterkeyhint="done"
-                      required
+                      :required="isEnrollmentFieldRequired('birthdate')"
                       class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
                       :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
                     />
@@ -909,6 +933,13 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
 import { getCoursePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
+import {
+  areConfigurableEnrollmentFieldsValid,
+  isEnrollmentFieldRequired as enrollmentFieldRequired,
+  isEnrollmentFieldVisible as enrollmentFieldVisible,
+  resolveCategoryEnrollmentFields,
+  type EnrollmentFieldKey,
+} from '~/utils/category-enrollment-fields'
 import { useTenant } from '~/composables/useTenant'
 import { useAffiliateRef } from '~/composables/useAffiliateRef'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
@@ -982,6 +1013,17 @@ const getTextColor = () => {
 
 // State
 const isSariCourse = computed(() => !!props.course?.sari_managed)
+
+/** Non-SARI only — SARI identity comes from SARI lookup, not category settings. */
+const enrollmentFields = computed(() =>
+  resolveCategoryEnrollmentFields(props.course?.course_category?.enrollment_fields),
+)
+
+const isEnrollmentFieldVisible = (key: EnrollmentFieldKey) =>
+  enrollmentFieldVisible(enrollmentFields.value, key)
+
+const isEnrollmentFieldRequired = (key: EnrollmentFieldKey) =>
+  enrollmentFieldRequired(enrollmentFields.value, key)
 
 const step = ref<'lookup' | 'contact' | 'vehicle'>(props.course?.sari_managed ? 'lookup' : 'contact')
 const isLoading = ref(false)
@@ -1073,14 +1115,14 @@ const isValidName = computed(() => {
 })
 
 const isValidAddress = computed(() => {
-  return (
-    formData.value.street.trim().length >= 2 &&
-    formData.value.streetNr.trim().length >= 1 &&
-    formData.value.zip.trim().length >= 4 &&
-    formData.value.city.trim().length >= 2 &&
-    formData.value.licenseNumber.trim().length >= 6 &&
-    formData.value.birthdateNonSari.trim().length >= 8
-  )
+  return areConfigurableEnrollmentFieldsValid(enrollmentFields.value, {
+    street: formData.value.street,
+    streetNr: formData.value.streetNr,
+    zip: formData.value.zip,
+    city: formData.value.city,
+    licenseNumber: formData.value.licenseNumber,
+    birthdate: formData.value.birthdateNonSari,
+  })
 })
 
 const agbAccepted = ref(false)
@@ -1776,19 +1818,36 @@ const submitEnrollment = async () => {
     const marketingSessionId = (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined
     const marketingAttribution = (typeof window !== 'undefined' && (window as any).__marketingAttribution) || undefined
 
+    // Non-SARI: only send visible (required/optional) fields — never collect hidden.
+    const nonSariFields: Record<string, string | undefined> = {}
+    if (!isSariCourse.value) {
+      nonSariFields.firstName = formData.value.firstName.trim()
+      nonSariFields.lastName = formData.value.lastName.trim()
+      if (isEnrollmentFieldVisible('street')) nonSariFields.street = formData.value.street.trim()
+      if (isEnrollmentFieldVisible('street_nr')) nonSariFields.streetNr = formData.value.streetNr.trim()
+      if (isEnrollmentFieldVisible('zip')) nonSariFields.zip = formData.value.zip.trim()
+      if (isEnrollmentFieldVisible('city')) nonSariFields.city = formData.value.city.trim()
+      if (isEnrollmentFieldVisible('license_number')) {
+        nonSariFields.licenseNumber = formData.value.licenseNumber.trim()
+      }
+      if (isEnrollmentFieldVisible('birthdate')) {
+        nonSariFields.birthdate = formData.value.birthdateNonSari
+      }
+    }
+
     const response = await $fetch(endpoint, {
       method: 'POST',
       body: {
         courseId: props.course.id,
         faberid: isSariCourse.value ? faberidClean : undefined,
-        birthdate: isSariCourse.value ? birthdate : formData.value.birthdateNonSari,
-        firstName: !isSariCourse.value ? formData.value.firstName.trim() : undefined,
-        lastName: !isSariCourse.value ? formData.value.lastName.trim() : undefined,
-        street: !isSariCourse.value ? formData.value.street.trim() : undefined,
-        streetNr: !isSariCourse.value ? formData.value.streetNr.trim() : undefined,
-        zip: !isSariCourse.value ? formData.value.zip.trim() : undefined,
-        city: !isSariCourse.value ? formData.value.city.trim() : undefined,
-        licenseNumber: !isSariCourse.value ? formData.value.licenseNumber.trim() : undefined,
+        birthdate: isSariCourse.value ? birthdate : nonSariFields.birthdate,
+        firstName: nonSariFields.firstName,
+        lastName: nonSariFields.lastName,
+        street: nonSariFields.street,
+        streetNr: nonSariFields.streetNr,
+        zip: nonSariFields.zip,
+        city: nonSariFields.city,
+        licenseNumber: nonSariFields.licenseNumber,
         tenantId: props.tenantId,
         email: formData.value.email,
         phone: formData.value.phone,

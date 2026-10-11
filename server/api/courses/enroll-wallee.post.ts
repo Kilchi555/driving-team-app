@@ -35,6 +35,11 @@ import { sha256Hex } from '~/server/utils/meta-capi'
 import { reportBindingCourseConversionSafely } from '~/server/utils/binding-booking-conversion'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
+import {
+  applyCategoryEnrollmentFieldPolicy,
+  CategoryEnrollmentFieldsError,
+  resolveCategoryEnrollmentFields,
+} from '~/utils/category-enrollment-fields'
 import { INVOICE_ENROLLMENT_DISABLED_MESSAGE } from '~/server/utils/course-enrollment-payment-method'
 import {
   parsePaymentSettings,
@@ -253,11 +258,44 @@ const handler = defineEventHandler(async (event) => {
         throw error
       }
     } else {
-      // Non-SARI course: use provided name directly
+      // Non-SARI course — category enrollment_fields drive address/license/birthdate
       if (!firstName || !lastName) {
         throw createError({ statusCode: 400, statusMessage: 'Vor- und Nachname erforderlich' })
       }
-      customerData = { firstname: firstName.trim(), lastname: lastName.trim(), email, phone, street, streetNr, zip, city, licenseNumber, birthdate }
+      const enrollmentFields = resolveCategoryEnrollmentFields(
+        course.course_category?.enrollment_fields,
+      )
+      let sanitizedFields
+      try {
+        sanitizedFields = applyCategoryEnrollmentFieldPolicy(enrollmentFields, {
+          street,
+          streetNr,
+          zip,
+          city,
+          licenseNumber,
+          birthdate,
+        })
+      } catch (fieldErr: any) {
+        if (fieldErr instanceof CategoryEnrollmentFieldsError || fieldErr?.statusCode === 400) {
+          throw createError({
+            statusCode: 400,
+            statusMessage: fieldErr.message || 'Ungültige Anmeldefelder',
+          })
+        }
+        throw fieldErr
+      }
+      customerData = {
+        firstname: firstName.trim(),
+        lastname: lastName.trim(),
+        email,
+        phone,
+        street: sanitizedFields.street,
+        streetNr: sanitizedFields.streetNr,
+        zip: sanitizedFields.zip,
+        city: sanitizedFields.city,
+        licenseNumber: sanitizedFields.licenseNumber,
+        birthdate: sanitizedFields.birthdate,
+      }
       logger.debug('✅ Non-SARI enrollment, customer:', `${firstName} ${lastName}`)
     }
 
