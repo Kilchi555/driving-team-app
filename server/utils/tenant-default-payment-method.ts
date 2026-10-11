@@ -20,10 +20,10 @@ export function parsePaymentSettings(raw: unknown): Record<string, any> {
   return {}
 }
 
-export async function getTenantDefaultPaymentMethod(
+async function loadTenantPaymentSettings(
   supabase: { from: (table: string) => any },
   tenantId: string
-): Promise<TenantPaymentMethod> {
+): Promise<Record<string, any>> {
   const { data } = await supabase
     .from('tenant_settings')
     .select('setting_value')
@@ -32,6 +32,22 @@ export async function getTenantDefaultPaymentMethod(
     .eq('setting_key', 'payment_settings')
     .maybeSingle()
 
-  const settings = parsePaymentSettings(data?.setting_value)
+  return parsePaymentSettings(data?.setting_value)
+}
+
+export async function getTenantDefaultPaymentMethod(
+  supabase: { from: (table: string) => any },
+  tenantId: string
+): Promise<TenantPaymentMethod> {
+  const settings = await loadTenantPaymentSettings(supabase, tenantId)
   return normalizeTenantPaymentMethod(settings.default_payment_method)
+}
+
+/** Tenant opt-in for Rechnung as a course/booking payment method. Off by default. */
+export async function getTenantInvoicePaymentsEnabled(
+  supabase: { from: (table: string) => any },
+  tenantId: string
+): Promise<boolean> {
+  const settings = await loadTenantPaymentSettings(supabase, tenantId)
+  return settings.invoice_payments_enabled === true
 }

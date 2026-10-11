@@ -907,6 +907,7 @@
             <select
               v-model="newCourse.payment_method"
               class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
+              @change="coursePaymentManuallyEdited = true"
             >
               <option :value="null">Automatisch (basierend auf Stadt)</option>
               <option value="WALLEE">Online-Zahlung (Wallee, Kreditkarte, TWINT)</option>
@@ -2095,6 +2096,30 @@
                   />
                 </div>
               </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Standard-Zahlungsart</label>
+              <select
+                v-model="categoryForm.default_payment_method"
+                class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
+              >
+                <option :value="null">Mandantenstandard</option>
+                <option value="WALLEE">Online-Zahlung (Wallee)</option>
+                <option value="CASH_ON_SITE">Barzahlung vor Ort</option>
+                <option value="INVOICE">Rechnung</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">
+                Wird beim Erstellen eines neuen Kurses aus dieser Kursart vorausgewählt.
+                Bestehende Kurse bleiben unverändert. Unabhängig von der Rechnungsstellung.
+              </p>
+              <p
+                v-if="categoryForm.default_payment_method === 'INVOICE' && !invoicePaymentsEnabledForTenant"
+                class="text-xs text-amber-700 mt-1"
+              >
+                „Rechnung als Zahlungsoption erlauben“ ist in den Zahlungseinstellungen deaktiviert.
+                Speichern mit Rechnung ist erst nach Aktivierung möglich.
+              </p>
             </div>
 
             <div>
@@ -4311,6 +4336,11 @@ import {
   mapTenantDefaultToCoursePaymentMethod,
   defaultAdminEnrollmentPaymentOption,
 } from '~/utils/courseLocationUtils'
+import {
+  resolveNewCoursePaymentMethod,
+  shouldApplyCategoryPaymentDefault,
+  type CategoryDefaultPaymentMethod,
+} from '~/utils/category-default-payment-method'
 import { evaluateSessionOrder } from '~/utils/session-order-rules'
 import { refreshClientSession } from '~/utils/client-session-refresh'
 import { formatCourseSessionLine } from '~/utils/format-course-sessions'
@@ -4341,6 +4371,27 @@ const tenantDefaultPaymentMethod = ref<'wallee' | 'cash' | 'invoice'>('wallee')
 const defaultCoursePaymentMethod = computed(() =>
   mapTenantDefaultToCoursePaymentMethod(tenantDefaultPaymentMethod.value)
 )
+/** True after the admin manually changes Zahlungsmethode on the create/edit form. */
+const coursePaymentManuallyEdited = ref(false)
+const lastAppliedCourseCategoryId = ref<string | null>(null)
+
+function applyCategoryPaymentDefaultToCourse(opts: { categoryChanged: boolean }) {
+  if (!shouldApplyCategoryPaymentDefault({
+    categoryChanged: opts.categoryChanged,
+    paymentManuallyEdited: coursePaymentManuallyEdited.value,
+  })) {
+    return
+  }
+  const categoryId = newCourse.value.course_category_id
+  const defaults = categoryId ? getCategoryDefaults(categoryId) : null
+  const categoryDefault = (defaults?.default_payment_method ?? null) as CategoryDefaultPaymentMethod | null
+  newCourse.value.payment_method = resolveNewCoursePaymentMethod({
+    categoryDefaultPaymentMethod: categoryDefault,
+    tenantDefaultPaymentMethod: tenantDefaultPaymentMethod.value,
+  })
+  coursePaymentManuallyEdited.value = false
+  lastAppliedCourseCategoryId.value = categoryId
+}
 
 async function loadTenantDefaultPaymentMethod() {
   try {
@@ -5268,6 +5319,7 @@ const categoryForm = ref({
     // Waitlist
   waitlist_enabled: false,
   invoice_timing_mode: 'inherit' as 'inherit' | 'off' | 'immediate',
+  default_payment_method: null as CategoryDefaultPaymentMethod | null,
   // Email
   email_important_notice: '',
 })
@@ -5702,8 +5754,13 @@ const createCourse = async () => {
 
 const onCategoryChange = () => {
   // Auto-fill defaults when category is selected
-  if (!newCourse.value.course_category_id) return
-  const defaults = getCategoryDefaults(newCourse.value.course_category_id)
+  const nextCategoryId = newCourse.value.course_category_id
+  const categoryChanged = nextCategoryId !== lastAppliedCourseCategoryId.value
+  if (!nextCategoryId) {
+    lastAppliedCourseCategoryId.value = null
+    return
+  }
+  const defaults = getCategoryDefaults(nextCategoryId)
   if (defaults) {
     newCourse.value.max_participants = defaults.max_participants
     newCourse.value.requires_room = defaults.requires_room
@@ -5736,6 +5793,10 @@ const onCategoryChange = () => {
     if (selectedCategoryInfo.value?.session_count && selectedCategoryInfo.value.session_count > 0) {
       generateSessionsFromCategory()
     }
+
+    // Zahlungsart: apply category/tenant default when category changes.
+    // Manual payment edits are kept until the category changes again.
+    applyCategoryPaymentDefaultToCourse({ categoryChanged })
     
     logger.debug('✅ Course data auto-filled from category:', {
       category: selectedCategoryInfo.value?.name,
@@ -5745,7 +5806,8 @@ const onCategoryChange = () => {
       requiresVehicle: defaults.requires_vehicle,
       sessionCount: selectedCategoryInfo.value?.session_count || 1,
       hoursPerSession: selectedCategoryInfo.value?.hours_per_session || 8,
-      sessionsGenerated: courseSessions.value.length
+      sessionsGenerated: courseSessions.value.length,
+      paymentMethod: newCourse.value.payment_method,
     })
   }
 }
@@ -5777,6 +5839,8 @@ const resetNewCourse = () => {
   registrationDeadline.value = ''
   courseSessions.value = []
   editingCourse.value = null
+  coursePaymentManuallyEdited.value = false
+  lastAppliedCourseCategoryId.value = null
 }
 
 // Session Management Functions
@@ -6194,6 +6258,12 @@ const editCategoryItem = (category: any) => {
     invoice_timing_mode: category.invoice_timing_mode === 'off' || category.invoice_timing_mode === 'immediate'
       ? category.invoice_timing_mode
       : 'inherit',
+    default_payment_method:
+      category.default_payment_method === 'WALLEE'
+      || category.default_payment_method === 'CASH_ON_SITE'
+      || category.default_payment_method === 'INVOICE'
+        ? category.default_payment_method
+        : null,
     // Email
     email_important_notice: category.email_important_notice || '',
   }
@@ -6336,6 +6406,7 @@ const resetCategoryForm = () => {
     // Waitlist
     waitlist_enabled: false,
     invoice_timing_mode: 'inherit',
+    default_payment_method: null,
     // Email
     email_important_notice: '',
   }
@@ -6614,6 +6685,9 @@ const editCourse = (course: any) => {
   
   // Set editing flag
   editingCourse.value = course
+  // Preserve the stored course payment_method until the admin changes category.
+  coursePaymentManuallyEdited.value = true
+  lastAppliedCourseCategoryId.value = course.course_category_id || null
   
   // Open modal
   showCreateCourseModal.value = true
