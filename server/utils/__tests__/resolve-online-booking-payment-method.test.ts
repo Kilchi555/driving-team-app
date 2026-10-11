@@ -44,6 +44,17 @@ describe('paymentPolicyFromTenantSettings', () => {
     expect(onlineBookingAllowedMethods(policy)).toEqual(['wallee', 'invoice', 'cash'])
   })
 
+  it('uses appointment-scoped key over legacy for invoice', () => {
+    const policy = paymentPolicyFromTenantSettings({
+      settings: {
+        invoice_payments_enabled: true,
+        individual_appointment_invoice_payments_enabled: false,
+      },
+      walleeEnabled: true,
+    })
+    expect(policy.invoiceEnabled).toBe(false)
+  })
+
   it('treats missing Wallee flag as enabled', () => {
     const policy = paymentPolicyFromTenantSettings({
       settings: {},
@@ -59,15 +70,15 @@ describe('resolveOnlineBookingPaymentMethod', () => {
     expect(resolveOnlineBookingPaymentMethod({
       requested: undefined,
       policy: walleeOnly,
-    })).toMatchObject({ method: 'wallee', rejectedRequest: false })
+    })).toMatchObject({ method: 'wallee', rejectedRequest: false, invoiceRequestRejected: false })
     expect(resolveOnlineBookingPaymentMethod({
       requested: 'cash',
       policy: walleeOnly,
-    })).toMatchObject({ method: 'wallee', rejectedRequest: true })
+    })).toMatchObject({ method: 'wallee', rejectedRequest: true, invoiceRequestRejected: false })
     expect(resolveOnlineBookingPaymentMethod({
       requested: 'invoice',
       policy: walleeOnly,
-    })).toMatchObject({ method: 'wallee', rejectedRequest: true })
+    })).toMatchObject({ rejectedRequest: true, invoiceRequestRejected: true })
   })
 
   it('honors invoice and cash when the tenant enabled them for customers', () => {
@@ -119,7 +130,7 @@ describe('resolveOnlineBookingPaymentMethod', () => {
     expect(resolveOnlineBookingPaymentMethod({
       requested: 'wallee',
       policy,
-    })).toMatchObject({ method: 'cash', rejectedRequest: true })
+    })).toMatchObject({ method: 'cash', rejectedRequest: true, invoiceRequestRejected: false })
   })
 })
 

@@ -39,6 +39,10 @@ import {
   assertInvoiceEnrollmentAllowed,
   resolveNonWalleeEnrollmentMethod,
 } from '~/server/utils/course-enrollment-payment-method'
+import {
+  parsePaymentSettings,
+  resolveCourseInvoicePaymentsEnabled,
+} from '~/server/utils/tenant-default-payment-method'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
@@ -281,8 +285,8 @@ const handler = defineEventHandler(async (event) => {
     //
     // Invoice is only allowed when BOTH are true:
     //   a) The course's `payment_method` column is explicitly set to 'INVOICE'.
-    //   b) The tenant has enabled invoice payments tenant-wide
-    //      (tenant_settings.payment.payment_settings.invoice_payments_enabled).
+    //   b) course_invoice_payments_enabled (legacy invoice_payments_enabled
+    //      only when the course key is absent).
     //
     // Cash-on-site is allowed in three cases:
     //   a) The course's `payment_method` column is explicitly set to
@@ -307,10 +311,8 @@ const handler = defineEventHandler(async (event) => {
         .eq('category', 'payment')
         .eq('setting_key', 'payment_settings')
         .maybeSingle()
-      const tenantPaymentSettings = paymentSettingRow?.setting_value
-        ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
-        : {}
-      adminAllowedInvoice = tenantPaymentSettings.invoice_payments_enabled === true
+      const tenantPaymentSettings = parsePaymentSettings(paymentSettingRow?.setting_value)
+      adminAllowedInvoice = resolveCourseInvoicePaymentsEnabled(tenantPaymentSettings)
     }
 
     // Course locked to INVOICE while tenant invoices are off: refuse (no silent Wallee/cash).

@@ -89,7 +89,7 @@ describe('P0-19 does not change non-Wallee payment modes', () => {
     const src = read('server/api/courses/enroll-wallee.post.ts')
     expect(src).toContain("explicitMethod === 'CASH_ON_SITE'")
     expect(src).toContain("explicitMethod === 'INVOICE'")
-    expect(src).toContain('invoice_payments_enabled === true')
+    expect(src).toContain('resolveCourseInvoicePaymentsEnabled')
     expect(src).not.toContain('fulfillCourseWalleePayment')
   })
 
