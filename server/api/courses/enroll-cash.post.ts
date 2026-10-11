@@ -35,7 +35,10 @@ import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/up
 import { sha256Hex } from '~/server/utils/meta-capi'
 import { reportBindingCourseConversionSafely } from '~/server/utils/binding-booking-conversion'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
-import { resolveNonWalleeEnrollmentMethod } from '~/server/utils/course-enrollment-payment-method'
+import {
+  assertInvoiceEnrollmentAllowed,
+  resolveNonWalleeEnrollmentMethod,
+} from '~/server/utils/course-enrollment-payment-method'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
@@ -308,6 +311,19 @@ const handler = defineEventHandler(async (event) => {
         ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
         : {}
       adminAllowedInvoice = tenantPaymentSettings.invoice_payments_enabled === true
+    }
+
+    // Course locked to INVOICE while tenant invoices are off: refuse (no silent Wallee/cash).
+    try {
+      assertInvoiceEnrollmentAllowed({
+        coursePaymentMethod: explicitMethod,
+        invoiceEnabled: adminAllowedInvoice,
+      })
+    } catch (invoiceErr: any) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: invoiceErr?.message || 'Rechnungsanmeldung ist für diesen Kurs nicht verfügbar.',
+      })
     }
 
     if (!adminAllowedCash && !adminAllowedInvoice && !isEinsiedeln && tenant.wallee_enabled) {

@@ -7,6 +7,11 @@ import {
   CategorySessionTemplateError,
   normalizeCategorySessionTemplate,
 } from '~/utils/course-category-session-template'
+import {
+  assertInvoicePaymentMethodAllowed,
+  parseCategoryDefaultPaymentMethod,
+} from '~/utils/category-default-payment-method'
+import { getTenantInvoicePaymentsEnabled } from '~/server/utils/tenant-default-payment-method'
 
 const CATEGORY_INVOICE_TIMING = new Set(['inherit', 'off', 'immediate'])
 
@@ -44,6 +49,7 @@ export default defineEventHandler(async (event) => {
       'allow_partial_enrollment', 'partial_start_position', 'partial_price_rappen',
       'is_active', 'waitlist_enabled',
       'invoice_timing_mode',
+      'default_payment_method',
     ]
     if (rest.invoice_timing_mode !== undefined) {
       const mode = categoryInvoiceTimingForSave(rest.invoice_timing_mode)
@@ -54,6 +60,16 @@ export default defineEventHandler(async (event) => {
         })
       }
       rest.invoice_timing_mode = mode
+    }
+    if (rest.default_payment_method !== undefined) {
+      try {
+        rest.default_payment_method = parseCategoryDefaultPaymentMethod(rest.default_payment_method)
+      } catch (parseErr: any) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: parseErr?.message || 'Ungültige Standard-Zahlungsart.',
+        })
+      }
     }
     const fields: Record<string, any> = { updated_at: new Date().toISOString() }
     for (const key of ALLOWED) {
@@ -107,6 +123,23 @@ export default defineEventHandler(async (event) => {
       if (roomErr) throw roomErr
       if (!room || room.tenant_id !== tenantId) {
         throw createError({ statusCode: 403, statusMessage: 'Room does not belong to this tenant' })
+      }
+    }
+
+    // INVOICE as category default requires the tenant invoice feature flag.
+    // Never silently downgrade to Wallee/cash.
+    if (fields.default_payment_method === 'INVOICE') {
+      const invoiceEnabled = await getTenantInvoicePaymentsEnabled(supabase, tenantId)
+      try {
+        assertInvoicePaymentMethodAllowed({
+          paymentMethod: fields.default_payment_method,
+          invoicePaymentsEnabled: invoiceEnabled,
+        })
+      } catch (invoiceErr: any) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: invoiceErr?.message || 'Rechnung ist für diesen Mandanten nicht erlaubt.',
+        })
       }
     }
 

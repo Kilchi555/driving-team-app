@@ -18,7 +18,8 @@ import {
   notifyAdminMissingInstructors,
 } from '~/server/utils/course-staff-notifications'
 import { getTenantDefaultPaymentMethod } from '~/server/utils/tenant-default-payment-method'
-import { mapTenantDefaultToCoursePaymentMethod, type CoursePaymentMethod } from '~/utils/courseLocationUtils'
+import { type CoursePaymentMethod } from '~/utils/courseLocationUtils'
+import { resolveNewCoursePaymentMethod } from '~/utils/category-default-payment-method'
 import { sariCourseDisplayName } from '~/server/utils/sari-course-title'
 import {
   parsePositiveSariSessionId,
@@ -84,15 +85,16 @@ export class SARISyncEngine {
       // 0. Load partial enrollment config for this category type (once per sync run)
       const { data: categoryConfig } = await this.supabase
         .from('course_categories')
-        .select('allow_partial_enrollment, partial_start_position, partial_price_rappen')
+        .select('allow_partial_enrollment, partial_start_position, partial_price_rappen, default_payment_method')
         .eq('tenant_id', this.tenantId)
         .eq('code', courseType)
         .maybeSingle()
 
       const partialConfig = categoryConfig || null
-      const defaultPaymentMethod = mapTenantDefaultToCoursePaymentMethod(
-        await getTenantDefaultPaymentMethod(this.supabase, this.tenantId)
-      )
+      const defaultPaymentMethod = resolveNewCoursePaymentMethod({
+        categoryDefaultPaymentMethod: (categoryConfig as any)?.default_payment_method ?? null,
+        tenantDefaultPaymentMethod: await getTenantDefaultPaymentMethod(this.supabase, this.tenantId),
+      })
 
       // 1. Fetch course GROUPS from SARI (each group = 1 course with multiple sessions)
       const courseGroups = await this.sari.getCourseGroups(courseType)

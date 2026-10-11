@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { resolveNonWalleeEnrollmentMethod } from '../course-enrollment-payment-method'
+import {
+  INVOICE_ENROLLMENT_DISABLED_MESSAGE,
+  assertInvoiceEnrollmentAllowed,
+  resolveNonWalleeEnrollmentMethod,
+} from '../course-enrollment-payment-method'
 
 describe('resolveNonWalleeEnrollmentMethod', () => {
   it('uses invoice when the course is locked to Rechnung and the tenant allows it', () => {
@@ -7,20 +11,17 @@ describe('resolveNonWalleeEnrollmentMethod', () => {
       coursePaymentMethod: 'INVOICE',
       invoiceEnabled: true,
     })).toBe('invoice')
-  })
-
-  it('does not store cash for an invoice course (wrong confirmation email)', () => {
     expect(resolveNonWalleeEnrollmentMethod({
       coursePaymentMethod: 'INVOICE',
       invoiceEnabled: true,
     })).not.toBe('cash_on_site')
   })
 
-  it('falls back to cash when invoice is disabled on the tenant', () => {
-    expect(resolveNonWalleeEnrollmentMethod({
+  it('refuses INVOICE when invoices are disabled (no silent cash rewrite)', () => {
+    expect(() => resolveNonWalleeEnrollmentMethod({
       coursePaymentMethod: 'INVOICE',
       invoiceEnabled: false,
-    })).toBe('cash_on_site')
+    })).toThrow(INVOICE_ENROLLMENT_DISABLED_MESSAGE)
   })
 
   it('keeps cash courses on cash', () => {
@@ -28,5 +29,25 @@ describe('resolveNonWalleeEnrollmentMethod', () => {
       coursePaymentMethod: 'CASH_ON_SITE',
       invoiceEnabled: true,
     })).toBe('cash_on_site')
+  })
+})
+
+describe('assertInvoiceEnrollmentAllowed', () => {
+  it('allows non-invoice methods when invoices are disabled', () => {
+    expect(() => assertInvoiceEnrollmentAllowed({
+      coursePaymentMethod: 'WALLEE',
+      invoiceEnabled: false,
+    })).not.toThrow()
+    expect(() => assertInvoiceEnrollmentAllowed({
+      coursePaymentMethod: 'CASH_ON_SITE',
+      invoiceEnabled: false,
+    })).not.toThrow()
+  })
+
+  it('blocks INVOICE when invoices are disabled', () => {
+    expect(() => assertInvoiceEnrollmentAllowed({
+      coursePaymentMethod: 'INVOICE',
+      invoiceEnabled: false,
+    })).toThrow(INVOICE_ENROLLMENT_DISABLED_MESSAGE)
   })
 })

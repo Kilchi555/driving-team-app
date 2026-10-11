@@ -23,6 +23,8 @@ interface CourseCategory {
   is_active: boolean
   sort_order: number
   invoice_timing_mode?: 'inherit' | 'off' | 'immediate' | 'days_before_start' | 'on_confirmed'
+  /** Optional default for new courses. NULL = tenant Standard-Zahlungsart. */
+  default_payment_method?: 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null
   // New duration fields
   total_duration_hours: number
   session_count: number
@@ -31,6 +33,13 @@ interface CourseCategory {
   created_at: string
   updated_at: string
   created_by: string | null
+  default_room_id?: string | null
+  default_vehicle_id?: string | null
+  allow_partial_enrollment?: boolean
+  partial_start_position?: number
+  partial_price_rappen?: number
+  waitlist_enabled?: boolean
+  email_important_notice?: string | null
 }
 
 export const useCourseCategories = () => {
@@ -110,7 +119,8 @@ export const useCourseCategories = () => {
       requires_room: category.default_requires_room,
       requires_vehicle: category.default_requires_vehicle,
       default_room_id: category.default_room_id,
-      default_vehicle_id: category.default_vehicle_id
+      default_vehicle_id: category.default_vehicle_id,
+      default_payment_method: category.default_payment_method ?? null,
     }
   }
 
