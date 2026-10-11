@@ -854,13 +854,24 @@
               />
             </div>
             <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">Zahlungsart</label>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Zahlungsart (Offline)</label>
               <input
                 v-model="paidNote"
-                type="text" placeholder="z.B. TWINT, Bar, Banküberweisung…"
+                type="text" placeholder="z.B. Bar, TWINT bar, Banküberweisung…"
                 class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-300 bg-gray-50 focus:bg-white"
               />
+              <p class="mt-1 text-[11px] text-gray-500">
+                Online-/Provider-Zahlungen (z.B. Wallee) hier nicht als erfolgreich markieren — Bankimport oder Provider-Workflow verwenden.
+              </p>
             </div>
+            <label class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 cursor-pointer">
+              <input v-model="manualPaymentAttested" type="checkbox" class="mt-0.5 rounded border-amber-300 text-amber-700 focus:ring-amber-400" />
+              <span class="text-xs text-amber-900 leading-snug">
+                Ich bestätige manuell, dass der Zahlungseingang geprüft wurde.
+                Das ist <strong>keine technische Verifikation</strong> (kein Bank-/Provider-Nachweis).
+              </span>
+            </label>
+            <p v-if="markPaidError" class="text-xs text-red-600">{{ markPaidError }}</p>
           </div>
 
           <div class="flex gap-2 pt-1">
@@ -871,11 +882,11 @@
             >Abbrechen</button>
             <button
               type="button"
-              :disabled="isMarkingPaid || !partialAmountChf"
+              :disabled="isMarkingPaid || !partialAmountChf || !manualPaymentAttested"
               @click="confirmMarkAsPaid"
               class="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-xl disabled:opacity-50"
             >
-              {{ isMarkingPaid ? 'Speichern…' : 'Bestätigen' }}
+              {{ isMarkingPaid ? 'Speichern…' : 'Manuell bestätigen' }}
             </button>
           </div>
         </div>
@@ -1185,6 +1196,8 @@ const showMarkPaidDialog = ref(false)
 const partialAmountChf = ref(0)
 const paidAtDate = ref(new Date().toISOString().slice(0, 10))
 const paidNote = ref('')
+const manualPaymentAttested = ref(false)
+const markPaidError = ref<string | null>(null)
 const isMarkingPaid = ref(false)
 
 // Zahlungshistorie
@@ -1212,12 +1225,19 @@ const openMarkPaidDialog = () => {
   }
   paidAtDate.value = new Date().toISOString().slice(0, 10)
   paidNote.value = ''
+  manualPaymentAttested.value = false
+  markPaidError.value = null
   showMarkPaidDialog.value = true
 }
 
 const confirmMarkAsPaid = async () => {
   if (!props.invoice?.id || isMarkingPaid.value) return
+  if (!manualPaymentAttested.value) {
+    markPaidError.value = 'Bitte die manuelle Zahlungsbestätigung aktivieren.'
+    return
+  }
   isMarkingPaid.value = true
+  markPaidError.value = null
   try {
     const paidRappen = Math.round(partialAmountChf.value * 100)
     await $fetch('/api/invoices/mark-invoice-paid', {
@@ -1228,14 +1248,16 @@ const confirmMarkAsPaid = async () => {
         paid_at: new Date(paidAtDate.value).toISOString(),
         note: paidNote.value || undefined,
         payment_method: paidNote.value || 'manual',
+        manual_payment_attested: true,
       },
     })
     showMarkPaidDialog.value = false
     // Zahlungshistorie sofort aktualisieren
     await loadInvoicePaymentsHistory()
     emit('updated', props.invoice.id)
-  } catch (e) {
+  } catch (e: any) {
     console.error('Mark as paid failed:', e)
+    markPaidError.value = e?.data?.statusMessage || e?.statusMessage || e?.message || 'Zahlung konnte nicht erfasst werden.'
   } finally {
     isMarkingPaid.value = false
   }

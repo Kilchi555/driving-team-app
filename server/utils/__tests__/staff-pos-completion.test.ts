@@ -274,7 +274,7 @@ describe('legacy completion bypass', () => {
     const src = read('server/api/invoices/mark-invoice-paid.post.ts')
     expect(src).toContain(".eq('tenant_id', invoice.tenant_id)")
     expect(src).toContain('applyStaffPosCreditsForPaidInvoice')
-    expect(src.indexOf('if (!isPartial)')).toBeLessThan(src.indexOf('await applyStaffPosCreditsForPaidInvoice'))
+    expect(src.indexOf('if (!totals.isPartial)')).toBeLessThan(src.indexOf('await applyStaffPosCreditsForPaidInvoice'))
     expect(src).toContain('applyInvoiceCreditOnPaid')
   })
 

@@ -662,8 +662,16 @@ const handleSendInvoice = async (id: string) => {
 const handleMarkAsPaid = async (id: string) => {
   try {
     logger.debug('💰 Mark as paid requested:', id)
-    
-    const result = await markInvoiceAsPaid(id, 'paid')
+
+    const attested = typeof window !== 'undefined'
+      ? window.confirm(
+          'Manuelle Bestätigung: Wurde der Zahlungseingang geprüft?\n\n' +
+          'Dies ist keine technische Verifikation (kein Bank-/Provider-Nachweis).',
+        )
+      : false
+    if (!attested) return
+
+    const result = await markInvoiceAsPaid(id, 'manual', undefined, { manualPaymentAttested: true })
     
     if (result && result.data) {
       logger.debug('✅ Invoice marked as paid successfully')

@@ -207,17 +207,27 @@ export const useInvoices = () => {
     })
   }
 
-  // Rechnung als bezahlt markieren
-  const markInvoiceAsPaid = async (id: string, paymentMethod: string, amount?: number): Promise<InvoiceUpdateResponse> => {
+  // Rechnung als bezahlt markieren (manuelle Attestierung — keine Provider-Verifikation)
+  const markInvoiceAsPaid = async (
+    id: string,
+    paymentMethod: string,
+    amount?: number,
+    options?: { manualPaymentAttested?: boolean },
+  ): Promise<InvoiceUpdateResponse> => {
     isLoading.value = true
     error.value = null
 
     try {
+      if (options?.manualPaymentAttested !== true) {
+        throw new Error('Manuelle Zahlungsbestätigung erforderlich (keine technische Verifikation).')
+      }
+
       const response = await $fetch('/api/invoices/mark-invoice-paid', {
         method: 'POST',
         body: {
           invoice_id: id,
-          payment_method: paymentMethod,
+          payment_method: paymentMethod === 'paid' ? 'manual' : paymentMethod,
+          manual_payment_attested: true,
           ...(amount ? { paid_amount_rappen: amount } : {})
         }
       }) as any
@@ -237,7 +247,7 @@ export const useInvoices = () => {
 
       return { data: response }
     } catch (err: any) {
-      error.value = err.message || 'Fehler beim Markieren als bezahlt'
+      error.value = err?.data?.statusMessage || err.message || 'Fehler beim Markieren als bezahlt'
       return { error: error.value || undefined }
     } finally {
       isLoading.value = false
