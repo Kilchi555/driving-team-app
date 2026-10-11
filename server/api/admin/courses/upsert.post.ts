@@ -191,74 +191,86 @@ export default defineEventHandler(async (event) => {
 
   // Persist a concrete payment_method on create when the client omits it:
   // category default wins; NULL category default → tenant Standard-Zahlungsart.
-  // Updates never inherit from the category (existing course snapshots stay).
+  // Updates never inherit from the category. Omitted payment_method on update
+  // must not be rewritten as null (that would clear the existing snapshot).
+  // Explicit null/'' on update is distinguishable and clears to city/auto.
   const isCreate = !courseId
-  let resolvedPaymentMethod: string | null
-  try {
-    resolvedPaymentMethod = parseCoursePaymentMethodInput(courseData.payment_method)
-  } catch (parseErr: any) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: parseErr?.message || 'Ungültige Zahlungsart.',
-    })
-  }
+  const paymentMethodProvided = Object.prototype.hasOwnProperty.call(courseData, 'payment_method')
 
-  if (isCreate && resolvedPaymentMethod === null) {
-    let categoryDefault: string | null = null
-    const categoryId = courseData.course_category_id
-      ? String(courseData.course_category_id)
-      : ''
-    if (categoryId) {
-      const { data: categoryRow, error: categoryErr } = await supabase
-        .from('course_categories')
-        .select('id, default_payment_method')
-        .eq('id', categoryId)
-        .eq('tenant_id', profile.tenant_id)
-        .maybeSingle()
-      if (categoryErr) {
-        throw createError({ statusCode: 500, statusMessage: categoryErr.message })
-      }
-      if (!categoryRow) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Kurskategorie nicht gefunden oder gehört nicht zu diesem Unternehmen.',
-        })
-      }
-      categoryDefault = (categoryRow as any).default_payment_method ?? null
-    }
-    const tenantDefault = await getTenantDefaultPaymentMethod(supabase, profile.tenant_id)
-    resolvedPaymentMethod = resolveNewCoursePaymentMethod({
-      categoryDefaultPaymentMethod: categoryDefault as any,
-      tenantDefaultPaymentMethod: tenantDefault,
-    })
-  }
-  courseData.payment_method = resolvedPaymentMethod
-
-  // Persist INVOICE only when the tenant invoice feature flag is enabled.
-  // Do not silently rewrite to Wallee/cash on the admin write path.
-  if (courseData.payment_method === 'INVOICE') {
-    const invoiceEnabled = await getTenantInvoicePaymentsEnabled(supabase, profile.tenant_id)
+  if (isCreate || paymentMethodProvided) {
+    let resolvedPaymentMethod: string | null
     try {
-      assertInvoicePaymentMethodAllowed({
-        paymentMethod: courseData.payment_method,
-        invoicePaymentsEnabled: invoiceEnabled,
-      })
-    } catch (invoiceErr: any) {
+      resolvedPaymentMethod = parseCoursePaymentMethodInput(courseData.payment_method)
+    } catch (parseErr: any) {
       throw createError({
         statusCode: 400,
-        statusMessage: invoiceErr?.message || 'Rechnung ist für diesen Mandanten nicht erlaubt.',
+        statusMessage: parseErr?.message || 'Ungültige Zahlungsart.',
       })
     }
-  }
 
-  const courseTiming = normalizeCourseInvoiceTimingForSave({
-    paymentMethod: courseData.payment_method,
-    invoiceTimingMode: courseData.invoice_timing_mode,
-  })
-  if ('error' in courseTiming) {
-    throw createError({ statusCode: 400, statusMessage: courseTiming.error })
+    if (isCreate && resolvedPaymentMethod === null) {
+      let categoryDefault: string | null = null
+      const categoryId = courseData.course_category_id
+        ? String(courseData.course_category_id)
+        : ''
+      if (categoryId) {
+        const { data: categoryRow, error: categoryErr } = await supabase
+          .from('course_categories')
+          .select('id, default_payment_method')
+          .eq('id', categoryId)
+          .eq('tenant_id', profile.tenant_id)
+          .maybeSingle()
+        if (categoryErr) {
+          throw createError({ statusCode: 500, statusMessage: categoryErr.message })
+        }
+        if (!categoryRow) {
+          throw createError({
+            statusCode: 400,
+            statusMessage: 'Kurskategorie nicht gefunden oder gehört nicht zu diesem Unternehmen.',
+          })
+        }
+        categoryDefault = (categoryRow as any).default_payment_method ?? null
+      }
+      const tenantDefault = await getTenantDefaultPaymentMethod(supabase, profile.tenant_id)
+      resolvedPaymentMethod = resolveNewCoursePaymentMethod({
+        categoryDefaultPaymentMethod: categoryDefault as any,
+        tenantDefaultPaymentMethod: tenantDefault,
+      })
+    }
+    courseData.payment_method = resolvedPaymentMethod
+
+    // Persist INVOICE only when the tenant invoice feature flag is enabled.
+    // Do not silently rewrite to Wallee/cash on the admin write path.
+    if (courseData.payment_method === 'INVOICE') {
+      const invoiceEnabled = await getTenantInvoicePaymentsEnabled(supabase, profile.tenant_id)
+      try {
+        assertInvoicePaymentMethodAllowed({
+          paymentMethod: courseData.payment_method,
+          invoicePaymentsEnabled: invoiceEnabled,
+        })
+      } catch (invoiceErr: any) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: invoiceErr?.message || 'Rechnung ist für diesen Mandanten nicht erlaubt.',
+        })
+      }
+    }
+
+    const courseTiming = normalizeCourseInvoiceTimingForSave({
+      paymentMethod: courseData.payment_method,
+      invoiceTimingMode: courseData.invoice_timing_mode,
+    })
+    if ('error' in courseTiming) {
+      throw createError({ statusCode: 400, statusMessage: courseTiming.error })
+    }
+    courseData.invoice_timing_mode = courseTiming.invoice_timing_mode
+  } else {
+    delete courseData.payment_method
+    // Do not derive invoice_timing_mode from a missing payment_method (would force null).
+    if (!Object.prototype.hasOwnProperty.call(courseData, 'invoice_timing_mode')) {
+      delete courseData.invoice_timing_mode
+    }
   }
-  courseData.invoice_timing_mode = courseTiming.invoice_timing_mode
 
   // Always scope to tenant
   const payload = {

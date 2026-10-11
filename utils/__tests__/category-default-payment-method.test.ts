@@ -205,6 +205,8 @@ describe('category default payment method wiring', () => {
     expect(src).toContain('resolveNewCoursePaymentMethod')
     expect(src).toContain('getTenantDefaultPaymentMethod')
     expect(src).toContain('isCreate && resolvedPaymentMethod === null')
+    expect(src).toContain('paymentMethodProvided')
+    expect(src).toContain('delete courseData.payment_method')
     expect(src).toContain(".eq('tenant_id', profile.tenant_id)")
   })
 

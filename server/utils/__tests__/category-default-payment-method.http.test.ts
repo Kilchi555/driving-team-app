@@ -485,6 +485,62 @@ describe('course upsert category → payment_method inheritance', () => {
     expect(db.courses[0]?.payment_method).toBe('WALLEE')
   })
 
+  it('preserves existing payment_method when update omits the field', async () => {
+    const handler = (await import('~/server/api/admin/courses/upsert.post')).default as CourseUpsertHandler
+    for (const method of ['WALLEE', 'CASH_ON_SITE', 'INVOICE'] as const) {
+      db.courses = [{
+        id: `course-${method}`,
+        tenant_id: method === 'INVOICE' ? OTHER : TENANT,
+        name: `Existing ${method}`,
+        payment_method: method,
+        status: 'draft',
+        invoice_timing_mode: method === 'INVOICE' ? 'immediate' : null,
+      }]
+      if (method === 'INVOICE') {
+        auth = { id: 'user-b', tenant_id: OTHER, role: 'admin', db_user_id: 'profile-b' }
+      } else {
+        auth = { id: 'user-a', tenant_id: TENANT, role: 'admin', db_user_id: 'profile-a' }
+      }
+      await handler(event({
+        courseId: `course-${method}`,
+        courseData: {
+          name: `Renamed ${method}`,
+          city: 'Zürich',
+          status: 'draft',
+          // payment_method intentionally omitted
+        },
+        sessions: [],
+      }))
+      expect(db.courses[0]?.payment_method).toBe(method)
+      expect(db.courses[0]?.name).toBe(`Renamed ${method}`)
+      if (method === 'INVOICE') {
+        expect(db.courses[0]?.invoice_timing_mode).toBe('immediate')
+      }
+    }
+  })
+
+  it('applies an explicit payment_method on update', async () => {
+    db.courses.push({
+      id: 'course-flip',
+      tenant_id: TENANT,
+      name: 'Flip',
+      payment_method: 'WALLEE',
+      status: 'draft',
+    })
+    const handler = (await import('~/server/api/admin/courses/upsert.post')).default as CourseUpsertHandler
+    await handler(event({
+      courseId: 'course-flip',
+      courseData: {
+        name: 'Flip',
+        city: 'Zürich',
+        payment_method: 'CASH_ON_SITE',
+        status: 'draft',
+      },
+      sessions: [],
+    }))
+    expect(db.courses[0]?.payment_method).toBe('CASH_ON_SITE')
+  })
+
   it('rejects foreign category ids and invalid payment methods', async () => {
     const handler = (await import('~/server/api/admin/courses/upsert.post')).default as CourseUpsertHandler
     db.categories.push({
