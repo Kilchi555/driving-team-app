@@ -191,6 +191,11 @@ export interface InvoiceItemFormData {
   notes?: string
   credit_to_wallet?: boolean
   credit_amount_rappen?: number
+  /** UI: mark line as already paid at create (admin/tenant_admin only). */
+  already_paid?: boolean
+  settlement_payment_method?: 'cash' | 'twint' | 'bank_transfer' | 'card_terminal' | ''
+  settlement_payment_date?: string
+  settlement_reference?: string
   // computed fields (not sent to server directly)
   total_price_rappen?: number
   vat_amount_rappen?: number
@@ -285,4 +290,8 @@ export const DEFAULT_INVOICE_ITEM_VALUES: Partial<InvoiceItemFormData> = {
   vat_amount_rappen: 0,
   credit_to_wallet: false,
   credit_amount_rappen: 0,
+  already_paid: false,
+  settlement_payment_method: 'cash',
+  settlement_payment_date: '',
+  settlement_reference: '',
 }

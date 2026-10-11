@@ -1,4 +1,4 @@
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
@@ -8,13 +8,21 @@ import { computeInvoiceDueDate, getTenantInvoiceDueDays } from '~/server/utils/i
 import { getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
 import { applyMissingInvoiceBilling } from '~/server/utils/invoice-billing-snapshot'
 import { applyStudentCreditToPayments } from '~/server/utils/apply-student-credit'
-import { resolveInvoiceLineCreditRappen } from '~/server/utils/invoice-credit'
+import { applyInvoiceCreditOnPaid, resolveInvoiceLineCreditRappen } from '~/server/utils/invoice-credit'
+import { applyStaffPosCreditsForPaidInvoice } from '~/server/utils/staff-pos-completion'
 import { snapshotBillingCompanyName } from '~/utils/billing-address-map'
 import { isInvoiceSourceTable, stampInvoiceSourceRow } from '~/server/utils/invoice-tenant-guards'
 import {
   buildServiceLineSnapshot,
   loadTenantEventTypeNames,
 } from '~/server/utils/invoice-line-snapshot'
+import {
+  canCreateInvoice,
+  requireIdempotencyKey,
+  validateLineSettlements,
+  type LineSettlementInput,
+} from '~/server/utils/invoice-create-settlement'
+import { callCreateInvoiceWithSettlement } from '~/server/utils/invoice-create-rpc'
 
 export default defineEventHandler(async (event) => {
   // ✅ Use authenticated user
@@ -31,12 +39,18 @@ export default defineEventHandler(async (event) => {
     .eq('auth_user_id', authUser.id)
     .single()
 
-  if (!userProfile || !['admin', 'staff'].includes(userProfile.role)) {
+  if (!userProfile || !canCreateInvoice(userProfile.role)) {
     throw createError({ statusCode: 403, statusMessage: 'Admin access required' })
   }
 
   const body = await readBody(event)
-  const { invoiceData, items, apply_available_credit = false } = body
+  const {
+    invoiceData,
+    items,
+    apply_available_credit = false,
+    settlements: rawSettlements = [],
+    idempotency_key = null,
+  } = body
 
   if (!invoiceData || !items) {
     throw createError({ statusCode: 400, statusMessage: 'Missing invoiceData or items' })
@@ -44,9 +58,6 @@ export default defineEventHandler(async (event) => {
 
   try {
     const asQuote = isQuoteDocument(invoiceData.document_kind)
-    const invoiceNumber = asQuote
-      ? await allocateQuoteNumber(supabaseAdmin, userProfile.tenant_id)
-      : await allocateInvoiceNumber(supabaseAdmin, userProfile.tenant_id)
 
     const toRappen = (value: unknown): number => {
       const num = Number(value) || 0
@@ -152,6 +163,47 @@ export default defineEventHandler(async (event) => {
     const totalRappen: number = subtotalRappen + vatRappen - discountRappen
     const tenantId = userProfile.tenant_id
 
+    // Quotes never accept prepaid settlements
+    const settlementInputs: LineSettlementInput[] = asQuote
+      ? []
+      : (Array.isArray(rawSettlements) ? rawSettlements : []).map((s: any, fallbackIndex: number) => ({
+          item_index: s.item_index ?? fallbackIndex,
+          payment_method: s.payment_method,
+          payment_date: s.payment_date,
+          amount_rappen: s.amount_rappen,
+          linked_payment_id: s.linked_payment_id
+            || (invoiceItemsInput[s.item_index ?? fallbackIndex]?._open_item_source_table === 'payments'
+              ? invoiceItemsInput[s.item_index ?? fallbackIndex]?._open_item_id
+              : null),
+          notes: s.notes,
+          line_total_rappen: toRappen(
+            invoiceItemsInput[s.item_index ?? fallbackIndex]?.total_price_rappen,
+          ),
+        }))
+
+    let validatedSettlements
+    try {
+      validatedSettlements = validateLineSettlements(settlementInputs, {
+        role: userProfile.role,
+        itemCount: invoiceItemsInput.length,
+      })
+    } catch (settleErr: any) {
+      throw createError({
+        statusCode: settleErr?.statusCode || 400,
+        statusMessage: settleErr?.statusMessage || settleErr?.message || 'Ungültige Zahlung',
+      })
+    }
+
+    let idempotencyKey: string | null = null
+    try {
+      idempotencyKey = requireIdempotencyKey(idempotency_key, validatedSettlements.length > 0)
+    } catch (idempErr: any) {
+      throw createError({
+        statusCode: idempErr?.statusCode || 400,
+        statusMessage: idempErr?.statusMessage || idempErr?.message,
+      })
+    }
+
     if (invoiceData.tenant_id && invoiceData.tenant_id !== tenantId) {
       throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
     }
@@ -250,7 +302,274 @@ export default defineEventHandler(async (event) => {
       invoiceData
     )
 
-    // Create invoice
+    const creditProductIds = Array.from(new Set(
+      invoiceItemsInput
+        .filter((item: any) => item.credit_to_wallet && item.product_id)
+        .map((item: any) => item.product_id as string)
+    ))
+    const creditProductById = new Map<string, { id: string; is_credit_product?: boolean; credit_amount_rappen?: number }>()
+    if (creditProductIds.length > 0) {
+      const { data: creditProducts } = await supabaseAdmin
+        .from('products')
+        .select('id, is_credit_product, credit_amount_rappen')
+        .in('id', creditProductIds)
+        .eq('tenant_id', userProfile.tenant_id)
+      for (const product of creditProducts || []) {
+        creditProductById.set(product.id, product)
+      }
+    }
+
+    const preparedItems = invoiceItemsInput.map((item: any, index: number) => {
+      const {
+        _open_item_id, _open_item_type, _open_item_source_table,
+        payment_method, status,
+        already_paid, settlement_payment_method, settlement_payment_date, settlement_reference,
+        tenant_id: _clientTenant,
+        user_id: _clientUser,
+        event_type_code: _clientEventType,
+        event_type_name: _clientEventName,
+        staff_id: _clientStaff,
+        staff_first_name: _clientStaffName,
+        customer_first_name: _clientCustomerFirst,
+        customer_last_name: _clientCustomerLast,
+        customer_line: _clientCustomerLine,
+        line_title: _clientLineTitle,
+        ...cleanItem
+      } = item
+
+      const appointment = item.appointment_id ? appointmentById.get(item.appointment_id) : null
+      const payment = paymentById.get(
+        item.payment_id || (item._open_item_source_table === 'payments' ? item._open_item_id : ''),
+      )
+      const snapshotUserId = appointment?.user_id || payment?.user_id || invoiceData.user_id || null
+      const customer = snapshotUserId ? partyById.get(snapshotUserId) : null
+      const staffId = appointment?.staff_id && partyById.has(appointment.staff_id) ? appointment.staff_id : null
+      const staff = staffId ? partyById.get(staffId) : null
+      const eventTypeCode = appointment?.event_type_code ? String(appointment.event_type_code) : null
+      const eventTypeName = eventTypeCode ? eventTypeNames[eventTypeCode] || null : null
+
+      let snapshotFields = {
+        event_type_code: null as string | null,
+        user_id: null as string | null,
+        staff_id: null as string | null,
+        staff_first_name: null as string | null,
+        customer_first_name: null as string | null,
+        customer_last_name: null as string | null,
+      }
+
+      if (!item.product_id && (eventTypeCode || appointment || payment)) {
+        const built = buildServiceLineSnapshot({
+          eventTypeCode,
+          eventTypeName,
+          existingTitle: cleanItem.product_name || appointment?.title,
+          appointmentStatus: appointment?.status,
+          cancellationChargePercentage: appointment?.cancellation_charge_percentage,
+          snapshotUserId,
+          staffId,
+          staffFirstName: staff?.first_name || null,
+          customerFirstName: customer?.first_name || null,
+          customerLastName: customer?.last_name || null,
+        })
+        cleanItem.product_name = built.product_name
+        snapshotFields = {
+          event_type_code: built.event_type_code,
+          user_id: built.user_id,
+          staff_id: built.staff_id,
+          staff_first_name: built.staff_first_name,
+          customer_first_name: built.customer_first_name,
+          customer_last_name: built.customer_last_name,
+        }
+      }
+
+      const creditToWallet = !asQuote && Boolean(item.credit_to_wallet)
+      const creditAmount = creditToWallet
+        ? resolveInvoiceLineCreditRappen(
+            {
+              credit_to_wallet: true,
+              credit_amount_rappen: item.credit_amount_rappen,
+              total_price_rappen: toRappen(cleanItem.total_price_rappen),
+              quantity: item.quantity,
+              product_id: item.product_id,
+            },
+            item.product_id ? creditProductById.get(item.product_id) : null
+          )
+        : 0
+
+      const linkedPaymentId =
+        item._open_item_source_table === 'payments' && item._open_item_id
+          ? String(item._open_item_id)
+          : (item.payment_id || null)
+
+      return {
+        ...cleanItem,
+        ...snapshotFields,
+        sort_order: item.sort_order ?? index,
+        discount_percent: item.discount_percent || 0,
+        unit_price_rappen: toRappen(cleanItem.unit_price_rappen),
+        total_price_rappen: toRappen(cleanItem.total_price_rappen),
+        vat_amount_rappen: toRappen(cleanItem.vat_amount_rappen),
+        credit_to_wallet: creditToWallet,
+        credit_amount_rappen: creditToWallet ? creditAmount : null,
+        linked_payment_id: linkedPaymentId,
+        _open_item_id,
+        _open_item_source_table,
+        appointment_id: item.appointment_id || null,
+      }
+    })
+
+    // ── Atomic create + settle (Contract F) ──────────────────────────────
+    if (validatedSettlements.length > 0) {
+      // Enrich settlements with linked payment from prepared items when missing
+      const settlementsForRpc = validatedSettlements.map((s) => ({
+        ...s,
+        linked_payment_id: s.linked_payment_id
+          || (preparedItems[s.item_index]?.linked_payment_id as string | null)
+          || null,
+      }))
+
+      let rpcResult
+      try {
+        rpcResult = await callCreateInvoiceWithSettlement({
+          supabase: supabaseAdmin,
+          actorUserId: userProfile.id,
+          idempotencyKey,
+          invoice: {
+            billing_type: billedInvoiceData.billing_type || 'individual',
+            billing_company_name: snapshotBillingCompanyName(billedInvoiceData.billing_company_name),
+            billing_contact_person: billedInvoiceData.billing_contact_person || null,
+            billing_email: billedInvoiceData.billing_email || null,
+            billing_street: billedInvoiceData.billing_street || null,
+            billing_street_number: billedInvoiceData.billing_street_number || null,
+            billing_zip: billedInvoiceData.billing_zip || null,
+            billing_city: billedInvoiceData.billing_city || null,
+            billing_country: billedInvoiceData.billing_country || 'CH',
+            billing_vat_number: billedInvoiceData.billing_vat_number || null,
+            tenant_id: tenantId,
+            document_kind: 'invoice',
+            valid_until: validUntil,
+            invoice_date: invoiceDate,
+            due_date: dueDate,
+            vat_rate: vatRate,
+            subtotal_rappen: subtotalRappen,
+            vat_amount_rappen: vatRappen,
+            discount_amount_rappen: discountRappen,
+            total_amount_rappen: totalRappen,
+            status: 'pdf_created',
+            notes: invoiceData.notes || null,
+            payment_terms: invoiceData.payment_terms || null,
+            footer_text: invoiceData.footer_text || null,
+            internal_notes: invoiceData.internal_notes || null,
+            user_id: invoiceData.user_id || null,
+            company_id: invoiceData.company_id || null,
+            staff_id: invoiceData.staff_id || userProfile.id,
+            product_sale_id: invoiceData.product_sale_id || null,
+            appointment_id: invoiceData.appointment_id || null,
+          },
+          items: preparedItems.map(({ _open_item_id, _open_item_source_table, ...row }) => row),
+          settlements: settlementsForRpc,
+        })
+      } catch (rpcErr: any) {
+        throw createError({
+          statusCode: rpcErr?.statusCode || 500,
+          statusMessage: rpcErr?.statusMessage || rpcErr?.message || 'Rechnung konnte nicht erstellt werden',
+        })
+      }
+
+      // Non-payment source stamps (rooms/vehicles/courses) — payments handled in RPC
+      if (!rpcResult.replayed) {
+        for (const item of invoiceItemsInput) {
+          if (!item._open_item_id || !item._open_item_source_table) continue
+          if (item._open_item_source_table === 'payments') {
+            const { data: paymentRow } = await supabaseAdmin
+              .from('payments')
+              .select('id, course_registration_id')
+              .eq('id', item._open_item_id)
+              .eq('tenant_id', tenantId)
+              .maybeSingle()
+            if (paymentRow?.course_registration_id) {
+              await stampInvoiceSourceRow({
+                supabase: supabaseAdmin,
+                table: 'course_registrations',
+                sourceId: paymentRow.course_registration_id,
+                tenantId,
+                invoiceId: rpcResult.invoice_id,
+              })
+            }
+            continue
+          }
+          if (!isInvoiceSourceTable(item._open_item_source_table)) continue
+          await stampInvoiceSourceRow({
+            supabase: supabaseAdmin,
+            table: item._open_item_source_table,
+            sourceId: item._open_item_id,
+            tenantId,
+            invoiceId: rpcResult.invoice_id,
+          })
+        }
+
+        if (rpcResult.payment_status === 'paid' && invoiceData.user_id) {
+          try {
+            const { data: invoicePayments } = await supabaseAdmin
+              .from('payments')
+              .select('id, tenant_id, metadata')
+              .eq('invoice_id', rpcResult.invoice_id)
+              .eq('tenant_id', tenantId)
+            await applyStaffPosCreditsForPaidInvoice({
+              payments: invoicePayments || [],
+              tenantId,
+              actorUserId: userProfile.id,
+              isPartial: false,
+              rpc: async (args) => {
+                const { data, error: rpcError } = await supabaseAdmin.rpc('staff_pos_sale', args)
+                if (rpcError) throw rpcError
+                return data
+              },
+            })
+          } catch (staffPosErr: any) {
+            console.warn('[invoice/create] staff POS credit after settle:', staffPosErr?.message || staffPosErr)
+          }
+          try {
+            await applyInvoiceCreditOnPaid({
+              supabase: supabaseAdmin,
+              invoiceId: rpcResult.invoice_id,
+              tenantId,
+              userId: invoiceData.user_id,
+              actorUserId: userProfile.id,
+            })
+          } catch (creditErr: any) {
+            console.warn('[invoice/create] wallet credit after settle:', creditErr?.message || creditErr)
+          }
+        }
+
+        // Preferred method only when something remains open
+        if (invoiceData.user_id && rpcResult.outstanding_rappen > 0) {
+          await supabaseAdmin
+            .from('users')
+            .update({ preferred_payment_method: 'invoice' })
+            .eq('id', invoiceData.user_id)
+        }
+      }
+
+      const { data: fullInvoice } = await supabaseAdmin
+        .from('invoices_with_details')
+        .select('*')
+        .eq('id', rpcResult.invoice_id)
+        .single()
+
+      return {
+        success: true,
+        data: fullInvoice,
+        replayed: rpcResult.replayed,
+        paid_amount_rappen: rpcResult.paid_amount_rappen,
+        outstanding_rappen: rpcResult.outstanding_rappen,
+      }
+    }
+
+    // ── Legacy unpaid create path (no settlements) ───────────────────────
+    const invoiceNumber = asQuote
+      ? await allocateQuoteNumber(supabaseAdmin, userProfile.tenant_id)
+      : await allocateInvoiceNumber(supabaseAdmin, userProfile.tenant_id)
+
     const invoiceInsertData = {
       billing_type: billedInvoiceData.billing_type || 'individual',
       billing_company_name: snapshotBillingCompanyName(billedInvoiceData.billing_company_name),
@@ -280,7 +599,6 @@ export default defineEventHandler(async (event) => {
       notes: invoiceData.notes || null,
       payment_terms: invoiceData.payment_terms || null,
       footer_text: invoiceData.footer_text || null,
-      // company invoices have no user_id — coerce empty strings to null (uuid columns)
       user_id: invoiceData.user_id || null,
       company_id: invoiceData.company_id || null,
       staff_id: invoiceData.staff_id || null,
@@ -296,7 +614,6 @@ export default defineEventHandler(async (event) => {
 
     if (invoiceError) throw invoiceError
 
-    // Update user's preferred payment method to 'invoice' if user_id is provided
     if (!asQuote && invoiceData.user_id) {
       const { error: updateUserError } = await supabaseAdmin
         .from('users')
@@ -307,9 +624,7 @@ export default defineEventHandler(async (event) => {
         console.warn('Warning: Could not update user payment method:', updateUserError)
       }
 
-      // Update payments for the selected appointments in the invoice items
       if (invoiceItemsInput.length > 0) {
-        // Collect all appointment IDs from invoice items
         const appointmentIds = invoiceItemsInput
           .filter((item: any) => item.appointment_id)
           .map((item: any) => item.appointment_id)
@@ -328,115 +643,17 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Create invoice items
-    if (invoiceItemsInput.length > 0) {
-      const creditProductIds = Array.from(new Set(
-        invoiceItemsInput
-          .filter((item: any) => item.credit_to_wallet && item.product_id)
-          .map((item: any) => item.product_id as string)
-      ))
-      const creditProductById = new Map<string, { id: string; is_credit_product?: boolean; credit_amount_rappen?: number }>()
-      if (creditProductIds.length > 0) {
-        const { data: creditProducts } = await supabaseAdmin
-          .from('products')
-          .select('id, is_credit_product, credit_amount_rappen')
-          .in('id', creditProductIds)
-          .eq('tenant_id', userProfile.tenant_id)
-        for (const product of creditProducts || []) {
-          creditProductById.set(product.id, product)
-        }
-      }
-
-      const invoiceItems = invoiceItemsInput.map((item: any, index: number) => {
-        // Strip internal metadata and client-supplied snapshot fields before inserting.
-        // tenant_id / user_id / event_type_code / staff & customer names are server-owned.
-        const {
-          _open_item_id, _open_item_type, _open_item_source_table,
-          payment_method, status,
-          tenant_id: _clientTenant,
-          user_id: _clientUser,
-          event_type_code: _clientEventType,
-          event_type_name: _clientEventName,
-          staff_id: _clientStaff,
-          staff_first_name: _clientStaffName,
-          customer_first_name: _clientCustomerFirst,
-          customer_last_name: _clientCustomerLast,
-          customer_line: _clientCustomerLine,
-          line_title: _clientLineTitle,
-          ...cleanItem
-        } = item
-
-        const appointment = item.appointment_id ? appointmentById.get(item.appointment_id) : null
-        const payment = paymentById.get(
-          item.payment_id || (item._open_item_source_table === 'payments' ? item._open_item_id : ''),
-        )
-        const snapshotUserId = appointment?.user_id || payment?.user_id || invoiceData.user_id || null
-        const customer = snapshotUserId ? partyById.get(snapshotUserId) : null
-        const staffId = appointment?.staff_id && partyById.has(appointment.staff_id) ? appointment.staff_id : null
-        const staff = staffId ? partyById.get(staffId) : null
-        const eventTypeCode = appointment?.event_type_code ? String(appointment.event_type_code) : null
-        const eventTypeName = eventTypeCode ? eventTypeNames[eventTypeCode] || null : null
-
-        let snapshotFields = {
-          event_type_code: null as string | null,
-          user_id: null as string | null,
-          staff_id: null as string | null,
-          staff_first_name: null as string | null,
-          customer_first_name: null as string | null,
-          customer_last_name: null as string | null,
-        }
-
-        if (!item.product_id && (eventTypeCode || appointment || payment)) {
-          const built = buildServiceLineSnapshot({
-            eventTypeCode,
-            eventTypeName,
-            existingTitle: cleanItem.product_name || appointment?.title,
-            appointmentStatus: appointment?.status,
-            cancellationChargePercentage: appointment?.cancellation_charge_percentage,
-            snapshotUserId,
-            staffId,
-            staffFirstName: staff?.first_name || null,
-            customerFirstName: customer?.first_name || null,
-            customerLastName: customer?.last_name || null,
-          })
-          cleanItem.product_name = built.product_name
-          snapshotFields = {
-            event_type_code: built.event_type_code,
-            user_id: built.user_id,
-            staff_id: built.staff_id,
-            staff_first_name: built.staff_first_name,
-            customer_first_name: built.customer_first_name,
-            customer_last_name: built.customer_last_name,
-          }
-        }
-
-        const creditToWallet = !asQuote && Boolean(item.credit_to_wallet)
-        const creditAmount = creditToWallet
-          ? resolveInvoiceLineCreditRappen(
-              {
-                credit_to_wallet: true,
-                credit_amount_rappen: item.credit_amount_rappen,
-                total_price_rappen: toRappen(cleanItem.total_price_rappen),
-                quantity: item.quantity,
-                product_id: item.product_id,
-              },
-              item.product_id ? creditProductById.get(item.product_id) : null
-            )
-          : 0
-        return {
-          ...cleanItem,
-          invoice_id: invoice.id,
-          tenant_id: tenantId,
-          ...snapshotFields,
-          sort_order: item.sort_order ?? index,
-          discount_percent: item.discount_percent || 0,
-          unit_price_rappen: toRappen(cleanItem.unit_price_rappen),
-          total_price_rappen: toRappen(cleanItem.total_price_rappen),
-          vat_amount_rappen: toRappen(cleanItem.vat_amount_rappen),
-          credit_to_wallet: creditToWallet,
-          credit_amount_rappen: creditToWallet ? creditAmount : null,
-        }
-      })
+    if (preparedItems.length > 0) {
+      const invoiceItems = preparedItems.map(({
+        linked_payment_id: _lp,
+        _open_item_id: _oi,
+        _open_item_source_table: _ost,
+        ...row
+      }) => ({
+        ...row,
+        invoice_id: invoice.id,
+        tenant_id: tenantId,
+      }))
 
       const { error: itemsError } = await supabaseAdmin
         .from('invoice_items')
@@ -444,7 +661,6 @@ export default defineEventHandler(async (event) => {
 
       if (itemsError) throw itemsError
 
-      // Stamp invoice_id back on source rows (payments, courses, rooms, vehicles)
       for (const item of asQuote ? [] : invoiceItemsInput) {
         if (item.appointment_id && !item._open_item_id) {
           const { error: aptPayErr } = await supabaseAdmin
@@ -467,8 +683,6 @@ export default defineEventHandler(async (event) => {
         const sourceId = item._open_item_id as string
 
         if (table === 'payments') {
-          // Course/lesson open items come from payments — link them so they
-          // disappear from "Offene Positionen" (filter: invoice_id IS NULL).
           const { data: paymentRow, error: payErr } = await supabaseAdmin
             .from('payments')
             .update({
@@ -513,7 +727,6 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Fetch full invoice with details
     const { data: fullInvoice } = await supabaseAdmin
       .from('invoices_with_details')
       .select('*')

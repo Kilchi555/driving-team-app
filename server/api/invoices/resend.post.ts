@@ -16,6 +16,7 @@ import { presentStoredInvoiceLine } from '~/server/utils/invoice-line-snapshot'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { invoicePersonNames, invoiceQrDebtorName, isPlaceholderBillingEmail, loadUserAddressForInvoice, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
 import { isQuoteDocument, quoteAcceptUrl, quoteDocumentLabels } from '~/server/utils/invoice-quote'
+import { invoiceCreateOutstandingRappen, invoiceCreateQrAmountRappen } from '~/server/utils/invoice-create-settlement'
 export default defineEventHandler(async (event) => {
   try {
     const { invoiceId } = await readBody(event)
@@ -39,6 +40,13 @@ export default defineEventHandler(async (event) => {
     // aufs Mahnschreiben, nicht auf die Original-Rechnung (siehe Item-Filter unten).
     const invoiceSubtotalRappen = (invoice.subtotal_rappen || invoice.total_amount_rappen) - (invoice.dunning_fees_rappen || 0)
     const invoiceTotalRappen = invoice.total_amount_rappen - (invoice.dunning_fees_rappen || 0)
+    const paidAmountRappen = invoice.paid_amount_rappen || 0
+    const outstandingRappen = invoiceCreateOutstandingRappen(invoiceTotalRappen, paidAmountRappen)
+    const qrAmountRappen = invoiceCreateQrAmountRappen(
+      invoice.total_amount_rappen,
+      paidAmountRappen,
+      invoice.dunning_fees_rappen || 0,
+    )
 
     // Sicherstellen dass nur Rechnungen des eigenen Tenants versendet werden
     const { data: staffUser } = await supabase
@@ -166,7 +174,7 @@ export default defineEventHandler(async (event) => {
     const acceptUrl = asQuote && (invoice as any).public_token
       ? quoteAcceptUrl((invoice as any).public_token)
       : null
-    const qrIban = asQuote ? null : ((tenant as any)?.qr_iban || null)
+    const qrIban = asQuote || qrAmountRappen <= 0 ? null : ((tenant as any)?.qr_iban || null)
     if (qrIban) {
       try {
         const { generateSwissQRBase64, generateReference } = await import('~/server/utils/swiss-qr')
@@ -184,7 +192,7 @@ export default defineEventHandler(async (event) => {
           debtor_street_nr: (invoice as any).billing_street_number || userAddress?.street_nr || '',
           debtor_zip: invoice.billing_zip || userAddress?.zip || '',
           debtor_city: invoice.billing_city || userAddress?.city || '',
-          amount_rappen: invoiceTotalRappen,
+          amount_rappen: qrAmountRappen,
           reference: paymentRef,
           additional_info: `Rechnung ${invoice.invoice_number}`,
         })
@@ -273,6 +281,8 @@ export default defineEventHandler(async (event) => {
         vatRate: Number(invoice.vat_rate) || 0,
         vatAmountRappen: invoice.vat_amount_rappen || 0,
         totalRappen: invoiceTotalRappen,
+        paidAmountRappen,
+        outstandingRappen,
         qrCodeDataUrl,
         qrIban,
         scorRef: scorRef || null,
