@@ -78,19 +78,47 @@ export function staffCourseBlockTitle(
 
 // ── Core: create/delete appointments for a staff member ───────────────────────
 
-/** Delete all course-related appointments for a specific staff + course. */
+export type StaffCourseAppointmentDeleteResult = {
+  ok: boolean
+  deletedIds: string[]
+  error: string | null
+}
+
+/**
+ * Delete all course-related appointments for a specific staff + course.
+ * Always tenant-scoped — never delete by course notes alone.
+ * Callers must treat `ok:false` as a real failure (do not invent success).
+ */
 export async function deleteStaffCourseAppointments(
   supabase: SupabaseClient,
   staffId: string,
   courseId: string,
-) {
-  const { error } = await supabase
+  tenantId: string,
+): Promise<StaffCourseAppointmentDeleteResult> {
+  if (!tenantId) {
+    const message = 'tenantId is required to delete staff course appointments'
+    logger.warn(`⚠️ ${message} (staff ${staffId}, course ${courseId})`)
+    return { ok: false, deletedIds: [], error: message }
+  }
+
+  const { data, error } = await supabase
     .from('appointments')
     .delete()
     .eq('staff_id', staffId)
     .eq('notes', `course:${courseId}`)
+    .eq('tenant_id', tenantId)
+    .select('id')
 
-  if (error) logger.warn(`⚠️ Could not delete course appointments for staff ${staffId}:`, error.message)
+  if (error) {
+    logger.warn(`⚠️ Could not delete course appointments for staff ${staffId}:`, error.message)
+    return { ok: false, deletedIds: [], error: error.message }
+  }
+
+  return {
+    ok: true,
+    deletedIds: (data || []).map((row) => row.id).filter(Boolean),
+    error: null,
+  }
 }
 
 /**
@@ -209,7 +237,11 @@ export async function syncStaffCourseCalendar(
   for (const [staffId, staffSessions] of sessionsByStaff) {
     const staffAppts = (appointments || []).filter((a) => a.staff_id === staffId)
     if (staffCalendarBlocksMatch(staffSessions, staffAppts)) continue
-    await deleteStaffCourseAppointments(supabase, staffId, course.id)
+    const deleted = await deleteStaffCourseAppointments(supabase, staffId, course.id, course.tenant_id)
+    if (!deleted.ok) {
+      logger.warn(`⚠️ Staff calendar resync skipped delete failure for staff ${staffId}:`, deleted.error)
+      continue
+    }
     await createStaffCourseAppointments(supabase, staffId, course, staffSessions)
     await notifyStaffCourseTimesChanged(supabase, staffId, course, staffSessions)
     updated++

@@ -57,6 +57,7 @@ export default defineEventHandler(async (event) => {
     sari: followUps.sari
       ? {
           unenrolled: followUps.sari.unenrolled,
+          alreadyCompleted: followUps.sari.alreadyCompleted,
           unresolved: followUps.sari.unresolved,
           failed: followUps.sari.failed,
           localOnly: followUps.sari.localOnly,

@@ -2,6 +2,9 @@
  * Post-commit follow-ups for course cancellation: staff calendar cleanup + SARI unenroll.
  * Must run after cancelCourse DB/email cascade for every cancellation entry point.
  * Does not invent refunds or reopen cancelled registrations/invoices.
+ *
+ * Failures here cannot roll back the committed DB cascade — they must surface as
+ * complete:false so operators can safely retry remaining work.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -19,7 +22,6 @@ import {
 import { logger } from '~/utils/logger'
 import {
   deleteConfirmedSariMembership,
-  isUnresolvedSariRegistration,
   listRegistrationSariMemberships,
 } from '~/server/utils/registration-sari-membership'
 import type { CourseCancelResult } from '~/server/utils/cancel-course'
@@ -34,6 +36,7 @@ export type CourseCancelStaffResult = {
 export type CourseCancelSariResult = {
   applicable: boolean
   unenrolled: number
+  alreadyCompleted: number
   unresolved: number
   failed: number
   localOnly: number
@@ -50,6 +53,25 @@ export type CourseCancelFollowUpResult = {
   sari: CourseCancelSariResult | null
   warnings: string[]
   complete: boolean
+}
+
+/**
+ * Classify a cancelled registration for SARI follow-up retry safety.
+ * Does not invent "confirmed" status after the DB cascade already cancelled the row.
+ */
+export function classifySariCancelRegistration(args: {
+  faberid: unknown
+  paymentMethod: unknown
+  membershipCount: number
+  sariSynced: unknown
+}): 'local_only' | 'already_completed' | 'pending_unenroll' | 'unresolved' {
+  const faberid = String(args.faberid || '').trim()
+  if (!faberid || args.paymentMethod === 'reserved') return 'local_only'
+  if (args.membershipCount > 0) return 'pending_unenroll'
+  // Durable sync flag set only after successful unenroll (+ membership wipe) or equivalent.
+  if (args.sariSynced === true) return 'already_completed'
+  // No membership snapshot and never marked synced — external outcome unknown.
+  return 'unresolved'
 }
 
 export async function runCourseCancelFollowUps(opts: {
@@ -70,57 +92,91 @@ export async function runCourseCancelFollowUps(opts: {
   }
 
   try {
-    const { data: staffSessions } = await supabase
+    const { data: staffSessions, error: sessionError } = await supabase
       .from('course_sessions')
       .select('id, start_time, end_time, description, staff_id')
       .eq('course_id', courseId)
+      .eq('tenant_id', tenantId)
       .not('staff_id', 'is', null)
 
-    const byStaff = new Map<string, Array<{ id: string; start_time: string; end_time: string; description?: string | null }>>()
-    for (const s of staffSessions || []) {
-      if (!s.staff_id) continue
-      if (!byStaff.has(s.staff_id)) byStaff.set(s.staff_id, [])
-      byStaff.get(s.staff_id)!.push(s)
-    }
+    if (sessionError) {
+      staff.ok = false
+      staff.errors.push(sessionError.message)
+      warnings.push(`Staff-Kalender: Sitzungen konnten nicht geladen werden (${sessionError.message})`)
+    } else {
+      const byStaff = new Map<string, Array<{ id: string; start_time: string; end_time: string; description?: string | null }>>()
+      for (const s of staffSessions || []) {
+        if (!s.staff_id) continue
+        if (!byStaff.has(s.staff_id)) byStaff.set(s.staff_id, [])
+        byStaff.get(s.staff_id)!.push(s)
+      }
 
-    const { data: courseNameRow } = await supabase
-      .from('courses')
-      .select('name')
-      .eq('id', courseId)
-      .eq('tenant_id', tenantId)
-      .maybeSingle()
+      const { data: courseNameRow } = await supabase
+        .from('courses')
+        .select('name')
+        .eq('id', courseId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
 
-    const courseForNotify = {
-      id: courseId,
-      name: courseNameRow?.name || 'Kurs',
-      tenant_id: tenantId,
-    }
+      const courseForNotify = {
+        id: courseId,
+        name: courseNameRow?.name || 'Kurs',
+        tenant_id: tenantId,
+      }
 
-    for (const [staffId, sessions] of byStaff) {
-      await deleteStaffCourseAppointments(supabase, staffId, courseId)
-      staff.instructorsCleared++
-      if (notifyStaff) {
-        await notifyStaffCourseCancelled(supabase, staffId, courseForNotify, sessions)
-        staff.notified++
+      for (const [staffId, sessions] of byStaff) {
+        const deleted = await deleteStaffCourseAppointments(supabase, staffId, courseId, tenantId)
+        if (!deleted.ok) {
+          staff.ok = false
+          const msg = deleted.error || `staff ${staffId} delete failed`
+          staff.errors.push(msg)
+          warnings.push(`Staff-Kalender: ${msg}`)
+          continue
+        }
+
+        if (deleted.deletedIds.length === 0) {
+          // Already cleaned on a prior attempt — do not re-notify.
+          continue
+        }
+
+        staff.instructorsCleared += deleted.deletedIds.length
+        if (notifyStaff) {
+          await notifyStaffCourseCancelled(supabase, staffId, courseForNotify, sessions)
+          staff.notified++
+        }
+      }
+
+      const { data: leftover, error: leftoverError } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('notes', `course:${courseId}`)
+        .eq('tenant_id', tenantId)
+        .select('id')
+
+      if (leftoverError) {
+        staff.ok = false
+        staff.errors.push(leftoverError.message)
+        warnings.push(`Staff-Kalender: ${leftoverError.message}`)
+      } else if (leftover?.length) {
+        staff.instructorsCleared += leftover.length
       }
     }
-
-    const { data: leftover } = await supabase
-      .from('appointments')
-      .delete()
-      .eq('notes', `course:${courseId}`)
-      .eq('tenant_id', tenantId)
-      .select('id')
-
-    if (leftover?.length) {
-      staff.instructorsCleared += leftover.length
-    }
-  } catch (staffCleanupErr: any) {
+  } catch (staffCleanupErr: unknown) {
     staff.ok = false
-    const msg = staffCleanupErr?.message || String(staffCleanupErr)
+    const msg = staffCleanupErr instanceof Error ? staffCleanupErr.message : String(staffCleanupErr)
     staff.errors.push(msg)
     warnings.push(`Staff-Kalender: ${msg}`)
     logger.warn('⚠️ Staff appointment cleanup after course cancel failed:', msg)
+  }
+
+  type CourseMetaTenant = { sari_enabled?: boolean | null; sari_environment?: string | null }
+  type CourseMetaRow = { sari_managed?: boolean | null; tenants?: CourseMetaTenant | null }
+  type CancelledRegRow = {
+    id: string
+    payment_method?: string | null
+    sari_faberid?: string | null
+    sari_synced?: boolean | null
+    users?: { id?: string; faberid?: string | null } | null
   }
 
   const { data: courseMeta } = await supabase
@@ -130,13 +186,15 @@ export async function runCourseCancelFollowUps(opts: {
     .eq('tenant_id', tenantId)
     .maybeSingle()
 
-  const tenant = (courseMeta as any)?.tenants
-  const isSariManaged = !!(courseMeta as any)?.sari_managed && !!tenant?.sari_enabled
+  const courseMetaRow = courseMeta as CourseMetaRow | null
+  const tenant = courseMetaRow?.tenants
+  const isSariManaged = !!courseMetaRow?.sari_managed && !!tenant?.sari_enabled
 
   let sari: CourseCancelSariResult | null = null
 
   if (isSariManaged) {
     let sariUnenrolled = 0
+    let sariAlreadyCompleted = 0
     let sariUnresolved = 0
     let sariLocalOnly = 0
     let sariError: string | null = null
@@ -152,7 +210,7 @@ export async function runCourseCancelFollowUps(opts: {
       )
 
       const sariClient = new SARIClient({
-        environment: (tenant.sari_environment || 'test') as 'test' | 'production',
+        environment: (tenant?.sari_environment || 'test') as 'test' | 'production',
         clientId: sariSecrets.SARI_CLIENT_ID,
         clientSecret: sariSecrets.SARI_CLIENT_SECRET,
         username: sariSecrets.SARI_USERNAME,
@@ -161,7 +219,7 @@ export async function runCourseCancelFollowUps(opts: {
 
       const { data: regs } = await supabase
         .from('course_registrations')
-        .select('id, user_id, status, payment_method, sari_faberid, users!course_registrations_user_id_fkey(id, faberid)')
+        .select('id, user_id, status, payment_method, sari_faberid, sari_synced, users!course_registrations_user_id_fkey(id, faberid)')
         .eq('course_id', courseId)
         .eq('tenant_id', tenantId)
         .eq('status', 'cancelled')
@@ -170,20 +228,26 @@ export async function runCourseCancelFollowUps(opts: {
       const failuresForLog: Array<{ faberid: string; sessionId: number; error: string }> = []
       let unenrolled = 0
 
-      for (const reg of regs || []) {
-        const faberid = (reg as any).sari_faberid || (reg as any).users?.faberid
+      for (const rawReg of regs || []) {
+        const reg = rawReg as CancelledRegRow
+        const faberid = reg.sari_faberid || reg.users?.faberid
         const memberships = await listRegistrationSariMemberships(supabase, tenantId, reg.id)
-        if (!faberid || (reg as any).payment_method === 'reserved') {
+        const classification = classifySariCancelRegistration({
+          faberid,
+          paymentMethod: reg.payment_method,
+          membershipCount: memberships.length,
+          sariSynced: reg.sari_synced,
+        })
+
+        if (classification === 'local_only') {
           sariLocalOnly++
           continue
         }
-        if (memberships.length === 0 && isUnresolvedSariRegistration({
-          sariManaged: true,
-          faberid,
-          status: 'confirmed',
-          paymentMethod: (reg as any).payment_method,
-          membershipCount: 0,
-        })) {
+        if (classification === 'already_completed') {
+          sariAlreadyCompleted++
+          continue
+        }
+        if (classification === 'unresolved') {
           sariUnresolved++
           sariOk = false
           warnings.push(`SARI-Status unklar für Anmeldung ${reg.id} — manuell prüfen`)
@@ -193,7 +257,7 @@ export async function runCourseCancelFollowUps(opts: {
         let regFailed = false
         for (const membership of memberships) {
           try {
-            await sariClient.unenrollStudent(membership.sari_session_id, faberid)
+            await sariClient.unenrollStudent(membership.sari_session_id, String(faberid))
             await deleteConfirmedSariMembership({
               supabase,
               tenantId,
@@ -201,8 +265,9 @@ export async function runCourseCancelFollowUps(opts: {
               sariSessionId: membership.sari_session_id,
             })
             unenrolled++
-          } catch (err: any) {
-            if (isSariUnenrollIdempotent(err.message)) {
+          } catch (err: unknown) {
+            const errMessage = err instanceof Error ? err.message : String(err)
+            if (isSariUnenrollIdempotent(errMessage)) {
               await deleteConfirmedSariMembership({
                 supabase,
                 tenantId,
@@ -213,8 +278,8 @@ export async function runCourseCancelFollowUps(opts: {
               continue
             }
             regFailed = true
-            if (isSariUnenrollBlocked(err.message)) sariBlockedCount++
-            failuresForLog.push({ faberid, sessionId: membership.sari_session_id, error: err.message })
+            if (isSariUnenrollBlocked(errMessage)) sariBlockedCount++
+            failuresForLog.push({ faberid: String(faberid), sessionId: membership.sari_session_id, error: errMessage })
           }
         }
         if (regFailed) {
@@ -244,16 +309,18 @@ export async function runCourseCancelFollowUps(opts: {
       }
 
       sariUnenrolled = unenrolled
-    } catch (sariErr: any) {
-      logger.error(`⚠️ SARI unenrollment failed during course cancellation: ${sariErr.message}`)
-      sariError = sariErr.message
+    } catch (sariErr: unknown) {
+      const msg = sariErr instanceof Error ? sariErr.message : String(sariErr)
+      logger.error(`⚠️ SARI unenrollment failed during course cancellation: ${msg}`)
+      sariError = msg
       sariOk = false
-      warnings.push(`SARI: ${sariErr.message}`)
+      warnings.push(`SARI: ${msg}`)
     }
 
     sari = {
       applicable: true,
       unenrolled: sariUnenrolled,
+      alreadyCompleted: sariAlreadyCompleted,
       unresolved: sariUnresolved,
       failed: sariFailedCount,
       localOnly: sariLocalOnly,

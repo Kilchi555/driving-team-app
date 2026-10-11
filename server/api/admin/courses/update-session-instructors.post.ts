@@ -155,7 +155,15 @@ export default defineEventHandler(async (event) => {
   // ── Post-loop: handle removed staff (one notification per staff) ───
   if (course) {
     for (const [staffId, removedSessions] of removedStaff) {
-      await deleteStaffCourseAppointments(supabase, staffId, course.id)
+      const deleted = await deleteStaffCourseAppointments(
+        supabase,
+        staffId,
+        course.id,
+        (course as { tenant_id: string }).tenant_id,
+      )
+      if (!deleted.ok) {
+        logger.warn(`⚠️ Could not clear appointments for removed staff ${staffId}:`, deleted.error)
+      }
       await notifyStaffRemoved(supabase, staffId, course as any, removedSessions)
     }
 
