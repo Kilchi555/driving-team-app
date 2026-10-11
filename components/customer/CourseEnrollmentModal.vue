@@ -666,7 +666,18 @@
 
             <!-- Invoice payment info -->
             <div
-              v-if="paymentMethod === 'INVOICE'"
+              v-if="paymentMethod === 'INVOICE' && invoiceEnrollmentBlocked"
+              class="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg"
+            >
+              <svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <p class="text-sm text-amber-900">
+                <strong>Anmeldung nicht möglich:</strong> Dieser Kurs ist auf Rechnung eingestellt, aber Rechnungszahlung ist für dieses Unternehmen derzeit nicht freigeschaltet. Bitte kontaktiere das Unternehmen.
+              </p>
+            </div>
+            <div
+              v-else-if="paymentMethod === 'INVOICE'"
               class="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg"
             >
               <svg class="w-4 h-4 mt-0.5 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -768,7 +779,7 @@
               <button 
                 v-else
                 @click="submitEnrollment"
-                :disabled="!canSubmit || isLoading || (paymentMethod === 'WALLEE' && !walleeEnabled && effectivePriceAfterCredit > 0)"
+                :disabled="!canSubmit || isLoading || invoiceEnrollmentBlocked || (paymentMethod === 'WALLEE' && !walleeEnabled && effectivePriceAfterCredit > 0)"
                 class="flex-1 py-3 text-white font-medium rounded-lg hover:opacity-90 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
                 :style="{ backgroundColor: getTenantPrimaryColor() }"
               >
@@ -779,6 +790,7 @@
                   </svg>
                   Lädt...
                 </span>
+                <span v-else-if="invoiceEnrollmentBlocked">Anmeldung nicht möglich</span>
                 <span v-else-if="paymentMethod === 'WALLEE' && !walleeEnabled && effectivePriceAfterCredit > 0">Online-Zahlung nicht verfügbar</span>
                 <span v-else-if="paymentMethod === 'WALLEE' && effectivePriceAfterCredit === 0">Mit Guthaben anmelden</span>
                 <span v-else>{{ paymentMethod === 'WALLEE' ? 'Zur Zahlung' : 'Verbindlich anmelden' }}</span>
@@ -841,7 +853,7 @@
         </button>
         <button
           @click="submitEnrollment"
-          :disabled="isLoading || (!selectedVehicleId && availableVehicles.some(v => v.is_available))"
+          :disabled="isLoading || invoiceEnrollmentBlocked || (!selectedVehicleId && availableVehicles.some(v => v.is_available))"
           class="flex-1 py-3 text-white font-medium rounded-lg hover:opacity-90 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
           :style="{ backgroundColor: getTenantPrimaryColor() }"
         >
@@ -852,6 +864,7 @@
             </svg>
             Lädt…
           </span>
+          <span v-else-if="invoiceEnrollmentBlocked">Anmeldung nicht möglich</span>
           <span v-else>{{ paymentMethod === 'WALLEE' ? 'Zur Zahlung' : 'Verbindlich anmelden' }}</span>
         </button>
       </div>
@@ -1027,14 +1040,19 @@ watch(() => formData.value.street, (street) => {
 const paymentMethod = computed(() => {
   // Honors `course.payment_method` (admin override), falls back to city +
   // tenant Wallee status. Server-side handlers use the same helper to keep
-  // UI and API in sync.
-  // Until invoice settings have loaded, pass undefined (not false) so an
-  // explicit course INVOICE is not temporarily degraded to WALLEE/cash.
+  // UI and API in sync. Explicit INVOICE is never rewritten to Wallee/cash.
   const invoiceFlag = invoiceSettingsLoaded.value ? invoiceEnabled.value : undefined
   return getCoursePaymentMethod(props.course as any, walleeEnabled.value, invoiceFlag)
 })
 
 const paymentMethodLabel = computed(() => getPaymentMethodLabel(paymentMethod.value))
+
+/** Course is INVOICE but tenant invoices are disabled after settings loaded. */
+const invoiceEnrollmentBlocked = computed(() =>
+  paymentMethod.value === 'INVOICE'
+  && invoiceSettingsLoaded.value
+  && invoiceEnabled.value !== true
+)
 
 const canLookup = computed(() => {
   return formData.value.faberid.length >= 6 && formData.value.birthdate
@@ -1727,6 +1745,12 @@ const submitEnrollment = async () => {
   let willRedirectToPayment = false
   
   try {
+    if (invoiceEnrollmentBlocked.value) {
+      enrollmentError.value =
+        'Dieser Kurs ist auf Rechnung eingestellt, aber Rechnungszahlung ist derzeit nicht freigeschaltet. Bitte kontaktiere das Unternehmen.'
+      return
+    }
+
     const faberidClean = formData.value.faberid.replace(/\./g, '')
     
     // Ensure birthdate is in YYYY-MM-DD format

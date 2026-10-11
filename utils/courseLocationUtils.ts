@@ -108,10 +108,13 @@ export function determinePaymentMethod(
  * status are evaluated consistently.
  *
  * `invoiceEnabled` mirrors `walleeEnabled`: it reflects the tenant-wide
- * "Rechnung als Zahlungsoption erlauben" toggle. A course explicitly set to
- * INVOICE degrades to the automatic WALLEE/CASH_ON_SITE logic if the tenant
- * has since disabled invoice payments — so enrollment never gets stuck on a
- * payment method nobody can select.
+ * "Rechnung als Zahlungsoption erlauben" toggle.
+ *
+ * Explicit INVOICE is never silently rewritten to Wallee/cash here. When
+ * invoices are later disabled for the tenant, enrollment endpoints must
+ * reject with a clear error instead of inventing a different payment method.
+ * Pass `invoiceEnabled: undefined` while settings are still loading so UI
+ * does not treat the default `false` as an explicit disable.
  */
 export function getCoursePaymentMethod(
   course: {
@@ -121,7 +124,7 @@ export function getCoursePaymentMethod(
     name?: string | null
   } | null | undefined,
   walleeEnabled?: boolean,
-  invoiceEnabled?: boolean
+  _invoiceEnabled?: boolean
 ): CoursePaymentMethod {
   const explicit = course?.payment_method
   if (explicit === 'WALLEE' || explicit === 'CASH_ON_SITE') {
@@ -134,10 +137,6 @@ export function getCoursePaymentMethod(
     return explicit
   }
   if (explicit === 'INVOICE') {
-    if (invoiceEnabled === false) {
-      const city = course?.city || extractCityFromCourseDescription(course?.description || course?.name || '')
-      return determinePaymentMethod(city, walleeEnabled)
-    }
     return 'INVOICE'
   }
 

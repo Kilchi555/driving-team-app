@@ -119,12 +119,12 @@ describe('getCoursePaymentMethod loading semantics', () => {
     )).toBe('INVOICE')
   })
 
-  it('degrades explicit INVOICE only when invoiceEnabled is explicitly false', () => {
+  it('never silently rewrites explicit INVOICE when invoices are disabled', () => {
     expect(getCoursePaymentMethod(
       { payment_method: 'INVOICE', city: 'Zürich' },
       true,
       false,
-    )).toBe('WALLEE')
+    )).toBe('INVOICE')
   })
 })
 
@@ -165,9 +165,24 @@ describe('category default payment method wiring', () => {
   it('uses persisted course payment_method on public enrollment and waits for invoice settings', () => {
     const modal = read('components/customer/CourseEnrollmentModal.vue')
     expect(modal).toContain('invoiceSettingsLoaded.value ? invoiceEnabled.value : undefined')
+    expect(modal).toContain('invoiceEnrollmentBlocked')
     expect(modal).toContain('getCoursePaymentMethod')
     expect(modal).toContain("paymentMethod.value === 'WALLEE'")
     const publicApi = read('server/api/courses/public.get.ts')
     expect(publicApi).toContain('payment_method')
+  })
+
+  it('rejects the legacy courses/create path instead of inserting without payment_method', () => {
+    const src = read('server/api/admin/courses/create.post.ts')
+    expect(src).toContain('statusCode: 410')
+    expect(src).toContain('/api/admin/courses/upsert')
+    expect(src).not.toMatch(/\.insert\(/)
+  })
+
+  it('blocks Wallee enrollment for INVOICE courses even when invoices are disabled', () => {
+    const src = read('server/api/courses/enroll-wallee.post.ts')
+    expect(src).toContain('INVOICE_ENROLLMENT_DISABLED_MESSAGE')
+    expect(src).toContain("explicitMethod === 'INVOICE'")
+    expect(src).not.toContain('auto-degrade')
   })
 })

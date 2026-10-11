@@ -35,6 +35,7 @@ import { sha256Hex } from '~/server/utils/meta-capi'
 import { reportBindingCourseConversionSafely } from '~/server/utils/binding-booking-conversion'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
+import { INVOICE_ENROLLMENT_DISABLED_MESSAGE } from '~/server/utils/course-enrollment-payment-method'
 import {
   assertCustomSessionsForTenant,
   loadPublicCourseForEnrollment,
@@ -155,9 +156,8 @@ const handler = defineEventHandler(async (event) => {
       })
     }
     if (explicitMethod === 'INVOICE') {
-      // Only block if invoice is actually usable for this tenant — otherwise
-      // the client-side auto-degrade logic (getCoursePaymentMethod) will
-      // have already fallen back to WALLEE, and we must honor that here too.
+      // Never silently rewrite INVOICE → Wallee. If invoices are enabled,
+      // clients must use enroll-cash; if disabled, refuse enrollment.
       const { data: paymentSettingRow } = await supabase
         .from('tenant_settings')
         .select('setting_value')
@@ -168,13 +168,19 @@ const handler = defineEventHandler(async (event) => {
       const tenantPaymentSettings = paymentSettingRow?.setting_value
         ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
         : {}
-      if (tenantPaymentSettings.invoice_payments_enabled === true) {
+      const invoiceEnabled = tenantPaymentSettings.invoice_payments_enabled === true
+      if (invoiceEnabled) {
         logger.warn('🚫 Wallee enrollment blocked: course is admin-marked invoice-only', { courseId, tenantId })
         throw createError({
           statusCode: 400,
-          statusMessage: 'Dieser Kurs ist auf Rechnung eingestellt. Bitte verwende die Rechnungs-Anmeldung.'
+          statusMessage: 'Dieser Kurs ist auf Rechnung eingestellt. Bitte verwende die Rechnungs-Anmeldung.',
         })
       }
+      logger.warn('🚫 Wallee enrollment blocked: invoice course but invoices disabled', { courseId, tenantId })
+      throw createError({
+        statusCode: 400,
+        statusMessage: INVOICE_ENROLLMENT_DISABLED_MESSAGE,
+      })
     }
 
     // Note: tenant.wallee_enabled is enforced LATER in the flow, only when a
