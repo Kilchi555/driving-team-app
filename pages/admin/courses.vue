@@ -915,8 +915,8 @@
               <option value="INVOICE">Rechnung</option>
             </select>
             <p v-if="newCourse.payment_method === 'INVOICE' && !invoicePaymentsEnabledForTenant" class="text-xs text-amber-700 mt-1">
-              Hinweis: „Rechnung als Zahlungsoption erlauben“ ist in den Zahlungseinstellungen deaktiviert.
-              Die Kurs-Zahlungsart Rechnung kann als Admin-Override gespeichert werden; öffentliche Anmeldung mit Rechnung bleibt blockiert, bis die Option aktiviert ist — es erfolgt kein automatischer Wechsel auf Online-Zahlung oder Barzahlung.
+              Hinweis: „Rechnung als Zahlungsoption für Kurse erlauben“ ist in den Zahlungseinstellungen deaktiviert.
+              Die Kurs-Zahlungsart Rechnung kann als Admin-Override gespeichert werden; öffentliche Anmeldung mit Rechnung bleibt blockiert, bis die Kurs-Option aktiviert ist — es erfolgt kein automatischer Wechsel auf Online-Zahlung oder Barzahlung.
             </p>
             <p
               v-if="!newCourse.payment_method"
@@ -2118,8 +2118,8 @@
                 v-if="categoryForm.default_payment_method === 'INVOICE' && !invoicePaymentsEnabledForTenant"
                 class="text-xs text-amber-700 mt-1"
               >
-                „Rechnung als Zahlungsoption erlauben“ ist in den Zahlungseinstellungen deaktiviert.
-                Die Kursart-Override Rechnung kann trotzdem gespeichert werden; öffentliche Anmeldung mit Rechnung bleibt blockiert, bis die Option aktiviert ist.
+                „Rechnung als Zahlungsoption für Kurse erlauben“ ist in den Zahlungseinstellungen deaktiviert.
+                Die Kursart-Override Rechnung kann trotzdem gespeichert werden; öffentliche Anmeldung mit Rechnung bleibt blockiert, bis die Kurs-Option aktiviert ist.
               </p>
             </div>
 
@@ -4367,7 +4367,7 @@ import {
 // Warning banner: surface "no online payments" so admins understand all
 // course enrollments will fall back to cash.
 const { walleeEnabled, walleeStatusLoaded, loadWalleeStatus } = useWalleeStatus()
-const { invoiceEnabled: invoicePaymentsEnabledForTenant } = useInvoicePaymentSettings()
+const { courseInvoiceEnabled: invoicePaymentsEnabledForTenant } = useInvoicePaymentSettings()
 const tenantDefaultPaymentMethod = ref<'wallee' | 'cash' | 'invoice'>('wallee')
 const defaultCoursePaymentMethod = computed(() =>
   mapTenantDefaultToCoursePaymentMethod(tenantDefaultPaymentMethod.value)

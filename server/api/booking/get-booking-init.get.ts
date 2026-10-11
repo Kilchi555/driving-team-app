@@ -8,7 +8,10 @@ import { createClient } from '@supabase/supabase-js'
 import { DEFAULT_BOOKING_POLICY, normalizeLocationIntakeModes, normalizeRegistrationFieldMode, normalizeRegistrationAccountMode } from '~/server/api/admin/booking-policy.get'
 import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { parsePaymentSettings } from '~/server/utils/tenant-default-payment-method'
+import {
+  parsePaymentSettings,
+  resolveCourseInvoicePaymentsEnabled,
+} from '~/server/utils/tenant-default-payment-method'
 import {
   onlineBookingAllowedMethods,
   onlineBookingFallbackMethod,
@@ -148,7 +151,8 @@ export default defineEventHandler(async (event) => {
   let allowOnlineBooking = true
   let pickupTravelCheck = false
   let cashVisibleForCustomer = false
-  let invoicePaymentsEnabled = false
+  let appointmentInvoiceEnabled = false
+  let courseInvoiceEnabled = false
   const paymentPolicy = paymentPolicyFromTenantSettings({
     settings: {},
     walleeEnabled: (tenant as any).wallee_enabled,
@@ -169,7 +173,8 @@ export default defineEventHandler(async (event) => {
           walleeEnabled: (tenant as any).wallee_enabled,
         })
         cashVisibleForCustomer = resolvedPolicy.cashEnabledForCustomers
-        invoicePaymentsEnabled = resolvedPolicy.invoiceEnabled
+        appointmentInvoiceEnabled = resolvedPolicy.invoiceEnabled
+        courseInvoiceEnabled = resolveCourseInvoicePaymentsEnabled(payment)
         onlinePaymentMethods = onlineBookingAllowedMethods(resolvedPolicy)
         defaultOnlinePaymentMethod = onlineBookingFallbackMethod(resolvedPolicy)
       }
@@ -192,7 +197,10 @@ export default defineEventHandler(async (event) => {
       allow_online_booking: allowOnlineBooking,
       pickup_travel_check: pickupTravelCheck,
       cash_visible_for_customer: cashVisibleForCustomer,
-      invoice_payments_enabled: invoicePaymentsEnabled,
+      // Booking UI: appointment-scoped (legacy field name kept for compat).
+      invoice_payments_enabled: appointmentInvoiceEnabled,
+      course_invoice_payments_enabled: courseInvoiceEnabled,
+      individual_appointment_invoice_payments_enabled: appointmentInvoiceEnabled,
       online_payment_methods: onlinePaymentMethods,
       default_online_payment_method: defaultOnlinePaymentMethod,
     },
