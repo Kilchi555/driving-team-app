@@ -246,14 +246,12 @@ describe('handler wiring (source contract)', () => {
   const camt = read('components/admin/CamtImportModal.vue')
   const migration = read('migrations/20261011_mark_invoice_paid_core.sql')
 
-  it('keeps tenant-scoped invoice load and staff-pos credit after full payment', () => {
+  it('keeps tenant-scoped invoice load and resumes post-commit after settlement', () => {
     expect(src).toContain(".eq('tenant_id', staffUser.tenant_id)")
-    expect(src).toContain(".eq('tenant_id', invoice.tenant_id)")
-    expect(src).toContain('applyStaffPosCreditsForPaidInvoice')
-    expect(src.indexOf('if (!alreadySettled && !settledIsPartial)')).toBeLessThan(
-      src.indexOf('await applyStaffPosCreditsForPaidInvoice'),
-    )
-    expect(src).toContain('applyInvoiceCreditOnPaid')
+    expect(src).toContain('runMarkInvoicePaidPostCommit')
+    expect(src).toContain('downstream_complete')
+    expect(src).toContain('resumedFromAlreadySettled: alreadySettled')
+    expect(src).not.toContain('if (!alreadySettled && !settledIsPartial)')
   })
 
   it('requires settlement resolution and truthful audit_written reporting', () => {

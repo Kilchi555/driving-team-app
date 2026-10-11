@@ -53,9 +53,24 @@ export function sumInvoiceCreditRappen(items: InvoiceCreditLine[]): number {
   }, 0)
 }
 
+function isUniqueViolation(err: { code?: string } | null | undefined): boolean {
+  return err?.code === '23505'
+}
+
 /**
  * Credits the customer wallet for flagged invoice lines after full payment.
- * Idempotent via invoices.credit_applied_rappen and credit_transactions.reference_id.
+ *
+ * Idempotency markers (durable):
+ * - invoices.credit_applied_rappen > 0
+ * - completed credit_transactions for this invoice reference
+ * - partial unique index credit_transactions_invoice_deposit_uidx (migration file;
+ *   when applied, concurrent duplicate ledger inserts fail closed)
+ *
+ * Crash / concurrency honesty:
+ * - Ledger insert unique conflict → treat as already applied (stamp invoice, skip).
+ * - A crash after wallet upsert and before ledger insert can still double-credit on
+ *   retry until the unique index is applied AND/OR an atomic SQL helper exists.
+ *   This function does not claim exactly-once wallet mutation under that crash window.
  */
 export async function applyInvoiceCreditOnPaid(opts: {
   supabase: any
@@ -82,6 +97,10 @@ export async function applyInvoiceCreditOnPaid(opts: {
     return { applied_rappen: 0, skipped: true }
   }
 
+  if (invoice.user_id && invoice.user_id !== userId) {
+    throw new Error('Rechnung gehört nicht zum angegebenen Benutzer')
+  }
+
   if (invoice.payment_status !== 'paid') {
     return { applied_rappen: 0, skipped: true }
   }
@@ -92,14 +111,29 @@ export async function applyInvoiceCreditOnPaid(opts: {
 
   const { data: existingTx } = await supabase
     .from('credit_transactions')
-    .select('id')
+    .select('id, amount_rappen')
+    .eq('tenant_id', tenantId)
     .eq('reference_id', invoiceId)
     .eq('reference_type', 'invoice')
     .in('transaction_type', ['deposit', 'credit_product_purchase'])
+    .eq('status', 'completed')
     .limit(1)
     .maybeSingle()
 
   if (existingTx) {
+    const stampAmount = Math.max(0, Number(existingTx.amount_rappen) || 0)
+    if (stampAmount > 0) {
+      await supabase
+        .from('invoices')
+        .update({
+          credit_applied_rappen: stampAmount,
+          credit_applied_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', invoiceId)
+        .eq('tenant_id', tenantId)
+        .eq('credit_applied_rappen', 0)
+    }
     return { applied_rappen: 0, skipped: true }
   }
 
@@ -111,7 +145,7 @@ export async function applyInvoiceCreditOnPaid(opts: {
 
   if (itemsError) {
     logger.warn('applyInvoiceCreditOnPaid: items load failed', itemsError.message)
-    return { applied_rappen: 0, skipped: true }
+    throw new Error('Guthaben-Positionen konnten nicht geladen werden')
   }
 
   const amountRappen = sumInvoiceCreditRappen(items || [])
@@ -165,6 +199,20 @@ export async function applyInvoiceCreditOnPaid(opts: {
     })
 
   if (txError) {
+    if (isUniqueViolation(txError)) {
+      // Concurrent retry already wrote the ledger; do not fail the settlement path.
+      await supabase
+        .from('invoices')
+        .update({
+          credit_applied_rappen: amountRappen,
+          credit_applied_at: now,
+          updated_at: now,
+        })
+        .eq('id', invoiceId)
+        .eq('tenant_id', tenantId)
+        .eq('credit_applied_rappen', 0)
+      return { applied_rappen: 0, skipped: true }
+    }
     logger.error('applyInvoiceCreditOnPaid: transaction log failed', txError)
     throw new Error('Guthaben-Buchung konnte nicht protokolliert werden')
   }

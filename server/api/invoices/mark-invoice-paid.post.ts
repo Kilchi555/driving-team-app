@@ -2,12 +2,10 @@
 // Markiert eine Rechnung als bezahlt — NUR für Admins.
 // Bankimport = technisch verifiziert; sonst nur mit ausdrücklicher manueller Attestierung.
 // Finanzielle Writes NUR über mark_invoice_paid_core (atomar). Kein sequential Fallback.
-// Schreibt keine cash_transactions. Staff-POS/Credits/Audit sind post-commit.
+// Post-commit (payments sync / staff-POS / wallet) is resumable after already_settled.
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { applyInvoiceCreditOnPaid } from '~/server/utils/invoice-credit'
-import { applyStaffPosCreditsForPaidInvoice } from '~/server/utils/staff-pos-completion'
 import { logAudit } from '~/server/utils/audit'
 import { getClientIP } from '~/server/utils/ip-utils'
 import {
@@ -21,6 +19,7 @@ import {
   planCourseRegistrationPaySync,
   resolveSettlementSource,
 } from '~/server/utils/mark-invoice-paid'
+import { runMarkInvoicePaidPostCommit } from '~/server/utils/mark-invoice-paid-post-commit'
 
 function httpErrorFromMark(err: unknown) {
   if (err instanceof MarkInvoicePaidError) {
@@ -121,17 +120,41 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Rechnung nicht gefunden' })
   }
 
+  const invoiceAlreadyFullyPaid =
+    (invoice.total_amount_rappen || 0) > 0
+    && (invoice.paid_amount_rappen || 0) >= (invoice.total_amount_rappen || 0)
+
   let totals: { newPaymentRappen: number; clampedTotalRappen: number; isPartial: boolean }
-  try {
-    totals = computePaidTotals({
-      invoiceTotalRappen: invoice.total_amount_rappen || 0,
-      previouslyPaidRappen: invoice.paid_amount_rappen || 0,
-      requestedPaymentRappen: paid_amount_rappen,
-    })
-  } catch (err) {
-    const mapped = httpErrorFromMark(err)
-    if (mapped) throw mapped
-    throw err
+  let alreadySettled = false
+  let rpcResult: any = null
+
+  if (invoiceAlreadyFullyPaid) {
+    // Core money already committed — resume post-commit only (do not invent a new payment).
+    alreadySettled = true
+    totals = {
+      newPaymentRappen: 0,
+      clampedTotalRappen: invoice.paid_amount_rappen || 0,
+      isPartial: false,
+    }
+    rpcResult = {
+      outcome: 'already_settled',
+      idempotent: true,
+      paid_amount_rappen: invoice.paid_amount_rappen || 0,
+      is_partial: false,
+      new_payment_rappen: 0,
+    }
+  } else {
+    try {
+      totals = computePaidTotals({
+        invoiceTotalRappen: invoice.total_amount_rappen || 0,
+        previouslyPaidRappen: invoice.paid_amount_rappen || 0,
+        requestedPaymentRappen: paid_amount_rappen,
+      })
+    } catch (err) {
+      const mapped = httpErrorFromMark(err)
+      if (mapped) throw mapped
+      throw err
+    }
   }
 
   const { data: linkedRegs, error: regLoadError } = await supabase
@@ -161,6 +184,11 @@ export default defineEventHandler(async (event) => {
     throw err
   }
 
+  if (rpcResult) {
+    rpcResult.course_registration_id =
+      syncPlan.action === 'sync' ? syncPlan.registrationId : null
+  }
+
   const noteText = typeof note === 'string' && note.trim() ? note.trim() : null
   const settlementNote =
     settlement.source === 'manual_attestation'
@@ -172,132 +200,80 @@ export default defineEventHandler(async (event) => {
       ? camt_dedupe_key.trim()
       : null
 
-  const rpcArgs: Record<string, unknown> = {
-    p_tenant_id: staffUser.tenant_id,
-    p_invoice_id: invoice_id,
-    p_actor_user_id: staffUser.id,
-    p_expected_paid_amount_rappen: invoice.paid_amount_rappen || 0,
-    p_requested_payment_rappen: totals.newPaymentRappen,
-    p_paid_at: paidAt,
-    p_payment_method: methodLabel,
-    p_notes: settlementNote,
-    p_internal_notes: noteText,
-    p_settlement_source: settlement.source,
-    p_sync_registration_id: syncPlan.action === 'sync' ? syncPlan.registrationId : null,
-    p_bank_dedupe_key: bankKey,
-    p_bank_ref: bankKey ? (camt_bank_ref || null) : null,
-    p_bank_entry_date: bankKey && paid_at ? paidAt.substring(0, 10) : null,
-    p_bank_reference: bankKey ? (camt_reference || null) : null,
-    p_bank_debtor_name: bankKey ? (camt_debtor_name || null) : null,
-    p_bank_import_source: bankKey ? (import_source === 'csv' ? 'csv' : 'camt') : null,
+  if (!alreadySettled) {
+    const rpcArgs: Record<string, unknown> = {
+      p_tenant_id: staffUser.tenant_id,
+      p_invoice_id: invoice_id,
+      p_actor_user_id: staffUser.id,
+      p_expected_paid_amount_rappen: invoice.paid_amount_rappen || 0,
+      p_requested_payment_rappen: totals.newPaymentRappen,
+      p_paid_at: paidAt,
+      p_payment_method: methodLabel,
+      p_notes: settlementNote,
+      p_internal_notes: noteText,
+      p_settlement_source: settlement.source,
+      p_sync_registration_id: syncPlan.action === 'sync' ? syncPlan.registrationId : null,
+      p_bank_dedupe_key: bankKey,
+      p_bank_ref: bankKey ? (camt_bank_ref || null) : null,
+      p_bank_entry_date: bankKey && paid_at ? paidAt.substring(0, 10) : null,
+      p_bank_reference: bankKey ? (camt_reference || null) : null,
+      p_bank_debtor_name: bankKey ? (camt_debtor_name || null) : null,
+      p_bank_import_source: bankKey ? (import_source === 'csv' ? 'csv' : 'camt') : null,
+    }
+
+    const { data, error: rpcError } = await supabase.rpc('mark_invoice_paid_core', rpcArgs)
+
+    if (rpcError) {
+      const mapped = httpErrorFromMark(rpcError)
+      if (mapped) throw mapped
+      throw createError({
+        statusCode: 500,
+        statusMessage: rpcError.message || 'Zahlung konnte nicht verbucht werden',
+        data: { settlement_code: 'rpc_error' },
+      })
+    }
+
+    rpcResult = data
+    alreadySettled = isBankDedupeAlreadySettledOutcome(rpcResult)
   }
 
-  // Fail closed BEFORE any settlement write if the atomic RPC is missing.
-  const { data: rpcResult, error: rpcError } = await supabase.rpc('mark_invoice_paid_core', rpcArgs)
-
-  if (rpcError) {
-    const mapped = httpErrorFromMark(rpcError)
-    if (mapped) throw mapped
-    throw createError({
-      statusCode: 500,
-      statusMessage: rpcError.message || 'Zahlung konnte nicht verbucht werden',
-      data: { settlement_code: 'rpc_error' },
-    })
-  }
-
-  const alreadySettled = isBankDedupeAlreadySettledOutcome(rpcResult)
   const settledPaidRappen =
-    typeof (rpcResult as any)?.paid_amount_rappen === 'number'
-      ? (rpcResult as any).paid_amount_rappen
+    typeof rpcResult?.paid_amount_rappen === 'number'
+      ? rpcResult.paid_amount_rappen
       : totals.clampedTotalRappen
   const settledIsPartial =
-    typeof (rpcResult as any)?.is_partial === 'boolean'
-      ? (rpcResult as any).is_partial
+    typeof rpcResult?.is_partial === 'boolean'
+      ? rpcResult.is_partial
       : totals.isPartial
   const settledNewPayment =
-    typeof (rpcResult as any)?.new_payment_rappen === 'number'
-      ? (rpcResult as any).new_payment_rappen
+    typeof rpcResult?.new_payment_rappen === 'number'
+      ? rpcResult.new_payment_rappen
       : alreadySettled
         ? 0
         : totals.newPaymentRappen
   const courseRegistrationId =
-    (rpcResult as any)?.course_registration_id
+    rpcResult?.course_registration_id
     || (syncPlan.action === 'sync' ? syncPlan.registrationId : null)
 
-  // Post-commit side effects only after atomic settlement succeeded.
-  // These are intentionally outside the DB transaction (no cash ledger here).
-  if (!alreadySettled && !settledIsPartial) {
-    await supabase
-      .from('payments')
-      .update({ payment_status: 'completed', paid_at: paidAt, updated_at: now })
-      .eq('invoice_id', invoice_id)
-      .eq('tenant_id', invoice.tenant_id)
-      .in('payment_status', ['invoice', 'invoiced', 'pending', 'open', 'failed', 'partial'])
+  // Always attempt/resume post-commit for this settlement outcome — including already_settled.
+  const postCommit = await runMarkInvoicePaidPostCommit({
+    supabase,
+    invoiceId: invoice_id,
+    tenantId: staffUser.tenant_id,
+    actorUserId: staffUser.id,
+    userId: invoice.user_id,
+    isPartial: settledIsPartial,
+    paidAt,
+    now,
+    resumedFromAlreadySettled: alreadySettled,
+    staffPosRpc: async (args) => {
+      const { data, error: rpcStaffError } = await supabase.rpc('staff_pos_sale', args)
+      if (rpcStaffError) throw rpcStaffError
+      return data
+    },
+  })
 
-    const { data: invoiceItems } = await supabase
-      .from('invoice_items')
-      .select('appointment_id')
-      .eq('invoice_id', invoice_id)
-      .not('appointment_id', 'is', null)
-
-    if (invoiceItems && invoiceItems.length > 0 && invoice.user_id) {
-      const appointmentIds = invoiceItems.map((item: any) => item.appointment_id).filter(Boolean)
-      if (appointmentIds.length > 0) {
-        await supabase
-          .from('payments')
-          .update({ payment_status: 'completed', invoice_id, paid_at: paidAt, updated_at: now })
-          .eq('user_id', invoice.user_id)
-          .eq('tenant_id', invoice.tenant_id)
-          .in('appointment_id', appointmentIds)
-          .in('payment_status', ['invoice', 'invoiced', 'pending', 'open', 'failed', 'partial'])
-      }
-    }
-
-    const { data: invoicePayments, error: staffPosLoadError } = await supabase
-      .from('payments')
-      .select('id, tenant_id, metadata')
-      .eq('invoice_id', invoice_id)
-      .eq('tenant_id', invoice.tenant_id)
-
-    if (staffPosLoadError) {
-      throw createError({ statusCode: 500, statusMessage: 'Staff-POS-Zahlungen konnten nicht geladen werden' })
-    }
-
-    try {
-      await applyStaffPosCreditsForPaidInvoice({
-        payments: invoicePayments || [],
-        tenantId: invoice.tenant_id,
-        actorUserId: staffUser.id,
-        isPartial: false,
-        rpc: async (args) => {
-          const { data, error: rpcStaffError } = await supabase.rpc('staff_pos_sale', args)
-          if (rpcStaffError) throw rpcStaffError
-          return data
-        },
-      })
-    } catch (staffPosErr: any) {
-      throw createError({
-        statusCode: staffPosErr?.statusCode || 500,
-        statusMessage: staffPosErr?.message || 'Staff-POS-Guthaben konnte nicht gebucht werden',
-      })
-    }
-  }
-
-  let creditAppliedRappen = 0
-  if (!alreadySettled && !settledIsPartial && invoice.user_id) {
-    try {
-      const creditResult = await applyInvoiceCreditOnPaid({
-        supabase,
-        invoiceId: invoice_id,
-        tenantId: staffUser.tenant_id,
-        userId: invoice.user_id,
-        actorUserId: staffUser.id,
-      })
-      creditAppliedRappen = creditResult.applied_rappen
-    } catch (creditErr: any) {
-      console.warn('⚠️ Invoice paid but wallet credit failed:', creditErr?.message || creditErr)
-    }
-  }
+  const creditAppliedRappen = postCommit.wallet_credit.applied_rappen || 0
 
   const auditDetails = buildMarkInvoicePaidAuditDetails({
     settlementSource: settlement.source,
@@ -318,10 +294,21 @@ export default defineEventHandler(async (event) => {
     action: 'mark_invoice_paid',
     resource_type: 'invoice',
     resource_id: invoice_id,
-    status: 'success',
+    status: postCommit.downstream_complete ? 'success' : 'partial',
     tenant_id: staffUser.tenant_id,
     ip_address: ipAddress,
-    details: { ...auditDetails, audit_written: true },
+    details: {
+      ...auditDetails,
+      audit_written: true,
+      downstream_complete: postCommit.downstream_complete,
+      post_commit: {
+        payments_sync: postCommit.payments_sync.status,
+        staff_pos: postCommit.staff_pos.status,
+        wallet_credit: postCommit.wallet_credit.status,
+        tracking_persisted: postCommit.tracking_persisted,
+        tracking_unavailable: postCommit.tracking_unavailable,
+      },
+    },
   }, event)
 
   if (!auditWritten) {
@@ -334,6 +321,8 @@ export default defineEventHandler(async (event) => {
 
   return {
     success: true,
+    settlement_complete: true,
+    downstream_complete: postCommit.downstream_complete,
     invoice_id,
     paid_amount_rappen: settledPaidRappen,
     new_payment_rappen: settledNewPayment,
@@ -345,6 +334,14 @@ export default defineEventHandler(async (event) => {
     outcome: alreadySettled ? 'already_settled' : 'settled',
     idempotent: alreadySettled,
     audit_written: auditWritten,
+    post_commit: {
+      payments_sync: postCommit.payments_sync.status,
+      staff_pos: postCommit.staff_pos.status,
+      wallet_credit: postCommit.wallet_credit.status,
+      tracking_persisted: postCommit.tracking_persisted,
+      tracking_unavailable: postCommit.tracking_unavailable,
+      resumed_from_already_settled: postCommit.resumed_from_already_settled,
+    },
     payment_confirmation_kind:
       settlement.source === 'bank_import' ? 'technically_verified' : 'manual_attestation',
   }
