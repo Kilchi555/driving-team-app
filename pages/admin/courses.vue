@@ -915,7 +915,8 @@
               <option value="INVOICE">Rechnung</option>
             </select>
             <p v-if="newCourse.payment_method === 'INVOICE' && !invoicePaymentsEnabledForTenant" class="text-xs text-amber-700 mt-1">
-              Hinweis: "Rechnung als Zahlungsoption erlauben" ist in den Zahlungseinstellungen aktuell deaktiviert — aktivieren Sie es dort, sonst wird für diesen Kurs automatisch auf Online-Zahlung/Barzahlung zurückgefallen.
+              Hinweis: „Rechnung als Zahlungsoption erlauben“ ist in den Zahlungseinstellungen deaktiviert.
+              Speichern und Anmeldung mit Rechnung sind erst nach Aktivierung möglich — es erfolgt kein automatischer Wechsel auf Online-Zahlung oder Barzahlung.
             </p>
             <p
               v-if="!newCourse.payment_method"

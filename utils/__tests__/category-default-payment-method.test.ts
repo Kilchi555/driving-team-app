@@ -220,6 +220,13 @@ describe('category default payment method wiring', () => {
     expect(src).toContain('Rechnungsstellung')
   })
 
+  it('warns that disabled invoice does not silently fall back on the course form', () => {
+    const src = read('pages/admin/courses.vue')
+    expect(src).not.toContain('automatisch auf Online-Zahlung/Barzahlung zurückgefallen')
+    expect(src).toContain('kein automatischer Wechsel auf Online-Zahlung oder Barzahlung')
+    expect(src).toContain('Speichern und Anmeldung mit Rechnung sind erst nach Aktivierung möglich')
+  })
+
   it('uses persisted course payment_method on public enrollment and waits for invoice settings', () => {
     const modal = read('components/customer/CourseEnrollmentModal.vue')
     expect(modal).toContain('invoiceSettingsLoaded.value ? invoiceEnabled.value : undefined')
