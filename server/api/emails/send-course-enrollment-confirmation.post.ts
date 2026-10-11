@@ -26,7 +26,10 @@ import { allowsCustomerAccountActivation } from '~/server/utils/customer-account
 import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
 import { assertSameTenant } from '~/server/utils/require-tenant-auth'
 import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
-import { buildCourseImportantNoticeListItems } from '~/server/utils/course-important-notice'
+import {
+  buildCourseImportantNoticeListItems,
+  resolveCourseCategoryNoticeLookup,
+} from '~/server/utils/course-important-notice'
 
 type ConfirmationPaymentMethod = 'wallee' | 'cash' | 'admin' | 'invoice' | 'paid' | 'reserve'
 
@@ -102,6 +105,7 @@ export default defineEventHandler(async (event) => {
           name,
           description,
           category,
+          course_category_id,
           price_per_participant_rappen,
           ${courseSessionsEmbed('id, sari_session_id, start_time, end_time')}
         ),
@@ -178,15 +182,20 @@ export default defineEventHandler(async (event) => {
     const price = (effectivePriceRappen / 100).toFixed(2)
     const isPartial = !!(enrollment as any).is_partial_enrollment
     
-    // Fetch course category to get email_important_notice
+    // Fetch course category to get email_important_notice.
+    // Prefer course_category_id (FK): modern admin courses often leave legacy
+    // courses.category NULL even when the category has custom hints configured.
     let courseCategory: any = null
-    if (course?.category && tenant?.id) {
-      const { data: cat } = await supabase
+    const categoryLookup = resolveCourseCategoryNoticeLookup(course)
+    if (categoryLookup && tenant?.id) {
+      let q = supabase
         .from('course_categories')
         .select('email_important_notice, name')
-        .eq('code', course.category)
         .eq('tenant_id', tenant.id)
-        .single()
+      q = categoryLookup.by === 'id'
+        ? q.eq('id', categoryLookup.value)
+        : q.eq('code', categoryLookup.value)
+      const { data: cat } = await q.maybeSingle()
       courseCategory = cat
     }
     
