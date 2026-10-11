@@ -46,6 +46,8 @@ export default defineEventHandler(async (event) => {
       'is_active', 'waitlist_enabled',
       'invoice_timing_mode',
       'default_payment_method',
+      // Yellow «Wichtig!» bullet list on enrollment confirmation email
+      'email_important_notice',
     ]
     if (rest.invoice_timing_mode !== undefined) {
       const mode = categoryInvoiceTimingForSave(rest.invoice_timing_mode)
