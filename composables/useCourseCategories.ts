@@ -40,6 +40,15 @@ interface CourseCategory {
   partial_price_rappen?: number
   waitlist_enabled?: boolean
   email_important_notice?: string | null
+  /** Non-SARI public enrollment field modes. NULL/missing → all required (legacy). */
+  enrollment_fields?: {
+    street: 'required' | 'optional' | 'hidden'
+    street_nr: 'required' | 'optional' | 'hidden'
+    zip: 'required' | 'optional' | 'hidden'
+    city: 'required' | 'optional' | 'hidden'
+    license_number: 'required' | 'optional' | 'hidden'
+    birthdate: 'required' | 'optional' | 'hidden'
+  } | null
 }
 
 export const useCourseCategories = () => {

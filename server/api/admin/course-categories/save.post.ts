@@ -8,6 +8,7 @@ import {
   normalizeCategorySessionTemplate,
 } from '~/utils/course-category-session-template'
 import { parseCategoryDefaultPaymentMethod } from '~/utils/category-default-payment-method'
+import { parseCategoryEnrollmentFields } from '~/utils/category-enrollment-fields'
 
 const CATEGORY_INVOICE_TIMING = new Set(['inherit', 'off', 'immediate'])
 
@@ -48,6 +49,8 @@ export default defineEventHandler(async (event) => {
       'default_payment_method',
       // Yellow «Wichtig!» bullet list on enrollment confirmation email
       'email_important_notice',
+      // Non-SARI public enrollment field modes (required|optional|hidden)
+      'enrollment_fields',
     ]
     if (rest.invoice_timing_mode !== undefined) {
       const mode = categoryInvoiceTimingForSave(rest.invoice_timing_mode)
@@ -66,6 +69,16 @@ export default defineEventHandler(async (event) => {
         throw createError({
           statusCode: 400,
           statusMessage: parseErr?.message || 'Ungültige Standard-Zahlungsart.',
+        })
+      }
+    }
+    if (rest.enrollment_fields !== undefined) {
+      try {
+        rest.enrollment_fields = parseCategoryEnrollmentFields(rest.enrollment_fields)
+      } catch (parseErr: any) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: parseErr?.message || 'Ungültige Anmeldefelder.',
         })
       }
     }

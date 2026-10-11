@@ -2123,6 +2123,32 @@
               </p>
             </div>
 
+            <!-- Non-SARI public enrollment fields (not applied to SARI identity flow) -->
+            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3">
+              <div>
+                <h4 class="text-sm font-medium text-gray-900">Anmeldefelder (öffentliche Anmeldung)</h4>
+                <p class="text-xs text-gray-500 mt-1">
+                  Steuert Adresse, Ausweisnummer und Geburtsdatum bei nicht-SARI Kursen.
+                  Name, E-Mail, Telefon und AGB bleiben Pflicht. SARI-Kurse nutzen weiterhin die SARI-Identität.
+                </p>
+              </div>
+              <div
+                v-for="fieldKey in enrollmentFieldKeys"
+                :key="fieldKey"
+                class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+              >
+                <span class="text-sm text-gray-700">{{ enrollmentFieldLabels[fieldKey] }}</span>
+                <select
+                  v-model="categoryForm.enrollment_fields[fieldKey]"
+                  class="w-full sm:w-44 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm tenant-focus focus:outline-none focus:ring-2"
+                >
+                  <option value="required">Pflicht</option>
+                  <option value="optional">Optional</option>
+                  <option value="hidden">Ausgeblendet</option>
+                </select>
+              </div>
+            </div>
+
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Rechnungsstellung</label>
               <select
@@ -4342,6 +4368,13 @@ import {
   shouldApplyCategoryPaymentDefault,
   type CategoryDefaultPaymentMethod,
 } from '~/utils/category-default-payment-method'
+import {
+  DEFAULT_CATEGORY_ENROLLMENT_FIELDS,
+  ENROLLMENT_FIELD_KEYS,
+  ENROLLMENT_FIELD_LABELS_DE,
+  resolveCategoryEnrollmentFields,
+  type CategoryEnrollmentFields,
+} from '~/utils/category-enrollment-fields'
 import { evaluateSessionOrder } from '~/utils/session-order-rules'
 import { refreshClientSession } from '~/utils/client-session-refresh'
 import { formatCourseSessionLine } from '~/utils/format-course-sessions'
@@ -5321,9 +5354,14 @@ const categoryForm = ref({
   waitlist_enabled: false,
   invoice_timing_mode: 'inherit' as 'inherit' | 'off' | 'immediate',
   default_payment_method: null as CategoryDefaultPaymentMethod | null,
+  // Non-SARI public enrollment field modes
+  enrollment_fields: { ...DEFAULT_CATEGORY_ENROLLMENT_FIELDS } as CategoryEnrollmentFields,
   // Email
   email_important_notice: '',
 })
+
+const enrollmentFieldKeys = ENROLLMENT_FIELD_KEYS
+const enrollmentFieldLabels = ENROLLMENT_FIELD_LABELS_DE
 
 const vehicleForm = ref({
   marke: '',
@@ -6265,6 +6303,7 @@ const editCategoryItem = (category: any) => {
       || category.default_payment_method === 'INVOICE'
         ? category.default_payment_method
         : null,
+    enrollment_fields: resolveCategoryEnrollmentFields(category.enrollment_fields),
     // Email
     email_important_notice: category.email_important_notice || '',
   }
@@ -6408,6 +6447,7 @@ const resetCategoryForm = () => {
     waitlist_enabled: false,
     invoice_timing_mode: 'inherit',
     default_payment_method: null,
+    enrollment_fields: { ...DEFAULT_CATEGORY_ENROLLMENT_FIELDS },
     // Email
     email_important_notice: '',
   }
