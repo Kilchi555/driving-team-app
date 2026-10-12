@@ -6,6 +6,7 @@ import {
   isDownstreamComplete,
   runMarkInvoicePaidPostCommit,
   stepNeedsWork,
+  type PostCommitTrackingRow,
 } from '../mark-invoice-paid-post-commit'
 
 const tenantId = '11111111-1111-4111-8111-111111111111'
@@ -13,6 +14,53 @@ const invoiceId = '22222222-2222-4222-8222-222222222222'
 const actorId = '33333333-3333-4333-8333-333333333333'
 const userId = '44444444-4444-4444-8444-444444444444'
 const paymentId = '55555555-5555-4555-8555-555555555555'
+
+/** Test-local payment row shape used by staff-POS post-commit mocks. */
+type StaffPaymentRow = {
+  id: string
+  tenant_id: string
+  metadata: Record<string, unknown>
+}
+
+/** Optional existing ledger row stub for wallet skip/already-applied paths. */
+type ExistingCreditTx = {
+  amount_rappen?: number
+}
+
+/** Insert payload when ensuring invoice_settlement_post_commit tracking. */
+type TrackingInsertPayload = Partial<PostCommitTrackingRow> & {
+  invoice_id?: string
+  tenant_id?: string
+}
+
+/** Update patch applied to tracking / invoice rows in mocks. */
+type TrackingUpdatePatch = Partial<PostCommitTrackingRow> & {
+  last_error?: string | null
+  updated_at?: string
+  attempts?: number
+  credit_applied_rappen?: number
+}
+
+/** Minimal supabase client surface exercised by runMarkInvoicePaidPostCommit. */
+type TestSupabaseClient = {
+  from: (table: string) => unknown
+  rpc?: ReturnType<typeof vi.fn>
+}
+
+/** Chainable default PostgREST stub for unused tables. */
+type QueryChain = {
+  select: () => QueryChain
+  eq: () => QueryChain
+  in: () => QueryChain
+  not: () => QueryChain
+  is: () => QueryChain
+  neq: () => QueryChain
+  limit: () => QueryChain
+  maybeSingle: () => Promise<{ data: null; error: null }>
+  update: () => QueryChain
+  insert: () => Promise<{ error: null }>
+  upsert: () => Promise<{ error: null }>
+}
 
 function walletCreditRpc(opts: {
   failOnce?: boolean
@@ -60,11 +108,11 @@ function walletCreditRpc(opts: {
 }
 
 function createSupabaseMock(opts: {
-  tracking?: Record<string, any> | null
+  tracking?: PostCommitTrackingRow | null
   trackingUnavailable?: boolean
-  payments?: any[]
+  payments?: StaffPaymentRow[]
   creditAppliedRappen?: number
-  existingTx?: any
+  existingTx?: ExistingCreditTx | null
   walletFailOnce?: boolean
   staffPosFailOnce?: boolean
   paymentsSyncFailOnce?: boolean
@@ -100,25 +148,25 @@ function createSupabaseMock(opts: {
             }),
           }),
         }),
-        insert: (payload: any) => ({
+        insert: (payload: TrackingInsertPayload) => ({
           select: () => ({
             maybeSingle: async () => {
               if (opts.trackingUnavailable) {
                 return { data: null, error: { code: 'PGRST205', message: 'Could not find the table' } }
               }
               tracking = {
-                invoice_id: payload.invoice_id,
-                tenant_id: payload.tenant_id,
-                payments_sync_status: payload.payments_sync_status,
-                staff_pos_status: payload.staff_pos_status,
-                wallet_credit_status: payload.wallet_credit_status,
+                invoice_id: payload.invoice_id || invoiceId,
+                tenant_id: payload.tenant_id || tenantId,
+                payments_sync_status: payload.payments_sync_status || 'pending',
+                staff_pos_status: payload.staff_pos_status || 'pending',
+                wallet_credit_status: payload.wallet_credit_status || 'pending',
                 attempts: 0,
               }
               return { data: tracking, error: null }
             },
           }),
         }),
-        update: (patch: any) => ({
+        update: (patch: TrackingUpdatePatch) => ({
           eq: () => ({
             eq: async () => {
               if (tracking) tracking = { ...tracking, ...patch }
@@ -184,7 +232,7 @@ function createSupabaseMock(opts: {
             }),
           }),
         }),
-        update: (patch: any) => ({
+        update: (patch: TrackingUpdatePatch) => ({
           eq: () => ({
             eq: () => ({
               eq: async () => {
@@ -245,7 +293,7 @@ function createSupabaseMock(opts: {
     }
 
     // Default chainable stub
-    const chain: any = {
+    const chain: QueryChain = {
       select: () => chain,
       eq: () => chain,
       in: () => chain,
@@ -267,7 +315,7 @@ function createSupabaseMock(opts: {
     if (table === 'invoice_items') {
       return {
         select: () => ({
-          eq: (_col: string, val: any) => {
+          eq: (_col: string, val: unknown) => {
             if (val === true || _col === 'credit_to_wallet') {
               return Promise.resolve({
                 data: [{ credit_to_wallet: true, credit_amount_rappen: 5000 }],
@@ -332,7 +380,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
         }
       }
       if (table === 'invoice_settlement_post_commit') {
-        let tracking: any = null
+        let tracking: PostCommitTrackingRow | null = null
         return {
           select: () => ({
             eq: () => ({
@@ -341,18 +389,25 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
               }),
             }),
           }),
-          insert: (payload: any) => ({
+          insert: (payload: TrackingInsertPayload) => ({
             select: () => ({
               maybeSingle: async () => {
-                tracking = { ...payload, attempts: 0 }
+                tracking = {
+                  invoice_id: payload.invoice_id || invoiceId,
+                  tenant_id: payload.tenant_id || tenantId,
+                  payments_sync_status: payload.payments_sync_status || 'pending',
+                  staff_pos_status: payload.staff_pos_status || 'pending',
+                  wallet_credit_status: payload.wallet_credit_status || 'pending',
+                  attempts: 0,
+                }
                 return { data: tracking, error: null }
               },
             }),
           }),
-          update: (patch: any) => ({
+          update: (patch: TrackingUpdatePatch) => ({
             eq: () => ({
               eq: async () => {
-                tracking = { ...(tracking || {}), ...patch }
+                if (tracking) tracking = { ...tracking, ...patch }
                 return { error: null }
               },
             }),
@@ -411,7 +466,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
 
   it('resumes staff-pos after failure without re-requiring core settlement', async () => {
     let staffCalls = 0
-    let tracking: any = {
+    let tracking: PostCommitTrackingRow = {
       invoice_id: invoiceId,
       tenant_id: tenantId,
       payments_sync_status: 'completed',
@@ -420,7 +475,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
       attempts: 1,
     }
 
-    const supabase: any = {
+    const supabase: TestSupabaseClient = {
       from: (table: string) => {
         if (table === 'invoice_settlement_post_commit') {
           return {
@@ -431,7 +486,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
                 }),
               }),
             }),
-            update: (patch: any) => ({
+            update: (patch: TrackingUpdatePatch) => ({
               eq: () => ({
                 eq: async () => {
                   tracking = { ...tracking, ...patch }
@@ -485,7 +540,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
   })
 
   it('does not re-run completed staff-pos when only wallet failed', async () => {
-    let tracking: any = {
+    let tracking: PostCommitTrackingRow = {
       invoice_id: invoiceId,
       tenant_id: tenantId,
       payments_sync_status: 'completed',
@@ -494,7 +549,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
       attempts: 1,
     }
 
-    const supabase: any = {
+    const supabase: TestSupabaseClient = {
       rpc: walletCreditRpc({ amountRappen: 2500 }),
       from: (table: string) => {
         if (table === 'invoice_settlement_post_commit') {
@@ -506,7 +561,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
                 }),
               }),
             }),
-            update: (patch: any) => ({
+            update: (patch: TrackingUpdatePatch) => ({
               eq: () => ({
                 eq: async () => {
                   tracking = { ...tracking, ...patch }
@@ -543,7 +598,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
 
   it('skips all downstream work for partial payments', async () => {
     const staffPosRpc = vi.fn()
-    const supabase: any = {
+    const supabase: TestSupabaseClient = {
       from: () => ({
         select: () => ({
           eq: () => ({
@@ -552,7 +607,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
             }),
           }),
         }),
-        insert: (payload: any) => ({
+        insert: (payload: TrackingInsertPayload) => ({
           select: () => ({
             maybeSingle: async () => ({ data: { ...payload, attempts: 0 }, error: null }),
           }),
@@ -587,7 +642,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
 
   it('still runs idempotent side effects when tracking table is unavailable', async () => {
     const staffPosRpc = vi.fn(async () => ({ ok: true, credit_applied: true, replayed: true }))
-    const supabase: any = {
+    const supabase: TestSupabaseClient = {
       rpc: walletCreditRpc({ alreadyApplied: true, amountRappen: 100 }),
       from: (table: string) => {
         if (table === 'invoice_settlement_post_commit') {
@@ -656,7 +711,7 @@ describe('runMarkInvoicePaidPostCommit recovery', () => {
 
 describe('independent step failure isolation', () => {
   it('keeps wallet pending/failed when staff-pos fails and does not mark workflow complete', async () => {
-    let tracking: any = {
+    let tracking: PostCommitTrackingRow = {
       invoice_id: invoiceId,
       tenant_id: tenantId,
       payments_sync_status: 'completed',
@@ -665,7 +720,7 @@ describe('independent step failure isolation', () => {
       attempts: 0,
     }
 
-    const supabase: any = {
+    const supabase: TestSupabaseClient = {
       rpc: walletCreditRpc({ amountRappen: 1000 }),
       from: (table: string) => {
         if (table === 'invoice_settlement_post_commit') {
@@ -677,7 +732,7 @@ describe('independent step failure isolation', () => {
                 }),
               }),
             }),
-            update: (patch: any) => ({
+            update: (patch: TrackingUpdatePatch) => ({
               eq: () => ({
                 eq: async () => {
                   tracking = { ...tracking, ...patch }
@@ -776,7 +831,7 @@ describe('handler wiring for post-commit resume', () => {
 
 describe('core settlement vs wallet downstream', () => {
   it('marks wallet failed on reconciliation error without claiming downstream complete', async () => {
-    let tracking: any = {
+    let tracking: PostCommitTrackingRow = {
       invoice_id: invoiceId,
       tenant_id: tenantId,
       payments_sync_status: 'completed',
@@ -785,7 +840,7 @@ describe('core settlement vs wallet downstream', () => {
       attempts: 0,
     }
 
-    const supabase: any = {
+    const supabase: TestSupabaseClient = {
       rpc: vi.fn(async () => ({
         data: null,
         error: {
@@ -803,7 +858,7 @@ describe('core settlement vs wallet downstream', () => {
                 }),
               }),
             }),
-            update: (patch: any) => ({
+            update: (patch: TrackingUpdatePatch) => ({
               eq: () => ({
                 eq: async () => {
                   tracking = { ...tracking, ...patch }
