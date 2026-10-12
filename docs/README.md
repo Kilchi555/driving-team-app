@@ -341,6 +341,19 @@ Bei Änderungen am System:
 - Policy-Änderungen → Aktualisieren Sie RLS_POLICIES.csv
 - Feature-Änderungen → Aktualisieren Sie APP_DOCUMENTATION.csv
 - Prozess-Änderungen → Aktualisieren Sie DATA_FLOWS.csv
+- Neue Engineering-Runbooks → Datei unter `docs/` + Zeile in **Engineering Runbooks** unten
+
+---
+
+## Engineering Runbooks
+
+Concise, code-verified runbooks for developers and ops. Prefer updating these over duplicating CSV rows for deep subsystem behavior.
+
+| File | Topic |
+|------|-------|
+| [CATEGORY_DEFAULT_PAYMENT_AND_SPLIT_INVOICE.md](./CATEGORY_DEFAULT_PAYMENT_AND_SPLIT_INVOICE.md) | Kursart Standard-Zahlungsart, course payment snapshot, split course vs appointment invoice toggles, fail-closed enroll/book (#408/#409/#411) |
+| [CATEGORY_ENROLLMENT_FIELDS.md](./CATEGORY_ENROLLMENT_FIELDS.md) | Non-SARI per-category enrollment field modes required/optional/hidden (#412) |
+| [COURSE_CONFIRMATION_IMPORTANT_NOTICE.md](./COURSE_CONFIRMATION_IMPORTANT_NOTICE.md) | Confirmation-email «Wichtig!» hints via `course_category_id` then legacy code (#410/#413) |
 
 ---
 
