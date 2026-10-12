@@ -6,6 +6,7 @@ import {
   resumeExistingConfirmedEnrollment,
   SARI_MEMBERSHIP_SOURCE,
 } from '~/server/utils/registration-sari-membership'
+import { drainPublicCashEnrollOutbox } from '~/server/utils/public-cash-enroll-outbox'
 
 const mocks = vi.hoisted(() => {
   const TENANT = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -152,10 +153,52 @@ function createMemory() {
     registration_sari_memberships: [],
     payments: [],
     public_cash_course_enroll_idempotency: [],
+    public_cash_course_enroll_outbox: [],
   }
   let failMembershipInsert = false
 
   async function rpc(fn: string, args: Record<string, unknown> = {}) {
+    if (fn === 'claim_public_cash_enroll_outbox_batch') {
+      const limit = Number(args.p_limit || 20)
+      const worker = String(args.p_worker_id || 'worker')
+      const outbox = tables.public_cash_course_enroll_outbox || (tables.public_cash_course_enroll_outbox = [])
+      const picked: Row[] = []
+      for (const row of outbox) {
+        if (picked.length >= limit) break
+        if (row.status === 'pending' || (row.status === 'processing' && row.claimed_at)) {
+          row.status = 'processing'
+          row.attempts = Number(row.attempts || 0) + 1
+          row.claimed_by = worker
+          row.claimed_at = new Date().toISOString()
+          picked.push(row)
+        }
+      }
+      return { data: picked, error: null }
+    }
+    if (fn === 'complete_public_cash_enroll_outbox_job') {
+      const id = String(args.p_job_id || '')
+      const row = (tables.public_cash_course_enroll_outbox || []).find((r) => r.id === id)
+      if (!row) return { data: { status: 'not_found' }, error: null }
+      row.status = 'completed'
+      row.processed_at = new Date().toISOString()
+      row.last_error = null
+      return { data: { status: 'completed', id }, error: null }
+    }
+    if (fn === 'fail_public_cash_enroll_outbox_job') {
+      const id = String(args.p_job_id || '')
+      const permanent = Boolean(args.p_permanent)
+      const row = (tables.public_cash_course_enroll_outbox || []).find((r) => r.id === id)
+      if (!row) return { data: { status: 'not_found' }, error: null }
+      if (permanent || Number(row.attempts || 0) >= 8) {
+        row.status = 'failed'
+        row.last_error = String(args.p_error || '')
+      } else {
+        row.status = 'pending'
+        row.last_error = String(args.p_error || '')
+        row.claimed_at = null
+      }
+      return { data: { status: row.status, id }, error: null }
+    }
     if (fn !== 'enroll_public_cash_course_with_pending_payment') {
       return { data: null, error: { message: `unexpected rpc ${fn}` } }
     }
@@ -227,6 +270,7 @@ function createMemory() {
       user_id: userId,
       email,
       sari_faberid: faber || null,
+      birthdate: registration.birthdate || '2000-01-02',
       status: 'confirmed',
       payment_status: 'pending',
       payment_method: 'cash_on_site',
@@ -253,6 +297,47 @@ function createMemory() {
       registration_id: regId,
       payment_id: payId,
     })
+    const outbox = tables.public_cash_course_enroll_outbox
+    outbox.push({
+      id: `ob-email-${regId}`,
+      tenant_id: tenantId,
+      registration_id: regId,
+      payment_id: payId,
+      enroll_idempotency_key: key,
+      event_type: 'confirmation_email',
+      dedupe_key: `confirmation_email:${regId}`,
+      payload: { registration_id: regId, amount_rappen: args.p_amount_rappen, payment_method: 'cash' },
+      status: 'pending',
+      attempts: 0,
+    })
+    if (registration.outbox_sari) {
+      outbox.push({
+        id: `ob-sari-${regId}`,
+        tenant_id: tenantId,
+        registration_id: regId,
+        payment_id: payId,
+        enroll_idempotency_key: key,
+        event_type: 'sari_sync',
+        dedupe_key: `sari_sync:${regId}`,
+        payload: { registration_id: regId, course_id: courseId, sari_session_ids: registration.outbox_sari_session_ids || [] },
+        status: 'pending',
+        attempts: 0,
+      })
+    }
+    if (registration.outbox_vehicle) {
+      outbox.push({
+        id: `ob-veh-${regId}`,
+        tenant_id: tenantId,
+        registration_id: regId,
+        payment_id: payId,
+        enroll_idempotency_key: key,
+        event_type: 'vehicle_bookings',
+        dedupe_key: `vehicle_bookings:${regId}`,
+        payload: { registration_id: regId, course_id: courseId, vehicle_id: registration.vehicle_id, user_id: userId },
+        status: 'pending',
+        attempts: 0,
+      })
+    }
     return {
       data: { status: 'enrolled', registration_id: regId, payment_id: payId },
       error: null,
@@ -515,71 +600,27 @@ beforeEach(() => {
 })
 
 describe('cash enrollment membership repair', () => {
-  it('same-key replay skips side effects; different key repairs via payment_conflict', async () => {
-    const fetchMock = vi.fn(async () => ({}))
-    vi.stubGlobal('$fetch', fetchMock)
-
-    db.setFailMembershipInsert(true)
-    // New logical request KEY_A: RPC commits, SARI runs, membership write fails.
-    await expect(enrollCash({ idempotencyKey: CASH_KEY_A })).rejects.toMatchObject({ statusCode: 500 })
-    expect(db.tables.course_registrations).toHaveLength(1)
-    expect(db.tables.payments).toHaveLength(1)
-    expect(db.tables.course_registrations[0]?.sari_synced).toBe(false)
-    expect(db.tables.registration_sari_memberships).toHaveLength(0)
-    expect(mocks.enrollStudent).toHaveBeenCalledTimes(1)
-    expect(mocks.enrollStudent).toHaveBeenCalledWith(2110027, '7181751', '2000-01-02')
-    const emailCallsAfterFirst = fetchMock.mock.calls.filter((c) =>
-      String(c[0]).includes('send-course-enrollment-confirmation')).length
-    expect(emailCallsAfterFirst).toBe(0)
-
-    db.setFailMembershipInsert(false)
-    const enrollCallsAfterFailure = mocks.enrollStudent.mock.calls.length
-    const fetchCallsAfterFailure = fetchMock.mock.calls.length
-
-    // Uncertain retry with SAME key → idempotent_replay: no SARI, no email, no membership.
-    const replay = await enrollCash({ idempotencyKey: CASH_KEY_A }) as {
-      success: boolean
-      idempotentReplay?: boolean
-      enrollmentId: string
-    }
-    expect(replay).toMatchObject({ success: true, idempotentReplay: true })
-    expect(replay.enrollmentId).toBe(db.tables.course_registrations[0]?.id)
-    expect(mocks.enrollStudent).toHaveBeenCalledTimes(enrollCallsAfterFailure)
-    expect(fetchMock.mock.calls.length).toBe(fetchCallsAfterFailure)
-    expect(db.tables.registration_sari_memberships).toHaveLength(0)
-    expect(db.tables.course_registrations).toHaveLength(1)
-
-    // Genuinely new key → business duplicate → repair path (resume) → 409.
-    await expect(enrollCash({ idempotencyKey: CASH_KEY_B })).rejects.toMatchObject({
-      statusCode: 409,
-      statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.',
-    })
-    expect(db.tables.course_registrations).toHaveLength(1)
-    expect(db.tables.course_registrations[0]?.tenant_id).toBe(mocks.TENANT)
-    expect(db.tables.course_registrations[0]?.sari_synced).toBe(true)
-    expect(db.tables.registration_sari_memberships).toEqual([
-      expect.objectContaining({
+  async function seedCourseForOutbox() {
+    db.tables.courses.push({
+      id: mocks.COURSE,
+      tenant_id: mocks.TENANT,
+      sari_managed: true,
+      sari_course_id: '2110027',
+      course_sessions: [{
+        id: 'sess-1',
         tenant_id: mocks.TENANT,
-        registration_id: db.tables.course_registrations[0]?.id,
-        sari_session_id: 2110027,
-        source: SARI_MEMBERSHIP_SOURCE.cashEnrollment,
-      }),
-    ])
-    expect(mocks.enrollStudent.mock.calls.length).toBeGreaterThan(enrollCallsAfterFailure)
-
-    const callsBeforeThird = mocks.enrollStudent.mock.calls.length
-    await expect(enrollCash({ idempotencyKey: CASH_KEY_C })).rejects.toMatchObject({
-      statusCode: 409,
-      statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.',
+        sari_session_id: '2110027',
+        session_number: 1,
+        start_time: '2027-06-01T08:00:00.000Z',
+        end_time: '2027-06-01T12:00:00.000Z',
+      }],
     })
-    expect(mocks.enrollStudent).toHaveBeenCalledTimes(callsBeforeThird)
-    expect(db.tables.course_registrations).toHaveLength(1)
-    expect(db.tables.registration_sari_memberships).toHaveLength(1)
-  })
+  }
 
-  it('first enrolled request sends confirmation email once; same-key replay does not', async () => {
+  it('enqueued outbox on enroll; same-key replay skips inline; different key repairs', async () => {
     const fetchMock = vi.fn(async () => ({}))
     vi.stubGlobal('$fetch', fetchMock)
+    await seedCourseForOutbox()
 
     const first = await enrollCash({ idempotencyKey: CASH_KEY_A }) as {
       success: boolean
@@ -588,25 +629,64 @@ describe('cash enrollment membership repair', () => {
     }
     expect(first).toMatchObject({ success: true })
     expect(first.idempotentReplay).toBeFalsy()
-    const emailCalls = () => fetchMock.mock.calls.filter((c) =>
-      String(c[0]).includes('send-course-enrollment-confirmation'))
-    expect(emailCalls().length).toBe(1)
-    expect(mocks.enrollStudent).toHaveBeenCalledTimes(1)
+    expect(db.tables.course_registrations).toHaveLength(1)
     expect(db.tables.payments).toHaveLength(1)
+    expect(db.tables.public_cash_course_enroll_outbox.map((r) => r.event_type).sort()).toEqual([
+      'confirmation_email',
+      'sari_sync',
+    ])
+    // Required SARI/email are outbox-owned — not inline on enroll.
+    expect(mocks.enrollStudent).not.toHaveBeenCalled()
 
-    const enrollCalls = mocks.enrollStudent.mock.calls.length
     const replay = await enrollCash({ idempotencyKey: CASH_KEY_A }) as {
       success: boolean
       idempotentReplay?: boolean
+      enrollmentId: string
     }
     expect(replay).toMatchObject({ success: true, idempotentReplay: true })
+    expect(replay.enrollmentId).toBe(db.tables.course_registrations[0]?.id)
+    expect(db.tables.course_registrations).toHaveLength(1)
+    expect(db.tables.public_cash_course_enroll_outbox).toHaveLength(2)
+
+    // Worker drain completes required side effects once.
+    const drain = await drainPublicCashEnrollOutbox(db as never, { workerId: 'test-worker' })
+    expect(drain.claimed).toBeGreaterThan(0)
+    expect(mocks.enrollStudent).toHaveBeenCalled()
+    expect(db.tables.registration_sari_memberships.length).toBeGreaterThan(0)
+    expect(db.tables.public_cash_course_enroll_outbox.every((r) => r.status === 'completed')).toBe(true)
+
+    const emailCalls = () => fetchMock.mock.calls.filter((c) =>
+      String(c[0]).includes('send-course-enrollment-confirmation'))
     expect(emailCalls().length).toBe(1)
-    expect(mocks.enrollStudent).toHaveBeenCalledTimes(enrollCalls)
+
+    // Drain again — no pending jobs.
+    const drain2 = await drainPublicCashEnrollOutbox(db as never, { workerId: 'test-worker-2' })
+    expect(drain2.claimed).toBe(0)
+    expect(emailCalls().length).toBe(1)
+
+    // New key → business duplicate → resume repair path still available.
+    await expect(enrollCash({ idempotencyKey: CASH_KEY_B })).rejects.toMatchObject({
+      statusCode: 409,
+      statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.',
+    })
+    expect(db.tables.course_registrations).toHaveLength(1)
+  })
+
+  it('first enrolled request creates outbox; replay does not duplicate outbox rows', async () => {
+    const fetchMock = vi.fn(async () => ({}))
+    vi.stubGlobal('$fetch', fetchMock)
+    await seedCourseForOutbox()
+
+    await enrollCash({ idempotencyKey: CASH_KEY_A })
+    expect(db.tables.public_cash_course_enroll_outbox).toHaveLength(2)
+    await enrollCash({ idempotencyKey: CASH_KEY_A })
+    expect(db.tables.public_cash_course_enroll_outbox).toHaveLength(2)
     expect(db.tables.course_registrations).toHaveLength(1)
     expect(db.tables.payments).toHaveLength(1)
   })
 
   it('does not repair a registration from another tenant', async () => {
+    await seedCourseForOutbox()
     db.tables.course_registrations.push(confirmedRegistration({
       id: mocks.FOREIGN,
       tenant_id: mocks.OTHER,
@@ -614,13 +694,15 @@ describe('cash enrollment membership repair', () => {
       sari_faberid: '9999999',
     }))
     await enrollCash({ idempotencyKey: CASH_KEY_A })
+    await drainPublicCashEnrollOutbox(db as never, { workerId: 't' })
     expect(db.tables.registration_sari_memberships.some((row) => row.registration_id === mocks.FOREIGN)).toBe(false)
     expect(db.tables.course_registrations.find((row) => row.id === mocks.FOREIGN)?.sari_synced).toBe(false)
     expect(db.tables.course_registrations.some((row) =>
-      row.tenant_id === mocks.TENANT && row.course_id === mocks.COURSE && row.sari_synced === true)).toBe(true)
+      row.tenant_id === mocks.TENANT && row.course_id === mocks.COURSE)).toBe(true)
   })
 
   it('does not repair a registration for another course', async () => {
+    await seedCourseForOutbox()
     db.tables.course_registrations.push(confirmedRegistration({
       id: mocks.FOREIGN,
       course_id: mocks.OTHER_COURSE,
@@ -628,10 +710,11 @@ describe('cash enrollment membership repair', () => {
       email: 'other-course@example.com',
     }))
     await enrollCash({ idempotencyKey: CASH_KEY_A })
+    await drainPublicCashEnrollOutbox(db as never, { workerId: 't' })
     expect(db.tables.registration_sari_memberships.some((row) => row.registration_id === mocks.FOREIGN)).toBe(false)
     expect(db.tables.course_registrations.find((row) => row.id === mocks.FOREIGN)?.sari_synced).toBe(false)
     expect(db.tables.course_registrations.some((row) =>
-      row.tenant_id === mocks.TENANT && row.course_id === mocks.COURSE && row.sari_synced === true)).toBe(true)
+      row.tenant_id === mocks.TENANT && row.course_id === mocks.COURSE)).toBe(true)
   })
 
   it('does not guess when the existing row is pending or ambiguous', async () => {

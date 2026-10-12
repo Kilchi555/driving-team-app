@@ -117,7 +117,8 @@ describe('F1 enroll-cash + modal wiring', () => {
     expect(modalSrc).not.toContain('shouldRetireCashIdempotencyKeyAfterError')
     expect(modalSrc).toContain('idempotencyKey: cashKey')
     expect(enrollCashSrc).toContain('idempotentReplay: true')
-    expect(enrollCashSrc).toContain('skipping one-time side effects')
+    expect(enrollCashSrc).toContain('kickPublicCashEnrollOutboxProcessing')
+    expect(enrollCashSrc).toContain('kick outbox drain')
   })
 
   it('does not reuse createEnrollmentPayment; Wallee unchanged', () => {

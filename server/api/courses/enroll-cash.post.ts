@@ -69,6 +69,7 @@ import {
   isUuidV4,
   throwIfPublicCashEnrollmentFailed,
 } from '~/server/utils/enroll-public-cash-course'
+import { kickPublicCashEnrollOutboxProcessing } from '~/server/utils/public-cash-enroll-outbox'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -569,6 +570,18 @@ const handler = defineEventHandler(async (event) => {
       sessions: course.course_sessions || [],
     })
 
+    const outboxSari = !!(course.sari_managed && course.sari_course_id && faberidClean)
+    const outboxSariSessionIds = outboxSari
+      ? resolveCashSariSessionIds({
+          course,
+          isPartial,
+          isIndividualSess,
+          individualSessionNumber,
+          customSessions,
+        })
+      : []
+    const outboxVehicle = !!vehicleId
+
     const registrationPayload = {
       course_id: courseId,
       tenant_id: tenantId,
@@ -591,6 +604,10 @@ const handler = defineEventHandler(async (event) => {
       sari_synced: false,
       notes: marketingSessionId ? `marketing_session_id:${marketingSessionId}` : null,
       vehicle_id: vehicleId || null,
+      // Server-only outbox hints (not part of request hash).
+      outbox_sari: outboxSari,
+      outbox_vehicle: outboxVehicle,
+      outbox_sari_session_ids: outboxSariSessionIds,
     }
 
     const runSariEnrollment = async () => {
@@ -681,11 +698,10 @@ const handler = defineEventHandler(async (event) => {
     let cashPaymentId: string | undefined
 
     // 10. Durable enrollment.
-    // cash_on_site: RPC first (race-safe enrolled vs idempotent_replay). Side effects only on enrolled.
+    // cash_on_site: RPC first (race-safe enrolled vs idempotent_replay).
+    // Required side effects (email / SARI / vehicle) are outbox rows in the same TX; a cron/worker
+    // drains them. Same-key replay returns IDs and kicks the worker for any still-pending jobs.
     // invoice: SARI then PostgREST insert (unchanged F3 scope).
-    //
-    // LIMITATION: post-commit crash after `enrolled` (SARI/membership/email) is not recovered by
-    // same-key replay — replay returns original IDs and skips one-time side effects (no outbox).
     if (finalPaymentMethod === 'cash_on_site') {
       if (!isUuidV4(rawIdempotencyKey)) {
         throw createError({
@@ -745,10 +761,11 @@ const handler = defineEventHandler(async (event) => {
       cashPaymentId = cashResult.paymentId
 
       if (cashResult.status === 'idempotent_replay') {
-        logger.info('↩️ Public cash enroll idempotent replay — skipping one-time side effects', {
+        logger.info('↩️ Public cash enroll idempotent replay — kick outbox drain, skip inline side effects', {
           registrationId: enrollment.id,
           paymentId: cashPaymentId,
         })
+        kickPublicCashEnrollOutboxProcessing()
         return {
           success: true,
           enrollmentId: enrollment.id,
@@ -758,11 +775,12 @@ const handler = defineEventHandler(async (event) => {
         }
       }
 
-      logger.info('✅ Confirmed cash enrollment + pending payment created:', {
+      logger.info('✅ Confirmed cash enrollment + pending payment + outbox created:', {
         registrationId: enrollment.id,
         paymentId: cashPaymentId,
       })
-      await runSariEnrollment()
+      // Required effects via outbox worker (not inline). Best-effort immediate kick.
+      kickPublicCashEnrollOutboxProcessing()
     } else {
       await runSariEnrollment()
 
@@ -854,18 +872,22 @@ const handler = defineEventHandler(async (event) => {
       logger.info('✅ Confirmed enrollment created:', enrollment.id)
     }
 
-    for (const confirmed of confirmedSariSessions) {
-      await recordConfirmedSariMembershipWithRetry({
-        supabase,
-        tenantId,
-        registrationId: enrollment.id,
-        sariSessionId: confirmed.sariSessionId,
-        courseSessionId: confirmed.courseSessionId,
-        source: SARI_MEMBERSHIP_SOURCE.cashEnrollment,
-      })
-    }
-    if (course.sari_managed && confirmedSariSessions.length > 0 && sariErrorCount === 0) {
-      await setRegistrationSariSynced(supabase, tenantId, enrollment.id, true)
+    // Invoice (and any non-outbox path): persist SARI membership snapshots inline.
+    // cash_on_site: sari_sync outbox job owns SARI + membership.
+    if (finalPaymentMethod !== 'cash_on_site') {
+      for (const confirmed of confirmedSariSessions) {
+        await recordConfirmedSariMembershipWithRetry({
+          supabase,
+          tenantId,
+          registrationId: enrollment.id,
+          sariSessionId: confirmed.sariSessionId,
+          courseSessionId: confirmed.courseSessionId,
+          source: SARI_MEMBERSHIP_SOURCE.cashEnrollment,
+        })
+      }
+      if (course.sari_managed && confirmedSariSessions.length > 0 && sariErrorCount === 0) {
+        await setRegistrationSariSynced(supabase, tenantId, enrollment.id, true)
+      }
     }
 
     upsertMarketingLeadSafe({
@@ -880,9 +902,8 @@ const handler = defineEventHandler(async (event) => {
       sourceLabel: course?.name ? `Kurs: ${course.name}` : 'Kursanmeldung',
     })
 
-    // ── Vehicle bookings for each session (if vehicle selected) ──────────────
-    // For partial/individual enrollments only create bookings for the sessions the customer booked.
-    if (vehicleId && course.course_sessions?.length) {
+    // ── Vehicle bookings (invoice path only; cash_on_site uses vehicle_bookings outbox) ──
+    if (finalPaymentMethod !== 'cash_on_site' && vehicleId && course.course_sessions?.length) {
       try {
         const isPartialOrd = !!(isPartialEnrollment || course.is_partial_only)
         const isIndivSess = isPartialOrd && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
@@ -961,23 +982,25 @@ const handler = defineEventHandler(async (event) => {
       ? billing.grossRappen
       : effectivePrice
 
-    // 11. Send confirmation email
-    try {
-      await $fetch('/api/emails/send-course-enrollment-confirmation', {
-        method: 'POST',
-        headers: internalSecretHeaders(),
-        body: {
-          courseRegistrationId: enrollment.id,
-          paymentMethod: finalPaymentMethod === 'invoice' ? 'invoice' : 'cash',
-          totalAmount: quotedRappen / 100, // In CHF
-          ...(finalPaymentMethod === 'invoice'
-            ? { invoiceNotice: billing?.status === 'sent' ? 'sent' : billing?.status === 'created' ? 'created' : 'none' }
-            : {}),
-        }
-      })
-      logger.info(`📧 Confirmation email sent to ${finalEmail}`)
-    } catch (error: any) {
-      logger.warn('⚠️ Email send failed (non-critical):', error.message)
+    // 11. Confirmation email — invoice inline; cash_on_site via confirmation_email outbox.
+    if (finalPaymentMethod !== 'cash_on_site') {
+      try {
+        await $fetch('/api/emails/send-course-enrollment-confirmation', {
+          method: 'POST',
+          headers: internalSecretHeaders(),
+          body: {
+            courseRegistrationId: enrollment.id,
+            paymentMethod: finalPaymentMethod === 'invoice' ? 'invoice' : 'cash',
+            totalAmount: quotedRappen / 100, // In CHF
+            ...(finalPaymentMethod === 'invoice'
+              ? { invoiceNotice: billing?.status === 'sent' ? 'sent' : billing?.status === 'created' ? 'created' : 'none' }
+              : {}),
+          }
+        })
+        logger.info(`📧 Confirmation email sent to ${finalEmail}`)
+      } catch (error: any) {
+        logger.warn('⚠️ Email send failed (non-critical):', error.message)
+      }
     }
 
     try {

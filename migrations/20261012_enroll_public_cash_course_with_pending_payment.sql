@@ -32,9 +32,20 @@
 --     AND (metadata->>'public_cash_course_enroll') = 'true'
 --   GROUP BY 1, 2 HAVING COUNT(*) > 1;
 --
+-- OUTBOX (required side effects after enroll commit):
+--   confirmation_email (always), sari_sync (when p_registration.outbox_sari=true),
+--   vehicle_bookings (when p_registration.outbox_vehicle=true).
+--   Rows inserted only on status=enrolled, same TX as reg+payment+idempotency.
+--   Replay does not insert duplicate outbox rows (UNIQUE tenant_id+dedupe_key).
+--   Worker claims via claim_public_cash_enroll_outbox_batch (SKIP LOCKED + stale reclaim).
+--
 -- ROLLBACK:
+--   DROP FUNCTION IF EXISTS public.fail_public_cash_enroll_outbox_job(uuid, text, text, boolean);
+--   DROP FUNCTION IF EXISTS public.complete_public_cash_enroll_outbox_job(uuid, text);
+--   DROP FUNCTION IF EXISTS public.claim_public_cash_enroll_outbox_batch(integer, text, integer);
 --   DROP FUNCTION IF EXISTS public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, uuid, jsonb);
 --   DROP FUNCTION IF EXISTS public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, jsonb);
+--   DROP TABLE IF EXISTS public.public_cash_course_enroll_outbox;
 --   DROP TABLE IF EXISTS public.public_cash_course_enroll_idempotency;
 --   DROP INDEX IF EXISTS public.payments_public_cash_course_enroll_registration_uidx;
 
@@ -66,6 +77,53 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.public_cash_course_enroll_i
 
 COMMENT ON TABLE public.public_cash_course_enroll_idempotency IS
   'F1: completed public cash course enroll idempotency. Rows exist only after a successful atomic enroll+payment.';
+
+-- Required post-commit side-effect outbox (email / SARI / vehicle).
+CREATE TABLE IF NOT EXISTS public.public_cash_course_enroll_outbox (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  registration_id uuid NOT NULL REFERENCES public.course_registrations(id) ON DELETE CASCADE,
+  payment_id uuid NOT NULL REFERENCES public.payments(id) ON DELETE CASCADE,
+  enroll_idempotency_key uuid NOT NULL,
+  event_type text NOT NULL
+    CHECK (event_type IN ('confirmation_email', 'sari_sync', 'vehicle_bookings')),
+  dedupe_key text NOT NULL,
+  payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  status text NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+  attempts integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+  next_attempt_at timestamptz NOT NULL DEFAULT now(),
+  claimed_at timestamptz NULL,
+  claimed_by text NULL,
+  last_error text NULL,
+  processed_at timestamptz NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, dedupe_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_public_cash_enroll_outbox_claim
+  ON public.public_cash_course_enroll_outbox (status, next_attempt_at)
+  WHERE status IN ('pending', 'processing');
+
+CREATE INDEX IF NOT EXISTS idx_public_cash_enroll_outbox_registration
+  ON public.public_cash_course_enroll_outbox (tenant_id, registration_id);
+
+ALTER TABLE public.public_cash_course_enroll_outbox ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS public_cash_course_enroll_outbox_service_role
+  ON public.public_cash_course_enroll_outbox;
+CREATE POLICY public_cash_course_enroll_outbox_service_role
+  ON public.public_cash_course_enroll_outbox
+  FOR ALL
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
+
+REVOKE ALL ON TABLE public.public_cash_course_enroll_outbox FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.public_cash_course_enroll_outbox TO service_role;
+
+COMMENT ON TABLE public.public_cash_course_enroll_outbox IS
+  'F1: required public cash enroll side effects. Inserted atomically with enroll; drained by service_role worker.';
 
 -- One public-cash enrollment payment per tenant + course registration.
 CREATE UNIQUE INDEX IF NOT EXISTS payments_public_cash_course_enroll_registration_uidx
@@ -428,6 +486,87 @@ BEGIN
       now()
     );
 
+    -- Required outbox jobs (same TX). Replay path never reaches here.
+    INSERT INTO public.public_cash_course_enroll_outbox (
+      tenant_id,
+      registration_id,
+      payment_id,
+      enroll_idempotency_key,
+      event_type,
+      dedupe_key,
+      payload,
+      status
+    ) VALUES (
+      p_tenant_id,
+      v_reg_id,
+      v_payment_id,
+      p_idempotency_key,
+      'confirmation_email',
+      'confirmation_email:' || v_reg_id::text,
+      jsonb_build_object(
+        'registration_id', v_reg_id,
+        'payment_id', v_payment_id,
+        'course_id', p_course_id,
+        'amount_rappen', p_amount_rappen,
+        'payment_method', 'cash'
+      ),
+      'pending'
+    );
+
+    IF COALESCE((p_registration->>'outbox_sari')::boolean, false) THEN
+      INSERT INTO public.public_cash_course_enroll_outbox (
+        tenant_id,
+        registration_id,
+        payment_id,
+        enroll_idempotency_key,
+        event_type,
+        dedupe_key,
+        payload,
+        status
+      ) VALUES (
+        p_tenant_id,
+        v_reg_id,
+        v_payment_id,
+        p_idempotency_key,
+        'sari_sync',
+        'sari_sync:' || v_reg_id::text,
+        jsonb_build_object(
+          'registration_id', v_reg_id,
+          'course_id', p_course_id,
+          'sari_session_ids', COALESCE(p_registration->'outbox_sari_session_ids', '[]'::jsonb)
+        ),
+        'pending'
+      );
+    END IF;
+
+    IF COALESCE((p_registration->>'outbox_vehicle')::boolean, false)
+       AND NULLIF(p_registration->>'vehicle_id', '') IS NOT NULL THEN
+      INSERT INTO public.public_cash_course_enroll_outbox (
+        tenant_id,
+        registration_id,
+        payment_id,
+        enroll_idempotency_key,
+        event_type,
+        dedupe_key,
+        payload,
+        status
+      ) VALUES (
+        p_tenant_id,
+        v_reg_id,
+        v_payment_id,
+        p_idempotency_key,
+        'vehicle_bookings',
+        'vehicle_bookings:' || v_reg_id::text,
+        jsonb_build_object(
+          'registration_id', v_reg_id,
+          'course_id', p_course_id,
+          'vehicle_id', p_registration->>'vehicle_id',
+          'user_id', p_user_id
+        ),
+        'pending'
+      );
+    END IF;
+
     RETURN jsonb_build_object(
       'status', 'enrolled',
       'registration_id', v_reg_id,
@@ -494,4 +633,164 @@ REVOKE ALL ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uui
 GRANT EXECUTE ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, uuid, jsonb) TO postgres, service_role;
 
 COMMENT ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, uuid, jsonb) IS
-  'F1: atomic public cash enroll + pending payment + idempotency claim. OWNER postgres. EXECUTE service_role/postgres only. Isolated/local; do not apply to production automatically.';
+  'F1: atomic public cash enroll + pending payment + idempotency + required outbox. OWNER postgres. EXECUTE service_role/postgres only. Isolated/local; do not apply to production automatically.';
+
+-- Claim pending/stale outbox jobs (SKIP LOCKED). Max attempts enforced by fail_*.
+CREATE OR REPLACE FUNCTION public.claim_public_cash_enroll_outbox_batch(
+  p_limit integer DEFAULT 20,
+  p_worker_id text DEFAULT 'worker',
+  p_stale_after_seconds integer DEFAULT 300
+)
+RETURNS SETOF public.public_cash_course_enroll_outbox
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+DECLARE
+  v_limit integer := GREATEST(1, LEAST(COALESCE(p_limit, 20), 50));
+  v_stale interval := make_interval(secs => GREATEST(60, COALESCE(p_stale_after_seconds, 300)));
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  RETURN QUERY
+  WITH picked AS (
+    SELECT o.id
+    FROM public.public_cash_course_enroll_outbox o
+    WHERE o.next_attempt_at <= now()
+      AND (
+        o.status = 'pending'
+        OR (
+          o.status = 'processing'
+          AND o.claimed_at IS NOT NULL
+          AND o.claimed_at < now() - v_stale
+        )
+      )
+      AND o.status IS DISTINCT FROM 'completed'
+      AND o.status IS DISTINCT FROM 'failed'
+    ORDER BY o.next_attempt_at ASC, o.created_at ASC
+    FOR UPDATE SKIP LOCKED
+    LIMIT v_limit
+  )
+  UPDATE public.public_cash_course_enroll_outbox o
+  SET
+    status = 'processing',
+    attempts = o.attempts + 1,
+    claimed_at = now(),
+    claimed_by = COALESCE(NULLIF(btrim(p_worker_id), ''), 'worker'),
+    updated_at = now()
+  FROM picked
+  WHERE o.id = picked.id
+  RETURNING o.*;
+END;
+$$;
+
+ALTER FUNCTION public.claim_public_cash_enroll_outbox_batch(integer, text, integer) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.claim_public_cash_enroll_outbox_batch(integer, text, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.claim_public_cash_enroll_outbox_batch(integer, text, integer) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_public_cash_enroll_outbox_batch(integer, text, integer) TO postgres, service_role;
+
+CREATE OR REPLACE FUNCTION public.complete_public_cash_enroll_outbox_job(
+  p_job_id uuid,
+  p_worker_id text DEFAULT 'worker'
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+DECLARE
+  v_row public.public_cash_course_enroll_outbox%ROWTYPE;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  UPDATE public.public_cash_course_enroll_outbox
+  SET
+    status = 'completed',
+    processed_at = now(),
+    last_error = NULL,
+    updated_at = now(),
+    claimed_by = COALESCE(NULLIF(btrim(p_worker_id), ''), claimed_by)
+  WHERE id = p_job_id
+    AND status IN ('processing', 'pending', 'completed')
+  RETURNING * INTO v_row;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('status', 'not_found');
+  END IF;
+  RETURN jsonb_build_object('status', 'completed', 'id', v_row.id, 'event_type', v_row.event_type);
+END;
+$$;
+
+ALTER FUNCTION public.complete_public_cash_enroll_outbox_job(uuid, text) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.complete_public_cash_enroll_outbox_job(uuid, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.complete_public_cash_enroll_outbox_job(uuid, text) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.complete_public_cash_enroll_outbox_job(uuid, text) TO postgres, service_role;
+
+CREATE OR REPLACE FUNCTION public.fail_public_cash_enroll_outbox_job(
+  p_job_id uuid,
+  p_worker_id text,
+  p_error text,
+  p_permanent boolean DEFAULT false
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+DECLARE
+  v_row public.public_cash_course_enroll_outbox%ROWTYPE;
+  v_max integer := 8;
+  v_delay integer;
+  v_err text;
+BEGIN
+  PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+  v_err := left(COALESCE(NULLIF(btrim(p_error), ''), 'unknown_error'), 500);
+
+  SELECT * INTO v_row
+  FROM public.public_cash_course_enroll_outbox
+  WHERE id = p_job_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('status', 'not_found');
+  END IF;
+
+  IF v_row.status = 'completed' THEN
+    RETURN jsonb_build_object('status', 'already_completed', 'id', v_row.id);
+  END IF;
+
+  IF p_permanent OR v_row.attempts >= v_max THEN
+    UPDATE public.public_cash_course_enroll_outbox
+    SET
+      status = 'failed',
+      last_error = v_err,
+      updated_at = now(),
+      claimed_by = COALESCE(NULLIF(btrim(p_worker_id), ''), claimed_by)
+    WHERE id = p_job_id;
+    RETURN jsonb_build_object('status', 'failed', 'id', p_job_id, 'attempts', v_row.attempts);
+  END IF;
+
+  v_delay := LEAST(3600, 30 * (2 ^ LEAST(v_row.attempts, 6)));
+  UPDATE public.public_cash_course_enroll_outbox
+  SET
+    status = 'pending',
+    last_error = v_err,
+    next_attempt_at = now() + make_interval(secs => v_delay),
+    claimed_at = NULL,
+    updated_at = now(),
+    claimed_by = COALESCE(NULLIF(btrim(p_worker_id), ''), claimed_by)
+  WHERE id = p_job_id;
+
+  RETURN jsonb_build_object(
+    'status', 'pending',
+    'id', p_job_id,
+    'attempts', v_row.attempts,
+    'retry_seconds', v_delay
+  );
+END;
+$$;
+
+ALTER FUNCTION public.fail_public_cash_enroll_outbox_job(uuid, text, text, boolean) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.fail_public_cash_enroll_outbox_job(uuid, text, text, boolean) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.fail_public_cash_enroll_outbox_job(uuid, text, text, boolean) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fail_public_cash_enroll_outbox_job(uuid, text, text, boolean) TO postgres, service_role;
