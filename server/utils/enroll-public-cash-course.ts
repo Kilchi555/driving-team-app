@@ -6,7 +6,11 @@
  * Same key + different hash → HTTP 409 idempotency_conflict.
  * Different key + business duplicate → HTTP 409 bereits angemeldet.
  *
- * SARI / email / CAPI stay outside the RPC.
+ * Request hash is computed only inside the SECURITY DEFINER RPC (never trust a
+ * client-supplied hash). custom_sessions use key-sorted canonicalization.
+ *
+ * SARI / email / CAPI stay outside the RPC; callers must skip one-time side
+ * effects when status is idempotent_replay.
  */
 import { createError } from 'h3'
 import { logger } from '~/utils/logger'

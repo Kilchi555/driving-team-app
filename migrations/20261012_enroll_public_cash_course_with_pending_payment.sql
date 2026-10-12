@@ -14,8 +14,12 @@
 -- REQUEST HASH CANONICALIZATION (server-only; never trust a client hash):
 --   md5 of pipe-joined fields:
 --     course_id|tenant_id|user_id|cash_on_site|amount_rappen|lower(email)|faber|
---     is_partial|individual_session|partial_start|canonical_custom_sessions_json|vehicle_id
---   custom_sessions: jsonb text as stored (empty string if null).
+--     is_partial|individual_session|partial_start|canonical_custom_sessions|vehicle_id
+--   custom_sessions canonical form (deterministic; never raw jsonb::text for objects):
+--     NULL → ''
+--     object → key-sorted "key:value" pairs joined by '|' (jsonb_each_text, ORDER BY key)
+--     array  → elements joined by ',' in array order (order is semantic)
+--     other  → scalar text
 --
 -- OWNERSHIP / PRIVILEGE:
 --   Function owner: postgres (explicit ALTER). EXECUTE: postgres + service_role only.
@@ -109,6 +113,7 @@ DECLARE
   v_desc text;
   v_request_hash text;
   v_canonical text;
+  v_custom_canon text;
   v_lock_key bigint;
 BEGIN
   IF p_user_id IS NULL OR p_tenant_id IS NULL OR p_course_id IS NULL OR p_idempotency_key IS NULL THEN
@@ -211,6 +216,21 @@ BEGIN
     v_custom := NULL;
   END IF;
 
+  -- Deterministic custom_sessions serialization (do not use jsonb::text for objects).
+  IF v_custom IS NULL THEN
+    v_custom_canon := '';
+  ELSIF jsonb_typeof(v_custom) = 'object' THEN
+    SELECT coalesce(string_agg(format('%s:%s', e.key, e.value), '|' ORDER BY e.key), '')
+      INTO v_custom_canon
+    FROM jsonb_each_text(v_custom) AS e;
+  ELSIF jsonb_typeof(v_custom) = 'array' THEN
+    SELECT coalesce(string_agg(elem, ',' ORDER BY ord), '')
+      INTO v_custom_canon
+    FROM jsonb_array_elements_text(v_custom) WITH ORDINALITY AS t(elem, ord);
+  ELSE
+    v_custom_canon := v_custom #>> '{}';
+  END IF;
+
   v_canonical :=
     p_course_id::text || '|' ||
     p_tenant_id::text || '|' ||
@@ -222,7 +242,7 @@ BEGIN
     CASE WHEN v_is_partial THEN '1' ELSE '0' END || '|' ||
     COALESCE(v_new_session::text, '') || '|' ||
     COALESCE(v_partial_start::text, '') || '|' ||
-    COALESCE(v_custom::text, '') || '|' ||
+    v_custom_canon || '|' ||
     COALESCE(v_vehicle::text, '');
   v_request_hash := md5(v_canonical);
 

@@ -73,6 +73,11 @@ describe('F1 SQL contract — idempotency + atomic enroll', () => {
     expect(sql).toContain('REQUEST HASH CANONICALIZATION')
     expect(sql).toContain('payments_public_cash_course_enroll_registration_uidx')
     expect(sql).toContain("(metadata->>'public_cash_course_enroll') = 'true'")
+    // Deterministic custom_sessions — never raw jsonb::text for objects.
+    expect(sql).toContain('jsonb_each_text')
+    expect(sql).toContain('ORDER BY e.key')
+    expect(sql).toContain('v_custom_canon')
+    expect(sql).not.toMatch(/v_custom::text/)
   })
 
   it('security: DEFINER, search_path, OWNER postgres, revoke anon/authenticated', () => {
@@ -104,12 +109,15 @@ describe('F1 enroll-cash + modal wiring', () => {
     expect(enrollCashSrc).toContain(".from('course_registrations')")
   })
 
-  it('modal uses body.idempotencyKey, reuses key, clears on success/close', () => {
-    expect(modalSrc).toContain('idempotencyKey: ensureCashIdempotencyKey()')
+  it('modal uses body.idempotencyKey, secure UUID, clears only on success/close', () => {
+    expect(modalSrc).toContain('createSecureCashEnrollIdempotencyKey')
     expect(modalSrc).toContain('ensureCashIdempotencyKey')
     expect(modalSrc).toContain('clearCashIdempotencyKey')
-    expect(modalSrc).toContain('shouldRetireCashIdempotencyKeyAfterError')
-    expect(modalSrc).toContain('clearCashIdempotencyKey()')
+    expect(modalSrc).not.toContain('Math.random')
+    expect(modalSrc).not.toContain('shouldRetireCashIdempotencyKeyAfterError')
+    expect(modalSrc).toContain('idempotencyKey: cashKey')
+    expect(enrollCashSrc).toContain('idempotentReplay: true')
+    expect(enrollCashSrc).toContain('skipping one-time side effects')
   })
 
   it('does not reuse createEnrollmentPayment; Wallee unchanged', () => {
