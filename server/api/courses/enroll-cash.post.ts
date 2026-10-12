@@ -1,12 +1,13 @@
 /**
- * CASH Course Enrollment API
- * 
- * For cash-on-site payments (Einsiedeln area)
- * 1. Validates SARI data
- * 2. Creates CONFIRMED enrollment (no payment needed)
- * 3. Immediately enrolls in SARI (if sari_managed)
- * 4. Sends confirmation email
- * 
+ * CASH / INVOICE Course Enrollment API
+ *
+ * For cash-on-site (and invoice) public enrollments when Wallee is not used.
+ * 1. Validates SARI data / non-SARI fields
+ * 2. cash_on_site: atomically creates confirmed registration + pending payment (F1 RPC)
+ *    invoice: creates confirmed registration, then best-effort public invoice billing
+ * 3. Enrolls in SARI when sari_managed (outside the DB transaction)
+ * 4. Sends confirmation email only after durable enrollment success
+ *
  * Rate Limiting: 5 attempts per IP per minute (prevent SARI brute-force)
  */
 
@@ -63,6 +64,10 @@ import {
   toPublicBillingResponse,
   type PublicCourseBillingResult,
 } from '~/server/utils/public-course-invoice'
+import {
+  enrollPublicCashCourseWithPendingPayment,
+  throwIfPublicCashEnrollmentFailed,
+} from '~/server/utils/enroll-public-cash-course'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -643,94 +648,171 @@ const handler = defineEventHandler(async (event) => {
       }
     }
 
-    // 10. Create CONFIRMED enrollment (only after SARI check passed)
-    const { data: enrollment, error: enrollmentError } = await supabase
-      .from('course_registrations')
-      .insert({
-        course_id: courseId,
-        tenant_id: tenantId,
-        user_id: guestUserId,
-        first_name: customerData.firstname,
-        last_name: customerData.lastname,
-        email: finalEmail,
-        phone: finalPhone,
-        sari_faberid: faberidClean || null,
-        // SARI returns `address` (full string); non-SARI provides `street` + `streetNr`
-        street: customerData.street || customerData.address || null,
-        street_nr: customerData.streetNr || null,
-        zip: customerData.zip || null,
-        city: customerData.city || null,
-        birthdate: customerData.birthdate || birthdate || null,
-        license_number: customerData.licenseNumber || null,
-        status: 'confirmed',
-        payment_status: 'pending',
-        payment_method: finalPaymentMethod,
-        amount_paid_rappen: 0,
-        registration_date: new Date().toISOString(),
-        registered_at: new Date().toISOString(),
-        custom_sessions: customSessions || null,
-        is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
-        individual_session_number: (typeof individualSessionNumber === 'number' && individualSessionNumber > 0) ? individualSessionNumber : null,
-        partial_start_session: (!isIndividualSess && (isPartialEnrollment || course.is_partial_only)) ? (course.course_category?.partial_start_position ?? 3) : null,
-        sari_synced: false,
-        sari_synced_at: null,
-        notes: marketingSessionId ? `marketing_session_id:${marketingSessionId}` : null,
-        vehicle_id: vehicleId || null,
-      })
-      .select('id')
-      .single()
+    // Price quoted for payment row / confirmation (server-side only).
+    const effectivePrice = resolvePublicEnrollmentPriceRappen({
+      pricePerParticipantRappen: course.price_per_participant_rappen ?? null,
+      isPartialOnly: !!course.is_partial_only,
+      isPartialEnrollment: !!isPartialEnrollment,
+      individualSessionNumber: typeof individualSessionNumber === 'number' ? individualSessionNumber : null,
+      partialPriceRappen: course.course_category?.partial_price_rappen ?? null,
+      sessions: course.course_sessions || [],
+    })
 
-    if (enrollmentError || !enrollment) {
-      throwIfCourseCapacityExceeded(enrollmentError)
-      logger.error('❌ Failed to create enrollment:', enrollmentError)
-      
-      // Provide clearer error messages
-      if (enrollmentError?.message?.includes('duplicate key')) {
-        if (
-          faberidClean
-          && (
-            enrollmentError.message.includes('course_id_sari_faberid')
-            || enrollmentError.message.includes('unique_faberid')
-          )
-        ) {
-          const raced = await loadCashFaberRegistrations(supabase, tenantId, courseId, faberidClean)
-          if (raced.length === 1 && isSameConfirmedEnrollment(raced[0], {
+    const registrationPayload = {
+      course_id: courseId,
+      tenant_id: tenantId,
+      user_id: guestUserId,
+      first_name: customerData.firstname,
+      last_name: customerData.lastname,
+      email: finalEmail,
+      phone: finalPhone,
+      sari_faberid: faberidClean || null,
+      // SARI returns `address` (full string); non-SARI provides `street` + `streetNr`
+      street: customerData.street || customerData.address || null,
+      street_nr: customerData.streetNr || null,
+      zip: customerData.zip || null,
+      city: customerData.city || null,
+      birthdate: customerData.birthdate || birthdate || null,
+      license_number: customerData.licenseNumber || null,
+      custom_sessions: customSessions || null,
+      is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
+      individual_session_number: (typeof individualSessionNumber === 'number' && individualSessionNumber > 0) ? individualSessionNumber : null,
+      partial_start_session: (!isIndividualSess && (isPartialEnrollment || course.is_partial_only)) ? (course.course_category?.partial_start_position ?? 3) : null,
+      sari_synced: false,
+      notes: marketingSessionId ? `marketing_session_id:${marketingSessionId}` : null,
+      vehicle_id: vehicleId || null,
+    }
+
+    let enrollment: { id: string }
+
+    // 10. Create CONFIRMED enrollment (only after SARI check passed).
+    // F1 cash_on_site: atomic RPC creates registration + pending payment + payment_id.
+    // Invoice path keeps PostgREST insert; billing follows below (unchanged F3 scope).
+    if (finalPaymentMethod === 'cash_on_site') {
+      const cashResult = await enrollPublicCashCourseWithPendingPayment({
+        supabase,
+        userId: guestUserId,
+        tenantId,
+        courseId,
+        courseName: course.name || 'Kurs',
+        amountRappen: effectivePrice,
+        registration: registrationPayload,
+      })
+      if (
+        (cashResult.status === 'already_enrolled' || cashResult.status === 'payment_conflict')
+        && faberidClean
+        && cashResult.registrationId
+      ) {
+        const raced = await loadCashFaberRegistrations(supabase, tenantId, courseId, faberidClean)
+        if (raced.length === 1 && isSameConfirmedEnrollment(raced[0], {
+          tenantId,
+          courseId,
+          faberid: faberidClean,
+        })) {
+          await persistConfirmedEnrollmentSnapshots({
+            supabase,
             tenantId,
-            courseId,
-            faberid: faberidClean,
-          })) {
-            await persistConfirmedEnrollmentSnapshots({
-              supabase,
-              tenantId,
-              registrationId: raced[0].id,
-              sessions: confirmedSariSessions,
-              source: SARI_MEMBERSHIP_SOURCE.cashEnrollment,
-              markSynced: sariErrorCount === 0 && confirmedSariSessions.length > 0,
-            })
-          }
-          throw createError({
-            statusCode: 409,
-            statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.'
-          })
-        }
-        if (
-          enrollmentError.message.includes('course_id_email_key') ||
-          enrollmentError.message.includes('unique_email')
-        ) {
-          throw createError({
-            statusCode: 409,
-            statusMessage: 'Diese E-Mail-Adresse ist bereits für diesen Kurs angemeldet.'
+            registrationId: raced[0].id,
+            sessions: confirmedSariSessions,
+            source: SARI_MEMBERSHIP_SOURCE.cashEnrollment,
+            markSynced: sariErrorCount === 0 && confirmedSariSessions.length > 0,
           })
         }
       }
-      
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Anmeldung konnte nicht erstellt werden. Bitte versuchen Sie es später erneut.'
+      throwIfPublicCashEnrollmentFailed(cashResult)
+      enrollment = { id: cashResult.registrationId }
+      logger.info('✅ Confirmed cash enrollment + pending payment created:', {
+        registrationId: enrollment.id,
+        paymentId: cashResult.paymentId,
       })
-    }
+    } else {
+      const { data: inserted, error: enrollmentError } = await supabase
+        .from('course_registrations')
+        .insert({
+          course_id: courseId,
+          tenant_id: tenantId,
+          user_id: guestUserId,
+          first_name: customerData.firstname,
+          last_name: customerData.lastname,
+          email: finalEmail,
+          phone: finalPhone,
+          sari_faberid: faberidClean || null,
+          street: customerData.street || customerData.address || null,
+          street_nr: customerData.streetNr || null,
+          zip: customerData.zip || null,
+          city: customerData.city || null,
+          birthdate: customerData.birthdate || birthdate || null,
+          license_number: customerData.licenseNumber || null,
+          status: 'confirmed',
+          payment_status: 'pending',
+          payment_method: finalPaymentMethod,
+          amount_paid_rappen: 0,
+          registration_date: new Date().toISOString(),
+          registered_at: new Date().toISOString(),
+          custom_sessions: customSessions || null,
+          is_partial_enrollment: !!(isPartialEnrollment || course.is_partial_only),
+          individual_session_number: (typeof individualSessionNumber === 'number' && individualSessionNumber > 0) ? individualSessionNumber : null,
+          partial_start_session: (!isIndividualSess && (isPartialEnrollment || course.is_partial_only)) ? (course.course_category?.partial_start_position ?? 3) : null,
+          sari_synced: false,
+          sari_synced_at: null,
+          notes: marketingSessionId ? `marketing_session_id:${marketingSessionId}` : null,
+          vehicle_id: vehicleId || null,
+        })
+        .select('id')
+        .single()
 
-    logger.info('✅ Confirmed enrollment created:', enrollment.id)
+      if (enrollmentError || !inserted) {
+        throwIfCourseCapacityExceeded(enrollmentError)
+        logger.error('❌ Failed to create enrollment:', enrollmentError)
+
+        if (enrollmentError?.message?.includes('duplicate key')) {
+          if (
+            faberidClean
+            && (
+              enrollmentError.message.includes('course_id_sari_faberid')
+              || enrollmentError.message.includes('unique_faberid')
+            )
+          ) {
+            const raced = await loadCashFaberRegistrations(supabase, tenantId, courseId, faberidClean)
+            if (raced.length === 1 && isSameConfirmedEnrollment(raced[0], {
+              tenantId,
+              courseId,
+              faberid: faberidClean,
+            })) {
+              await persistConfirmedEnrollmentSnapshots({
+                supabase,
+                tenantId,
+                registrationId: raced[0].id,
+                sessions: confirmedSariSessions,
+                source: SARI_MEMBERSHIP_SOURCE.cashEnrollment,
+                markSynced: sariErrorCount === 0 && confirmedSariSessions.length > 0,
+              })
+            }
+            throw createError({
+              statusCode: 409,
+              statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.'
+            })
+          }
+          if (
+            enrollmentError.message.includes('course_id_email_key') ||
+            enrollmentError.message.includes('unique_email')
+          ) {
+            throw createError({
+              statusCode: 409,
+              statusMessage: 'Diese E-Mail-Adresse ist bereits für diesen Kurs angemeldet.'
+            })
+          }
+        }
+
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Anmeldung konnte nicht erstellt werden. Bitte versuchen Sie es später erneut.'
+        })
+      }
+
+      enrollment = inserted
+      logger.info('✅ Confirmed enrollment created:', enrollment.id)
+    }
 
     for (const confirmed of confirmedSariSessions) {
       await recordConfirmedSariMembershipWithRetry({
@@ -821,15 +903,6 @@ const handler = defineEventHandler(async (event) => {
         logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
       })
     }
-
-    const effectivePrice = resolvePublicEnrollmentPriceRappen({
-      pricePerParticipantRappen: course.price_per_participant_rappen ?? null,
-      isPartialOnly: !!course.is_partial_only,
-      isPartialEnrollment: !!isPartialEnrollment,
-      individualSessionNumber: typeof individualSessionNumber === 'number' ? individualSessionNumber : null,
-      partialPriceRappen: course.course_category?.partial_price_rappen ?? null,
-      sessions: course.course_sessions || [],
-    })
 
     let billing: PublicCourseBillingResult | null = null
     if (finalPaymentMethod === 'invoice') {
