@@ -1,17 +1,31 @@
 /**
- * F1 — Atomic public cash_on_site course enrollment + pending payment.
+ * F1 — Atomic public cash_on_site course enrollment + pending payment + idempotency.
  *
- * Registration + payments row + payment_id link commit in one PostgreSQL
- * function. Callers must not soft-succeed if the RPC fails. SARI / email /
- * CAPI stay outside the RPC.
+ * Canonical client transport: body field `idempotencyKey` (UUID v4).
+ * Same key + same server request hash → HTTP 200 idempotent replay with original IDs.
+ * Same key + different hash → HTTP 409 idempotency_conflict.
+ * Different key + business duplicate → HTTP 409 bereits angemeldet.
+ *
+ * SARI / email / CAPI stay outside the RPC.
  */
 import { createError } from 'h3'
 import { logger } from '~/utils/logger'
 import { COURSE_CAPACITY_HTTP_MESSAGE } from '~/server/utils/course-capacity'
 
+export const PUBLIC_CASH_IDEMPOTENCY_KEY_FIELD = 'idempotencyKey' as const
+
+/** UUID v4 (RFC 4122 variant). */
+const UUID_V4_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+export function isUuidV4(value: unknown): value is string {
+  return typeof value === 'string' && UUID_V4_RE.test(value)
+}
+
 export const PUBLIC_CASH_ENROLLMENT_STATUSES = [
   'enrolled',
-  'already_enrolled',
+  'idempotent_replay',
+  'idempotency_conflict',
   'capacity_exceeded',
   'tenant_mismatch',
   'course_not_found',
@@ -55,7 +69,7 @@ export type PublicCashEnrollmentPayload = {
 }
 
 export function isSuccessfulPublicCashEnrollment(status: PublicCashEnrollmentStatus): boolean {
-  return status === 'enrolled' || status === 'already_enrolled'
+  return status === 'enrolled' || status === 'idempotent_replay'
 }
 
 function parsePublicCashRpcResult(
@@ -104,9 +118,23 @@ export async function enrollPublicCashCourseWithPendingPayment(opts: {
   courseId: string
   courseName: string
   amountRappen: number
+  idempotencyKey: string
   registration: PublicCashEnrollmentPayload
 }): Promise<PublicCashEnrollmentResult> {
-  const { supabase, userId, tenantId, courseId, courseName, amountRappen, registration } = opts
+  const {
+    supabase,
+    userId,
+    tenantId,
+    courseId,
+    courseName,
+    amountRappen,
+    idempotencyKey,
+    registration,
+  } = opts
+
+  if (!isUuidV4(idempotencyKey)) {
+    return { status: 'invalid_args', error: 'idempotency_key_invalid' }
+  }
   if (
     !userId
     || !tenantId
@@ -123,6 +151,7 @@ export async function enrollPublicCashCourseWithPendingPayment(opts: {
     p_course_id: courseId,
     p_amount_rappen: amountRappen,
     p_course_name: courseName || 'Kurs',
+    p_idempotency_key: idempotencyKey,
     p_registration: registration,
   })
 
@@ -130,18 +159,30 @@ export async function enrollPublicCashCourseWithPendingPayment(opts: {
 }
 
 /**
- * already_enrolled is treated as HTTP 409 (same as pre-RPC duplicate checks),
- * not as a soft success — public cash must not claim a new enrollment succeeded.
+ * enrolled / idempotent_replay → success with both IDs.
+ * idempotency_conflict → 409 with stable code.
+ * payment_conflict (business duplicate, different key) → 409 bereits angemeldet.
  */
 export function throwIfPublicCashEnrollmentFailed(result: PublicCashEnrollmentResult): asserts result is PublicCashEnrollmentResult & {
-  status: 'enrolled'
+  status: 'enrolled' | 'idempotent_replay'
   registrationId: string
   paymentId: string
 } {
-  if (result.status === 'enrolled' && result.registrationId && result.paymentId) {
+  if (
+    (result.status === 'enrolled' || result.status === 'idempotent_replay')
+    && result.registrationId
+    && result.paymentId
+  ) {
     return
   }
-  if (result.status === 'already_enrolled' || result.status === 'payment_conflict' || result.status === 'session_conflict') {
+  if (result.status === 'idempotency_conflict') {
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'Diese Anfrage steht im Konflikt mit einer früheren Anmeldung.',
+      data: { code: 'idempotency_conflict' },
+    })
+  }
+  if (result.status === 'payment_conflict' || result.status === 'session_conflict') {
     throw createError({
       statusCode: 409,
       statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.',
@@ -157,7 +198,15 @@ export function throwIfPublicCashEnrollmentFailed(result: PublicCashEnrollmentRe
     throw createError({ statusCode: 404, statusMessage: 'Kurs nicht gefunden' })
   }
   if (result.status === 'invalid_args') {
-    throw createError({ statusCode: 400, statusMessage: 'Ungültige Anmeldedaten' })
+    throw createError({
+      statusCode: 400,
+      statusMessage: result.error === 'idempotency_key_invalid'
+        ? 'Ungültiger Idempotency-Key'
+        : 'Ungültige Anmeldedaten',
+      data: result.error === 'idempotency_key_invalid'
+        ? { code: 'idempotency_key_invalid' }
+        : undefined,
+    })
   }
   throw createError({
     statusCode: 500,

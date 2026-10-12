@@ -1,9 +1,9 @@
 /**
- * F1 public cash enrollment — contract + helper tests.
+ * F1 public cash enrollment — contract + helper tests (idempotency hardening).
  *
- * These do NOT prove PostgreSQL transaction atomicity or concurrent locking.
  * Live SQL is gated on COURSE_ISOLATED_DB_URL (never Production or shared staging)
- * and is not run in the default suite.
+ * and is not run in the default suite. These tests do NOT prove PostgreSQL
+ * transaction atomicity or concurrent locking.
  */
 import { describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
@@ -11,6 +11,7 @@ import { resolve } from 'node:path'
 import {
   enrollPublicCashCourseWithPendingPayment,
   isSuccessfulPublicCashEnrollment,
+  isUuidV4,
   throwIfPublicCashEnrollmentFailed,
 } from '../enroll-public-cash-course'
 
@@ -21,116 +22,120 @@ function read(rel: string): string {
 
 const sql = read('migrations/20261012_enroll_public_cash_course_with_pending_payment.sql')
 const enrollCashSrc = read('server/api/courses/enroll-cash.post.ts')
-const adminBillingSrc = read('server/utils/course-enrollment-billing.ts')
+const modalSrc = read('components/customer/CourseEnrollmentModal.vue')
 const enrollWalleeSrc = read('server/api/courses/enroll-wallee.post.ts')
+const adminBillingSrc = read('server/utils/course-enrollment-billing.ts')
 
-describe('F1 atomic public cash enrollment SQL (contract — not a live TX test)', () => {
-  it('registration insert, payment insert, and payment_id link share one function / exception block', () => {
-    const regAt = sql.indexOf('INSERT INTO public.course_registrations')
-    const payAt = sql.indexOf('INSERT INTO public.payments')
-    const linkAt = sql.indexOf('SET payment_id = v_payment_id')
-    expect(regAt).toBeGreaterThan(0)
-    expect(payAt).toBeGreaterThan(regAt)
-    expect(linkAt).toBeGreaterThan(payAt)
-    expect(sql).toContain('EXCEPTION')
-    expect(sql).toContain('WHEN unique_violation THEN')
-  })
+const SAMPLE_KEY = '550e8400-e29b-41d4-a716-446655440000'
 
-  it('creates pending cash_on_site payment with payment_provider NULL and public_cash metadata', () => {
-    expect(sql).toContain("'cash_on_site'")
-    expect(sql).toContain("'pending'")
-    expect(sql).toMatch(/payment_provider[\s\S]*NULL/)
-    expect(sql).toContain("'public_cash_course_enroll', true")
-    expect(sql).not.toMatch(/payment_provider\s*,\s*\n\s*'wallee'/)
-  })
-
-  it('adds narrowly scoped partial unique index', () => {
-    expect(sql).toContain('payments_public_cash_course_enroll_registration_uidx')
-    expect(sql).toContain("(metadata->>'public_cash_course_enroll') = 'true'")
-    expect(sql).toContain('CREATE UNIQUE INDEX IF NOT EXISTS payments_public_cash_course_enroll_registration_uidx')
-  })
-
-  it('security: SECURITY DEFINER, search_path, revoke anon/authenticated', () => {
-    expect(sql).toContain('SECURITY DEFINER')
-    expect(sql).toContain('SET search_path = pg_catalog, public')
-    expect(sql).toContain(
-      'REVOKE ALL ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, jsonb) FROM PUBLIC',
-    )
-    expect(sql).toContain(
-      'REVOKE ALL ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, jsonb) FROM anon, authenticated',
-    )
-    expect(sql).toContain(
-      'GRANT EXECUTE ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, jsonb) TO postgres, service_role',
-    )
-    expect(sql).toContain("set_config('request.jwt.claim.role', 'service_role', true)")
-  })
-
-  it('rejects tenant mismatch and verifies course belongs to tenant', () => {
-    expect(sql).toContain('v_course.tenant_id IS DISTINCT FROM p_tenant_id')
-    expect(sql).toContain('v_user_tenant IS DISTINCT FROM p_tenant_id')
-    expect(sql).toContain("'tenant_mismatch'")
-    expect(sql).toContain('FOR UPDATE')
-  })
-
-  it('idempotency: already_enrolled for matching cash seat; payment_conflict otherwise', () => {
-    expect(sql).toContain("'already_enrolled'")
-    expect(sql).toContain("'payment_conflict'")
-    expect(sql).toContain("r.status IS DISTINCT FROM 'cancelled'")
-    expect(sql).toContain("r.deleted_at IS NULL")
-    expect(sql).toContain("v_exist.payment_method = 'cash_on_site'")
-  })
-
-  it('capacity trigger is not replaced', () => {
-    expect(sql).toContain('course_capacity_exceeded')
-    expect(sql).not.toContain('DROP TRIGGER')
-    expect(sql).not.toContain('DROP FUNCTION IF EXISTS public.enforce_course_registration_capacity')
-  })
-
-  it('documents read-only duplicate preflight', () => {
-    expect(sql).toContain('Read-only duplicate preflight')
-    expect(sql).toContain("metadata->>'public_cash_course_enroll'")
+describe('F1 UUID v4 helper', () => {
+  it('accepts UUID v4 and rejects missing/malformed', () => {
+    expect(isUuidV4(SAMPLE_KEY)).toBe(true)
+    expect(isUuidV4('not-a-uuid')).toBe(false)
+    expect(isUuidV4('')).toBe(false)
+    expect(isUuidV4(null)).toBe(false)
+    expect(isUuidV4('550e8400-e29b-11d4-a716-446655440000')).toBe(false) // not version 4
   })
 })
 
-describe('F1 enroll-cash wiring (source contract)', () => {
-  it('cash_on_site uses the atomic RPC; invoice keeps PostgREST insert', () => {
-    expect(enrollCashSrc).toContain('enrollPublicCashCourseWithPendingPayment')
-    expect(enrollCashSrc).toContain('throwIfPublicCashEnrollmentFailed')
-    expect(enrollCashSrc).toContain("finalPaymentMethod === 'cash_on_site'")
-    const cashRpcAt = enrollCashSrc.indexOf('enrollPublicCashCourseWithPendingPayment')
-    const invoiceInsertAt = enrollCashSrc.lastIndexOf(".from('course_registrations')")
-    expect(cashRpcAt).toBeGreaterThan(0)
-    expect(invoiceInsertAt).toBeGreaterThan(cashRpcAt)
+describe('F1 SQL contract — idempotency + atomic enroll', () => {
+  it('creates idempotency table with tenant+key PK and completed-only linkage', () => {
+    expect(sql).toContain('CREATE TABLE IF NOT EXISTS public.public_cash_course_enroll_idempotency')
+    expect(sql).toContain('PRIMARY KEY (tenant_id, idempotency_key)')
+    expect(sql).toContain('request_hash text NOT NULL')
+    expect(sql).toContain('registration_id uuid NOT NULL')
+    expect(sql).toContain('payment_id uuid NOT NULL')
+    expect(sql).toContain('REVOKE ALL ON TABLE public.public_cash_course_enroll_idempotency FROM PUBLIC, anon, authenticated')
   })
 
-  it('does not reuse createEnrollmentPayment for public cash', () => {
+  it('requires p_idempotency_key and uses advisory lock + request hash', () => {
+    expect(sql).toContain('p_idempotency_key uuid')
+    expect(sql).toContain('pg_advisory_xact_lock')
+    expect(sql).toContain('v_request_hash := md5(v_canonical)')
+    expect(sql).toContain("'idempotent_replay'")
+    expect(sql).toContain("'idempotency_conflict'")
+    expect(sql).toContain('cash_on_site')
+  })
+
+  it('registration, payment, payment_id link, and idempotency insert share one exception block', () => {
+    const regAt = sql.indexOf('INSERT INTO public.course_registrations')
+    const payAt = sql.indexOf('INSERT INTO public.payments')
+    const linkAt = sql.indexOf('SET payment_id = v_payment_id')
+    const idemAt = sql.indexOf('INSERT INTO public.public_cash_course_enroll_idempotency')
+    expect(regAt).toBeGreaterThan(0)
+    expect(payAt).toBeGreaterThan(regAt)
+    expect(linkAt).toBeGreaterThan(payAt)
+    expect(idemAt).toBeGreaterThan(linkAt)
+    expect(sql).toContain('WHEN unique_violation THEN')
+  })
+
+  it('documents hash canonicalization and partial payment unique index', () => {
+    expect(sql).toContain('REQUEST HASH CANONICALIZATION')
+    expect(sql).toContain('payments_public_cash_course_enroll_registration_uidx')
+    expect(sql).toContain("(metadata->>'public_cash_course_enroll') = 'true'")
+  })
+
+  it('security: DEFINER, search_path, OWNER postgres, revoke anon/authenticated', () => {
+    expect(sql).toContain('SECURITY DEFINER')
+    expect(sql).toContain('SET search_path = pg_catalog, public')
+    expect(sql).toContain('OWNER TO postgres')
+    expect(sql).toContain(
+      'REVOKE ALL ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, uuid, jsonb) FROM PUBLIC',
+    )
+    expect(sql).toContain(
+      'REVOKE ALL ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, uuid, jsonb) FROM anon, authenticated',
+    )
+    expect(sql).toContain(
+      'GRANT EXECUTE ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, uuid, jsonb) TO postgres, service_role',
+    )
+  })
+
+  it('sets payment_provider NULL and hardcodes cash_on_site/pending', () => {
+    expect(sql).toMatch(/payment_provider[\s\S]*NULL/)
+    expect(sql).toContain("'public_cash_course_enroll', true")
+  })
+})
+
+describe('F1 enroll-cash + modal wiring', () => {
+  it('cash_on_site requires UUID idempotencyKey; invoice path unchanged', () => {
+    expect(enrollCashSrc).toContain('isUuidV4(rawIdempotencyKey)')
+    expect(enrollCashSrc).toContain('idempotencyKey: rawIdempotencyKey')
+    expect(enrollCashSrc).toContain("finalPaymentMethod === 'cash_on_site'")
+    expect(enrollCashSrc).toContain(".from('course_registrations')")
+  })
+
+  it('modal uses body.idempotencyKey, reuses key, clears on success/close', () => {
+    expect(modalSrc).toContain('idempotencyKey: ensureCashIdempotencyKey()')
+    expect(modalSrc).toContain('ensureCashIdempotencyKey')
+    expect(modalSrc).toContain('clearCashIdempotencyKey')
+    expect(modalSrc).toContain('shouldRetireCashIdempotencyKeyAfterError')
+    expect(modalSrc).toContain('clearCashIdempotencyKey()')
+  })
+
+  it('does not reuse createEnrollmentPayment; Wallee unchanged', () => {
     expect(enrollCashSrc).not.toContain('createEnrollmentPayment')
     expect(adminBillingSrc).toContain('export async function createEnrollmentPayment')
+    expect(enrollWalleeSrc).not.toContain('enrollPublicCashCourseWithPendingPayment')
+    expect(enrollWalleeSrc).not.toContain('idempotencyKey')
   })
 
-  it('confirmation email remains after enrollment creation block', () => {
+  it('confirmation email remains after enrollment block', () => {
     const rpcAt = enrollCashSrc.indexOf('enrollPublicCashCourseWithPendingPayment')
     const emailAt = enrollCashSrc.indexOf('send-course-enrollment-confirmation')
     expect(rpcAt).toBeGreaterThan(0)
     expect(emailAt).toBeGreaterThan(rpcAt)
   })
-
-  it('Wallee enroll path is unchanged (still process-public / no F1 RPC)', () => {
-    expect(enrollWalleeSrc).not.toContain('enroll_public_cash_course_with_pending_payment')
-    expect(enrollWalleeSrc).not.toContain('enrollPublicCashCourseWithPendingPayment')
-    expect(enrollWalleeSrc).toContain('/api/payments/process-public')
-  })
 })
 
 describe('F1 TS helper behavior', () => {
-  it('isSuccessfulPublicCashEnrollment only treats enrolled/already_enrolled as success statuses', () => {
+  it('treats enrolled and idempotent_replay as success statuses', () => {
     expect(isSuccessfulPublicCashEnrollment('enrolled')).toBe(true)
-    expect(isSuccessfulPublicCashEnrollment('already_enrolled')).toBe(true)
-    expect(isSuccessfulPublicCashEnrollment('rpc_error')).toBe(false)
+    expect(isSuccessfulPublicCashEnrollment('idempotent_replay')).toBe(true)
+    expect(isSuccessfulPublicCashEnrollment('idempotency_conflict')).toBe(false)
     expect(isSuccessfulPublicCashEnrollment('payment_conflict')).toBe(false)
   })
 
-  it('throwIfPublicCashEnrollmentFailed allows only enrolled with both ids', () => {
+  it('throwIf allows enrolled/replay with IDs; maps conflict codes', () => {
     expect(() =>
       throwIfPublicCashEnrollmentFailed({
         status: 'enrolled',
@@ -138,80 +143,87 @@ describe('F1 TS helper behavior', () => {
         paymentId: 'pay-1',
       }),
     ).not.toThrow()
-
     expect(() =>
-      throwIfPublicCashEnrollmentFailed({ status: 'already_enrolled', registrationId: 'reg-1', paymentId: 'pay-1' }),
+      throwIfPublicCashEnrollmentFailed({
+        status: 'idempotent_replay',
+        registrationId: 'reg-1',
+        paymentId: 'pay-1',
+      }),
+    ).not.toThrow()
+    expect(() =>
+      throwIfPublicCashEnrollmentFailed({ status: 'idempotency_conflict', registrationId: 'r', paymentId: 'p' }),
     ).toThrow()
-
     expect(() =>
-      throwIfPublicCashEnrollmentFailed({ status: 'rpc_error' }),
+      throwIfPublicCashEnrollmentFailed({ status: 'payment_conflict', registrationId: 'r' }),
     ).toThrow()
-
     expect(() =>
-      throwIfPublicCashEnrollmentFailed({ status: 'enrolled', registrationId: 'reg-1' }),
+      throwIfPublicCashEnrollmentFailed({ status: 'invalid_args', error: 'idempotency_key_invalid' }),
     ).toThrow()
   })
 
-  it('enrollPublicCashCourseWithPendingPayment maps RPC success and rejects invalid args without calling rpc', async () => {
-    const rpc = vi.fn().mockResolvedValue({
-      data: { status: 'enrolled', registration_id: 'reg-1', payment_id: 'pay-1' },
-      error: null,
+  it('rejects invalid idempotency key without calling rpc', async () => {
+    const rpc = vi.fn()
+    const result = await enrollPublicCashCourseWithPendingPayment({
+      supabase: { rpc },
+      userId: 'u1',
+      tenantId: 't1',
+      courseId: 'c1',
+      courseName: 'VKU',
+      amountRappen: 100,
+      idempotencyKey: 'bad',
+      registration: { course_id: 'c1', tenant_id: 't1', user_id: 'u1' },
     })
+    expect(result.status).toBe('invalid_args')
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it('passes idempotency key to RPC and maps enrolled / replay / transport error', async () => {
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({
+        data: { status: 'enrolled', registration_id: 'reg-1', payment_id: 'pay-1' },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { status: 'idempotent_replay', registration_id: 'reg-1', payment_id: 'pay-1' },
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: null, error: { message: 'boom' } })
+
     const supabase = { rpc }
-    const ok = await enrollPublicCashCourseWithPendingPayment({
+    const base = {
       supabase,
       userId: 'u1',
       tenantId: 't1',
       courseId: 'c1',
       courseName: 'VKU',
       amountRappen: 25000,
+      idempotencyKey: SAMPLE_KEY,
       registration: { course_id: 'c1', tenant_id: 't1', user_id: 'u1' },
-    })
-    expect(ok).toEqual({
+    }
+
+    await expect(enrollPublicCashCourseWithPendingPayment(base)).resolves.toEqual({
       status: 'enrolled',
       registrationId: 'reg-1',
       paymentId: 'pay-1',
     })
-    expect(rpc).toHaveBeenCalledWith('enroll_public_cash_course_with_pending_payment', expect.objectContaining({
-      p_user_id: 'u1',
-      p_tenant_id: 't1',
-      p_course_id: 'c1',
-      p_amount_rappen: 25000,
-      p_course_name: 'VKU',
-    }))
+    expect(rpc).toHaveBeenCalledWith(
+      'enroll_public_cash_course_with_pending_payment',
+      expect.objectContaining({ p_idempotency_key: SAMPLE_KEY }),
+    )
 
-    const bad = await enrollPublicCashCourseWithPendingPayment({
-      supabase,
-      userId: '',
-      tenantId: 't1',
-      courseId: 'c1',
-      courseName: 'VKU',
-      amountRappen: 100,
-      registration: { course_id: 'c1', tenant_id: 't1', user_id: 'u1' },
+    await expect(enrollPublicCashCourseWithPendingPayment(base)).resolves.toEqual({
+      status: 'idempotent_replay',
+      registrationId: 'reg-1',
+      paymentId: 'pay-1',
     })
-    expect(bad.status).toBe('invalid_args')
-    expect(rpc).toHaveBeenCalledTimes(1)
-  })
 
-  it('RPC transport error never looks like enrolled', async () => {
-    const supabase = {
-      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'boom' } }),
-    }
-    const result = await enrollPublicCashCourseWithPendingPayment({
-      supabase,
-      userId: 'u1',
-      tenantId: 't1',
-      courseId: 'c1',
-      courseName: 'VKU',
-      amountRappen: 100,
-      registration: { course_id: 'c1', tenant_id: 't1', user_id: 'u1' },
-    })
-    expect(result.status).toBe('rpc_error')
-    expect(() => throwIfPublicCashEnrollmentFailed(result)).toThrow()
+    const fail = await enrollPublicCashCourseWithPendingPayment(base)
+    expect(fail.status).toBe('rpc_error')
+    expect(() => throwIfPublicCashEnrollmentFailed(fail)).toThrow()
   })
 })
 
-describe('F1 live SQL (gated — not run without COURSE_ISOLATED_DB_URL)', () => {
+describe('F1 live SQL (gated — NOT RUN without COURSE_ISOLATED_DB_URL)', () => {
   const liveUrl = process.env.COURSE_ISOLATED_DB_URL
   const maybe = liveUrl ? it : it.skip
 

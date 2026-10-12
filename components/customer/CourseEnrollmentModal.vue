@@ -1033,6 +1033,41 @@ const sariData = ref<any>(null)
 const isFaberIdFocused = ref(false)
 const isPhoneFocused = ref(false)
 
+/**
+ * F1 cash_on_site idempotency (canonical body field: idempotencyKey).
+ * One UUID v4 per submit attempt; reused on uncertain retry; cleared on
+ * confirmed success, business/client 4xx, or modal close (new attempt).
+ * Not persisted to storage — in-memory only for this modal instance.
+ */
+const cashIdempotencyKey = ref<string | null>(null)
+
+function ensureCashIdempotencyKey(): string {
+  if (!cashIdempotencyKey.value) {
+    cashIdempotencyKey.value =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            const r = (Math.random() * 16) | 0
+            const v = c === 'x' ? r : (r & 0x3) | 0x8
+            return v.toString(16)
+          })
+  }
+  return cashIdempotencyKey.value
+}
+
+function clearCashIdempotencyKey() {
+  cashIdempotencyKey.value = null
+}
+
+function shouldRetireCashIdempotencyKeyAfterError(error: any): boolean {
+  const status = Number(error?.statusCode || error?.status || error?.response?.status || 0)
+  if (!status) return false // network / unknown — keep key for retry
+  if (status === 408 || status === 429) return false
+  if (status >= 500) return false
+  // Confirmed client/business outcomes — next submit is a new attempt
+  return status >= 400 && status < 500
+}
+
 // ── Vehicle selection ─────────────────────────────────────────────────────
 const availableVehicles = ref<any[]>([])
 const selectedVehicleId = ref<string | null>(null)
@@ -1808,6 +1843,7 @@ const submitEnrollment = async () => {
       ? '/api/courses/enroll-wallee'
       : '/api/courses/enroll-cash'
     const nonWalleePaymentMethod = paymentMethod.value === 'INVOICE' ? 'invoice' : 'cash_on_site'
+    const isCashOnSite = paymentMethod.value !== 'WALLEE' && nonWalleePaymentMethod === 'cash_on_site'
     
     // Build custom sessions object if any sessions were swapped
     const hasCustomSessions = Object.keys(customSessions.value).length > 0
@@ -1861,10 +1897,13 @@ const submitEnrollment = async () => {
         marketingAttribution,
         vehicleId: selectedVehicleId.value || undefined,
         ...(paymentMethod.value !== 'WALLEE' ? { paymentMethod: nonWalleePaymentMethod } : {}),
+        // Cash only: reuse same UUID across uncertain retries for this attempt.
+        ...(isCashOnSite ? { idempotencyKey: ensureCashIdempotencyKey() } : {}),
       }
     }) as any
     
     if (response.success) {
+      if (isCashOnSite) clearCashIdempotencyKey()
       if (response.paymentUrl) {
         // Keep loading state active during navigation — do NOT reset isLoading.
         // Small delay gives Wallee time to activate the transaction before the
@@ -1879,10 +1918,15 @@ const submitEnrollment = async () => {
       }
     } else {
       enrollmentError.value = getGermanErrorMessage(response)
+      if (isCashOnSite) clearCashIdempotencyKey()
     }
   } catch (error: any) {
     logger.error('Enrollment error:', error)
     enrollmentError.value = getGermanErrorMessage(error)
+    // Keep key on network/5xx so the user can retry the same attempt.
+    if (paymentMethod.value === 'CASH_ON_SITE' && shouldRetireCashIdempotencyKeyAfterError(error)) {
+      clearCashIdempotencyKey()
+    }
   } finally {
     // Don't reset loading state when navigating to Wallee — button stays
     // disabled with spinner until the browser actually leaves the page.
@@ -1921,6 +1965,8 @@ watch(() => props.isOpen, (isOpen) => {
     isIndividualSessionMode.value = false
     partialConfirmed.value = false
     sessionHasAlternatives.value = {}
+    // Closing the modal ends the submit attempt — next open is a new key.
+    clearCashIdempotencyKey()
   }
 })
 

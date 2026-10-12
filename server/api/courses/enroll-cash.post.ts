@@ -66,6 +66,7 @@ import {
 } from '~/server/utils/public-course-invoice'
 import {
   enrollPublicCashCourseWithPendingPayment,
+  isUuidV4,
   throwIfPublicCashEnrollmentFailed,
 } from '~/server/utils/enroll-public-cash-course'
 
@@ -254,6 +255,8 @@ const handler = defineEventHandler(async (event) => {
       marketingAttribution, // Optional: client-side gclid/UTM blob
       vehicleId,            // Optional: selected rental vehicle
       paymentMethod: _requestedPaymentMethod, // accepted for back-compat; course.payment_method wins
+      // F1 cash_on_site only — canonical transport: body.idempotencyKey (UUID v4).
+      idempotencyKey: rawIdempotencyKey,
     } = body
 
     logger.debug('💵 Cash enrollment request:', { courseId, requestedTenantId, hasCustomSessions: !!requestedCustomSessions, isPartialEnrollment })
@@ -689,6 +692,13 @@ const handler = defineEventHandler(async (event) => {
     // F1 cash_on_site: atomic RPC creates registration + pending payment + payment_id.
     // Invoice path keeps PostgREST insert; billing follows below (unchanged F3 scope).
     if (finalPaymentMethod === 'cash_on_site') {
+      if (!isUuidV4(rawIdempotencyKey)) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Idempotency-Key fehlt oder ist ungültig',
+          data: { code: 'idempotency_key_invalid' },
+        })
+      }
       const cashResult = await enrollPublicCashCourseWithPendingPayment({
         supabase,
         userId: guestUserId,
@@ -696,10 +706,11 @@ const handler = defineEventHandler(async (event) => {
         courseId,
         courseName: course.name || 'Kurs',
         amountRappen: effectivePrice,
+        idempotencyKey: rawIdempotencyKey,
         registration: registrationPayload,
       })
       if (
-        (cashResult.status === 'already_enrolled' || cashResult.status === 'payment_conflict')
+        cashResult.status === 'payment_conflict'
         && faberidClean
         && cashResult.registrationId
       ) {
@@ -724,6 +735,7 @@ const handler = defineEventHandler(async (event) => {
       logger.info('✅ Confirmed cash enrollment + pending payment created:', {
         registrationId: enrollment.id,
         paymentId: cashResult.paymentId,
+        replay: cashResult.status === 'idempotent_replay',
       })
     } else {
       const { data: inserted, error: enrollmentError } = await supabase

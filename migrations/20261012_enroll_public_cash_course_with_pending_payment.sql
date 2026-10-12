@@ -1,40 +1,67 @@
--- F1: atomic public cash_on_site course enrollment + pending payment.
+-- F1: atomic public cash_on_site course enrollment + pending payment + request idempotency.
 -- Create only. Do not apply automatically to Production or shared staging.
 -- Isolated/local apply only.
 --
--- OLD PATH:
---   enroll-cash INSERT course_registrations (confirmed, payment_status=pending)
---   with no payments row. Open Items then invoice from source=course_registrations;
---   mark-invoice-paid cannot sync a missing payments row; Payments UI stays empty.
--- NEW PATH:
---   public.enroll_public_cash_course_with_pending_payment(...) inserts the
---   registration AND the pending cash payment AND sets payment_id in ONE TX.
--- WHY REQUIRED:
---   Business rule: public cash success requires both rows. PostgREST multi-step
---   leaves a crash window (seat without payment). Sibling SECURITY DEFINER RPCs
---   (enroll_course_with_credit, fulfill_course_wallee_payment) already use this
---   pattern for the same class of inconsistency.
--- BLAST RADIUS:
---   server/api/courses/enroll-cash.post.ts cash_on_site branch only.
---   Wallee / invoice / admin / credit / SARI transfer unchanged.
--- IDEMPOTENCY:
---   Existing confirmed seat for same course+tenant+(user|email|faber) returns
---   already_enrolled / payment_conflict (same identity contract as credit enroll).
---   Unique(course,email/faberid) + partial payment uidx are concurrency backstops.
---   No separate client idempotency key exists on this public path.
+-- IDEMPOTENCY CONTRACT (canonical transport: body.idempotencyKey UUID v4):
+--   Client generates one UUID per cash submit attempt; retries reuse the same key;
+--   new human submit uses a new key. Server requires the key for cash_on_site.
+--   Unique (tenant_id, idempotency_key) stores request_hash + registration_id + payment_id.
+--   Same key + same hash → idempotent_replay (HTTP 200 + original IDs).
+--   Same key + different hash → idempotency_conflict (HTTP 409).
+--   Different key + business duplicate (email/faber/user) → payment_conflict (HTTP 409).
+--   Contact fields are NOT the sole concurrency lock; advisory xact lock + idempotency PK are.
 --
--- Read-only duplicate preflight BEFORE apply (expect 0):
+-- REQUEST HASH CANONICALIZATION (server-only; never trust a client hash):
+--   md5 of pipe-joined fields:
+--     course_id|tenant_id|user_id|cash_on_site|amount_rappen|lower(email)|faber|
+--     is_partial|individual_session|partial_start|canonical_custom_sessions_json|vehicle_id
+--   custom_sessions: jsonb text as stored (empty string if null).
+--
+-- OWNERSHIP / PRIVILEGE:
+--   Function owner: postgres (explicit ALTER). EXECUTE: postgres + service_role only.
+--   Table: RLS enabled; service_role ALL; no anon/authenticated grants.
+--
+-- Read-only preflight BEFORE apply (expect 0):
 --   SELECT tenant_id, course_registration_id, COUNT(*) AS cnt
 --   FROM public.payments
---   WHERE course_registration_id IS NOT NULL
---     AND tenant_id IS NOT NULL
+--   WHERE course_registration_id IS NOT NULL AND tenant_id IS NOT NULL
 --     AND (metadata->>'public_cash_course_enroll') = 'true'
---   GROUP BY 1, 2
---   HAVING COUNT(*) > 1;
+--   GROUP BY 1, 2 HAVING COUNT(*) > 1;
 --
 -- ROLLBACK:
+--   DROP FUNCTION IF EXISTS public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, uuid, jsonb);
 --   DROP FUNCTION IF EXISTS public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, jsonb);
+--   DROP TABLE IF EXISTS public.public_cash_course_enroll_idempotency;
 --   DROP INDEX IF EXISTS public.payments_public_cash_course_enroll_registration_uidx;
+
+CREATE TABLE IF NOT EXISTS public.public_cash_course_enroll_idempotency (
+  tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  idempotency_key uuid NOT NULL,
+  request_hash text NOT NULL,
+  registration_id uuid NOT NULL REFERENCES public.course_registrations(id) ON DELETE CASCADE,
+  payment_id uuid NOT NULL REFERENCES public.payments(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (tenant_id, idempotency_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_public_cash_enroll_idempotency_registration
+  ON public.public_cash_course_enroll_idempotency (tenant_id, registration_id);
+
+ALTER TABLE public.public_cash_course_enroll_idempotency ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS public_cash_course_enroll_idempotency_service_role
+  ON public.public_cash_course_enroll_idempotency;
+CREATE POLICY public_cash_course_enroll_idempotency_service_role
+  ON public.public_cash_course_enroll_idempotency
+  FOR ALL
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
+
+REVOKE ALL ON TABLE public.public_cash_course_enroll_idempotency FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.public_cash_course_enroll_idempotency TO service_role;
+
+COMMENT ON TABLE public.public_cash_course_enroll_idempotency IS
+  'F1: completed public cash course enroll idempotency. Rows exist only after a successful atomic enroll+payment.';
 
 -- One public-cash enrollment payment per tenant + course registration.
 CREATE UNIQUE INDEX IF NOT EXISTS payments_public_cash_course_enroll_registration_uidx
@@ -43,12 +70,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS payments_public_cash_course_enroll_registratio
     AND tenant_id IS NOT NULL
     AND (metadata->>'public_cash_course_enroll') = 'true';
 
+-- Drop prior F1 signature (6-arg) if present from earlier PR revision.
+DROP FUNCTION IF EXISTS public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, jsonb);
+DROP FUNCTION IF EXISTS public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, uuid, jsonb);
+
 CREATE OR REPLACE FUNCTION public.enroll_public_cash_course_with_pending_payment(
   p_user_id uuid,
   p_tenant_id uuid,
   p_course_id uuid,
   p_amount_rappen integer,
   p_course_name text,
+  p_idempotency_key uuid,
   p_registration jsonb
 )
 RETURNS jsonb
@@ -60,6 +92,7 @@ DECLARE
   v_course public.courses%ROWTYPE;
   v_exist public.course_registrations%ROWTYPE;
   v_pay public.payments%ROWTYPE;
+  v_idem public.public_cash_course_enroll_idempotency%ROWTYPE;
   v_user_tenant uuid;
   v_payload_course uuid;
   v_payload_tenant uuid;
@@ -70,9 +103,15 @@ DECLARE
   v_faber text;
   v_custom jsonb;
   v_new_session integer;
+  v_partial_start integer;
+  v_is_partial boolean;
+  v_vehicle uuid;
   v_desc text;
+  v_request_hash text;
+  v_canonical text;
+  v_lock_key bigint;
 BEGIN
-  IF p_user_id IS NULL OR p_tenant_id IS NULL OR p_course_id IS NULL THEN
+  IF p_user_id IS NULL OR p_tenant_id IS NULL OR p_course_id IS NULL OR p_idempotency_key IS NULL THEN
     RETURN jsonb_build_object('status', 'invalid_args');
   END IF;
 
@@ -84,8 +123,11 @@ BEGIN
     RETURN jsonb_build_object('status', 'invalid_args');
   END IF;
 
-  -- service_role-only RPC. JWT claim lets payment-field triggers allow writes.
   PERFORM set_config('request.jwt.claim.role', 'service_role', true);
+
+  -- Serialize concurrent claims for the same tenant+key (DB-enforced coordination).
+  v_lock_key := hashtextextended(p_tenant_id::text || ':' || p_idempotency_key::text, 0);
+  PERFORM pg_advisory_xact_lock(v_lock_key);
 
   SELECT u.tenant_id INTO v_user_tenant
   FROM public.users u
@@ -132,7 +174,81 @@ BEGIN
     'Kursanmeldung'
   );
 
-  -- Active enrollment for this identity: idempotent replay or conflict.
+  BEGIN
+    IF jsonb_typeof(p_registration->'individual_session_number') = 'number' THEN
+      v_new_session := (p_registration->>'individual_session_number')::integer;
+    ELSIF NULLIF(btrim(COALESCE(p_registration->>'individual_session_number', '')), '') IS NOT NULL THEN
+      v_new_session := (p_registration->>'individual_session_number')::integer;
+    ELSE
+      v_new_session := NULL;
+    END IF;
+  EXCEPTION WHEN invalid_text_representation THEN
+    v_new_session := NULL;
+  END;
+
+  BEGIN
+    IF NULLIF(p_registration->>'partial_start_session', '') IS NULL THEN
+      v_partial_start := NULL;
+    ELSE
+      v_partial_start := (p_registration->>'partial_start_session')::integer;
+    END IF;
+  EXCEPTION WHEN invalid_text_representation THEN
+    v_partial_start := NULL;
+  END;
+
+  v_is_partial := COALESCE((p_registration->>'is_partial_enrollment')::boolean, false);
+
+  BEGIN
+    v_vehicle := NULLIF(p_registration->>'vehicle_id', '')::uuid;
+  EXCEPTION WHEN invalid_text_representation THEN
+    RETURN jsonb_build_object('status', 'invalid_args');
+  END;
+
+  IF jsonb_typeof(p_registration->'custom_sessions') = 'object'
+     OR jsonb_typeof(p_registration->'custom_sessions') = 'array' THEN
+    v_custom := p_registration->'custom_sessions';
+  ELSE
+    v_custom := NULL;
+  END IF;
+
+  v_canonical :=
+    p_course_id::text || '|' ||
+    p_tenant_id::text || '|' ||
+    p_user_id::text || '|' ||
+    'cash_on_site' || '|' ||
+    p_amount_rappen::text || '|' ||
+    lower(COALESCE(v_email, '')) || '|' ||
+    COALESCE(v_faber, '') || '|' ||
+    CASE WHEN v_is_partial THEN '1' ELSE '0' END || '|' ||
+    COALESCE(v_new_session::text, '') || '|' ||
+    COALESCE(v_partial_start::text, '') || '|' ||
+    COALESCE(v_custom::text, '') || '|' ||
+    COALESCE(v_vehicle::text, '');
+  v_request_hash := md5(v_canonical);
+
+  -- Completed idempotency row for this key?
+  SELECT * INTO v_idem
+  FROM public.public_cash_course_enroll_idempotency i
+  WHERE i.tenant_id = p_tenant_id
+    AND i.idempotency_key = p_idempotency_key
+  FOR UPDATE;
+
+  IF FOUND THEN
+    IF v_idem.request_hash IS DISTINCT FROM v_request_hash THEN
+      RETURN jsonb_build_object(
+        'status', 'idempotency_conflict',
+        'registration_id', v_idem.registration_id,
+        'payment_id', v_idem.payment_id
+      );
+    END IF;
+    RETURN jsonb_build_object(
+      'status', 'idempotent_replay',
+      'registration_id', v_idem.registration_id,
+      'payment_id', v_idem.payment_id
+    );
+  END IF;
+
+  -- Business duplicate for a *different* request key (preserve existing product semantics).
   SELECT * INTO v_exist
   FROM public.course_registrations r
   WHERE r.course_id = p_course_id
@@ -152,53 +268,10 @@ BEGIN
   LIMIT 1;
 
   IF FOUND THEN
-    IF v_exist.payment_method = 'cash_on_site'
-       AND v_exist.user_id = p_user_id THEN
-      SELECT * INTO v_pay
-      FROM public.payments p
-      WHERE p.id = v_exist.payment_id
-         OR (
-           p.course_registration_id = v_exist.id
-           AND p.tenant_id = p_tenant_id
-           AND (p.metadata->>'public_cash_course_enroll') = 'true'
-         )
-      ORDER BY CASE WHEN p.id = v_exist.payment_id THEN 0 ELSE 1 END
-      LIMIT 1;
-
-      IF FOUND
-         AND v_pay.tenant_id = p_tenant_id
-         AND v_pay.payment_method = 'cash_on_site'
-         AND (v_pay.metadata->>'public_cash_course_enroll') = 'true' THEN
-        RETURN jsonb_build_object(
-          'status', 'already_enrolled',
-          'registration_id', v_exist.id,
-          'payment_id', v_pay.id
-        );
-      END IF;
-    END IF;
     RETURN jsonb_build_object(
       'status', 'payment_conflict',
       'registration_id', v_exist.id
     );
-  END IF;
-
-  BEGIN
-    IF jsonb_typeof(p_registration->'individual_session_number') = 'number' THEN
-      v_new_session := (p_registration->>'individual_session_number')::integer;
-    ELSIF NULLIF(btrim(COALESCE(p_registration->>'individual_session_number', '')), '') IS NOT NULL THEN
-      v_new_session := (p_registration->>'individual_session_number')::integer;
-    ELSE
-      v_new_session := NULL;
-    END IF;
-  EXCEPTION WHEN invalid_text_representation THEN
-    v_new_session := NULL;
-  END;
-
-  IF jsonb_typeof(p_registration->'custom_sessions') = 'object'
-     OR jsonb_typeof(p_registration->'custom_sessions') = 'array' THEN
-    v_custom := p_registration->'custom_sessions';
-  ELSE
-    v_custom := NULL;
   END IF;
 
   BEGIN
@@ -253,13 +326,10 @@ BEGIN
       'cash_on_site',
       0,
       v_custom,
-      COALESCE((p_registration->>'is_partial_enrollment')::boolean, false),
-      CASE
-        WHEN NULLIF(p_registration->>'partial_start_session', '') IS NULL THEN NULL
-        ELSE (p_registration->>'partial_start_session')::integer
-      END,
+      v_is_partial,
+      v_partial_start,
       v_new_session,
-      NULLIF(p_registration->>'vehicle_id', '')::uuid,
+      v_vehicle,
       NULLIF(p_registration->>'notes', ''),
       now(),
       now(),
@@ -304,7 +374,8 @@ BEGIN
         'course_id', p_course_id,
         'course_name', v_desc,
         'course_registration_id', v_reg_id,
-        'public_cash_course_enroll', true
+        'public_cash_course_enroll', true,
+        'idempotency_key', p_idempotency_key
       ),
       now(),
       now()
@@ -321,6 +392,22 @@ BEGIN
       RAISE EXCEPTION 'registration_link_failed' USING ERRCODE = 'P0001';
     END IF;
 
+    INSERT INTO public.public_cash_course_enroll_idempotency (
+      tenant_id,
+      idempotency_key,
+      request_hash,
+      registration_id,
+      payment_id,
+      created_at
+    ) VALUES (
+      p_tenant_id,
+      p_idempotency_key,
+      v_request_hash,
+      v_reg_id,
+      v_payment_id,
+      now()
+    );
+
     RETURN jsonb_build_object(
       'status', 'enrolled',
       'registration_id', v_reg_id,
@@ -328,6 +415,26 @@ BEGIN
     );
   EXCEPTION
     WHEN unique_violation THEN
+      -- Concurrent claim: prefer idempotency replay if our key landed.
+      SELECT * INTO v_idem
+      FROM public.public_cash_course_enroll_idempotency i
+      WHERE i.tenant_id = p_tenant_id
+        AND i.idempotency_key = p_idempotency_key;
+      IF FOUND THEN
+        IF v_idem.request_hash IS DISTINCT FROM v_request_hash THEN
+          RETURN jsonb_build_object(
+            'status', 'idempotency_conflict',
+            'registration_id', v_idem.registration_id,
+            'payment_id', v_idem.payment_id
+          );
+        END IF;
+        RETURN jsonb_build_object(
+          'status', 'idempotent_replay',
+          'registration_id', v_idem.registration_id,
+          'payment_id', v_idem.payment_id
+        );
+      END IF;
+
       SELECT * INTO v_exist
       FROM public.course_registrations r
       WHERE r.deleted_at IS NULL
@@ -338,40 +445,15 @@ BEGIN
           OR (v_email IS NOT NULL AND lower(r.email) = lower(v_email))
           OR (v_faber IS NOT NULL AND r.sari_faberid = v_faber)
         )
-      ORDER BY CASE
-                 WHEN r.user_id = p_user_id AND r.payment_method = 'cash_on_site' THEN 0
-                 ELSE 1
-               END,
-               r.created_at
+      ORDER BY r.created_at
       LIMIT 1;
-      IF NOT FOUND THEN
-        RETURN jsonb_build_object('status', 'session_conflict');
-      END IF;
-      IF v_exist.payment_method = 'cash_on_site'
-         AND v_exist.user_id = p_user_id
-         AND v_exist.status IS DISTINCT FROM 'cancelled' THEN
-        SELECT p.id INTO v_payment_id
-        FROM public.payments p
-        WHERE p.tenant_id = p_tenant_id
-          AND (
-            p.id = v_exist.payment_id
-            OR (
-              p.course_registration_id = v_exist.id
-              AND (p.metadata->>'public_cash_course_enroll') = 'true'
-            )
-          )
-        ORDER BY CASE WHEN p.id = v_exist.payment_id THEN 0 ELSE 1 END
-        LIMIT 1;
+      IF FOUND THEN
         RETURN jsonb_build_object(
-          'status', 'already_enrolled',
-          'registration_id', v_exist.id,
-          'payment_id', v_payment_id
+          'status', 'payment_conflict',
+          'registration_id', v_exist.id
         );
       END IF;
-      RETURN jsonb_build_object(
-        'status', 'payment_conflict',
-        'registration_id', v_exist.id
-      );
+      RETURN jsonb_build_object('status', 'session_conflict');
     WHEN SQLSTATE 'P0001' THEN
       IF SQLERRM LIKE '%course_capacity_exceeded%' OR SQLERRM LIKE '%COURSE_FULL%' THEN
         RETURN jsonb_build_object('status', 'capacity_exceeded');
@@ -384,9 +466,12 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, jsonb) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, jsonb) FROM anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, jsonb) TO postgres, service_role;
+ALTER FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, uuid, jsonb)
+  OWNER TO postgres;
 
-COMMENT ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, jsonb) IS
-  'F1: atomically create confirmed cash_on_site course registration + pending payments row and link payment_id. service_role only. Isolated/local; do not apply to production automatically.';
+REVOKE ALL ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, uuid, jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, uuid, jsonb) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, uuid, jsonb) TO postgres, service_role;
+
+COMMENT ON FUNCTION public.enroll_public_cash_course_with_pending_payment(uuid, uuid, uuid, integer, text, uuid, jsonb) IS
+  'F1: atomic public cash enroll + pending payment + idempotency claim. OWNER postgres. EXECUTE service_role/postgres only. Isolated/local; do not apply to production automatically.';
