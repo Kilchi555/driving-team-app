@@ -3,6 +3,18 @@
  * Guests cannot read tenant_settings via RLS; the shop API evaluates this server-side.
  */
 
+export {
+  CUSTOM_VOUCHER_SINGLE_CHECKOUT_MESSAGE,
+  canAddCustomVoucherToCart,
+  customVoucherCheckoutLimitError,
+  customVoucherFulfillmentKey,
+  customVoucherUnitCount,
+  isCustomAmountVoucher,
+  resolveCustomVoucherDescription,
+  resolveCustomVoucherDisplayName,
+  resolveCustomVoucherRecipient,
+} from '~/utils/shop-custom-voucher'
+
 export type ShopCustomVoucherProduct = {
   id: string
   name: string

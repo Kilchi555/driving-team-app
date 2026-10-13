@@ -2093,40 +2093,77 @@ async function processVouchersAndCredits(payments: any[]) {
     
     // Process vouchers
     const voucherProducts = payment.metadata.products.filter((p: any) => p.is_voucher)
-    
+    // In-memory guard against duplicate issuance within the same webhook delivery.
+    const issuedFulfillmentKeys = new Set<string>()
+
     for (const product of voucherProducts) {
       try {
         const { generateVoucherCode } = await import('~/utils/voucherGenerator')
         const voucherCode = generateVoucherCode()
-        
+
+        const amountRappen = Number(product.unit_price_rappen || product.price_rappen || 0)
+        const displayName = product.display_name || product.product_name || product.name || 'Gutschein'
+        const description = product.description || ''
+        const fulfillmentKey = product.fulfillment_key
+          || (product.is_custom_amount_voucher || product.allow_custom_amount
+            ? `custom-voucher:${product.product_id || product.id}`
+            : `voucher:${product.product_id || product.id}:${displayName}`)
+
+        if (issuedFulfillmentKeys.has(fulfillmentKey)) {
+          logger.info('⏭️ Voucher already issued in this webhook pass, skipping:', fulfillmentKey)
+          continue
+        }
+
+        // Custom-amount shop vouchers are always one unit; never multiply issuance by qty.
+        if ((product.is_custom_amount_voucher || product.allow_custom_amount) && Number(product.quantity || 1) > 1) {
+          logger.error('❌ Refusing custom voucher fulfillment with quantity > 1', {
+            paymentId: payment.id,
+            quantity: product.quantity,
+          })
+          continue
+        }
+
         const customerEmail = payment.metadata.customer_email || product.recipient_email
-        const customerName = payment.metadata.customer_name || product.recipient_name
+        const recipientName = product.recipient_name || null
+        const buyerName = payment.metadata.customer_name || null
 
-        // Idempotency: skip if voucher already created for this payment+product
-        const { data: existingVoucher } = await supabase
+        // Idempotency: prefer fulfillment_key embedded in description prefix, else name+amount.
+        const { data: existingForPayment } = await supabase
           .from('vouchers')
-          .select('id, code')
+          .select('id, code, name, description, amount_rappen')
           .eq('payment_id', payment.id)
-          .eq('name', product.product_name || product.name)
-          .maybeSingle()
 
-        if (existingVoucher) {
-          logger.info('⏭️ Voucher already created for payment+product, skipping:', existingVoucher.code)
+        const alreadyIssued = (existingForPayment || []).some((v: any) => {
+          if (typeof v.description === 'string' && v.description.includes(`[${fulfillmentKey}]`)) return true
+          // Fallback for legacy rows without fulfillment_key marker
+          return v.name === displayName && Number(v.amount_rappen) === amountRappen
+        })
+
+        if (alreadyIssued) {
+          const existingVoucher = (existingForPayment || []).find((v: any) =>
+            (typeof v.description === 'string' && v.description.includes(`[${fulfillmentKey}]`))
+            || (v.name === displayName && Number(v.amount_rappen) === amountRappen)
+          )
+          logger.info('⏭️ Voucher already created for payment+product, skipping:', existingVoucher?.code)
+          issuedFulfillmentKeys.add(fulfillmentKey)
           continue
         }
 
         const validUntil = new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString()
-        
+        const descriptionWithKey = description
+          ? `${description}\n[${fulfillmentKey}]`
+          : `[${fulfillmentKey}]`
+
         const { data: newVoucher, error: voucherInsertError } = await supabase
           .from('vouchers')
           .insert({
             code: voucherCode,
-            name: product.product_name || product.name,
-            description: product.description || '',
-            amount_rappen: product.unit_price_rappen || product.price_rappen,
-            recipient_name: customerName || null,
+            name: displayName,
+            description: descriptionWithKey,
+            amount_rappen: amountRappen,
+            recipient_name: recipientName || buyerName || null,
             recipient_email: customerEmail || null,
-            buyer_name: customerName || null,
+            buyer_name: buyerName || null,
             buyer_email: customerEmail || null,
             payment_id: payment.id,
             valid_until: validUntil,
@@ -2141,6 +2178,7 @@ async function processVouchersAndCredits(payments: any[]) {
           continue
         }
 
+        issuedFulfillmentKeys.add(fulfillmentKey)
         logger.info('✅ Voucher created in webhook:', newVoucher.code)
 
         // ── Send voucher email with PDF attachment (direct, not queued) ─────────
@@ -2153,7 +2191,8 @@ async function processVouchersAndCredits(payments: any[]) {
             const { getTenantBranding } = await import('~/server/utils/tenant-branding')
             
             const branding = payment.tenant_id ? await getTenantBranding(payment.tenant_id) : {}
-            const amountChf = (product.unit_price_rappen || product.price_rappen || 0) / 100
+            const amountChf = amountRappen / 100
+            const pdfRecipient = recipientName || buyerName || undefined
 
             // Generate PDF buffer
             let pdfAttachment: { filename: string; content: Buffer; contentType: string } | undefined
@@ -2172,11 +2211,11 @@ async function processVouchersAndCredits(payments: any[]) {
               const page = await browser.newPage()
               const htmlContent = generateVoucherPDFContent({
                 code: newVoucher.code,
-                name: product.product_name || product.name || 'Gutschein',
+                name: displayName,
                 amount_chf: amountChf,
-                recipient_name: customerName || undefined,
+                recipient_name: pdfRecipient,
                 valid_until: validUntil,
-                description: product.description || undefined
+                description: description || undefined
               }, branding)
               await page.setContent(htmlContent, { waitUntil: 'networkidle0' })
               const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' } })
@@ -2189,12 +2228,12 @@ async function processVouchersAndCredits(payments: any[]) {
 
             const emailContent = generateVoucherEmailContent({
               code: newVoucher.code,
-              name: product.product_name || product.name || 'Gutschein',
+              name: displayName,
               amount_chf: amountChf,
-              recipient_name: customerName || undefined,
+              recipient_name: pdfRecipient,
               recipient_email: customerEmail,
               valid_until: validUntil,
-              description: product.description || undefined,
+              description: description || undefined,
             }, branding)
 
             await sendEmail({

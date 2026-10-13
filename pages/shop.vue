@@ -579,7 +579,10 @@
                   updated_at: new Date().toISOString(),
                   quantity: item.quantity,
                   unit_price_rappen: item.product.price_rappen,
-                  total_price_rappen: Math.round(item.total * 100)
+                  total_price_rappen: Math.round(item.total * 100),
+                  recipient: (item.product as any).recipient || (item.product as any).recipient_name,
+                  recipient_name: (item.product as any).recipient_name || (item.product as any).recipient,
+                  display_name: (item.product as any).display_name || item.product.name
                 }))"
                 :initial-discounts="appliedDiscounts.map(discount => ({
                   id: discount.id,
@@ -983,6 +986,10 @@ import { useVouchers } from '~/composables/useVouchers'
 import { useDiscounts } from '~/composables/useDiscounts'
 import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
+import {
+  canAddCustomVoucherToCart,
+  isCustomAmountVoucher,
+} from '~/utils/shop-custom-voucher'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -1731,32 +1738,47 @@ const handleRegister = async () => {
 
 // Produktverwaltung
 const addProduct = (product: Product) => {
+  const cartLines = selectedProducts.value.map(item => ({
+    id: item.product.id,
+    is_voucher: !!(item.product as any).is_voucher,
+    allow_custom_amount: !!(item.product as any).allow_custom_amount,
+    quantity: item.quantity,
+  }))
+
+  // Custom vouchers must never merge by template UUID or exceed one unit per checkout.
+  if (isCustomAmountVoucher(product as any)) {
+    const gate = canAddCustomVoucherToCart(cartLines)
+    if (!gate.ok) {
+      showToastMessage(`❌ ${gate.message}`)
+      return
+    }
+  }
+
   const existingIndex = selectedProducts.value.findIndex(item => item.product.id === product.id)
-  
+
   if (existingIndex >= 0) {
-    // Produkt existiert bereits, erhöhe Menge
+    // Never qty++ a custom voucher (same template UUID would corrupt amount/recipient).
+    if (isCustomAmountVoucher(selectedProducts.value[existingIndex].product as any)
+      || isCustomAmountVoucher(product as any)) {
+      showToastMessage('❌ Individuelle Gutscheine können nicht mehrfach hinzugefügt werden.')
+      return
+    }
     selectedProducts.value[existingIndex].quantity += 1
     selectedProducts.value[existingIndex].total = selectedProducts.value[existingIndex].quantity * (product.price_rappen / 100)
   } else {
-    // Neues Produkt hinzufügen
     selectedProducts.value.push({
       product,
       quantity: 1,
       total: product.price_rappen / 100
     })
-    
-    // Show toast notification
+
     showToastMessage(`✅ ${product.name} zum Warenkorb hinzugefügt!`)
   }
-  
-  // Recalculate discounts when product is added
+
   recalculateDiscounts()
-  
-  // Speichere sofort bei Produktänderungen
   saveImmediately()
-  
+
   logger.debug('✅ Product added:', product.name)
-  // ProductSelectorModal was removed
 }
 
 const handleProductsSelected = (products: any[]) => {
@@ -2034,6 +2056,18 @@ const handleVoucherCreated = (voucherData: any) => {
     return
   }
 
+  const cartLines = selectedProducts.value.map(item => ({
+    id: item.product.id,
+    is_voucher: !!(item.product as any).is_voucher,
+    allow_custom_amount: !!(item.product as any).allow_custom_amount,
+    quantity: item.quantity,
+  }))
+  const gate = canAddCustomVoucherToCart(cartLines)
+  if (!gate.ok) {
+    showToastMessage(`❌ ${gate.message}`)
+    return
+  }
+
   const voucherProduct = {
     id: customVoucherProduct.value.id,
     name: voucherData.name,
@@ -2050,6 +2084,9 @@ const handleVoucherCreated = (voucherData: any) => {
     min_amount_rappen: customVoucherProduct.value.min_amount_rappen ?? 100,
     max_amount_rappen: customVoucherProduct.value.max_amount_rappen ?? 100_000,
     allow_custom_amount: true,
+    recipient: voucherData.recipient || undefined,
+    recipient_name: voucherData.recipient || undefined,
+    display_name: voucherData.name,
     unit_price_rappen: voucherData.price_rappen,
     total_price_rappen: voucherData.price_rappen
   }
