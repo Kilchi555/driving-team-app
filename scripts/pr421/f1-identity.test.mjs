@@ -9,6 +9,7 @@ import {
   assertLiveServerIdentity,
   assertUrlIdentityGate,
   isDockerBridgeCompatibleServerIp,
+  isLoopbackHost,
   isLoopbackIp,
   normalizeInetHost,
 } from './f1-identity.mjs'
@@ -23,99 +24,139 @@ function assertThrows(fn, re) {
   })
 }
 
-test('normalizeInetHost strips netmask (/32, /128)', () => {
+function liveOk(serverHost, connectionHost = '127.0.0.1', database = DB) {
+  return assertLiveServerIdentity({
+    connectionHost,
+    database,
+    serverHost,
+    expectedDb: DB,
+    phase: 'preflight',
+  })
+}
+
+function liveFail(serverHost, connectionHost = '127.0.0.1', database = DB) {
+  assertThrows(
+    () => assertLiveServerIdentity({
+      connectionHost,
+      database,
+      serverHost,
+      expectedDb: DB,
+      phase: 'preflight',
+    }),
+    /live identity/,
+  )
+}
+
+/** Positive accept must fail when client host or DB name is wrong. */
+function assertPositiveWithNegativeControls(serverHost, expectedTopology) {
+  const r = liveOk(serverHost)
+  assert.equal(r.ok, true)
+  assert.equal(r.topology, expectedTopology)
+
+  assertThrows(
+    () => liveOk(serverHost, '10.0.0.5', DB),
+    /connection host must be loopback/,
+  )
+  assertThrows(
+    () => liveOk(serverHost, '127.0.0.1', 'postgres'),
+    /database postgres != pr421_f1_concurrency/,
+  )
+}
+
+test('normalizeInetHost accepts bare IPs and exact CIDR', () => {
+  assert.equal(normalizeInetHost('172.18.0.2'), '172.18.0.2')
   assert.equal(normalizeInetHost('172.18.0.2/32'), '172.18.0.2')
   assert.equal(normalizeInetHost('127.0.0.1/32'), '127.0.0.1')
   assert.equal(normalizeInetHost('::1/128'), '::1')
-  assert.equal(normalizeInetHost('172.18.0.2'), '172.18.0.2')
+  assert.equal(normalizeInetHost('[::1]'), '::1')
   assert.equal(normalizeInetHost(null), null)
   assert.equal(normalizeInetHost(''), null)
 })
 
+test('normalizeInetHost rejects malformed CIDR suffixes and zone IDs', () => {
+  assert.equal(normalizeInetHost('172.18.0.2/32extra'), null)
+  assert.equal(normalizeInetHost('172.18.0.2/'), null)
+  assert.equal(normalizeInetHost('172.18.0.2/32/8'), null)
+  assert.equal(normalizeInetHost('172.18.0.2/-1'), null)
+  assert.equal(normalizeInetHost('172.18.0.2/33'), null)
+  assert.equal(normalizeInetHost('::1/129'), null)
+  assert.equal(normalizeInetHost('fe80::1%eth0'), null)
+  assert.equal(normalizeInetHost('not-an-ip'), null)
+  assert.equal(normalizeInetHost('172.18.0'), null)
+})
+
 test('Actions disposable topology: 127.0.0.1 client + Docker bridge server', () => {
-  const r = assertLiveServerIdentity({
-    connectionHost: '127.0.0.1',
-    database: DB,
-    serverHost: '172.18.0.2',
-    expectedDb: DB,
-    phase: 'preflight',
-  })
-  assert.equal(r.ok, true)
-  assert.equal(r.topology, 'docker-bridge-published')
-  assert.equal(r.serverHost, '172.18.0.2')
+  assertPositiveWithNegativeControls('172.18.0.2', 'docker-bridge-published')
 })
 
-test('Actions disposable topology: inet text with netmask 172.18.0.2/32', () => {
-  const r = assertLiveServerIdentity({
-    connectionHost: '127.0.0.1',
-    database: DB,
-    serverHost: '172.18.0.2/32',
-    expectedDb: DB,
-  })
-  assert.equal(r.ok, true)
-  assert.equal(r.serverHost, '172.18.0.2')
-  assert.equal(r.topology, 'docker-bridge-published')
+test('Actions disposable topology: exact inet text with netmask 172.18.0.2/32', () => {
+  assertPositiveWithNegativeControls('172.18.0.2/32', 'docker-bridge-published')
 })
 
-test('loopback server address with correct normalization', () => {
-  for (const serverHost of ['127.0.0.1', '127.0.0.1/32', '::1', '::1/128']) {
-    const r = assertLiveServerIdentity({
-      connectionHost: '127.0.0.1',
-      database: DB,
-      serverHost,
-      expectedDb: DB,
-    })
-    assert.equal(r.ok, true)
-    assert.equal(r.topology, 'loopback-server')
-    assert.equal(isLoopbackIp(r.serverHost), true)
+test('invalid CIDR suffix 172.18.0.2/32extra rejected', () => {
+  liveFail('172.18.0.2/32extra')
+})
+
+test('loopback server address with normalization', () => {
+  for (const serverHost of ['127.0.0.1', '127.0.0.1/32', '::1', '::1/128', '0:0:0:0:0:0:0:1']) {
+    assertPositiveWithNegativeControls(serverHost, 'loopback-server')
+    assert.equal(isLoopbackIp(normalizeInetHost(serverHost)), true)
   }
 })
 
-test('localhost connection host + RFC1918 Docker bridge accepted (conjunction)', () => {
-  const r = assertLiveServerIdentity({
-    connectionHost: 'localhost',
-    database: DB,
-    serverHost: '10.0.0.5',
-    expectedDb: DB,
-  })
+test('bracketed IPv6 loopback host [::1] recognized for connection host', () => {
+  assert.equal(isLoopbackHost('[::1]'), true)
+  const r = liveOk('172.18.0.2', '[::1]', DB)
   assert.equal(r.topology, 'docker-bridge-published')
+  const url = assertUrlIdentityGate(`postgresql://u:p@[::1]:5432/${DB}`, { expectedDb: DB })
+  assert.equal(url.host, '::1')
 })
 
-test('public server address rejected', () => {
-  assertThrows(
-    () => assertLiveServerIdentity({
-      connectionHost: '127.0.0.1',
-      database: DB,
-      serverHost: '8.8.8.8',
-      expectedDb: DB,
-      phase: 'preflight',
-    }),
-    /unexpected inet_server_addr/,
-  )
-  assertThrows(
-    () => assertLiveServerIdentity({
-      connectionHost: '127.0.0.1',
-      database: DB,
-      serverHost: '1.2.3.4/32',
-      expectedDb: DB,
-    }),
-    /unexpected inet_server_addr/,
-  )
+test('localhost connection host + RFC1918 Docker bridge accepted (conjunction)', () => {
+  assertPositiveWithNegativeControls('10.0.0.5', 'docker-bridge-published')
+})
+
+test('valid IPv6 ULA accepted only with full identity conjunction', () => {
+  assertPositiveWithNegativeControls('fc00::1', 'docker-bridge-published')
+  assertPositiveWithNegativeControls('fd12:3456::78', 'docker-bridge-published')
+  assert.equal(isDockerBridgeCompatibleServerIp('fc00::1'), true)
+})
+
+test('valid IPv6 link-local accepted only with full identity conjunction', () => {
+  assertPositiveWithNegativeControls('fe80::1', 'docker-bridge-published')
+  assert.equal(isDockerBridgeCompatibleServerIp('fe80::abcd:1'), true)
+})
+
+test('malformed IPv6 and zone IDs rejected', () => {
+  for (const bad of ['fcgg::1', 'fd:::1', 'fc::', 'fe80:', 'fe80::1%eth0', 'fe80::1%2']) {
+    liveFail(bad)
+    assert.equal(isDockerBridgeCompatibleServerIp(bad), false)
+  }
+})
+
+test('IPv4-mapped IPv6 rejected (no unmap / no blanket accept)', () => {
+  liveFail('::ffff:8.8.8.8')
+  liveFail('::ffff:172.18.0.2')
+  liveFail('::ffff:127.0.0.1')
+})
+
+test('public IPv4 and public IPv6 rejected', () => {
+  liveFail('8.8.8.8')
+  liveFail('1.2.3.4/32')
+  liveFail('2001:db8::1')
+  liveFail('2001:4860:4860::8888')
+})
+
+test('CGNAT 100.64.0.1 rejected', () => {
+  liveFail('100.64.0.1')
+  liveFail('100.127.0.1')
 })
 
 test('unverifiable server address (hostname) rejected', () => {
-  assertThrows(
-    () => assertLiveServerIdentity({
-      connectionHost: '127.0.0.1',
-      database: DB,
-      serverHost: 'db.example.invalid',
-      expectedDb: DB,
-    }),
-    /unverifiable inet_server_addr/,
-  )
+  liveFail('db.example.invalid')
 })
 
-test('NULL / Unix-socket server address rejected (fail closed)', () => {
+test('NULL / empty server address rejected (fail closed)', () => {
   for (const serverHost of [null, undefined, '']) {
     assertThrows(
       () => assertLiveServerIdentity({
@@ -142,7 +183,7 @@ test('wrong database name rejected even with Docker bridge addr', () => {
   )
 })
 
-test('non-loopback connection host rejected by live check (defense in depth)', () => {
+test('non-loopback connection host rejected by live check', () => {
   assertThrows(
     () => assertLiveServerIdentity({
       connectionHost: 'db.aws.example',
@@ -174,10 +215,16 @@ test('URL gate: accepts loopback + exact DB name', () => {
   assert.equal(r.dbName, DB)
 })
 
-test('URL gate: non-loopback host rejected', () => {
+test('URL gate: non-loopback and malformed hosts rejected', () => {
   assertThrows(
     () => assertUrlIdentityGate(`postgresql://u:p@db.example.invalid:5432/${DB}`, {
       phase: 'startup',
+      expectedDb: DB,
+    }),
+    /host must be localhost\/127\.0\.0\.1/,
+  )
+  assertThrows(
+    () => assertUrlIdentityGate(`postgresql://u:p@not_a_host:5432/${DB}`, {
       expectedDb: DB,
     }),
     /host must be localhost\/127\.0\.0\.1/,
