@@ -102,6 +102,7 @@
     "@types/node": "^26.6.1",
     "@vitest/ui": "3.2.7",
     "eslint": "^10.10.0",
+    "pg": "^8.23.1",
     "typescript": "5.8.3",
     "vitest": "3.2.7",
     "vue-tsc": "^3.3.11"
