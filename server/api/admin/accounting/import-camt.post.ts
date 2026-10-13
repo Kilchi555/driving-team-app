@@ -3,7 +3,6 @@ import { requireAccountingAccess } from '~/server/utils/accountant-access'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { parseCamtXml } from '~/server/utils/camt-parse'
 import { flagAlreadyImported, matchEntriesToExpenses } from '~/server/utils/accounting-camt'
-import { assertStatementUploadSize } from '~/server/utils/csv-upload-limit'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAccountingAccess(event, { write: true })
@@ -12,8 +11,6 @@ export default defineEventHandler(async (event) => {
   if (!body.xml_content?.trim()) {
     throw createError({ statusCode: 400, statusMessage: 'xml_content fehlt' })
   }
-  assertStatementUploadSize(body.xml_content)
-
   const entries = parseCamtXml(body.xml_content, { directions: ['DBIT'] })
   if (!entries.length) {
     throw createError({ statusCode: 422, statusMessage: 'Keine Lastschriften in der CAMT-Datei gefunden' })

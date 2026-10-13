@@ -121,6 +121,7 @@ export interface ColumnMapping {
   description?: string
   debtor_name?: string
   transaction_id?: string
+  currency?: string
 }
 
 /** Scoring-basierte Header-Erkennung — Banken nennen Spalten unterschiedlich. */
@@ -167,6 +168,9 @@ const HEADER_SCORERS: Record<keyof ColumnMapping, Array<{ re: RegExp; score: num
   transaction_id: [
     { re: /zkb[-\s]?referenz|acct.?svcr|buchungsnr|transaktionsnr|transaction\s?id|avis[-\s]?nr/i, score: 40 },
     { re: /bank[-\s]?referenz|buchungs[-\s]?id/i, score: 25 },
+  ],
+  currency: [
+    { re: /^(währung|waehrung|currency|ccy|devise)$/i, score: 40 },
   ],
 }
 

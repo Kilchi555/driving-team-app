@@ -25,6 +25,7 @@ import {
 export type StatementLine = BankCreditInput & {
   bankRef: string | null
   reviewText: string
+  debtorName: string
 }
 
 export type DepositMatchPreview = {
@@ -68,12 +69,13 @@ function asLine(input: {
     }),
     amountRappen: input.amountRappen,
     date: input.date,
-    currency: (input.currency || 'CHF').toUpperCase(),
     direction: input.direction,
     reference,
     remittance,
     bankRef: input.bankRef || null,
     reviewText: redactStatementText(`${reference} ${remittance}`.trim()),
+    debtorName: input.debtorName || '',
+    currency: (input.currency ?? '').trim().toUpperCase(),
   }
 }
 
@@ -88,6 +90,7 @@ export function creditsFromCsv(csv: string, mapping: ColumnMapping): { lines: St
   const descriptionIdx = colIndex(mapping.description)
   const debtorNameIdx = colIndex(mapping.debtor_name)
   const transactionIdIdx = colIndex(mapping.transaction_id)
+  const currencyIdx = colIndex(mapping.currency)
   if (dateIdx === -1 || (amountIdx === -1 && creditIdx === -1 && debitIdx === -1)) {
     throw new Error('mapping')
   }
@@ -133,11 +136,12 @@ export function creditsFromCsv(csv: string, mapping: ColumnMapping): { lines: St
       mappedDebtorName: mappedDebtor,
       skipHeaderIndexes: [dateIdx, amountIdx, creditIdx, debitIdx, transactionIdIdx, debtorNameIdx].filter(i => i > -1),
     })
+    const rawCurrency = currencyIdx > -1 ? (row[currencyIdx] || '').trim() : ''
     lines.push(asLine({
       date,
       amountRappen: Math.round(amount * 100),
       direction,
-      currency: 'CHF',
+      currency: rawCurrency,
       reference: enriched.reference || enriched.reference_raw,
       remittance: enriched.remittance_info,
       bankRef,
@@ -159,6 +163,7 @@ export function resolveCsvMapping(csv: string, mapping?: Partial<ColumnMapping> 
     description: mapping?.description || suggested.description,
     debtor_name: mapping?.debtor_name || suggested.debtor_name,
     transaction_id: mapping?.transaction_id || suggested.transaction_id,
+    currency: mapping?.currency || suggested.currency,
   }
   if (!resolved.date || (!resolved.amount && !resolved.credit && !resolved.debit)) {
     throw new Error('mapping')
@@ -167,13 +172,13 @@ export function resolveCsvMapping(csv: string, mapping?: Partial<ColumnMapping> 
 }
 
 export function creditsFromCamt(xml: string): { lines: StatementLine[] } {
-  const entries = parseCamtXml(xml, { directions: ['CRDT', 'DBIT'] })
+  const entries = parseCamtXml(xml, { directions: ['CRDT', 'DBIT'], includeNonChf: true, includeReversals: true })
   return {
     lines: entries.map(entry => asLine({
       date: entry.date,
       amountRappen: entry.amount_rappen,
-      direction: entry.direction === 'DBIT' ? 'debit' : 'credit',
-      currency: 'CHF',
+      direction: entry.reversal ? 'reversal' : entry.direction === 'DBIT' ? 'debit' : 'credit',
+      currency: entry.currency || '',
       reference: entry.reference,
       remittance: entry.remittance_info,
       bankRef: entry.bank_ref,
@@ -192,7 +197,7 @@ export function previewStatementLines(
       dedupe_key: line.dedupeKey,
       amount_rappen: line.amountRappen,
       date: line.date,
-      currency: (line.currency || 'CHF').toUpperCase(),
+      currency: line.currency || 'UNKNOWN',
       direction: line.direction,
       match_class: match.matchClass,
       deposit_ids: match.depositIds,

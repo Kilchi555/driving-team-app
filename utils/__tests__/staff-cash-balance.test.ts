@@ -54,7 +54,19 @@ describe('calculateStaffCashBalance', () => {
     ).toBe(1_000)
   })
 
-  it('ignores movement types that are not deposit, withdrawal, or cash_handover', () => {
+  it('subtracts a cash-to-bank movement and adds its reversal once', () => {
+    expect(calculateStaffCashBalance([
+      { movement_type: 'deposit', amount_rappen: 50_000 },
+      { movement_type: 'cash_to_bank', amount_rappen: 10_000 },
+      { movement_type: 'cash_to_bank_reversal', amount_rappen: 10_000 },
+    ], [])).toBe(50_000)
+    expect(calculateStaffCashBalance([
+      { movement_type: 'deposit', amount_rappen: 50_000 },
+      { movement_type: 'cash_to_bank', amount_rappen: 10_000 },
+    ], [])).toBe(40_000)
+  })
+
+  it('ignores movement types that are not deposit, withdrawal, cash_handover, or cash-to-bank', () => {
     expect(
       calculateStaffCashBalance(
         [

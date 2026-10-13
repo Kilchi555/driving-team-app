@@ -6,7 +6,8 @@
  * It does not read or write cash_balances, and it does not change the balance sheet.
  *
  * Staff display (this function):
- *   deposit − withdrawal − cash_handover + pending cash_transactions
+ *   deposit + cash_to_bank_reversal − withdrawal − cash_handover − cash_to_bank
+ *   + pending cash_transactions
  *
  * Admin display (CashBalanceManager.calculatedCurrentBalance and
  * load_staff_balances in server/api/admin/cash-management.post.ts):
@@ -58,9 +59,13 @@ export function calculateStaffCashBalance(
 
   for (const movement of movements) {
     const amount = rappen(movement.amount_rappen)
-    if (movement.movement_type === 'deposit') {
+    if (movement.movement_type === 'deposit' || movement.movement_type === 'cash_to_bank_reversal') {
       balance += amount
-    } else if (movement.movement_type === 'withdrawal' || movement.movement_type === 'cash_handover') {
+    } else if (
+      movement.movement_type === 'withdrawal'
+      || movement.movement_type === 'cash_handover'
+      || movement.movement_type === 'cash_to_bank'
+    ) {
       balance -= amount
     }
   }

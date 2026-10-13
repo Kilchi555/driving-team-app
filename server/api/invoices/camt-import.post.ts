@@ -8,7 +8,6 @@ import {
   type OpenInvoiceForMatching,
 } from '~/server/utils/bank-reconciliation'
 import { parseCamtXml } from '~/server/utils/camt-parse'
-import { assertStatementUploadSize } from '~/server/utils/csv-upload-limit'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -32,8 +31,6 @@ export default defineEventHandler(async (event) => {
   if (!xmlContent || typeof xmlContent !== 'string') {
     throw createError({ statusCode: 400, statusMessage: 'xml_content fehlt' })
   }
-  assertStatementUploadSize(xmlContent)
-
   const entries = parseCamtXml(xmlContent, { directions: ['CRDT'] })
   if (entries.length === 0) {
     throw createError({ statusCode: 422, statusMessage: 'Keine Zahlungseingänge in der CAMT-Datei gefunden' })

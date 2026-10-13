@@ -10,22 +10,32 @@ import {
   CASH_ACCOUNT_NUMBER,
   canAssignDepositor,
   canCorrectAttribution,
+  applyTransferToBalances,
+  cashToBankReversalLines,
   cashToBankTransferLines,
+  collectCompletePages,
   commitConfirmation,
   depositorFromStatementImport,
   duplicateImportKeepsAttribution,
+  identifySourceDrawer,
   isEligibleDepositorRole,
   matchCreditToDeposits,
+  OPEN_DEPOSIT_PAGE_SIZE,
+  openReportFingerprint,
   planAttributionChange,
   planConfirmation,
+  planReversal,
   referenceTokenForDeposit,
+  repeatedOpenReport,
   rejectClientTenantOverride,
   tenantOwnsResource,
   transferTouchesProfitAndLoss,
   validateReportInput,
   type BankCreditInput,
   type DepositMatchInput,
+  type ExistingBankRow,
   type OpenDeposit,
+  type StatementEvidence,
 } from '../cash-bank-deposit'
 
 const TENANT = 'tenant-a'
@@ -74,19 +84,40 @@ function openDeposit(partial: Partial<OpenDeposit> = {}): OpenDeposit {
   }
 }
 
+function evidence(partial: Partial<StatementEvidence> = {}): StatementEvidence {
+  return {
+    statementLineId: 'line-1',
+    statementTenantId: TENANT,
+    recomputedDedupeKey: 'bank-1',
+    storedDedupeKey: 'bank-1',
+    amountRappen: 10_000,
+    currency: 'CHF',
+    entryDate: '2026-10-02',
+    direction: 'credit',
+    reference: '',
+    remittance: 'SIMYDEPDEP1',
+    ...partial,
+  }
+}
+
+function confirmation(partial: {
+  deposit?: OpenDeposit
+  evidence?: StatementEvidence | null
+  bankRow?: ExistingBankRow | null
+  drawerCount?: number
+} = {}) {
+  return planConfirmation({
+    deposit: partial.deposit ?? openDeposit(),
+    evidence: partial.evidence === undefined ? evidence() : partial.evidence,
+    bankRow: partial.bankRow ?? null,
+    drawerCount: partial.drawerCount ?? 1,
+  })
+}
+
 describe('cash-to-bank deposit reports', () => {
   it('reports a one-person deposit without posting a journal', () => {
     const lines = cashToBankTransferLines(10_000)
-    const plan = planConfirmation({
-      deposit: openDeposit({ status: 'reported', candidateDedupeKey: null }),
-      bankTenantId: TENANT,
-      bankDedupeKey: 'bank-1',
-      bankAmountRappen: 10_000,
-      bankCurrency: 'CHF',
-      bankDirection: 'credit',
-      bankAlreadyLinkedDepositId: null,
-      matchClass: 'exact',
-    })
+    const plan = confirmation({ deposit: openDeposit({ status: 'reported', candidateDedupeKey: null }), evidence: null })
     expect(plan.action).toBe('reject')
     expect(lines).toHaveLength(2)
     expect(transferTouchesProfitAndLoss(lines)).toBe(false)
@@ -117,30 +148,12 @@ describe('matching', () => {
   })
 
   it('does not post a suggestion before confirmation', () => {
-    const plan = planConfirmation({
-      deposit: openDeposit({ status: 'reported', candidateDedupeKey: null }),
-      bankTenantId: TENANT,
-      bankDedupeKey: 'bank-1',
-      bankAmountRappen: 10_000,
-      bankCurrency: 'CHF',
-      bankDirection: 'credit',
-      bankAlreadyLinkedDepositId: null,
-      matchClass: 'suggestion',
-    })
+    const plan = confirmation({ deposit: openDeposit({ status: 'reported', candidateDedupeKey: null }), evidence: null })
     expect(plan.action).toBe('reject')
   })
 
   it('posts one Dr 1020 / Cr 1000 transfer on confirmation', () => {
-    const plan = planConfirmation({
-      deposit: openDeposit(),
-      bankTenantId: TENANT,
-      bankDedupeKey: 'bank-1',
-      bankAmountRappen: 10_000,
-      bankCurrency: 'CHF',
-      bankDirection: 'credit',
-      bankAlreadyLinkedDepositId: null,
-      matchClass: 'suggestion',
-    })
+    const plan = confirmation()
     expect(plan.action).toBe('post')
     if (plan.action === 'post') {
       expect(plan.lines).toEqual(cashToBankTransferLines(10_000))
@@ -149,31 +162,16 @@ describe('matching', () => {
   })
 
   it('returns already reconciled on a repeated confirmation', () => {
-    const plan = planConfirmation({
+    const plan = confirmation({
       deposit: openDeposit({ status: 'reconciled', journalId: 'journal-1' }),
-      bankTenantId: TENANT,
-      bankDedupeKey: 'bank-1',
-      bankAmountRappen: 10_000,
-      bankCurrency: 'CHF',
-      bankDirection: 'credit',
-      bankAlreadyLinkedDepositId: 'dep-1',
-      matchClass: 'exact',
+      evidence: null,
     })
     expect(plan).toEqual({ action: 'already_reconciled', journalId: 'journal-1' })
   })
 
   it('rejects a second journal when two confirms race after the first post', () => {
     const first = commitConfirmation(openDeposit(), 'posted', 'journal-1', 'import-1')
-    const second = planConfirmation({
-      deposit: first,
-      bankTenantId: TENANT,
-      bankDedupeKey: 'bank-1',
-      bankAmountRappen: 10_000,
-      bankCurrency: 'CHF',
-      bankDirection: 'credit',
-      bankAlreadyLinkedDepositId: 'dep-1',
-      matchClass: 'exact',
-    })
+    const second = confirmation({ deposit: first, evidence: null })
     expect(first.journalId).toBe('journal-1')
     expect(second.action).toBe('already_reconciled')
   })
@@ -195,59 +193,33 @@ describe('matching', () => {
     const result = matchCreditToDeposits(credit({ amountRappen: 10_000 }), [one, other])
     expect(result.matchClass).toBe('ambiguous')
     expect(result.depositIds).toHaveLength(2)
-    const plan = planConfirmation({
-      deposit: openDeposit(),
-      bankTenantId: TENANT,
-      bankDedupeKey: 'bank-1',
-      bankAmountRappen: 10_000,
-      bankCurrency: 'CHF',
-      bankDirection: 'credit',
-      bankAlreadyLinkedDepositId: null,
-      matchClass: 'ambiguous',
-    })
-    expect(plan).toEqual({ action: 'reject', reason: 'not_confirmable' })
+    const plan = confirmation({ evidence: evidence({ remittance: 'Bancomat', reference: '' }) })
+    expect(plan).toEqual({ action: 'reject', reason: 'insufficient_evidence' })
   })
 
   it('leaves a partial or aggregate amount unresolved', () => {
     const result = matchCreditToDeposits(credit({ amountRappen: 9_500, remittance: token }), [one])
     expect(result.matchClass).toBe('unresolved_amount')
-    const plan = planConfirmation({
-      deposit: openDeposit({ amountRappen: 10_000 }),
-      bankTenantId: TENANT,
-      bankDedupeKey: 'bank-1',
-      bankAmountRappen: 9_500,
-      bankCurrency: 'CHF',
-      bankDirection: 'credit',
-      bankAlreadyLinkedDepositId: null,
-      matchClass: 'unresolved_amount',
-    })
+    const plan = confirmation({ evidence: evidence({ amountRappen: 9_500 }) })
     expect(plan.action).toBe('reject')
   })
 
   it('rejects a bank line from another tenant', () => {
-    const plan = planConfirmation({
-      deposit: openDeposit(),
-      bankTenantId: OTHER,
-      bankDedupeKey: 'bank-1',
-      bankAmountRappen: 10_000,
-      bankCurrency: 'CHF',
-      bankDirection: 'credit',
-      bankAlreadyLinkedDepositId: null,
-      matchClass: 'exact',
-    })
+    const plan = confirmation({ evidence: evidence({ statementTenantId: OTHER }) })
     expect(plan).toEqual({ action: 'reject', reason: 'tenant' })
   })
 
   it('rejects a deposit that already belongs to another bank line', () => {
-    const plan = planConfirmation({
-      deposit: openDeposit(),
-      bankTenantId: TENANT,
-      bankDedupeKey: 'bank-1',
-      bankAmountRappen: 10_000,
-      bankCurrency: 'CHF',
-      bankDirection: 'credit',
-      bankAlreadyLinkedDepositId: 'dep-other',
-      matchClass: 'exact',
+    const plan = confirmation({
+      bankRow: {
+        amountRappen: 10_000,
+        currency: 'CHF',
+        entryDate: '2026-10-02',
+        source: 'cash_statement',
+        linkedDepositId: 'dep-other',
+        invoiceId: null,
+        accountingEntryId: null,
+      },
     })
     expect(plan).toEqual({ action: 'reject', reason: 'bank_line_used' })
   })
@@ -404,15 +376,9 @@ describe('reporting and tenant checks', () => {
 
   it('lets a one-person tenant report a deposit without a journal', () => {
     expect(validateReportInput(base).ok).toBe(true)
-    const plan = planConfirmation({
+    const plan = confirmation({
       deposit: openDeposit({ status: 'reported', candidateDedupeKey: null, journalId: null }),
-      bankTenantId: TENANT,
-      bankDedupeKey: 'bank-1',
-      bankAmountRappen: 10_000,
-      bankCurrency: 'CHF',
-      bankDirection: 'credit',
-      bankAlreadyLinkedDepositId: null,
-      matchClass: 'exact',
+      evidence: null,
     })
     expect(plan.action).toBe('reject')
   })
@@ -449,6 +415,20 @@ describe('statement preview', () => {
     expect(preview[0].remittance).not.toContain('Max Muster')
     expect(preview[1].review_text).not.toContain('Pneu AG')
     expect(preview[0].dedupe_key.toLowerCase()).toContain('max muster')
+    expect(preview[0].currency).toBe('UNKNOWN')
+  })
+
+  it('keeps an explicit CHF currency and does not relabel EUR as CHF', () => {
+    const withCurrency = [
+      'Buchungsdatum;Gutschrift;Währung;Referenz',
+      '2026-10-02;100.00;CHF;Bancomat',
+      '2026-10-02;40.00;EUR;Ausland',
+      '2026-10-02;20.00;;Leer',
+    ].join('\n')
+    const parsed = creditsFromCsv(withCurrency, { date: 'Buchungsdatum', credit: 'Gutschrift', currency: 'Währung', reference: 'Referenz' })
+    expect(parsed.lines.map(line => line.currency)).toEqual(['CHF', 'EUR', ''])
+    expect(previewStatementLines(parsed.lines, []).map(line => line.currency)).toEqual(['CHF', 'EUR', 'UNKNOWN'])
+    expect(matchCreditToDeposits({ ...parsed.lines[1], dedupeKey: parsed.lines[1].dedupeKey }, []).matchClass).toBe('ineligible')
   })
 
   it('does not treat a CAMT debtor or a debit as the depositor', () => {
@@ -460,11 +440,21 @@ describe('statement preview', () => {
         <NtryDtls><TxDtls><RltdPties><Dbtr><Nm>Max Muster</Nm></Dbtr></RltdPties><RmtInf><Ustrd>Bancomat</Ustrd></RmtInf></TxDtls></NtryDtls></Ntry>
     </Stmt></BkToCstmrStmt></Document>`
     const preview = previewStatementLines(creditsFromCamt(xml).lines, [])
-    expect(preview.map(line => line.direction)).toEqual(['debit', 'credit'])
+    expect(preview.map(line => line.direction)).toEqual(['debit', 'reversal', 'credit'])
+    expect(preview.map(line => line.currency)).toEqual(['CHF', 'CHF', 'CHF'])
     expect(preview.every(line => line.depositor_user_id === null)).toBe(true)
     expect(JSON.stringify(preview)).not.toContain('Max Muster')
     const again = previewStatementLines(creditsFromCamt(xml).lines, [])
     expect(again.map(line => line.dedupe_key)).toEqual(preview.map(line => line.dedupe_key))
+  })
+
+  it('does not label a CAMT amount without a currency as CHF', () => {
+    const xml = `<?xml version="1.0"?><Document><BkToCstmrStmt><Stmt>
+      <Ntry><Amt>10.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><ValDt><Dt>2026-10-02</Dt></ValDt><AcctSvcrRef>NO-CCY</AcctSvcrRef></Ntry>
+    </Stmt></BkToCstmrStmt></Document>`
+    const lines = creditsFromCamt(xml).lines
+    expect(lines[0].currency).toBe('')
+    expect(previewStatementLines(lines, [])[0].currency).toBe('UNKNOWN')
   })
 
   it('rejects an oversized statement before parsing', () => {
@@ -475,23 +465,154 @@ describe('statement preview', () => {
 })
 
 describe('migration safety', () => {
-  const sql = readFileSync(resolve(process.cwd(), 'migrations/20261013_cash_bank_deposit_reports.sql'), 'utf8')
+  const original = readFileSync(resolve(process.cwd(), 'migrations/20261013_cash_bank_deposit_reports.sql'), 'utf8')
+  const sql = readFileSync(resolve(process.cwd(), 'migrations/20261013_cash_bank_phase1_remediation.sql'), 'utf8')
 
-  it('posts inside one function and does not touch legacy snapshots', () => {
+  it('posts the transfer and the storno inside locked functions', () => {
+    expect(original).toContain('confirm_cash_bank_deposit')
     expect(sql).toContain('FOR UPDATE')
-    expect(sql).toContain('confirm_cash_bank_deposit')
-    expect(sql).toContain('report_cash_bank_deposit')
-    expect(sql).toContain('apply_cash_deposit_attribution')
-    expect(sql).toContain('reconciled_locked')
-    expect(sql).not.toMatch(/NEW\.depositor_user_id IS DISTINCT FROM OLD\.depositor_user_id/)
+    expect(sql).toContain('reverse_cash_bank_deposit')
+    expect(sql).toContain('persist_cash_bank_statement_lines')
+    expect(sql).toContain('cash_bank_statement_lines')
+    expect(sql).toContain('UPDATE public.cash_balances')
+    expect(sql).toContain('UPDATE public.tenants')
+    expect(sql).toContain('cash_to_bank')
     expect(sql).not.toMatch(/DELETE\s+FROM\s+public\.cash_bank_transfer/i)
-    expect(sql).not.toMatch(/UPDATE\s+public\.cash_balances/i)
-    expect(sql).not.toMatch(/UPDATE\s+public\.tenants/i)
     expect(sql).not.toMatch(/UPDATE\s+public\.cash_transactions/i)
-    expect(sql).not.toMatch(/UPDATE\s+public\.cash_movements/i)
+    expect(sql).not.toMatch(/INSERT\s+INTO\s+public\.accounting_entries/i)
+    expect(sql).not.toContain('v_dep.candidate_dedupe_key')
     expect(sql).toContain("'1020'")
     expect(sql).toContain("'1000'")
     expect(sql).not.toContain("'3000'")
     expect(sql).not.toContain("'3900'")
+    expect(sql).not.toContain("'1090'")
+  })
+})
+
+describe('authoritative balances and storno', () => {
+  it('moves the drawer and the bank by the same amount and keeps cash close at zero', () => {
+    const posted = applyTransferToBalances({ drawerBalance: 50_000, bankBalance: 20_000, amountRappen: 10_000, direction: 'to_bank' })
+    expect(posted).toEqual({ ok: true, drawerBalance: 40_000, bankBalance: 30_000 })
+    if (!posted.ok) return
+    const counted = posted.drawerBalance
+    expect(counted - posted.drawerBalance).toBe(0)
+    const untouchedBook = 50_000
+    expect(counted - untouchedBook).toBe(-10_000)
+  })
+
+  it('rejects a short drawer and an unknown currency', () => {
+    expect(applyTransferToBalances({ drawerBalance: 100, bankBalance: 0, amountRappen: 10_000, direction: 'to_bank' })).toEqual({ ok: false, reason: 'insufficient_drawer' })
+    expect(confirmation({ evidence: evidence({ currency: '' }) })).toEqual({ action: 'reject', reason: 'currency' })
+    expect(confirmation({ evidence: evidence({ currency: 'EUR' }) })).toEqual({ action: 'reject', reason: 'currency' })
+    expect(confirmation({ evidence: null })).toEqual({ action: 'reject', reason: 'missing_statement_line' })
+    expect(confirmation({ evidence: evidence({ recomputedDedupeKey: 'forged' }) })).toEqual({ action: 'reject', reason: 'forged_dedupe' })
+    expect(confirmation({ evidence: evidence({ entryDate: '2026-12-01' }) })).toEqual({ action: 'reject', reason: 'date' })
+  })
+
+  it('rejects an invoice or expense line and a mismatched stored bank row', () => {
+    expect(confirmation({
+      bankRow: {
+        amountRappen: 10_000, currency: 'CHF', entryDate: '2026-10-02', source: 'camt',
+        linkedDepositId: null, invoiceId: 'inv-1', accountingEntryId: null,
+      },
+    })).toEqual({ action: 'reject', reason: 'bank_line_used' })
+    expect(confirmation({
+      bankRow: {
+        amountRappen: 10_000, currency: 'CHF', entryDate: '2026-10-02', source: 'camt',
+        linkedDepositId: null, invoiceId: null, accountingEntryId: 'exp-1',
+      },
+    })).toEqual({ action: 'reject', reason: 'bank_line_used' })
+    expect(confirmation({
+      bankRow: {
+        amountRappen: 9_000, currency: 'CHF', entryDate: '2026-10-02', source: 'cash_statement',
+        linkedDepositId: null, invoiceId: null, accountingEntryId: null,
+      },
+    })).toEqual({ action: 'reject', reason: 'bank_row_mismatch' })
+    expect(confirmation({
+      bankRow: {
+        amountRappen: 10_000, currency: null, entryDate: '2026-10-02', source: 'cash_statement',
+        linkedDepositId: null, invoiceId: null, accountingEntryId: null,
+      },
+    })).toEqual({ action: 'reject', reason: 'bank_row_mismatch' })
+    expect(confirmation({
+      bankRow: {
+        amountRappen: 10_000, currency: 'CHF', entryDate: '2026-10-02', source: 'camt',
+        linkedDepositId: null, invoiceId: null, accountingEntryId: null,
+      },
+    })).toEqual({ action: 'reject', reason: 'ordinary_payment' })
+  })
+
+  it('uses one drawer or none', () => {
+    const rows = [
+      { id: 'office-1', tenantId: TENANT, instructorId: 'admin-1', officeRegisterId: 'reg-1', registerType: 'office' },
+      { id: 'office-2', tenantId: TENANT, instructorId: 'admin-1', officeRegisterId: 'reg-2', registerType: 'office' },
+      { id: 'staff-1', tenantId: TENANT, instructorId: 'staff-1', officeRegisterId: null, registerType: 'instructor' },
+      { id: 'other', tenantId: OTHER, instructorId: 'staff-1', officeRegisterId: null, registerType: 'instructor' },
+    ]
+    expect(identifySourceDrawer({ tenantId: TENANT, sourceKind: 'business', sourceUserId: null, rows }).ok).toBe(false)
+    expect(identifySourceDrawer({ tenantId: TENANT, sourceKind: 'staff', sourceUserId: 'staff-1', rows })).toMatchObject({ ok: true, drawerId: 'staff-1', movement: 'staff' })
+    expect(identifySourceDrawer({ tenantId: TENANT, sourceKind: 'staff', sourceUserId: 'missing', rows })).toEqual({ ok: false, reason: 'drawer_missing' })
+    expect(confirmation({ drawerCount: 0 })).toEqual({ action: 'reject', reason: 'drawer_missing' })
+    expect(confirmation({ drawerCount: 2 })).toEqual({ action: 'reject', reason: 'drawer_ambiguous' })
+  })
+
+  it('reverses once and restores both balances', () => {
+    const first = planReversal({
+      role: 'admin', reason: 'Falsche Zeile', status: 'reconciled', journalId: 'j-1', reversalJournalId: null,
+      amountRappen: 10_000, drawerBalance: 40_000, bankBalance: 30_000,
+    })
+    expect(first.action).toBe('reverse')
+    if (first.action !== 'reverse') return
+    expect(first.lines).toEqual(cashToBankReversalLines(10_000))
+    expect(transferTouchesProfitAndLoss(first.lines)).toBe(false)
+    expect(first.drawerBalance).toBe(50_000)
+    expect(first.bankBalance).toBe(20_000)
+    expect(planReversal({
+      role: 'admin', reason: 'Nochmals', status: 'reversed', journalId: 'j-1', reversalJournalId: 'j-2',
+      amountRappen: 10_000, drawerBalance: 50_000, bankBalance: 20_000,
+    }).action).toBe('already_reversed')
+    expect(planReversal({
+      role: 'staff', reason: 'Falsche Zeile', status: 'reconciled', journalId: 'j-1', reversalJournalId: null,
+      amountRappen: 10_000, drawerBalance: 40_000, bankBalance: 30_000,
+    })).toEqual({ action: 'reject', reason: 'forbidden' })
+    expect(planReversal({
+      role: 'admin', reason: 'no', status: 'reconciled', journalId: 'j-1', reversalJournalId: null,
+      amountRappen: 10_000, drawerBalance: 40_000, bankBalance: 30_000,
+    })).toEqual({ action: 'reject', reason: 'reason_required' })
+  })
+
+  it('treats a repeated open report as the same operation and fails closed on a truncated page', async () => {
+    const fingerprint = openReportFingerprint({
+      sourceKind: 'staff', sourceUserId: 'staff-1', amountRappen: 10_000, reportedOn: '2026-10-01', depositorUserId: 'staff-1',
+    })
+    expect(repeatedOpenReport({ existingStatus: 'reported', existingFingerprint: fingerprint, incomingFingerprint: fingerprint })).toBe(true)
+    expect(repeatedOpenReport({ existingStatus: 'reconciled', existingFingerprint: fingerprint, incomingFingerprint: fingerprint })).toBe(false)
+    const complete = await collectCompletePages(async (from) => (from === 0 ? [{ id: 'a' }] : []))
+    expect(complete).toEqual([{ id: 'a' }])
+    await expect(collectCompletePages(async () => Array.from({ length: OPEN_DEPOSIT_PAGE_SIZE }, (_, index) => index))).rejects.toThrow('incomplete_candidates')
+  })
+})
+
+describe('existing import size cap', () => {
+  const routes = [
+    'server/api/invoices/csv-import.post.ts',
+    'server/api/invoices/csv-import-detect.post.ts',
+    'server/api/invoices/camt-import.post.ts',
+    'server/api/admin/accounting/import-camt.post.ts',
+  ]
+
+  it('parses a CSV above 1 MiB and leaves the older import routes uncapped', () => {
+    const padding = 'x'.repeat(STATEMENT_UPLOAD_MAX_BYTES)
+    const csv = `Buchungsdatum;Gutschrift;Währung;Referenz\n2026-10-02;100.00;CHF;${padding}\n`
+    expect(statementByteLength(csv)).toBeGreaterThan(STATEMENT_UPLOAD_MAX_BYTES)
+    const parsed = creditsFromCsv(csv, { date: 'Buchungsdatum', credit: 'Gutschrift', currency: 'Währung', reference: 'Referenz' })
+    expect(parsed.lines).toHaveLength(1)
+    expect(parsed.lines[0].currency).toBe('CHF')
+    for (const route of routes) {
+      const source = readFileSync(resolve(process.cwd(), route), 'utf8')
+      expect(source).not.toContain('assertStatementUploadSize')
+    }
+    const preview = readFileSync(resolve(process.cwd(), 'server/api/admin/cash-bank-deposits.post.ts'), 'utf8')
+    expect(preview).toContain('assertStatementUploadSize')
   })
 })

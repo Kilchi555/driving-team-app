@@ -3,6 +3,7 @@ import { assertStatementUploadSize } from '~/server/utils/csv-upload-limit'
 import {
   canAssignDepositor,
   canConfirmReconciliation,
+  collectCompletePages,
   isEligibleDepositorRole,
   isIsoDate,
   isPositiveRappen,
@@ -79,8 +80,32 @@ function rpcFailure(error: { message?: string; code?: string; details?: string }
   if (blob.includes('reason_required')) {
     throw createError({ statusCode: 400, statusMessage: 'Für eine Korrektur nach dem Abgleich braucht es eine Begründung' })
   }
-  if (blob.includes('bank_line_used') || blob.includes('23505') || blob.includes('duplicate key')) {
-    throw createError({ statusCode: 409, statusMessage: 'Diese Kontoauszugszeile ist bereits zugeordnet' })
+  if (blob.includes('bank_line_used') || blob.includes('ordinary_payment')) {
+    throw createError({ statusCode: 409, statusMessage: 'Diese Kontoauszugszeile ist bereits einer Rechnung oder Ausgabe zugeordnet' })
+  }
+  if (blob.includes('idempotency_conflict')) {
+    throw createError({ statusCode: 409, statusMessage: 'Diese Meldung widerspricht einer bereits gespeicherten Meldung' })
+  }
+  if (blob.includes('token_collision')) {
+    throw createError({ statusCode: 409, statusMessage: 'Die Referenz konnte nicht vergeben werden. Bitte erneut versuchen' })
+  }
+  if (blob.includes('missing_statement_line') || blob.includes('statement_not_found')) {
+    throw createError({ statusCode: 409, statusMessage: 'Die Kontoauszugszeile ist nicht gespeichert' })
+  }
+  if (blob.includes('forged_dedupe') || blob.includes('bank_row_mismatch')) {
+    throw createError({ statusCode: 409, statusMessage: 'Die Kontoauszugszeile stimmt nicht mit dem gespeicherten Beleg überein' })
+  }
+  if (blob.includes('insufficient_evidence')) {
+    throw createError({ statusCode: 409, statusMessage: 'Ohne die Einzahlungsreferenz auf dem Kontoauszug wird nicht gebucht' })
+  }
+  if (blob.includes('drawer_missing') || blob.includes('drawer_ambiguous')) {
+    throw createError({ statusCode: 409, statusMessage: 'Die Herkunftskasse ist nicht eindeutig. Es wurde nichts gebucht' })
+  }
+  if (blob.includes('insufficient_drawer') || blob.includes('bank_insufficient')) {
+    throw createError({ statusCode: 409, statusMessage: 'Der gespeicherte Saldo reicht für diese Buchung nicht' })
+  }
+  if (blob.includes('currency')) {
+    throw createError({ statusCode: 409, statusMessage: 'Nur eine explizite CHF-Gutschrift kann bestätigt werden' })
   }
   throw createError({ statusCode: 409, statusMessage: 'Die Einzahlung kann in diesem Zustand nicht so geändert werden' })
 }
@@ -110,9 +135,13 @@ export default defineEventHandler(async (event) => {
     const names = await loadNames(supabase, actor.tenant_id, rows)
     return {
       flow: 'cash_bank_reconciliation',
-      legacy_snapshots_unchanged: true,
       deposits: rows.map(row => toDto(row, names)),
     }
+  }
+
+  if (action === 'reverse') {
+    requireConfirmRole(actor.role)
+    return reverseDeposit(supabase, actor, body)
   }
 
   if (action === 'report' || action === 'create_from_credit') {
@@ -121,7 +150,7 @@ export default defineEventHandler(async (event) => {
 
   if (action === 'preview_import') {
     requireConfirmRole(actor.role)
-    return previewImport(supabase, actor.tenant_id, body)
+    return previewImport(supabase, actor, body)
   }
 
   if (action === 'select_candidate') {
@@ -233,7 +262,6 @@ function toDto(row: DepositRow, names: Map<string, string>) {
     candidate_entry_date: row.candidate_entry_date,
     candidate_amount_rappen: row.candidate_amount_rappen,
     journal_id: row.journal_id,
-    legacy_balance_updated: false,
   }
 }
 
@@ -251,21 +279,22 @@ async function loadUser(supabase: ReturnType<typeof getSupabaseAdmin>, userId: s
 
 async function reportDeposit(supabase: ReturnType<typeof getSupabaseAdmin>, actor: { id: string; tenant_id: string; role: string }, body: Record<string, unknown>) {
   const idempotencyKey = typeof body.idempotency_key === 'string' ? body.idempotency_key.trim() : ''
-  if (idempotencyKey.length < 8 || idempotencyKey.length > 80) {
+  if (idempotencyKey.length < 8 || idempotencyKey.length > 180) {
     throw createError({ statusCode: 400, statusMessage: 'Der Idempotenzschlüssel ist ungültig' })
   }
 
   let amountRappen = body.amount_rappen
   let reportedOn = body.reported_on
   let sourceKind = body.source_kind
+  let persistedLine: Awaited<ReturnType<typeof loadStatementLine>> | null = null
   if (body.action === 'create_from_credit') {
     requireConfirmRole(actor.role)
-    const line = readCandidate(body)
-    if (line.direction !== 'credit' || (line.currency || 'CHF').toUpperCase() !== 'CHF' || line.amountRappen <= 0) {
-      throw createError({ statusCode: 409, statusMessage: 'Nur eine Gutschrift in CHF kann als Bareinzahlung gemeldet werden' })
+    persistedLine = await loadStatementLine(supabase, actor.tenant_id, assertUuid(body.statement_line_id, 'Kontoauszugszeile'))
+    if (persistedLine.direction !== 'credit' || persistedLine.currency !== 'CHF' || persistedLine.amount_rappen <= 0) {
+      throw createError({ statusCode: 409, statusMessage: 'Nur eine gespeicherte CHF-Gutschrift kann als Bareinzahlung gemeldet werden' })
     }
     const open = await openDeposits(supabase, actor.tenant_id)
-    const existing = matchCreditToDeposits(line, open)
+    const existing = matchCreditToDeposits(storedCredit(persistedLine), open)
     const blocked = existing.matchClass === 'exact'
       || existing.matchClass === 'suggestion'
       || existing.matchClass === 'ambiguous'
@@ -273,8 +302,8 @@ async function reportDeposit(supabase: ReturnType<typeof getSupabaseAdmin>, acto
     if (blocked) {
       return { result: 'use_existing', match_class: existing.matchClass, deposit_ids: existing.depositIds }
     }
-    amountRappen = line.amountRappen
-    reportedOn = line.date
+    amountRappen = persistedLine.amount_rappen
+    reportedOn = persistedLine.entry_date
     if (sourceKind !== 'business' && sourceKind !== 'staff' && sourceKind !== 'admin') sourceKind = 'business'
   }
 
@@ -326,21 +355,14 @@ async function reportDeposit(supabase: ReturnType<typeof getSupabaseAdmin>, acto
   if (error) rpcFailure(error, 'report')
   const depositId = data?.deposit_id as string
   let linked = false
-  if (body.action === 'create_from_credit' && data?.result === 'reported') {
-    const line = readCandidate(body)
-    const open = await openDeposits(supabase, actor.tenant_id)
-    const match = matchCreditToDeposits(line, open)
-    if ((match.matchClass === 'exact' || match.matchClass === 'suggestion') && match.depositIds.includes(depositId)) {
+  if (body.action === 'create_from_credit' && persistedLine) {
+    const current = data?.result === 'existing' ? await loadOwnDeposit(supabase, actor.tenant_id, depositId) : null
+    if (data?.result === 'reported' || current?.status === 'reported' || current?.status === 'matched') {
       const selected = await supabase.rpc('select_cash_bank_deposit_candidate', {
         p_tenant_id: actor.tenant_id,
         p_actor_id: actor.id,
         p_deposit_id: depositId,
-        p_dedupe_key: line.dedupeKey,
-        p_amount_rappen: line.amountRappen,
-        p_entry_date: line.date,
-        p_direction: 'credit',
-        p_match_class: match.matchClass,
-        p_bank_ref: lineBankRef(body),
+        p_statement_line_id: persistedLine.id,
       })
       if (selected.error) rpcFailure(selected.error, 'select')
       linked = true
@@ -348,10 +370,10 @@ async function reportDeposit(supabase: ReturnType<typeof getSupabaseAdmin>, acto
   }
   const row = await loadOwnDeposit(supabase, actor.tenant_id, depositId)
   const names = await loadNames(supabase, actor.tenant_id, [row])
-  return { result: data?.result || 'reported', linked, legacy_balance_updated: false, deposit: toDto(row, names) }
+  return { result: data?.result || 'reported', linked, authoritative_balances_updated: false, deposit: toDto(row, names) }
 }
 
-async function previewImport(supabase: ReturnType<typeof getSupabaseAdmin>, tenantId: string, body: Record<string, unknown>) {
+async function previewImport(supabase: ReturnType<typeof getSupabaseAdmin>, actor: { id: string; tenant_id: string }, body: Record<string, unknown>) {
   const kind = body.statement_kind === 'camt' ? 'camt' : 'csv'
   const content = kind === 'camt' ? body.xml_content : body.csv_content
   if (typeof content !== 'string' || !content.trim()) {
@@ -372,44 +394,53 @@ async function previewImport(supabase: ReturnType<typeof getSupabaseAdmin>, tena
     }
     throw createError({ statusCode: 422, statusMessage: 'Die Datei konnte nicht gelesen werden' })
   }
-  const open = await openDeposits(supabase, tenantId)
+  const { data, error } = await supabase.rpc('persist_cash_bank_statement_lines', {
+    p_tenant_id: actor.tenant_id,
+    p_actor_id: actor.id,
+    p_source: kind,
+    p_lines: lines.map(line => ({
+      dedupe_key: line.dedupeKey,
+      amount_rappen: line.amountRappen,
+      currency: line.currency,
+      direction: line.direction,
+      entry_date: line.date,
+      reference: line.reference || '',
+      remittance: line.remittance || '',
+      debtor_name: line.debtorName || '',
+      bank_ref: line.bankRef,
+    })),
+  })
+  if (error) rpcFailure(error, 'preview')
+  const stored = new Map<number, { statement_line_id: string | null; result: string }>()
+  for (const row of (data?.lines || []) as Array<{ index: number; statement_line_id: string | null; result: string }>) {
+    stored.set(row.index, row)
+  }
+  const open = await openDeposits(supabase, actor.tenant_id)
   return {
-    lines: previewStatementLines(lines, open),
-    legacy_balance_updated: false,
+    lines: previewStatementLines(lines, open).map((line, index) => ({
+      ...line,
+      statement_line_id: stored.get(index)?.statement_line_id || null,
+      persist_result: stored.get(index)?.result || 'invalid',
+    })),
+    authoritative_balances_updated: false,
     posted: false,
   }
 }
 
 async function selectCandidate(supabase: ReturnType<typeof getSupabaseAdmin>, actor: { id: string; tenant_id: string }, body: Record<string, unknown>) {
   const depositId = assertUuid(body.deposit_id, 'Einzahlung')
-  const line = readCandidate(body)
-  const open = await openDeposits(supabase, actor.tenant_id)
-  const target = open.find(row => row.id === depositId)
-  if (!target) {
-    throw createError({ statusCode: 404, statusMessage: 'Einzahlung wurde nicht gefunden' })
-  }
-  const match = matchCreditToDeposits(line, open)
-  if (match.matchClass !== 'exact' && match.matchClass !== 'suggestion') {
-    return { result: 'unmatched', match_class: match.matchClass, deposit_ids: match.depositIds, posted: false }
-  }
-  if (!match.depositIds.includes(depositId)) {
-    throw createError({ statusCode: 409, statusMessage: 'Diese Gutschrift gehört zu einer anderen Meldung' })
-  }
+  const lineId = assertUuid(body.statement_line_id, 'Kontoauszugszeile')
+  await loadStatementLine(supabase, actor.tenant_id, lineId)
   const { error } = await supabase.rpc('select_cash_bank_deposit_candidate', {
     p_tenant_id: actor.tenant_id,
     p_actor_id: actor.id,
     p_deposit_id: depositId,
-    p_dedupe_key: line.dedupeKey,
-    p_amount_rappen: line.amountRappen,
-    p_entry_date: line.date,
-    p_direction: line.direction,
-    p_match_class: match.matchClass,
-    p_bank_ref: lineBankRef(body),
+    p_statement_line_id: lineId,
   })
   if (error) rpcFailure(error, 'select')
   const row = await loadOwnDeposit(supabase, actor.tenant_id, depositId)
   const names = await loadNames(supabase, actor.tenant_id, [row])
-  return { result: 'matched', posted: false, legacy_balance_updated: false, deposit: toDto(row, names) }
+  return { result: 'matched', posted: false, authoritative_balances_updated: false, deposit: toDto(row, names) }
 }
 
 async function confirmDeposit(supabase: ReturnType<typeof getSupabaseAdmin>, actor: { id: string; tenant_id: string }, body: Record<string, unknown>) {
@@ -425,7 +456,7 @@ async function confirmDeposit(supabase: ReturnType<typeof getSupabaseAdmin>, act
       const row = await loadOwnDeposit(supabase, actor.tenant_id, depositId).catch(() => null)
       if (row?.status === 'reconciled' && row.journal_id) {
         const names = await loadNames(supabase, actor.tenant_id, [row])
-        return { result: 'already_reconciled', legacy_balance_updated: false, deposit: toDto(row, names) }
+        return { result: 'already_reconciled', authoritative_balances_updated: false, deposit: toDto(row, names) }
       }
     }
     rpcFailure(error, 'confirm')
@@ -435,7 +466,30 @@ async function confirmDeposit(supabase: ReturnType<typeof getSupabaseAdmin>, act
   return {
     result: data?.result || 'reconciled',
     journal_id: row.journal_id,
-    legacy_balance_updated: false,
+    authoritative_balances_updated: data?.result === 'reconciled',
+    deposit: toDto(row, names),
+  }
+}
+
+async function reverseDeposit(supabase: ReturnType<typeof getSupabaseAdmin>, actor: { id: string; tenant_id: string }, body: Record<string, unknown>) {
+  const depositId = assertUuid(body.deposit_id, 'Einzahlung')
+  const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+  if (reason.length < 3) {
+    throw createError({ statusCode: 400, statusMessage: 'Für eine Korrektur nach dem Abgleich braucht es eine Begründung' })
+  }
+  const { data, error } = await supabase.rpc('reverse_cash_bank_deposit', {
+    p_tenant_id: actor.tenant_id,
+    p_actor_id: actor.id,
+    p_deposit_id: depositId,
+    p_reason: reason,
+  })
+  if (error) rpcFailure(error, 'reverse')
+  const row = await loadOwnDeposit(supabase, actor.tenant_id, depositId)
+  const names = await loadNames(supabase, actor.tenant_id, [row])
+  return {
+    result: data?.result || 'reversed',
+    journal_id: row.journal_id,
+    authoritative_balances_updated: data?.result === 'reversed',
     deposit: toDto(row, names),
   }
 }
@@ -457,6 +511,7 @@ async function setOpenStatus(
         candidate_direction: null,
         candidate_match_class: null,
         candidate_bank_ref: null,
+        statement_line_id: null,
         updated_at: new Date().toISOString(),
       }
   const { data, error } = await supabase
@@ -470,7 +525,7 @@ async function setOpenStatus(
   if (!data?.length) {
     throw createError({ statusCode: 409, statusMessage: 'Die Einzahlung kann in diesem Zustand nicht so geändert werden' })
   }
-  return { result: action === 'cancel' ? 'cancelled' : 'reported', legacy_balance_updated: false }
+  return { result: action === 'cancel' ? 'cancelled' : 'reported', authoritative_balances_updated: false }
 }
 
 async function setDepositor(supabase: ReturnType<typeof getSupabaseAdmin>, actor: { id: string; tenant_id: string; role: string }, body: Record<string, unknown>) {
@@ -519,32 +574,69 @@ async function setDepositor(supabase: ReturnType<typeof getSupabaseAdmin>, actor
     result: plan.event.kind,
     journal_id: updated.journal_id,
     journal_unchanged: true,
-    legacy_balance_updated: false,
+    authoritative_balances_updated: false,
     deposit: toDto(updated, names),
   }
 }
 
 async function openDeposits(supabase: ReturnType<typeof getSupabaseAdmin>, tenantId: string): Promise<DepositMatchInput[]> {
-  const { data, error } = await supabase
-    .from('cash_deposit_reports')
-    .select('id, tenant_id, amount_rappen, reported_on, reference_token, status')
-    .eq('tenant_id', tenantId)
-    .in('status', ['reported', 'matched'])
-    .limit(500)
-  if (error) {
-    if (/does not exist|schema cache/i.test(error.message || '')) {
-      throw createError({ statusCode: 503, statusMessage: 'Die Abgleich-Funktion ist in dieser Datenbank noch nicht vorhanden' })
+  try {
+    const data = await collectCompletePages(async (from, to) => {
+      const { data: page, error } = await supabase
+        .from('cash_deposit_reports')
+        .select('id, tenant_id, amount_rappen, reported_on, reference_token, status')
+        .eq('tenant_id', tenantId)
+        .in('status', ['reported', 'matched'])
+        .order('id', { ascending: true })
+        .range(from, to)
+      if (error) {
+        if (/does not exist|schema cache/i.test(error.message || '')) {
+          throw createError({ statusCode: 503, statusMessage: 'Die Abgleich-Funktion ist in dieser Datenbank noch nicht vorhanden' })
+        }
+        throw createError({ statusCode: 500, statusMessage: 'Offene Meldungen konnten nicht geladen werden' })
+      }
+      return page || []
+    })
+    return data.map(row => ({
+      id: row.id,
+      tenantId: row.tenant_id,
+      amountRappen: row.amount_rappen,
+      reportedOn: row.reported_on,
+      referenceToken: row.reference_token,
+      status: row.status,
+    }))
+  } catch (error) {
+    if (error instanceof Error && error.message === 'incomplete_candidates') {
+      throw createError({ statusCode: 409, statusMessage: 'Die offenen Meldungen sind unvollständig. Es wird nichts abgeglichen' })
     }
-    throw createError({ statusCode: 500, statusMessage: 'Offene Meldungen konnten nicht geladen werden' })
+    throw error
   }
-  return (data || []).map(row => ({
-    id: row.id,
-    tenantId: row.tenant_id,
-    amountRappen: row.amount_rappen,
-    reportedOn: row.reported_on,
-    referenceToken: row.reference_token,
-    status: row.status,
-  }))
+}
+
+async function loadStatementLine(supabase: ReturnType<typeof getSupabaseAdmin>, tenantId: string, lineId: string) {
+  const { data, error } = await supabase
+    .from('cash_bank_statement_lines')
+    .select('id, tenant_id, amount_rappen, currency, direction, entry_date, dedupe_key, reference, remittance')
+    .eq('id', lineId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  if (error || !data || !tenantOwnsResource(data.tenant_id, tenantId)) {
+    throw createError({ statusCode: 404, statusMessage: 'Die Kontoauszugszeile ist nicht gespeichert' })
+  }
+  return data
+}
+
+function storedCredit(line: { dedupe_key: string; amount_rappen: number; entry_date: string; currency: string; direction: string; reference: string | null; remittance: string | null }): BankCreditInput {
+  const direction = line.direction === 'debit' || line.direction === 'reversal' ? line.direction : 'credit'
+  return {
+    dedupeKey: line.dedupe_key,
+    amountRappen: line.amount_rappen,
+    date: line.entry_date,
+    currency: line.currency,
+    direction,
+    reference: line.reference || '',
+    remittance: line.remittance || '',
+  }
 }
 
 async function loadOwnDeposit(supabase: ReturnType<typeof getSupabaseAdmin>, tenantId: string, depositId: string): Promise<DepositRow> {
@@ -558,41 +650,4 @@ async function loadOwnDeposit(supabase: ReturnType<typeof getSupabaseAdmin>, ten
     throw createError({ statusCode: 404, statusMessage: 'Einzahlung wurde nicht gefunden' })
   }
   return data as DepositRow
-}
-
-function lineBankRef(body: Record<string, unknown>): string | null {
-  const candidate = body.candidate
-  if (!candidate || typeof candidate !== 'object') return null
-  const value = (candidate as Record<string, unknown>).bank_ref
-  return typeof value === 'string' && value.trim() ? value.trim().slice(0, 120) : null
-}
-
-function readCandidate(body: Record<string, unknown>): BankCreditInput {
-  const candidate = body.candidate
-  if (!candidate || typeof candidate !== 'object') {
-    throw createError({ statusCode: 400, statusMessage: 'Die Kontoauszugszeile fehlt' })
-  }
-  const row = candidate as Record<string, unknown>
-  const dedupeKey = typeof row.dedupe_key === 'string' ? row.dedupe_key.trim() : ''
-  const date = typeof row.date === 'string' ? row.date : ''
-  const direction = row.direction
-  const currency = typeof row.currency === 'string' ? row.currency : 'CHF'
-  if (!dedupeKey || dedupeKey.length > 500 || !isIsoDate(date)) {
-    throw createError({ statusCode: 400, statusMessage: 'Die Kontoauszugszeile ist unvollständig' })
-  }
-  if (direction !== 'credit' && direction !== 'debit' && direction !== 'reversal') {
-    throw createError({ statusCode: 400, statusMessage: 'Die Kontoauszugszeile ist unvollständig' })
-  }
-  if (!isPositiveRappen(row.amount_rappen)) {
-    throw createError({ statusCode: 400, statusMessage: 'Der Betrag der Kontoauszugszeile ist ungültig' })
-  }
-  return {
-    dedupeKey,
-    amountRappen: row.amount_rappen,
-    date,
-    currency,
-    direction,
-    reference: typeof row.reference === 'string' ? row.reference.slice(0, 180) : '',
-    remittance: typeof row.remittance === 'string' ? row.remittance.slice(0, 180) : '',
-  }
 }

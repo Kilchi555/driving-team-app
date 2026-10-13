@@ -320,13 +320,13 @@ export default defineEventHandler(async (event) => {
         : { data: [] }
 
       const instructorIdToBalance = new Map((balancesRows || []).map(row => [row.instructor_id, row]))
-      const WITHDRAWAL_TYPES = ['withdrawal', 'cash_handover']
+      const WITHDRAWAL_TYPES = ['withdrawal', 'cash_handover', 'cash_to_bank']
       const staffBalances = (users || []).map(user => {
         const persisted = instructorIdToBalance.get(user.id)
         let balance = 0
         movements?.forEach(m => {
           if (m.instructor_id !== user.id) return
-          if (m.movement_type === 'deposit') balance += m.amount_rappen
+          if (m.movement_type === 'deposit' || m.movement_type === 'cash_to_bank_reversal') balance += m.amount_rappen
           else if (WITHDRAWAL_TYPES.includes(m.movement_type)) balance -= m.amount_rappen
         })
         transactions?.forEach(t => {

@@ -4,6 +4,9 @@ export type CamtDirection = 'CRDT' | 'DBIT'
 
 export type CamtParsedEntry = MatchableEntry & {
   direction: CamtDirection
+  /** Present for callers that must not treat a missing code as CHF. */
+  currency?: string
+  reversal?: boolean
 }
 
 function xmlVal(xml: string, tag: string): string {
@@ -56,7 +59,7 @@ function counterparty(tx: string, direction: CamtDirection): { name: string; iba
 
 export function parseCamtXml(
   xml: string,
-  options: { directions?: CamtDirection[] } = {},
+  options: { directions?: CamtDirection[]; includeNonChf?: boolean; includeReversals?: boolean } = {},
 ): CamtParsedEntry[] {
   const allowed = new Set(options.directions ?? ['CRDT', 'DBIT'])
   const entries: CamtParsedEntry[] = []
@@ -67,15 +70,18 @@ export function parseCamtXml(
     if (cdtDbt !== 'CRDT' && cdtDbt !== 'DBIT') continue
     if (!allowed.has(cdtDbt)) continue
 
-    const reversal = xmlVal(ntry, 'RvslInd').toLowerCase()
-    if (reversal === 'true') continue
+    const reversal = xmlVal(ntry, 'RvslInd').toLowerCase() === 'true'
+    if (reversal && !options.includeReversals) continue
 
     const amtStr = xmlVal(ntry, 'Amt')
     const amt = parseFloat(amtStr.replace(',', '.')) || 0
     if (amt <= 0) continue
 
-    const currency = xmlAttr(ntry, 'Amt', 'Ccy') || 'CHF'
-    if (currency !== 'CHF') continue
+    const rawCurrency = xmlAttr(ntry, 'Amt', 'Ccy')
+    if (!options.includeNonChf) {
+      const currency = rawCurrency || 'CHF'
+      if (currency !== 'CHF') continue
+    }
 
     const date = xmlNestedVal(ntry, 'ValDt', ['Dt', 'DtTm']) || xmlNestedVal(ntry, 'BookgDt', ['Dt', 'DtTm'])
     const acctSvcrRefEntry = xmlVal(ntry, 'AcctSvcrRef')
@@ -96,6 +102,8 @@ export function parseCamtXml(
 
       entries.push({
         direction: cdtDbt,
+        currency: options.includeNonChf ? rawCurrency : (rawCurrency || 'CHF'),
+        reversal,
         amount_rappen: amountRappen,
         date: dateStr,
         reference: cleanRef,

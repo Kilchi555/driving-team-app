@@ -3,8 +3,9 @@
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 class="text-xl font-semibold text-gray-900">Bareinzahlung an die Bank</h1>
       <p class="mt-3 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-4">
-        Dieser Abgleich ist ein neuer Buchungsfluss. Er verändert weder den Kassen-Snapshot noch den manuell gepflegten Banksaldo in der Bilanz.
-        Eine gemeldete oder nur zugeordnete Einzahlung ist kein bestätigter Bankbestand.
+        Eine bestätigte Bareinzahlung reduziert genau eine erkannte Herkunftskasse und erhöht den Banksaldo der Bilanz. Sie ist keine Einnahme und kein Aufwand.
+        Eine nur gemeldete Einzahlung ist noch kein Bankbestand. Ältere Kassenstände werden dadurch nicht nachträglich abgeglichen.
+        Fehlt die Referenz auf dem Kontoauszug oder ist die Herkunftskasse nicht eindeutig, wird nicht gebucht.
       </p>
 
       <p v-if="error" class="mt-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-4">{{ error }}</p>
@@ -78,14 +79,14 @@
             </label>
             <div class="mt-3 flex flex-wrap gap-2">
               <button
-                v-if="line.match_class === 'exact' || line.match_class === 'suggestion'"
+                v-if="line.statement_line_id && (line.match_class === 'exact' || line.match_class === 'suggestion')"
                 type="button"
                 class="text-sm rounded-lg px-3 py-2 bg-gray-900 text-white"
                 :disabled="busy"
                 @click="linkLine(line)"
               >Als Kandidat übernehmen</button>
               <button
-                v-if="line.direction === 'credit' && line.match_class === 'none'"
+                v-if="line.statement_line_id && line.direction === 'credit' && line.currency === 'CHF' && line.match_class === 'none'"
                 type="button"
                 class="text-sm rounded-lg px-3 py-2 border border-gray-300"
                 :disabled="busy"
@@ -116,11 +117,14 @@
             <template v-if="deposit.candidate_entry_date">· {{ deposit.candidate_entry_date }}</template>
           </p>
           <p v-if="deposit.status === 'reconciled'" class="mt-2 text-sm text-gray-800">
-            Abgeglichen. Journal {{ deposit.journal_id }}. Der Kassen-Snapshot und der Bilanz-Banksaldo wurden nicht verändert.
+            Abgeglichen. Die Herkunftskasse wurde reduziert und der Banksaldo erhöht. Journal {{ deposit.journal_id }}.
+          </p>
+          <p v-else-if="deposit.status === 'reversed'" class="mt-2 text-sm text-gray-800">
+            Storniert. Kasse und Banksaldo wurden zurückgebucht. Das ursprüngliche Journal bleibt gespeichert.
           </p>
           <p v-else class="mt-2 text-sm text-gray-500">Noch nicht als Bankbestand bestätigt.</p>
 
-          <div v-if="deposit.status !== 'reconciled'" class="mt-4 flex flex-wrap gap-2">
+          <div v-if="deposit.status !== 'reconciled' && deposit.status !== 'reversed'" class="mt-4 flex flex-wrap gap-2">
             <label class="text-sm text-gray-700 flex-1 min-w-[220px]">
               Zuordnung
               <select v-model="depositChoices[deposit.id]" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2">
@@ -129,11 +133,16 @@
               </select>
             </label>
             <button type="button" class="self-end text-sm border border-gray-300 rounded-lg px-3 py-2" :disabled="busy" @click="saveDepositor(deposit, false)">Zuordnung speichern</button>
-            <button v-if="deposit.status === 'matched'" type="button" class="self-end text-sm bg-gray-900 text-white rounded-lg px-3 py-2" :disabled="busy" @click="confirmDeposit(deposit.id)">Abgleich bestätigen</button>
+            <button v-if="deposit.status === 'matched' && deposit.candidate_match_class === 'exact'" type="button" class="self-end text-sm bg-gray-900 text-white rounded-lg px-3 py-2" :disabled="busy" @click="confirmDeposit(deposit.id)">Abgleich bestätigen</button>
             <button type="button" class="self-end text-sm text-gray-600 rounded-lg px-3 py-2" :disabled="busy" @click="cancelDeposit(deposit.id)">Zurückziehen</button>
           </div>
 
-          <form v-else class="mt-4 grid gap-2" @submit.prevent="saveDepositor(deposit, true)">
+          <form v-if="deposit.status === 'reconciled'" class="mt-4 flex flex-wrap gap-2" @submit.prevent="reverseDeposit(deposit.id)">
+            <input v-model="reversalReasons[deposit.id]" class="flex-1 min-w-[220px] border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Begründung für den Storno" required minlength="3">
+            <button type="submit" class="text-sm border border-gray-300 rounded-lg px-3 py-2" :disabled="busy">Storno</button>
+          </form>
+
+          <form v-if="deposit.status === 'reconciled' || deposit.status === 'reversed'" class="mt-4 grid gap-2" @submit.prevent="saveDepositor(deposit, true)">
             <p class="text-sm text-gray-600">Eine Korrektur nach dem Abgleich ändert nur die Person, nicht den Betrag und nicht das Journal.</p>
             <label class="text-sm text-gray-700">
               Korrigierte Person
@@ -160,7 +169,7 @@ definePageMeta({ layout: 'admin', middleware: 'admin' })
 type Person = { id: string; name: string; role: string }
 type Deposit = {
   id: string
-  status: 'reported' | 'matched' | 'reconciled' | 'cancelled'
+  status: 'reported' | 'matched' | 'reconciled' | 'reversed' | 'cancelled'
   amount_rappen: number
   reported_on: string
   reference_token: string
@@ -186,6 +195,7 @@ type PreviewLine = {
   reference: string
   remittance: string
   depositor_user_id: null
+  statement_line_id: string | null
 }
 
 const busy = ref(false)
@@ -199,6 +209,7 @@ const lastToken = ref('')
 const lineChoices = reactive<Record<string, string>>({})
 const depositChoices = reactive<Record<string, string>>({})
 const correctionReasons = reactive<Record<string, string>>({})
+const reversalReasons = reactive<Record<string, string>>({})
 const form = reactive({
   amount: '',
   date: '',
@@ -228,6 +239,7 @@ function roleLabel(role: string) {
 
 function statusLabel(deposit: Deposit) {
   if (deposit.status === 'reconciled') return 'Abgeglichen'
+  if (deposit.status === 'reversed') return 'Storniert'
   if (deposit.status === 'cancelled') return 'Zurückgezogen'
   if (deposit.status === 'matched') return 'Kandidat'
   if (deposit.candidate_match_class === 'ambiguous') return 'Mehrdeutig'
@@ -282,19 +294,6 @@ async function onFile(event: Event) {
   fileText.value = await file.text()
 }
 
-function candidateOf(line: PreviewLine) {
-  return {
-    dedupe_key: line.dedupe_key,
-    amount_rappen: line.amount_rappen,
-    date: line.date,
-    currency: line.currency,
-    direction: line.direction,
-    bank_ref: line.bank_ref,
-    reference: line.reference,
-    remittance: line.remittance,
-  }
-}
-
 async function previewFile() {
   busy.value = true
   error.value = ''
@@ -337,7 +336,7 @@ async function reportDeposit() {
       method: 'POST',
       body: {
         action: 'report',
-        idempotency_key: crypto.randomUUID(),
+        idempotency_key: reportKey(amount),
         amount_rappen: amount,
         reported_on: form.date,
         source_kind: form.sourceKind,
@@ -354,15 +353,20 @@ async function reportDeposit() {
   }
 }
 
+function reportKey(amount: number) {
+  const source = form.sourceKind === 'business' ? '' : form.sourceUserId
+  return `report|${form.sourceKind}|${source}|${amount}|${form.date}|${form.depositorUserId}`.slice(0, 180)
+}
+
 async function linkLine(line: PreviewLine) {
   const depositId = line.deposit_ids[0]
-  if (!depositId) return
+  if (!depositId || !line.statement_line_id) return
   busy.value = true
   error.value = ''
   try {
     const selected = await $fetch<{ result: string }>('/api/admin/cash-bank-deposits', {
       method: 'POST',
-      body: { action: 'select_candidate', deposit_id: depositId, candidate: candidateOf(line) },
+      body: { action: 'select_candidate', deposit_id: depositId, statement_line_id: line.statement_line_id },
     })
     if (selected.result !== 'matched') {
       error.value = 'Der Treffer ist nicht eindeutig. Es wurde nichts gebucht.'
@@ -384,6 +388,7 @@ async function linkLine(line: PreviewLine) {
 }
 
 async function createFromLine(line: PreviewLine) {
+  if (!line.statement_line_id) return
   busy.value = true
   error.value = ''
   try {
@@ -391,15 +396,31 @@ async function createFromLine(line: PreviewLine) {
       method: 'POST',
       body: {
         action: 'create_from_credit',
-        idempotency_key: crypto.randomUUID(),
+        idempotency_key: `line|${line.statement_line_id}|${lineChoices[line.dedupe_key] || ''}`.slice(0, 180),
         source_kind: 'business',
         depositor_user_id: lineChoices[line.dedupe_key] || null,
-        candidate: candidateOf(line),
+        statement_line_id: line.statement_line_id,
       },
     })
     if (created.result === 'use_existing') {
       error.value = 'Diese Gutschrift trifft schon eine Meldung oder ist nicht eindeutig. Es wurde nichts gebucht.'
     }
+    await loadAll()
+  } catch (err: any) {
+    error.value = messageOf(err)
+  } finally {
+    busy.value = false
+  }
+}
+
+async function reverseDeposit(depositId: string) {
+  busy.value = true
+  error.value = ''
+  try {
+    await $fetch('/api/admin/cash-bank-deposits', {
+      method: 'POST',
+      body: { action: 'reverse', deposit_id: depositId, reason: reversalReasons[depositId] || '' },
+    })
     await loadAll()
   } catch (err: any) {
     error.value = messageOf(err)

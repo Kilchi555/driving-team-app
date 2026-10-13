@@ -439,14 +439,14 @@ const toastMessage = ref('')
 const totalDeposits = computed(() => {
   if (!selectedStaff.value) return 0
   return staffMovements.value
-    .filter(m => m.movement_type === 'deposit')
+    .filter(m => m.movement_type === 'deposit' || m.movement_type === 'cash_to_bank_reversal')
     .reduce((sum, m) => sum + m.amount_rappen, 0)
 })
 
 const totalWithdrawals = computed(() => {
   if (!selectedStaff.value) return 0
   return staffMovements.value
-    .filter(m => m.movement_type === 'withdrawal' || m.movement_type === 'cash_handover')
+    .filter(m => m.movement_type === 'withdrawal' || m.movement_type === 'cash_handover' || m.movement_type === 'cash_to_bank')
     .reduce((sum, m) => sum + m.amount_rappen, 0)
 })
 
@@ -842,7 +842,9 @@ const getMovementTypeClass = (type) => {
     'withdrawal': 'bg-red-100 text-red-600',
     'cash_transaction': 'bg-blue-100 text-blue-600',
     'adjustment': 'bg-yellow-100 text-yellow-600',
-    'cash_handover': 'bg-purple-100 text-purple-700'
+    'cash_handover': 'bg-purple-100 text-purple-700',
+    'cash_to_bank': 'bg-red-100 text-red-700',
+    'cash_to_bank_reversal': 'bg-green-100 text-green-700'
   }
   return classes[type] || 'bg-gray-100 text-gray-600'
 }
@@ -853,7 +855,9 @@ const getMovementTypeIcon = (type) => {
     'withdrawal': '➖',
     'cash_transaction': '💰',
     'adjustment': '⚖️',
-    'cash_handover': '🏦'
+    'cash_handover': '🏦',
+    'cash_to_bank': '🏦',
+    'cash_to_bank_reversal': '↩️'
   }
   return icons[type] || '❓'
 }
@@ -865,7 +869,9 @@ const getMovementTypeText = (type) => {
     'cash_transaction': 'Bargeldtransaktion',
     'adjustment': 'Korrektur',
     'system_init': 'Kasse eröffnet',
-    'cash_handover': `Kassenabgabe an ${t.value.businessNoun}`
+    'cash_handover': `Kassenabgabe an ${t.value.businessNoun}`,
+    'cash_to_bank': 'Bareinzahlung an die Bank',
+    'cash_to_bank_reversal': 'Storno Bareinzahlung an die Bank'
   }
   return texts[type] || type
 }

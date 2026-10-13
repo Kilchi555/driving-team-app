@@ -13,8 +13,6 @@ import {
   matchEntriesToInvoices, flagAlreadyImported, computeDedupeKey,
   type MatchableEntry, type OpenInvoiceForMatching,
 } from '~/server/utils/bank-reconciliation'
-import { assertStatementUploadSize } from '~/server/utils/csv-upload-limit'
-
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
   if (!authUser?.id) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
@@ -37,7 +35,6 @@ export default defineEventHandler(async (event) => {
   if (!csvContent || typeof csvContent !== 'string') {
     throw createError({ statusCode: 400, statusMessage: 'csv_content fehlt' })
   }
-  assertStatementUploadSize(csvContent)
   if (!mapping?.date || (!mapping.amount && !mapping.credit)) {
     throw createError({ statusCode: 400, statusMessage: 'Spalten-Zuordnung unvollständig: Datum und Betrag (oder Gutschrift) erforderlich' })
   }

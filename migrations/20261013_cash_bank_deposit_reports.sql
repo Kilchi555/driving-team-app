@@ -1,7 +1,8 @@
 -- Cash-to-bank deposit reports. Additive. Do not apply from the application deploy.
 --
--- This file does not update cash_balances, cash_transactions, cash_movements,
--- or tenants.bank_balance_rappen. Historical rows stay as they are.
+-- Snapshot updates for a confirmed transfer live in
+-- 20261013_cash_bank_phase1_remediation.sql. This file does not rewrite
+-- historical cash_transactions or existing balance rows by itself.
 --
 -- The transfer journal is separate from accounting_entries because that table
 -- only allows income and expense, and the accounting screen treats every
