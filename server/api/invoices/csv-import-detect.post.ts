@@ -6,6 +6,7 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { parseCsv, suggestColumnMapping } from '~/server/utils/csv-parse'
+import { assertStatementUploadSize } from '~/server/utils/csv-upload-limit'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -27,6 +28,7 @@ export default defineEventHandler(async (event) => {
   if (!csvContent || typeof csvContent !== 'string') {
     throw createError({ statusCode: 400, statusMessage: 'csv_content fehlt' })
   }
+  assertStatementUploadSize(csvContent)
 
   const { headers, rows, delimiter } = parseCsv(csvContent)
   if (headers.length === 0 || rows.length === 0) {

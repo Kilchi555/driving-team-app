@@ -22,6 +22,7 @@ export const FEATURE_ROUTE_MAP: Record<string, string[]> = {
   'cash_management_enabled': [
     '/admin/cash-management',
     '/admin/office-cash',
+    '/admin/cash-bank-reconciliation',
     '/api/admin/cash'
   ],
   'cancellation_management_enabled': [

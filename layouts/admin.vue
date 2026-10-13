@@ -182,6 +182,8 @@
               class="drawer-link" :class="isActive('/admin/courses') ? 'drawer-active' : ''">Kurse</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('cash_management_enabled')" to="/admin/cash-management" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/cash-management') ? 'drawer-active' : ''">Kassen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('cash_management_enabled')" to="/admin/cash-bank-reconciliation" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/cash-bank-reconciliation') ? 'drawer-active' : ''">Bankabgleich</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('cancellation_management_enabled')" to="/admin/cancellation-management" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/cancellation-management') ? 'drawer-active' : ''">Absagen</NuxtLink>
             <NuxtLink to="/admin/medical-certificate-reviews" @click="showMobileMenu = false"
@@ -318,6 +320,8 @@
               class="drawer-link" :class="isActive('/admin/courses') ? 'drawer-active' : ''">Kurse</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('cash_management_enabled')" to="/admin/cash-management"
               class="drawer-link" :class="isActive('/admin/cash-management') ? 'drawer-active' : ''">Kassen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('cash_management_enabled')" to="/admin/cash-bank-reconciliation"
+              class="drawer-link" :class="isActive('/admin/cash-bank-reconciliation') ? 'drawer-active' : ''">Bankabgleich</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('cancellation_management_enabled')" to="/admin/cancellation-management"
               class="drawer-link" :class="isActive('/admin/cancellation-management') ? 'drawer-active' : ''">Absagen</NuxtLink>
             <NuxtLink to="/admin/medical-certificate-reviews"
