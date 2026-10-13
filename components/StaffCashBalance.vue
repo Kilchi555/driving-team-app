@@ -76,6 +76,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { formatDate, formatDateTime } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
+import { calculateStaffCashBalance } from '~/utils/staff-cash-balance'
 import Toast from '~/components/Toast.vue'
 import { useTerminology } from '~/composables/useTerminology'
 
@@ -162,38 +163,14 @@ onMounted(async () => {
   logger.debug('✅ All data loaded')
 })
 
-// Load cash balance
+// Load cash balance. Rows are already limited to this instructor and tenant
+// by /api/staff/cash-balance. The formula lives in calculateStaffCashBalance.
 const loadCashBalance = async () => {
   try {
     logger.debug('🔍 Loading cash balance for staff:', props.currentUser.id)
-    
-    // Calculate balance from movements and transactions (same logic as admin)
-    let balance = 0
-
-    // Calculate from movements
-    cashMovements.value.forEach(movement => {
-      if (movement.movement_type === 'deposit') {
-        balance += movement.amount_rappen
-        logger.debug(`➕ Adding deposit: ${movement.amount_rappen / 100} CHF`)
-      } else if (movement.movement_type === 'withdrawal') {
-        balance -= movement.amount_rappen
-        logger.debug(`➖ Subtracting withdrawal: ${movement.amount_rappen / 100} CHF`)
-      }
-    })
-
-    // Calculate from transactions (ONLY pending ones, confirmed ones are ignored)
-    cashTransactions.value.forEach(transaction => {
-      if (transaction.status === 'pending') {
-        balance += transaction.amount_rappen
-        logger.debug(`➕ Adding pending transaction: ${transaction.amount_rappen / 100} CHF`)
-      } else if (transaction.status === 'confirmed') {
-        logger.debug(`❌ Ignoring confirmed transaction: ${transaction.amount_rappen / 100} CHF`)
-      }
-    })
-
+    const balance = calculateStaffCashBalance(cashMovements.value, cashTransactions.value)
     logger.debug(`💰 Final calculated balance: ${balance / 100} CHF`)
     currentBalance.value = balance
-
   } catch (err) {
     console.error('Error loading cash balance:', err)
     currentBalance.value = 0
