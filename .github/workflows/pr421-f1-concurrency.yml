@@ -1,0 +1,140 @@
+# PR #421 Path A — F1 concurrency on disposable PostgreSQL 17 only.
+# Gate A implementation. Do not wire as a required main check until flake rate known.
+#
+# Forbidden: Production unyjaetebnaexaflpyoc, shared staging kssqalisscxkhvorqwgy,
+# secrets.SUPABASE_DB_URL, Supabase MCP, or any hosted DB fallback.
+#
+# Modes:
+#   preflight   — Gate B (identity/bootstrap/multi-session/advisory probe). No matrix scoring.
+#   concurrency — Gate C only. Requires operator to choose concurrency (sets approval env).
+
+name: PR421 F1 concurrency (disposable PG)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_mode:
+        description: 'preflight (Gate B) or concurrency (Gate C — requires explicit approval)'
+        required: true
+        type: choice
+        default: preflight
+        options:
+          - preflight
+          - concurrency
+
+permissions:
+  contents: read
+
+env:
+  PR421_F1_PGDATABASE: pr421_f1_concurrency
+  PR421_PGHOST: 127.0.0.1
+  PR421_PGPORT: '5432'
+  PR421_PGUSER: postgres
+  # Local ephemeral service password only — not a hosted secret; never echo.
+  PR421_PGPASSWORD: pr421_local_only
+  F1_EXPECTED_SHA256: d8d10cd20a4fad2ea744bca5dfc36b1b1333e999f8f867cefeed9ea240291cab
+
+jobs:
+  f1-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: pr421_local_only
+          POSTGRES_DB: pr421_f1_concurrency
+        options: >-
+          --health-cmd "pg_isready -U postgres -d pr421_f1_concurrency"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Identity gate (pre-bootstrap)
+        run: |
+          set -euo pipefail
+          # Construct URL only from local service parameters — never from hosted secrets.
+          if [ -n "${SUPABASE_DB_URL:-}" ]; then
+            echo "::error::SUPABASE_DB_URL must not be present in Path A job"
+            exit 1
+          fi
+          HOST="${PR421_PGHOST}"
+          DB="${PR421_F1_PGDATABASE}"
+          case "$HOST" in
+            localhost|127.0.0.1) ;;
+            *) echo "::error::host must be localhost/127.0.0.1"; exit 1 ;;
+          esac
+          URL_CHECK="postgresql://${PR421_PGUSER}@${HOST}:${PR421_PGPORT}/${DB}"
+          for s in unyjaetebnaexaflpyoc kssqalisscxkhvorqwgy supabase.co; do
+            if printf '%s' "$URL_CHECK" | grep -qi "$s"; then
+              echo "::error::forbidden identity substring"
+              exit 1
+            fi
+          done
+          echo "Identity OK host=${HOST} db=${DB}"
+
+      - name: Install PostgreSQL client
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify F1 migration SHA-256
+        run: |
+          set -euo pipefail
+          FILE="migrations/20261012_enroll_public_cash_course_with_pending_payment.sql"
+          GOT="$(sha256sum "$FILE" | awk '{print $1}')"
+          if [ "$GOT" != "$F1_EXPECTED_SHA256" ]; then
+            echo "::error::F1 SHA-256 mismatch"
+            exit 1
+          fi
+          echo "F1 checksum OK"
+
+      - name: Bootstrap minimal schema + F1 migration
+        env:
+          PGPASSWORD: ${{ env.PR421_PGPASSWORD }}
+        run: |
+          set -euo pipefail
+          # Identity again immediately before apply
+          HOST="${PR421_PGHOST}"
+          case "$HOST" in localhost|127.0.0.1) ;; *) exit 1 ;; esac
+          psql -h "$PR421_PGHOST" -p "$PR421_PGPORT" -U "$PR421_PGUSER" -d "$PR421_F1_PGDATABASE" \
+            -v ON_ERROR_STOP=1 -f scripts/pr421/f1-minimal-schema.sql
+          psql -h "$PR421_PGHOST" -p "$PR421_PGPORT" -U "$PR421_PGUSER" -d "$PR421_F1_PGDATABASE" \
+            -v ON_ERROR_STOP=1 -f migrations/20261012_enroll_public_cash_course_with_pending_payment.sql
+
+      - name: Run harness (mode-gated)
+        env:
+          PR421_HARNESS_MODE: ${{ inputs.run_mode }}
+          # Only concurrency input sets Gate C env; preflight cannot score matrix.
+          PR421_CONCURRENCY_EXECUTION_APPROVED: ${{ inputs.run_mode == 'concurrency' && '1' || '0' }}
+          PR421_PGHOST: ${{ env.PR421_PGHOST }}
+          PR421_PGPORT: ${{ env.PR421_PGPORT }}
+          PR421_PGUSER: ${{ env.PR421_PGUSER }}
+          PR421_PGPASSWORD: ${{ env.PR421_PGPASSWORD }}
+          PR421_F1_PGDATABASE: ${{ env.PR421_F1_PGDATABASE }}
+        run: |
+          set -euo pipefail
+          if [ -n "${SUPABASE_DB_URL:-}" ]; then
+            echo "::error::SUPABASE_DB_URL must not be present"
+            exit 1
+          fi
+          echo "Harness mode=${PR421_HARNESS_MODE}"
+          node scripts/pr421/f1-concurrency.mjs --mode="${PR421_HARNESS_MODE}"
