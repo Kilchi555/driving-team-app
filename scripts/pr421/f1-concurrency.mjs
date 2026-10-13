@@ -19,14 +19,18 @@ import { createHash, randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {
+  DEFAULT_EXPECTED_DB,
+  assertLiveServerIdentity,
+  assertUrlIdentityGate,
+} from './f1-identity.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = resolve(__dirname, '../..')
 
 const F1_REL = 'migrations/20261012_enroll_public_cash_course_with_pending_payment.sql'
 const F1_EXPECTED_SHA256 = 'd8d10cd20a4fad2ea744bca5dfc36b1b1333e999f8f867cefeed9ea240291cab'
-const FORBIDDEN_SUBSTR = ['unyjaetebnaexaflpyoc', 'kssqalisscxkhvorqwgy', 'supabase.co']
-const EXPECTED_DB = process.env.PR421_F1_PGDATABASE || 'pr421_f1_concurrency'
+const EXPECTED_DB = process.env.PR421_F1_PGDATABASE || DEFAULT_EXPECTED_DB
 const WAIT_BUDGET_MS = Number(process.env.PR421_WAIT_BUDGET_MS || 10_000)
 const POLL_MS = 75
 const HARNESS_PROBE_LABEL = 'pr421-harness-advisory-probe-v1'
@@ -71,28 +75,16 @@ function buildDatabaseUrl() {
 }
 
 function identityGate(url, { phase }) {
-  let parsed
   try {
-    parsed = new URL(url)
-  } catch {
-    fail(`identityGate(${phase}): unparseable DATABASE_URL`)
+    const { host, dbName } = assertUrlIdentityGate(url, {
+      phase,
+      expectedDb: EXPECTED_DB,
+      supabaseDbUrlSet: Boolean(process.env.SUPABASE_DB_URL),
+    })
+    console.log(`[identity] OK phase=${phase} host=${host} db=${dbName}`)
+  } catch (err) {
+    fail(err?.message || String(err))
   }
-  const host = parsed.hostname.toLowerCase()
-  if (host !== 'localhost' && host !== '127.0.0.1') {
-    fail(`identityGate(${phase}): host must be localhost/127.0.0.1, got ${host}`)
-  }
-  const hay = url.toLowerCase()
-  for (const s of FORBIDDEN_SUBSTR) {
-    if (hay.includes(s)) fail(`identityGate(${phase}): forbidden substring ${s}`)
-  }
-  if (process.env.SUPABASE_DB_URL) {
-    fail(`identityGate(${phase}): SUPABASE_DB_URL must not be set for Path A harness`)
-  }
-  const dbName = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
-  if (dbName !== EXPECTED_DB) {
-    fail(`identityGate(${phase}): database name must be ${EXPECTED_DB}, got ${dbName}`)
-  }
-  console.log(`[identity] OK phase=${phase} host=${host} db=${dbName}`)
 }
 
 async function withClient(url, fn) {
@@ -405,24 +397,35 @@ async function preflightOverlappingTx(url) {
   }
 }
 
-async function verifyDbIdentityLive(client, phase) {
+async function verifyDbIdentityLive(client, phase, connectionHost) {
+  // host(inet_server_addr()) strips netmask; NULL means Unix socket (fail closed in assert).
   const { rows } = await client.query(
-    `SELECT current_database() AS db, inet_server_addr()::text AS addr`,
+    `SELECT current_database() AS db, host(inet_server_addr()) AS server_host`,
   )
-  if (rows[0].db !== EXPECTED_DB) {
-    fail(`live identity (${phase}): database ${rows[0].db} != ${EXPECTED_DB}`)
+  try {
+    const result = assertLiveServerIdentity({
+      connectionHost,
+      database: rows[0].db,
+      serverHost: rows[0].server_host,
+      expectedDb: EXPECTED_DB,
+      phase,
+    })
+    console.log(
+      `[identity] live OK phase=${phase} db=${rows[0].db} server=${result.serverHost} topology=${result.topology}`,
+    )
+  } catch (err) {
+    fail(err?.message || String(err))
   }
-  const addr = rows[0].addr
-  if (addr && addr !== '127.0.0.1' && addr !== '::1') {
-    // inet_server_addr() can be null for unix socket; null is acceptable for local service
-    fail(`live identity (${phase}): unexpected inet_server_addr ${addr}`)
-  }
+}
+
+function connectionHostFromUrl(url) {
+  return new URL(url).hostname
 }
 
 async function runPreflight(url) {
   identityGate(url, { phase: 'preflight-start' })
   await withClient(url, async (client) => {
-    await verifyDbIdentityLive(client, 'preflight')
+    await verifyDbIdentityLive(client, 'preflight', connectionHostFromUrl(url))
     const { rows } = await client.query(
       `SELECT COUNT(*)::int AS c FROM pg_proc
         WHERE proname = 'enroll_public_cash_course_with_pending_payment'`,
@@ -496,7 +499,7 @@ async function runTest7(url, observabilityOk) {
   const c = await openClient(url)
   let fx = null
   try {
-    await verifyDbIdentityLive(c, 'test-7')
+    await verifyDbIdentityLive(c, 'test-7', connectionHostFromUrl(url))
     fx = await seedFixtures(c)
     const key = randomUUID()
     const reg = baseRegistration(fx, {
