@@ -104,8 +104,8 @@
           <div v-if="currentStep === 1">
             <div class="space-y-5">
 
-              <!-- Voucher Selector -->
-              <div v-if="isFeatureEnabled('voucher_creation')">
+              <!-- Voucher Selector (flag comes from public shop API — guests cannot read tenant_settings) -->
+              <div v-if="voucherCreationEnabled">
                 <VoucherProductSelector
                   :existing-vouchers="availableVouchers"
                   :brand-color="brandPrimary"
@@ -569,9 +569,9 @@
                   category: item.product.category || '',
                   is_active: item.product.is_active || true,
                   is_voucher: item.product.is_voucher || false,
-                  allow_custom_amount: false,
-                  min_amount_rappen: 0,
-                  max_amount_rappen: 0,
+                  allow_custom_amount: !!(item.product as any).allow_custom_amount,
+                  min_amount_rappen: (item.product as any).min_amount_rappen || 0,
+                  max_amount_rappen: (item.product as any).max_amount_rappen || 0,
                   is_credit_product: item.product.is_credit_product || false,
                   credit_amount_rappen: item.product.credit_amount_rappen || 0,
                   display_order: item.product.display_order || 0,
@@ -981,7 +981,6 @@ import { useShopCheckout } from '~/composables/useShopCheckout'
 import { useTenant } from '~/composables/useTenant'
 import { useVouchers } from '~/composables/useVouchers'
 import { useDiscounts } from '~/composables/useDiscounts'
-import { useFeatures } from '~/composables/useFeatures'
 import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
 
@@ -990,7 +989,6 @@ const authStore = useAuthStore()
 const { loadTenant, tenantSlug, tenantName, tenantId, currentTenant } = useTenant()
 const { createVoucher, createVouchersAfterPurchase, downloadVoucherPDF, sendVoucherEmail } = useVouchers()
 const { validateDiscountCode } = useDiscounts()
-const { isEnabled: isFeatureEnabled, load: loadFeatures } = useFeatures()
 
 // Get tenant from URL parameter
 const tenantParam = ref(route.query.tenant as string || '')
@@ -1009,13 +1007,8 @@ watch(() => route.query.tenant, (newTenant) => {
   }
 }, { immediate: true })
 
-// Watch for tenantId changes to debug
-watch(tenantId, async (newTenantId, oldTenantId) => {
+watch(tenantId, (newTenantId, oldTenantId) => {
   logger.debug('🔄 Tenant ID changed:', { from: oldTenantId, to: newTenantId })
-  if (newTenantId) {
-    logger.debug('🔍 Loading features for new tenant:', newTenantId)
-    await loadFeatures(newTenantId)
-  }
 })
 
 // Components
@@ -1202,8 +1195,15 @@ watch(() => registerForm.value.password, (newPassword) => {
   }
 })
 
-// Gutschein-Funktionalität
+// Gutschein-Funktionalität (from public /api/shop/products — not client-side useFeatures)
 const availableVouchers = ref<any[]>([])
+const voucherCreationEnabled = ref(false)
+const customVoucherProduct = ref<{
+  id: string
+  name: string
+  min_amount_rappen?: number | null
+  max_amount_rappen?: number | null
+} | null>(null)
 
 // Step 1: Customer Data
 const formData = ref({
@@ -1956,6 +1956,9 @@ const loadProducts = async () => {
     if (!currentTenant.value) {
       console.error('❌ Tenant not loaded')
       availableProducts.value = []
+      availableVouchers.value = []
+      customVoucherProduct.value = null
+      voucherCreationEnabled.value = false
       return
     }
 
@@ -1967,6 +1970,9 @@ const loadProducts = async () => {
     if (!query.tenantId && !query.tenant) {
       console.error('❌ No tenant identifier available for product loading')
       availableProducts.value = []
+      availableVouchers.value = []
+      customVoucherProduct.value = null
+      voucherCreationEnabled.value = false
       return
     }
 
@@ -1975,14 +1981,23 @@ const loadProducts = async () => {
     const res = await $fetch('/api/shop/products', { query }) as any
 
     availableProducts.value = res?.products || []
-    logger.debug('✅ Products loaded:', availableProducts.value.length)
+    availableVouchers.value = (res?.products || []).filter((p: any) => p.is_voucher && !p.allow_custom_amount)
+    customVoucherProduct.value = res?.customVoucherProduct || null
+    voucherCreationEnabled.value = !!res?.voucherCreationEnabled
+    logger.debug('✅ Products loaded:', availableProducts.value.length, {
+      voucherCreationEnabled: voucherCreationEnabled.value,
+      customVoucherProductId: customVoucherProduct.value?.id || null,
+    })
 
-    if (availableProducts.value.length === 0) {
+    if (availableProducts.value.length === 0 && !voucherCreationEnabled.value) {
       logger.debug('⚠️ No products in database, shop not available')
     }
   } catch (error) {
     console.error('❌ Error loading products:', error)
     availableProducts.value = []
+    availableVouchers.value = []
+    customVoucherProduct.value = null
+    voucherCreationEnabled.value = false
     showToastMessage('❌ Shop kann nicht geöffnet werden. Fehler beim Laden der Produkte.')
   } finally {
     isLoadingProducts.value = false
@@ -2012,10 +2027,15 @@ const selectInvoicePayment = async () => {
 // Gutschein-Handler
 const handleVoucherCreated = (voucherData: any) => {
   logger.debug('🎁 Voucher created:', voucherData)
-  
-  // Gutschein als Produkt hinzufügen - mit ALLEN benötigten Fields
+
+  // Checkout validates against a real DB product with allow_custom_amount
+  if (!customVoucherProduct.value?.id) {
+    showToastMessage('❌ Gutschein-Kauf ist derzeit nicht verfügbar.')
+    return
+  }
+
   const voucherProduct = {
-    id: `voucher-${Date.now()}`,
+    id: customVoucherProduct.value.id,
     name: voucherData.name,
     description: voucherData.description,
     price_rappen: voucherData.price_rappen,
@@ -2027,15 +2047,14 @@ const handleVoucherCreated = (voucherData: any) => {
     is_voucher: true,
     is_credit_product: false,
     credit_amount_rappen: 0,
-    min_amount_rappen: 0,
-    max_amount_rappen: 0,
-    allow_custom_amount: false,
+    min_amount_rappen: customVoucherProduct.value.min_amount_rappen ?? 100,
+    max_amount_rappen: customVoucherProduct.value.max_amount_rappen ?? 100_000,
+    allow_custom_amount: true,
     unit_price_rappen: voucherData.price_rappen,
     total_price_rappen: voucherData.price_rappen
   }
-  
+
   addProduct(voucherProduct)
-  // saveImmediately() wird bereits in addProduct() aufgerufen
 }
 
 const handleVoucherSelected = (voucher: any) => {
@@ -2354,10 +2373,7 @@ onMounted(async () => {
     const user = authStore.user
 
     await Promise.all([
-      // Load feature flags
-      tenantId.value ? loadFeatures(tenantId.value) : Promise.resolve(),
-
-      // Load products
+      // Load products (+ public voucher_creation flag)
       loadProducts(),
 
       // Load auth user data if already logged in
