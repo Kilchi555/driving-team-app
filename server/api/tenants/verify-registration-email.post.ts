@@ -7,6 +7,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { consumeRegistrationEmailToken } from '~/server/utils/registration-email-verification'
+import { isRegistrationTokenSecretConfigured } from '~/server/utils/registration-token'
 
 export default defineEventHandler(async (event) => {
   const ipAddress = getClientIP(event)
@@ -21,6 +22,13 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 429,
       statusMessage: 'Zu viele Anfragen. Bitte warten.',
+    })
+  }
+
+  if (!isRegistrationTokenSecretConfigured()) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Registrierung vorübergehend nicht verfügbar. Bitte später erneut versuchen.',
     })
   }
 

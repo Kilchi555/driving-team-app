@@ -6,12 +6,30 @@
 import { createHash, randomBytes } from 'crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendEmail } from '~/server/utils/email'
-import { generateRegistrationToken } from '~/server/utils/registration-token'
+import {
+  generateRegistrationToken,
+  isRegistrationTokenSecretConfigured,
+} from '~/server/utils/registration-token'
 
 export const REGISTRATION_EMAIL_TOKEN_TTL_MS = 60 * 60 * 1000 // 1 hour
 export const REGISTRATION_STATUS_PENDING = 'pending_email_verification'
 export const REGISTRATION_STATUS_EMAIL_VERIFIED = 'email_verified'
 export const REGISTRATION_STATUS_ACTIVE = 'active'
+
+/**
+ * Absolute HMAC reissue deadline = original email-verification token `expires_at`
+ * (persisted at issue time; never updated on consume or replay).
+ */
+export function isWithinRegistrationTokenReissueWindow(
+  expiresAt: string | Date | null | undefined,
+  nowMs: number = Date.now(),
+): boolean {
+  if (expiresAt == null || expiresAt === '') return false
+  const deadline =
+    expiresAt instanceof Date ? expiresAt.getTime() : Date.parse(String(expiresAt))
+  if (!Number.isFinite(deadline)) return false
+  return nowMs < deadline
+}
 
 export function normalizeRegistrationEmail(email: string): string {
   return String(email || '')
@@ -143,6 +161,14 @@ export async function consumeRegistrationEmailToken(
     return { ok: false, reason: 'invalid' }
   }
 
+  // Refuse to mutate verification state if HMAC secret is unavailable.
+  if (!isRegistrationTokenSecretConfigured()) {
+    console.error(
+      '❌ Refusing registration email verify: NUXT_REGISTRATION_TOKEN_SECRET not configured',
+    )
+    return { ok: false, reason: 'invalid' }
+  }
+
   const tokenHash = hashRegistrationEmailToken(rawToken)
 
   // Preferred path: single DB transaction with row locks.
@@ -179,23 +205,28 @@ export async function consumeRegistrationEmailToken(
             | 'already_verified')
         : 'invalid'
       // Refresh / double-submit after successful verify: re-issue HMAC only while
-      // the tenant is verified and still has no admin (prevents stranding).
+      // the tenant is verified, has no admin, and the original email-token
+      // expires_at deadline has not passed (absolute; not extended by replay).
       if (reason === 'used' || reason === 'already_verified') {
-        const reissued = await reissueRegistrationTokenForVerifiedPendingAdmin(
-          supabase,
-          tokenHash,
-        )
-        if (reissued) return reissued
+        return reissueRegistrationTokenForVerifiedPendingAdmin(supabase, tokenHash)
       }
       return { ok: false, reason }
     }
-    return {
-      ok: true,
-      tenantId: String(row.tenant_id),
-      email: String(row.email_normalized),
-      registrationToken: generateRegistrationToken(String(row.tenant_id)),
-      slug: String(row.slug || ''),
-      name: String(row.tenant_name || ''),
+    try {
+      return {
+        ok: true,
+        tenantId: String(row.tenant_id),
+        email: String(row.email_normalized),
+        registrationToken: generateRegistrationToken(String(row.tenant_id)),
+        slug: String(row.slug || ''),
+        name: String(row.tenant_name || ''),
+      }
+    } catch (err) {
+      console.error(
+        '❌ Failed to mint registration_token after verify:',
+        err instanceof Error ? err.message : err,
+      )
+      return { ok: false, reason: 'invalid' }
     }
   }
 
@@ -215,11 +246,9 @@ export async function consumeRegistrationEmailToken(
 
   if (error || !row) return { ok: false, reason: 'invalid' }
   if (row.used_at) {
-    const reissued = await reissueRegistrationTokenForVerifiedPendingAdmin(supabase, tokenHash)
-    if (reissued) return reissued
-    return { ok: false, reason: 'used' }
+    return reissueRegistrationTokenForVerifiedPendingAdmin(supabase, tokenHash)
   }
-  if (new Date(row.expires_at).getTime() < Date.now()) {
+  if (!isWithinRegistrationTokenReissueWindow(row.expires_at)) {
     return { ok: false, reason: 'expired' }
   }
 
@@ -264,13 +293,21 @@ export async function consumeRegistrationEmailToken(
     return { ok: false, reason: 'tenant_missing' }
   }
 
-  return {
-    ok: true,
-    tenantId: tenant.id,
-    email: contactNormalized,
-    registrationToken: generateRegistrationToken(tenant.id),
-    slug: tenant.slug,
-    name: tenant.name,
+  try {
+    return {
+      ok: true,
+      tenantId: tenant.id,
+      email: contactNormalized,
+      registrationToken: generateRegistrationToken(tenant.id),
+      slug: tenant.slug,
+      name: tenant.name,
+    }
+  } catch (err) {
+    console.error(
+      '❌ Failed to mint registration_token after verify:',
+      err instanceof Error ? err.message : err,
+    )
+    return { ok: false, reason: 'invalid' }
   }
 }
 
@@ -294,19 +331,28 @@ export function tenantAllowsPrivilegedOnboarding(tenant: {
  * - the email token hash matches a previously used row
  * - the bound tenant is verified/active
  * - no admin user exists yet
- * Once an admin exists, replay stays rejected.
+ * - now < original email-token `expires_at` (absolute deadline; not reset by replay)
+ *
+ * Once an admin exists, or the absolute window has passed, replay is rejected.
  */
 async function reissueRegistrationTokenForVerifiedPendingAdmin(
   supabase: SupabaseClient,
   tokenHash: string,
-): Promise<Extract<ConsumeVerificationResult, { ok: true }> | null> {
+): Promise<ConsumeVerificationResult> {
   const { data: tokenRow } = await supabase
     .from('tenant_registration_email_tokens')
-    .select('tenant_id, email_normalized, used_at')
+    .select('tenant_id, email_normalized, used_at, expires_at')
     .eq('token_hash', tokenHash)
     .maybeSingle()
 
-  if (!tokenRow?.used_at || !tokenRow.tenant_id) return null
+  if (!tokenRow?.used_at || !tokenRow.tenant_id) {
+    return { ok: false, reason: 'used' }
+  }
+
+  // Absolute deadline from the original verification token — never extended.
+  if (!isWithinRegistrationTokenReissueWindow(tokenRow.expires_at)) {
+    return { ok: false, reason: 'expired' }
+  }
 
   const { data: tenant } = await supabase
     .from('tenants')
@@ -314,10 +360,14 @@ async function reissueRegistrationTokenForVerifiedPendingAdmin(
     .eq('id', tokenRow.tenant_id)
     .maybeSingle()
 
-  if (!tenant || !tenantAllowsPrivilegedOnboarding(tenant)) return null
+  if (!tenant || !tenantAllowsPrivilegedOnboarding(tenant)) {
+    return { ok: false, reason: 'used' }
+  }
 
   const contactNormalized = normalizeRegistrationEmail(tenant.contact_email || '')
-  if (!contactNormalized || contactNormalized !== tokenRow.email_normalized) return null
+  if (!contactNormalized || contactNormalized !== tokenRow.email_normalized) {
+    return { ok: false, reason: 'email_mismatch' }
+  }
 
   const { data: existingAdmin } = await supabase
     .from('users')
@@ -327,14 +377,24 @@ async function reissueRegistrationTokenForVerifiedPendingAdmin(
     .limit(1)
     .maybeSingle()
 
-  if (existingAdmin) return null
+  if (existingAdmin) {
+    return { ok: false, reason: 'used' }
+  }
 
-  return {
-    ok: true,
-    tenantId: tenant.id,
-    email: contactNormalized,
-    registrationToken: generateRegistrationToken(tenant.id),
-    slug: tenant.slug,
-    name: tenant.name,
+  try {
+    return {
+      ok: true,
+      tenantId: tenant.id,
+      email: contactNormalized,
+      registrationToken: generateRegistrationToken(tenant.id),
+      slug: tenant.slug,
+      name: tenant.name,
+    }
+  } catch (err) {
+    console.error(
+      '❌ Failed to re-issue registration_token:',
+      err instanceof Error ? err.message : err,
+    )
+    return { ok: false, reason: 'invalid' }
   }
 }

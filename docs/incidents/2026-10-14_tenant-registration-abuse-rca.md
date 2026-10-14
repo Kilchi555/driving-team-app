@@ -45,8 +45,9 @@ Add `registration_status` + `email_verified_at`. Create tenants as **`is_active 
 
 1. **Register (public):** tenant inserted `is_active=false`, `registration_status=pending_email_verification`, hashed single-use email token stored, verification email sent. **No** `registration_token` returned.
 2. **Verify (atomic RPC):** consume hashed token (`FOR UPDATE` + one-shot `used_at`) → `email_verified_at` set, `registration_status=email_verified`, `is_active=true` → issue tenant-bound HMAC `registration_token`.
-3. **Create-admin:** requires verified+active tenant + valid `registration_token`; creates admin without bypassing app email verification.
-4. **Staff invite / privileged paths:** reject unverified/inactive tenants.
+3. **Verify refresh / reissue:** a used email link may re-mint HMAC only while the tenant has no admin **and** `now <` the original email-token `expires_at` (absolute; not extended by replay). No schema migration required — `expires_at` is already persisted at issue time.
+4. **Create-admin:** requires verified+active tenant + valid `registration_token`; creates admin without bypassing app email verification. HMAC secret (`NUXT_REGISTRATION_TOKEN_SECRET`, ≥32 chars) is mandatory — no insecure fallback.
+5. **Staff invite / privileged paths:** reject unverified/inactive tenants; invite-staff-batch requires HMAC.
 
 ## Fix package (this PR)
 

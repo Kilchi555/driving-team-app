@@ -5,7 +5,8 @@ vi.mock('~/server/utils/email', () => ({
 }))
 
 vi.mock('~/server/utils/registration-token', () => ({
-  generateRegistrationToken: vi.fn(() => 'reg-token-abc'),
+  generateRegistrationToken: vi.fn((tenantId: string) => `reg-token-for-${tenantId}`),
+  isRegistrationTokenSecretConfigured: vi.fn(() => true),
 }))
 
 describe('registration-email-verification', () => {
@@ -29,7 +30,20 @@ describe('registration-email-verification', () => {
     expect(hash).not.toContain(raw)
   })
 
-  it('rejects replayed / expired / mismatched tokens', async () => {
+  it('isWithinRegistrationTokenReissueWindow fails closed on missing/malformed timestamps', async () => {
+    const { isWithinRegistrationTokenReissueWindow } = await import(
+      '../registration-email-verification'
+    )
+    const now = Date.parse('2026-10-14T12:00:00.000Z')
+    expect(isWithinRegistrationTokenReissueWindow(null, now)).toBe(false)
+    expect(isWithinRegistrationTokenReissueWindow(undefined, now)).toBe(false)
+    expect(isWithinRegistrationTokenReissueWindow('', now)).toBe(false)
+    expect(isWithinRegistrationTokenReissueWindow('not-a-date', now)).toBe(false)
+    expect(isWithinRegistrationTokenReissueWindow('2026-10-14T11:59:59.000Z', now)).toBe(false)
+    expect(isWithinRegistrationTokenReissueWindow('2026-10-14T12:00:01.000Z', now)).toBe(true)
+  })
+
+  it('reissues within expires_at, rejects after expiry, and does not extend the absolute window', async () => {
     const {
       consumeRegistrationEmailToken,
       hashRegistrationEmailToken,
@@ -38,12 +52,13 @@ describe('registration-email-verification', () => {
 
     const raw = mintRegistrationEmailToken()
     const hash = hashRegistrationEmailToken(raw)
+    const fixedExpiresAt = new Date(Date.now() + 60_000).toISOString()
 
     const tokenRow = {
       id: 'tok-1',
       tenant_id: '11111111-1111-1111-1111-111111111111',
       email_normalized: 'owner@example.com',
-      expires_at: new Date(Date.now() + 60_000).toISOString(),
+      expires_at: fixedExpiresAt,
       used_at: null as string | null,
     }
 
@@ -52,7 +67,7 @@ describe('registration-email-verification', () => {
       name: 'Acme',
       slug: 'acme',
       contact_email: 'owner@example.com',
-      email_verified_at: null,
+      email_verified_at: null as string | null,
       registration_status: 'pending_email_verification',
       is_active: false,
     }
@@ -123,16 +138,27 @@ describe('registration-email-verification', () => {
     const first = await consumeRegistrationEmailToken(supabase, raw)
     expect(first.ok).toBe(true)
     if (first.ok) {
-      expect(first.registrationToken).toBe('reg-token-abc')
-      expect(first.email).toBe('owner@example.com')
+      expect(first.registrationToken).toBe(`reg-token-for-${tokenRow.tenant_id}`)
     }
 
-    // Refresh before admin creation: re-issue HMAC (same email token is used).
+    // Within absolute window: refresh re-issues (expires_at unchanged).
     const refresh = await consumeRegistrationEmailToken(supabase, raw)
     expect(refresh.ok).toBe(true)
-    if (refresh.ok) expect(refresh.registrationToken).toBe('reg-token-abc')
+    expect(tokenRow.expires_at).toBe(fixedExpiresAt)
 
-    // After admin exists, replay stays rejected.
+    // Repeated replay still uses the same absolute expires_at (not extended).
+    const refresh2 = await consumeRegistrationEmailToken(supabase, raw)
+    expect(refresh2.ok).toBe(true)
+    expect(tokenRow.expires_at).toBe(fixedExpiresAt)
+
+    // After absolute deadline: reject even though used_at is recent and no admin.
+    tokenRow.expires_at = new Date(Date.now() - 1000).toISOString()
+    const afterExpiry = await consumeRegistrationEmailToken(supabase, raw)
+    expect(afterExpiry.ok).toBe(false)
+    if (!afterExpiry.ok) expect(afterExpiry.reason).toBe('expired')
+
+    // Restore window; after admin exists, replay stays rejected.
+    tokenRow.expires_at = fixedExpiresAt
     adminExists = true
     const replay = await consumeRegistrationEmailToken(supabase, raw)
     expect(replay.ok).toBe(false)
@@ -213,5 +239,23 @@ describe('registration-email-verification', () => {
         registration_status: 'email_verified',
       }),
     ).toBe(true)
+  })
+
+  it('refuses consume when registration token secret is not configured', async () => {
+    const tokenMod = await import('~/server/utils/registration-token')
+    vi.mocked(tokenMod.isRegistrationTokenSecretConfigured).mockReturnValueOnce(false)
+
+    const { consumeRegistrationEmailToken } = await import('../registration-email-verification')
+    const supabase = {
+      rpc: vi.fn(async () => {
+        throw new Error('should not call rpc')
+      }),
+      from: vi.fn(),
+    } as unknown as import('@supabase/supabase-js').SupabaseClient
+
+    const result = await consumeRegistrationEmailToken(supabase, 'a'.repeat(40))
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.reason).toBe('invalid')
+    expect(supabase.rpc).not.toHaveBeenCalled()
   })
 })

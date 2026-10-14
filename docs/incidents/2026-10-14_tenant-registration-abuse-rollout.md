@@ -15,13 +15,13 @@
 
 Remaining before claiming full staging signup validation: deploy this branch to a non-prod app environment pointed at simy-test and run the smoke checklist in §4 (end-to-end Resend + UI).
 
-## 1. Environment (no new mandatory secrets)
+## 1. Environment
 
 | Variable | Required? | Notes |
 |----------|-----------|--------|
 | `RESEND_API_KEY` | Yes (existing) | Verification emails |
 | `RESEND_FROM_EMAIL` / platform from | Existing | |
-| `NUXT_REGISTRATION_TOKEN_SECRET` | **Strongly recommended** | HMAC for post-verify create-admin |
+| `NUXT_REGISTRATION_TOKEN_SECRET` | **Required** (≥32 chars) | HMAC for post-verify create-admin / invite / rollback. **No insecure fallback** — missing/empty/short secret fail-closes mint+verify. |
 | `HCAPTCHA_SECRET_KEY` | Optional | Needed when captcha is enabled for signup |
 | `VITE_HCAPTCHA_SITE_KEY` | Optional | Frontend widget (required before enabling) |
 | `TENANT_REGISTER_REQUIRE_HCAPTCHA` | Optional | Set `1` only after the signup widget is live |
@@ -30,14 +30,20 @@ Remaining before claiming full staging signup validation: deploy this branch to 
 ### Validate secrets without exposing values
 
 ```bash
-# Presence only — do not print values
+# Presence / length only — do not print values
 test -n "$RESEND_API_KEY" && echo RESEND_API_KEY=set || echo RESEND_API_KEY=missing
-test -n "$NUXT_REGISTRATION_TOKEN_SECRET" && echo REG_TOKEN_SECRET=set || echo REG_TOKEN_SECRET=missing
+if [ -n "$NUXT_REGISTRATION_TOKEN_SECRET" ] && [ "${#NUXT_REGISTRATION_TOKEN_SECRET}" -ge 32 ]; then
+  echo REG_TOKEN_SECRET=set_ok_len
+else
+  echo REG_TOKEN_SECRET=missing_or_too_short
+fi
 test -n "$HCAPTCHA_SECRET_KEY" && echo HCAPTCHA_SECRET=set || echo HCAPTCHA_SECRET=missing
 echo "REQUIRE_HCAPTCHA=${TENANT_REGISTER_REQUIRE_HCAPTCHA:-unset}"
 ```
 
-**Captcha behavior:** enforcement is active only when `TENANT_REGISTER_REQUIRE_HCAPTCHA=1` **and** secret is set. Otherwise signup does not claim bot protection.
+**Registration token secret:** must be set identically on every app instance that serves verify / create-admin / invite-staff-batch / rollback. Do not enable public signup until this check prints `set_ok_len`.
+
+**Captcha behavior:** enforcement is active only when `TENANT_REGISTER_REQUIRE_HCAPTCHA=1` **and** secret is set **and** the tenant-register UI posts a valid `captcha_token`. Do **not** set the flag until the widget is wired — otherwise signup fails closed with missing_token.
 
 ## 2. Database migration (staging first — then prod with explicit approval)
 
@@ -69,19 +75,31 @@ Apply `sql_migrations/20261014_tenant_registration_abuse_protection.sql`:
 2. Deploy application code that expects new columns/RPCs  
 3. Deploying code **before** migration will fail closed on abuse rate-limits (RPC missing) and break tenant inserts that write new columns — intentional fail-closed, not silent allow
 
-## 4. Signup smoke-test checklist (non-prod)
+## 4. Signup smoke-test checklist (simy-test / non-prod)
 
-- [ ] Register disposable tenant → response has **no** `registration_token`; tenant `is_active=false` / `pending_email_verification`
-- [ ] Receive verify email (Resend) → link works once → tenant active / `email_verified` → `registration_token` issued
-- [ ] Replay verify link → rejected
-- [ ] Expired/malformed token → rejected
-- [ ] Create-admin succeeds only after verify with bound token
-- [ ] Unverified tenant cannot create-admin / invite staff
-- [ ] Burst > limit register attempts from one IP → HTTP 429
-- [ ] Independent email-key limit triggers with different IPs same email (and vice versa)
-- [ ] Spoofed `X-Forwarded-For: 1.2.3.4` does not change limiter key when Vercel/`x-real-ip` present
-- [ ] With `TENANT_REGISTER_REQUIRE_HCAPTCHA` unset: signup works; no claim of captcha
-- [ ] With require=1 + secret: invalid/missing captcha rejected
+**Human gate — agent cannot complete this without Resend + mailbox access.**
+
+Environment: non-prod app pointed at **simy-test** (`kssqalisscxkhvorqwgy`) with migration already applied, `RESEND_API_KEY` set, and `NUXT_REGISTRATION_TOKEN_SECRET` length ≥ 32. Leave `TENANT_REGISTER_REQUIRE_HCAPTCHA` unset (UI has no captcha widget yet).
+
+1. Confirm secret checks (§1) print `REG_TOKEN_SECRET=set_ok_len` and `RESEND_API_KEY=set` (values never printed).
+2. Open `/tenant-register`, register a disposable tenant with a mailbox you control.
+3. Confirm API/UI shows pending verification and **no** `registration_token` yet; DB: `is_active=false`, `registration_status=pending_email_verification`.
+4. Receive Resend email → open link → admin password form appears with a `registration_token`.
+5. Refresh the verify URL once → still within email-token `expires_at` → recovery re-issues HMAC (admin form still works).
+6. Complete create-admin → login works.
+7. Replay verify URL after admin exists → rejected (`used`).
+8. Optional: register another pending tenant, wait past email-token expiry (or set `expires_at` in the past on simy-test for that row only) → replay must **not** mint a new registration token.
+9. Confirm invite-staff (if used in flow) requires the post-verify token.
+10. Do **not** enable captcha flag until the register page posts `captcha_token`.
+
+Checklist summary:
+
+- [ ] Register → pending, no registration_token
+- [ ] Resend deliver + first verify issues HMAC
+- [ ] Refresh within `expires_at` still recovers
+- [ ] After admin / after `expires_at` replay rejected
+- [ ] Create-admin + invite authz OK
+- [ ] Captcha flag left unset (or UI wired first)
 
 ## 5. Monitoring signals
 

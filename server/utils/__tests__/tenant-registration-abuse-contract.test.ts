@@ -76,4 +76,16 @@ describe('tenant registration abuse protection contracts', () => {
     expect(src.toLowerCase()).toContain('not trust')
     expect(src).toContain('reverse()')
   })
+
+  it('registration-token has no insecure secret fallback and reissue uses expires_at', () => {
+    const tokenSrc = read('server/utils/registration-token.ts')
+    expect(tokenSrc).not.toContain('insecure-dev-secret-change-in-production')
+    expect(tokenSrc).toContain('RegistrationTokenSecretError')
+    expect(tokenSrc).toContain('REGISTRATION_TOKEN_SECRET_MIN_LENGTH')
+
+    const verifySrc = read('server/utils/registration-email-verification.ts')
+    expect(verifySrc).toContain('isWithinRegistrationTokenReissueWindow')
+    expect(verifySrc).toContain('expires_at')
+    expect(verifySrc).toContain('isRegistrationTokenSecretConfigured')
+  })
 })
