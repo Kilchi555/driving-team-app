@@ -1,0 +1,12 @@
+---
+description: Put audit and investigation reports in a Markdown file and link it
+alwaysApply: true
+---
+
+# Reports as Markdown
+
+When the deliverable is an audit, investigation, review, or other standalone written report:
+
+1. Write the full report to a Markdown file under `/opt/cursor/artifacts/` and copy it to the agent store at `/cursor/stores/self/artifacts/`.
+2. In the chat reply, give the user a clickable Markdown link to that file. Do not leave the report only in the chat.
+3. Keep the reply short and point at the file. The file is the report.
