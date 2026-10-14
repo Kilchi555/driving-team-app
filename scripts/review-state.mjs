@@ -54,6 +54,8 @@ const NOISE_REASON = 'not required by the main ruleset'
 const REVIEW_SENTENCE =
   /Cursor Bugbot has reviewed your changes using default effort and found (\d+) potential issues?\./
 const BUG_ID = /<!-- BUGBOT_BUG_ID:\s*([0-9a-fA-F-]{36})\s*-->/
+const TRUSTED_MARKER_AUTHOR = 'github-actions[bot]'
+const MAX_LIST_PAGES = 20
 const API = 'https://api.github.com'
 const NEXT_ACTIONS = ['wait', 'fix', 'rebase', 'escalate', 'ready_for_human_merge']
 
@@ -247,7 +249,7 @@ export function analyzeReviews({ reviews = [], threads = [], threadsTruncated = 
     unresolved_bugbot_count: 0,
     uncertain: Boolean(threadsTruncated || reviewsTruncated),
   }
-  if (threadsTruncated || reviewsTruncated) {
+  if (threadsTruncated) {
     return {
       uncertain: true,
       findings: [],
@@ -684,9 +686,20 @@ function freshnessConsistent(state) {
   return false
 }
 
+function markerAuthorLogin(comment) {
+  if (typeof comment?.user?.login === 'string' && comment.user.login) return comment.user.login
+  if (typeof comment?.author === 'string' && comment.author) return comment.author
+  if (typeof comment?.author?.login === 'string' && comment.author.login) return comment.author.login
+  return null
+}
+
+function isTrustedMarkerAuthor(comment) {
+  return markerAuthorLogin(comment) === TRUSTED_MARKER_AUTHOR
+}
+
 function markerRecords(comments) {
   return (comments || [])
-    .filter((comment) => typeof comment?.body === 'string' && comment.body.includes(MARKER))
+    .filter((comment) => typeof comment?.body === 'string' && comment.body.includes(MARKER) && isTrustedMarkerAuthor(comment))
     .map((comment) => {
       try {
         const state = extractMachineState(comment.body)
@@ -715,13 +728,15 @@ function markerRecords(comments) {
     })
 }
 
-export function selectCanonicalMarker(comments) {
+export function selectCanonicalMarker(comments, options = {}) {
+  if (options.truncated === true) return null
   const valid = markerRecords(comments).filter((record) => !record.invalid)
   valid.sort((left, right) => compareObservations(right.state, left.state) || left.id - right.id)
   return valid[0] || null
 }
 
-export function planPublication({ observation, currentHeadSha, comments, cancelled }) {
+export function planPublication({ observation, currentHeadSha, comments, cancelled, commentsTruncated = false }) {
+  if (commentsTruncated) return { action: 'skip', reason: 'comments-truncated', retireIds: [] }
   if (cancelled || halted()) return { action: 'skip', reason: 'cancelled', retireIds: [] }
   if (!observation?.head_sha || currentHeadSha !== observation.head_sha) {
     return { action: 'skip', reason: 'stale-head', retireIds: [] }
@@ -794,9 +809,11 @@ export function interpretPublishedState(comments, live = {}) {
     reason,
     state: null,
   })
+  if (live.commentsTruncated === true) return refused('comments_truncated')
   const list = Array.isArray(comments) ? comments : []
-  const marked = list.filter((comment) => typeof comment?.body === 'string' && comment.body.includes(MARKER))
-  if (marked.length === 0) return refused('missing')
+  const marked = list.filter((comment) => typeof comment?.body === 'string' && comment.body.includes(MARKER) && isTrustedMarkerAuthor(comment))
+  const untrusted = list.filter((comment) => typeof comment?.body === 'string' && comment.body.includes(MARKER) && !isTrustedMarkerAuthor(comment))
+  if (marked.length === 0) return refused(untrusted.length > 0 ? 'untrusted' : 'missing')
 
   let sawMalformed = false
   let sawUnknownSchema = false
@@ -957,21 +974,21 @@ async function github(token, path, { method = 'GET', body, tolerate = [] } = {})
   return { payload, headers: response.headers, status: response.status }
 }
 
-async function githubPaginated(token, path) {
+export async function githubPaginated(token, path, request = github) {
   const items = []
   let page = 1
   for (;;) {
-    if (halted()) break
+    if (halted()) return { items, truncated: true }
     const separator = path.includes('?') ? '&' : '?'
-    const { payload, headers } = await github(token, `${path}${separator}per_page=100&page=${page}`)
+    const { payload, headers } = await request(token, `${path}${separator}per_page=100&page=${page}`)
     const batch = Array.isArray(payload) ? payload : []
     items.push(...batch)
-    const link = headers.get('link') || ''
-    if (!link.includes('rel="next"') || batch.length === 0) break
+    const link = headers?.get?.('link') || ''
+    const hasNext = link.includes('rel="next"') && batch.length > 0
+    if (!hasNext) return { items, truncated: false }
+    if (page >= MAX_LIST_PAGES) return { items, truncated: true }
     page += 1
-    if (page > 20) break
   }
-  return items
 }
 
 const REVIEW_QUERY = `
@@ -980,6 +997,7 @@ const REVIEW_QUERY = `
       pullRequest(number: $number) {
         headRefOid
         baseRefOid
+        baseRefName
         isDraft
         mergeable
         mergeStateStatus
@@ -1053,6 +1071,7 @@ async function loadPullRequest(token, owner, name, number) {
   return {
     headSha: pull.headRefOid,
     baseSha: pull.baseRefOid,
+    baseRefName: pull.baseRefName,
     isDraft: pull.isDraft,
     mergeable: mapMergeable(pull.mergeable),
     mergeStateStatus: pull.mergeStateStatus,
@@ -1118,38 +1137,87 @@ function rulesetFromPayload(payload) {
   }
 }
 
-async function loadRuleset(token, owner, name) {
+function unverifiedRuleset() {
+  return { verified: false, matches_expected: false, required_checks: [] }
+}
+
+export function classifyRulesetScope(ruleset, baseRef) {
+  if (typeof baseRef !== 'string' || !baseRef || baseRef.includes('/') || baseRef.includes('*')) return 'ambiguous'
+  const include = ruleset?.conditions?.ref_name?.include
+  const exclude = ruleset?.conditions?.ref_name?.exclude
+  if (!Array.isArray(include) || include.length === 0) return 'ambiguous'
+  if (exclude != null && (!Array.isArray(exclude) || exclude.length > 0)) return 'ambiguous'
+  const exact = include.every((entry) => typeof entry === 'string' && /^refs\/heads\/[A-Za-z0-9._/-]+$/.test(entry))
+  if (!exact) return 'ambiguous'
+  return include.includes(`refs/heads/${baseRef}`) ? 'applies' : 'absent'
+}
+
+export function selectRulesetForBase(rulesets, baseRef) {
+  const classified = (rulesets || []).map((ruleset) => ({ ruleset, scope: classifyRulesetScope(ruleset, baseRef) }))
+  if (classified.some((item) => item.scope === 'ambiguous')) return { verified: false, reason: 'ambiguous' }
+  const applying = classified.filter((item) => item.scope === 'applies')
+  if (applying.length !== 1) return { verified: false, reason: applying.length === 0 ? 'none' : 'multiple' }
+  return { verified: true, ruleset: applying[0].ruleset }
+}
+
+export function resolveRulesetPolicy(rulesets, baseRef) {
+  const selected = selectRulesetForBase(rulesets, baseRef)
+  if (!selected.verified) return unverifiedRuleset()
+  const parsed = rulesetFromPayload(selected.ruleset)
+  if (!parsed.required_checks.length) {
+    return {
+      verified: true,
+      matches_expected: false,
+      name: parsed.name,
+      required_checks: [],
+      requires_review_thread_resolution: parsed.requires_review_thread_resolution,
+    }
+  }
+  return parsed
+}
+
+async function loadRuleset(token, owner, name, baseRef) {
   try {
+    if (!baseRef) return unverifiedRuleset()
     const { payload } = await github(token, `/repos/${owner}/${name}/rulesets`)
     const summaries = Array.isArray(payload) ? payload : []
     const branchRules = summaries.filter((ruleset) => ruleset.target === 'branch' && ruleset.enforcement === 'active')
-    if (branchRules.length !== 1) {
-      return { verified: false, matches_expected: false, required_checks: [] }
+    const full = []
+    for (const summary of branchRules) {
+      if (halted()) return unverifiedRuleset()
+      const { payload: body } = await github(token, `/repos/${owner}/${name}/rulesets/${summary.id}`)
+      full.push(body)
     }
-    const { payload: full } = await github(token, `/repos/${owner}/${name}/rulesets/${branchRules[0].id}`)
-    const parsed = rulesetFromPayload(full)
-    if (!parsed.required_checks.length) {
-      return { verified: true, matches_expected: false, name: parsed.name, required_checks: [], requires_review_thread_resolution: parsed.requires_review_thread_resolution }
-    }
-    return parsed
+    return resolveRulesetPolicy(full, baseRef)
   } catch (error) {
     console.error(`Ruleset could not be verified: ${error instanceof Error ? error.message : String(error)}`)
-    return { verified: false, matches_expected: false, required_checks: [] }
+    return unverifiedRuleset()
   }
 }
 
 async function listComments(token, owner, name, number) {
-  return githubPaginated(token, `/repos/${owner}/${name}/issues/${number}/comments`)
+  const { items, truncated } = await githubPaginated(token, `/repos/${owner}/${name}/issues/${number}/comments`)
+  return { comments: items, truncated }
 }
 
 async function listOpenPullNumbers(token, owner, name, sha) {
-  const pulls = await githubPaginated(token, `/repos/${owner}/${name}/commits/${encodeURIComponent(sha)}/pulls`)
-  return pulls.filter((pull) => pull.state === 'open').map((pull) => pull.number)
+  const { items, truncated } = await githubPaginated(token, `/repos/${owner}/${name}/commits/${encodeURIComponent(sha)}/pulls`)
+  if (truncated) throw new Error('Pull request list pagination was truncated.')
+  return items.filter((pull) => pull.state === 'open').map((pull) => pull.number)
 }
 
 async function listOpenBasePullNumbers(token, owner, name) {
-  const pulls = await githubPaginated(token, `/repos/${owner}/${name}/pulls?state=open&base=main`)
-  return pulls.map((pull) => pull.number)
+  const { items, truncated } = await githubPaginated(token, `/repos/${owner}/${name}/pulls?state=open&base=main`)
+  if (truncated) throw new Error('Pull request list pagination was truncated.')
+  return items.map((pull) => pull.number)
+}
+
+function commentList(value) {
+  if (Array.isArray(value)) return { comments: value, truncated: false }
+  if (value && Array.isArray(value.comments) && typeof value.truncated === 'boolean') {
+    return { comments: value.comments, truncated: value.truncated }
+  }
+  throw new Error('Comment list is unavailable.')
 }
 
 const publicationTail = new Map()
@@ -1175,7 +1243,10 @@ async function publishObservationLocked(client, number, state) {
   if (halted()) return 'cancelled'
   const head = await client.readHead(number)
   if (halted()) return 'cancelled'
-  let comments = await client.listComments(number)
+  let listed = commentList(await client.listComments(number))
+  if (halted()) return 'cancelled'
+  if (listed.truncated) return 'comments-truncated'
+  let comments = listed.comments
   let plan = planPublication({
     observation: state,
     currentHeadSha: head,
@@ -1192,8 +1263,10 @@ async function publishObservationLocked(client, number, state) {
     console.log(`#${number} superseded before write: observation ${state.head_sha}, live ${headNow}`)
     return 'stale-head'
   }
-  comments = await client.listComments(number)
+  listed = commentList(await client.listComments(number))
   if (halted()) return 'cancelled'
+  if (listed.truncated) return 'comments-truncated'
+  comments = listed.comments
   plan = planPublication({
     observation: state,
     currentHeadSha: headNow,
@@ -1213,7 +1286,10 @@ async function publishObservationLocked(client, number, state) {
     console.log(`#${number} superseded before create: live ${headBeforeCreate}`)
     return 'stale-head'
   }
-  comments = await client.listComments(number)
+  listed = commentList(await client.listComments(number))
+  if (halted()) return 'cancelled'
+  if (listed.truncated) return 'comments-truncated'
+  comments = listed.comments
   plan = planPublication({
     observation: state,
     currentHeadSha: headBeforeCreate,
@@ -1232,7 +1308,12 @@ async function publishObservationLocked(client, number, state) {
   console.log(`Created review-state comment on #${number}`)
 
   const headAfter = await client.readHead(number)
-  const commentsAfter = await client.listComments(number)
+  const listedAfter = commentList(await client.listComments(number))
+  if (listedAfter.truncated) {
+    console.log(`#${number} comment list truncated after create; existing markers were left in place`)
+    return 'comments-truncated'
+  }
+  const commentsAfter = listedAfter.comments
   const reconcile = planReconcile({ observation: state, currentHeadSha: headAfter, comments: commentsAfter })
   const canonical = headAfter === state.head_sha ? selectCanonicalMarker(commentsAfter) : null
   if (!halted()) await retireComments(client, reconcile.retireIds, canonical?.state || null)
@@ -1295,7 +1376,7 @@ async function updateOne(token, owner, name, number) {
   if (halted()) return 'cancelled'
   const checks = await loadChecks(token, owner, name, pull.headSha)
   if (halted()) return 'cancelled'
-  const ruleset = await loadRuleset(token, owner, name)
+  const ruleset = await loadRuleset(token, owner, name, pull.baseRefName)
   const observedAt = new Date().toISOString()
   const evaluationId = makeEvaluationId({
     runId: process.env.GITHUB_RUN_ID,
@@ -1360,7 +1441,10 @@ async function main() {
       break
     }
     try {
-      await updateOne(token, owner, name, number)
+      const result = await updateOne(token, owner, name, number)
+      if (result === 'comments-truncated') {
+        throw new Error('Issue comment pagination was truncated. No authoritative review state was selected.')
+      }
     } catch (error) {
       failed = true
       console.error(`#${number} ${error instanceof Error ? error.message : String(error)}`)

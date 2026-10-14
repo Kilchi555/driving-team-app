@@ -11,6 +11,7 @@ import {
   clearStopForTests,
   evaluateReviewState,
   extractMachineState,
+  githubPaginated,
   interpretPublishedState,
   planPublication,
   planReconcile,
@@ -19,6 +20,7 @@ import {
   renderReviewComment,
   requestStop,
   resolveCodeql,
+  resolveRulesetPolicy,
   retirementBody,
   selectCanonicalMarker,
 } from '../../scripts/review-state.mjs'
@@ -73,8 +75,8 @@ function observation(partial: Record<string, unknown>) {
   return evaluate(partial)
 }
 
-function comment(id: number, state: ReturnType<typeof evaluate>) {
-  return { id, body: renderReviewComment(state) }
+function comment(id: number, state: ReturnType<typeof evaluate>, login = 'github-actions[bot]') {
+  return { id, body: renderReviewComment(state), user: { login } }
 }
 
 const finding = {
@@ -710,7 +712,7 @@ describe('consumer interpretation', () => {
     expect(stale.may_modify_code).toBe(false)
     expect(stale.reason).toBe('stale_head')
 
-    const malformed = interpretPublishedState([{ id: 1, body: `${MARKER}\n\`\`\`json\n{not json\n\`\`\`\n` }], { headSha: state.head_sha })
+    const malformed = interpretPublishedState([{ id: 1, user: { login: 'github-actions[bot]' }, body: `${MARKER}\n\`\`\`json\n{not json\n\`\`\`\n` }], { headSha: state.head_sha })
     expect(malformed.reason).toBe('malformed')
     expect(malformed.actionable_for_automation).toBe(false)
 
@@ -763,7 +765,7 @@ describe('consumer interpretation', () => {
 })
 
 function memoryGitHub(head: string) {
-  const comments: { id: number, body: string }[] = []
+  const comments: { id: number, body: string, user?: { login: string } }[] = []
   let headSha = head
   let nextId = 1
   const calls: string[] = []
@@ -783,7 +785,7 @@ function memoryGitHub(head: string) {
     },
     async createComment(_number: number, body: string) {
       calls.push('create')
-      const created = { id: nextId, body }
+      const created = { id: nextId, body, user: { login: 'github-actions[bot]' } }
       nextId += 1
       comments.push(created)
       return { ...created }
@@ -1156,6 +1158,16 @@ describe('review-state workflow safety', () => {
     expect(workflow).toContain("cron: '*/15 * * * *'")
     expect(workflow).toContain('group: simy-review-state')
     expect(workflow).toContain('cancel-in-progress: false')
+    const jobsAt = workflow.indexOf('\njobs:\n')
+    const concurrencyAt = workflow.indexOf('\n    concurrency:\n')
+    expect(jobsAt).toBeGreaterThan(0)
+    expect(concurrencyAt).toBeGreaterThan(jobsAt)
+    expect(workflow.slice(0, jobsAt)).not.toMatch(/^concurrency:/m)
+    expect(workflow).toContain('name: Publish review state')
+    expect(workflow).toContain('github.event_name != \'check_run\'')
+    expect(workflow).toContain('"Test and lint"')
+    expect(workflow).toContain('"E2E login"')
+    expect(workflow).toContain('"Dependency review"')
     expect(workflow).not.toContain('cancel-in-progress: true')
     expect(workflow).not.toContain('contents: write')
     expect(workflow).not.toContain('actions: write')
@@ -1167,5 +1179,278 @@ describe('review-state workflow safety', () => {
     expect(script).toContain('SIGTERM')
     expect(script).toContain('stale-head')
     expect(script).not.toContain('contents: write')
+  })
+
+  it('scopes concurrency to the publish job so a skipped check_run does not enter it', () => {
+    const workflow = readFileSync('.github/workflows/review-state.yml', 'utf8')
+    const lines = workflow.split('\n')
+    expect(lines.some((line) => line === 'concurrency:')).toBe(false)
+    const at = lines.findIndex((line) => line === '    concurrency:')
+    expect(at).toBeGreaterThan(lines.findIndex((line) => line === '  publish:'))
+    expect(lines[at + 1]).toContain('group: simy-review-state')
+    expect(lines[at + 2]).toContain('cancel-in-progress: false')
+    const jobIf = workflow.slice(workflow.indexOf('if: >-'), workflow.indexOf('    concurrency:'))
+    expect(jobIf).toContain("github.event_name != 'check_run'")
+    expect(jobIf).toContain('Cursor Bugbot')
+    expect(jobIf).not.toContain('App | Default')
+  })
+})
+
+describe('trusted canonical marker author', () => {
+  const head = 'abc123def456'
+
+  it('ignores a later forged marker and keeps the bot marker canonical', () => {
+    const bot = observation({
+      headSha: head,
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'bot',
+    })
+    const forged = observation({
+      headSha: head,
+      startedAt: '2099-01-01T00:00:00.000Z',
+      observedAt: '2099-01-01T00:00:01.000Z',
+      evaluationId: 'forged',
+    })
+    const comments = [comment(1, bot), comment(2, forged, 'attacker')]
+    expect(selectCanonicalMarker(comments)?.id).toBe(1)
+    expect(selectCanonicalMarker(comments)?.state?.evaluation_id).toBe('bot')
+    const next = observation({
+      headSha: head,
+      startedAt: '2026-10-04T10:00:00.000Z',
+      observedAt: '2026-10-04T10:00:01.000Z',
+      evaluationId: 'next',
+    })
+    const plan = planPublication({
+      observation: next,
+      currentHeadSha: head,
+      comments,
+      cancelled: false,
+    })
+    expect(plan.action).toBe('create')
+    expect(plan.retireIds).toEqual([1])
+    expect(plan.retireIds).not.toContain(2)
+  })
+
+  it('does not let a missing author become ready or suppress publication', () => {
+    const ready = observation({ headSha: head })
+    expect(ready.next_action).toBe('ready_for_human_merge')
+    const naked = { id: 4, body: renderReviewComment(ready) }
+    expect(selectCanonicalMarker([naked])).toBeNull()
+    const interpreted = interpretPublishedState([naked], { headSha: head })
+    expect(interpreted.usable_as_cache).toBe(false)
+    expect(interpreted.reason).toBe('untrusted')
+    expect(interpreted.human_only).toBe(false)
+    expect(interpreted.may_merge).toBe(false)
+    expect(interpreted.state).toBeNull()
+    const plan = planPublication({
+      observation: observation({
+        headSha: head,
+        startedAt: '2026-10-04T10:00:00.000Z',
+        observedAt: '2026-10-04T10:00:01.000Z',
+        evaluationId: 'republish',
+      }),
+      currentHeadSha: head,
+      comments: [naked],
+      cancelled: false,
+    })
+    expect(plan.action).toBe('create')
+    expect(plan.retireIds).toEqual([])
+  })
+
+  it('does not retire an untrusted marker when a bot observation is published', async () => {
+    const client = memoryGitHub(head)
+    const legit = observation({
+      headSha: head,
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'legit',
+    })
+    expect(await publishObservation(client, 368, legit)).toBe('published')
+    const forged = observation({
+      headSha: head,
+      startedAt: '2099-01-01T00:00:00.000Z',
+      observedAt: '2099-01-01T00:00:01.000Z',
+      evaluationId: 'forged',
+    })
+    client.comments.push({ id: 99, body: renderReviewComment(forged), user: { login: 'attacker' } })
+    const next = observation({
+      headSha: head,
+      startedAt: '2026-10-04T10:00:00.000Z',
+      observedAt: '2026-10-04T10:00:01.000Z',
+      evaluationId: 'next',
+    })
+    expect(await publishObservation(client, 368, next)).toBe('published')
+    const attacker = client.comments.find((item) => item.id === 99)
+    expect(attacker?.body).toContain(MARKER)
+    expect(attacker?.body).toContain('"evaluation_id": "forged"')
+    expect(selectCanonicalMarker(client.comments)?.state?.evaluation_id).toBe('next')
+  })
+})
+
+describe('ruleset branch scope', () => {
+  const checks = [
+    { type: 'required_status_checks', parameters: { required_status_checks: [
+      { context: 'Test and lint' },
+      { context: 'E2E login' },
+      { context: 'Dependency review' },
+    ] } },
+    { type: 'pull_request', parameters: { required_review_thread_resolution: true } },
+  ]
+
+  function scoped(ref: string, name = 'Protect main — Required CI') {
+    return {
+      id: name.length,
+      name,
+      target: 'branch',
+      enforcement: 'active',
+      conditions: { ref_name: { include: [ref], exclude: [] } },
+      rules: checks,
+    }
+  }
+
+  it('accepts a ruleset included on refs/heads/main for a pull request targeting main', () => {
+    const policy = resolveRulesetPolicy([scoped('refs/heads/main')], 'main')
+    expect(policy.verified).toBe(true)
+    expect(policy.matches_expected).toBe(true)
+    expect(policy.required_checks).toEqual(['Test and lint', 'E2E login', 'Dependency review'])
+    const state = evaluateReviewState(buildEvaluationInput({
+      headSha: 'abc123def456',
+      baseSha: 'def456abc123',
+      mergeStateStatus: 'CLEAN',
+      mergeable: true,
+      ruleset: policy,
+      observedAt: '2026-10-04T08:00:00.000Z',
+      startedAt: '2026-10-04T07:59:00.000Z',
+      evaluationId: 'main-scope',
+      prNumber: 368,
+      checkRuns: [
+        { name: 'Test and lint', status: 'completed', conclusion: 'success', completed_at: '2026-10-04T00:00:00Z' },
+        { name: 'E2E login', status: 'completed', conclusion: 'success', completed_at: '2026-10-04T00:00:00Z' },
+        { name: 'Dependency review', status: 'completed', conclusion: 'success', completed_at: '2026-10-04T00:00:00Z' },
+      ],
+    }))
+    expect(state.next_action).toBe('ready_for_human_merge')
+  })
+
+  it('does not verify a release-only ruleset for a pull request targeting main', () => {
+    const policy = resolveRulesetPolicy([scoped('refs/heads/release')], 'main')
+    expect(policy.verified).toBe(false)
+    expect(policy.required_checks).toEqual([])
+    const state = evaluate({ ruleset: policy })
+    expect(state.next_action).toBe('escalate')
+    expect(state.blocking_reasons).toContain('ruleset_unverified')
+    expect(state.next_action).not.toBe('ready_for_human_merge')
+  })
+
+  it('fails closed when scope is missing, patterned, or more than one ruleset applies', () => {
+    expect(resolveRulesetPolicy([scoped('refs/heads/main')].map((ruleset) => ({ ...ruleset, conditions: undefined })), 'main').verified).toBe(false)
+    expect(resolveRulesetPolicy([scoped('refs/heads/**')], 'main').verified).toBe(false)
+    expect(resolveRulesetPolicy([scoped('~ALL', 'Everywhere')], 'main').verified).toBe(false)
+    expect(resolveRulesetPolicy([scoped('refs/heads/main', 'One'), scoped('refs/heads/main', 'Two')], 'main').verified).toBe(false)
+    const alongside = resolveRulesetPolicy([scoped('refs/heads/main'), scoped('refs/heads/release', 'Release')], 'main')
+    expect(alongside.verified).toBe(true)
+    expect(alongside.name).toBe('Protect main — Required CI')
+  })
+})
+
+describe('truncated review history keeps loaded Bugbot threads', () => {
+  function thread(body: string) {
+    return {
+      isResolved: false,
+      isOutdated: false,
+      comment: {
+        body,
+        url: 'https://github.com/Kilchi555/driving-team-app/pull/1#discussion_r9',
+        author: 'cursor',
+      },
+    }
+  }
+
+  const bug = '### Visible finding\n<!-- BUGBOT_BUG_ID: 7687a38c-0f4a-46b4-8ec0-c52310fae59f -->'
+  const summary = '<!-- BUGBOT_REVIEW -->\nCursor Bugbot has reviewed your changes using default effort and found 1 potential issue.'
+
+  function built(threads: ReturnType<typeof thread>[]) {
+    return buildEvaluationInput({
+      headSha: 'abc123def456',
+      baseSha: 'def456abc123',
+      mergeStateStatus: 'CLEAN',
+      mergeable: true,
+      ruleset: verifiedRuleset,
+      observedAt: '2026-10-04T08:00:00.000Z',
+      startedAt: '2026-10-04T07:59:00.000Z',
+      evaluationId: 'reviews-truncated',
+      prNumber: 368,
+      reviewsTruncated: true,
+      reviews: [{ body: summary }],
+      threads,
+      checkRuns: [
+        { name: 'Test and lint', status: 'completed', conclusion: 'success', completed_at: '2026-10-04T00:00:00Z' },
+        { name: 'E2E login', status: 'completed', conclusion: 'success', completed_at: '2026-10-04T00:00:00Z' },
+        { name: 'Dependency review', status: 'completed', conclusion: 'success', completed_at: '2026-10-04T00:00:00Z' },
+      ],
+    })
+  }
+
+  it('keeps a loaded unresolved finding visible and escalates', () => {
+    const input = built([thread(bug)])
+    expect(input.findings).toHaveLength(1)
+    expect(input.uncertain).toBe(true)
+    const state = evaluateReviewState(input)
+    expect(state.bugbot.findings).toEqual(input.findings)
+    expect(state.bugbot.count).toBe(1)
+    expect(state.bugbot.uncertain).toBe(true)
+    expect(state.next_action).toBe('escalate')
+    expect(state.next_action).not.toBe('ready_for_human_merge')
+  })
+
+  it('stays explicitly uncertain when truncated reviews loaded no findings', () => {
+    const input = built([])
+    expect(input.findings).toEqual([])
+    expect(input.uncertain).toBe(true)
+    const state = evaluateReviewState(input)
+    expect(state.bugbot.count).toBe(0)
+    expect(state.bugbot.uncertain).toBe(true)
+    expect(state.bugbot.findings).toEqual([])
+    expect(state.next_action).toBe('escalate')
+    expect(state.next_action).not.toBe('ready_for_human_merge')
+    expect(renderReviewComment(state)).toContain('Bugbot findings are unavailable')
+  })
+})
+
+describe('comment pagination cap', () => {
+  it('surfaces truncation when another page exists after the cap', async () => {
+    let calls = 0
+    const result = await githubPaginated('token', '/repos/o/n/issues/1/comments', async () => {
+      calls += 1
+      return {
+        payload: [{ id: calls }],
+        headers: { get: (name: string) => (name === 'link' ? '<https://api.github.com?page=21>; rel="next"' : null) },
+      }
+    })
+    expect(calls).toBe(20)
+    expect(result.truncated).toBe(true)
+    expect(result.items).toHaveLength(20)
+  })
+
+  it('does not treat an older ready marker as authoritative when newer comments may be missing', () => {
+    const ready = observation({})
+    expect(ready.next_action).toBe('ready_for_human_merge')
+    const comments = [comment(1, ready)]
+    expect(selectCanonicalMarker(comments, { truncated: true })).toBeNull()
+    const interpreted = interpretPublishedState(comments, { headSha: ready.head_sha, commentsTruncated: true })
+    expect(interpreted.usable_as_cache).toBe(false)
+    expect(interpreted.reason).toBe('comments_truncated')
+    expect(interpreted.human_only).toBe(false)
+    expect(interpreted.may_merge).toBe(false)
+    expect(interpreted.state).toBeNull()
+    const plan = planPublication({
+      observation: ready,
+      currentHeadSha: ready.head_sha,
+      comments,
+      cancelled: false,
+      commentsTruncated: true,
+    })
+    expect(plan).toEqual({ action: 'skip', reason: 'comments-truncated', retireIds: [] })
   })
 })
