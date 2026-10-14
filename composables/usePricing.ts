@@ -4,6 +4,7 @@ import { useAuthStore } from '~/stores/auth'
 import { roundToNearest5Rappen } from '~/utils/rounding'
 import { useFallbackLogger } from '~/composables/useFallbackLogger'
 import { COMPLETE_FALLBACK_RULES, getFallbackRule } from '~/utils/fallbackPricingRules'
+import { clientTheoryLessonPriceRappen } from '~/utils/theory-client-price'
 // Note: fallback pricing data lives in utils/fallbackPricingRules.ts (the single source
 // of truth) so server endpoints can share the exact same numbers without importing a Vue
 // composable. Import from there directly rather than re-exporting here, to avoid Nuxt
@@ -43,6 +44,8 @@ interface CalculatedPrice {
   duration_minutes: number
   appointment_number: number
   original_duration_minutes?: number // ✅ NEU: Original-Duration für Edit-Mode
+  /** True when a paid theory offer has no matching theory pricing rule (no CHF 85 invent). */
+  missing_price_rule?: boolean
 }
 
 interface DynamicPricing {
@@ -517,7 +520,8 @@ export const usePricing = (options: UsePricingOptions = {}) => {
   const validDrivingCategories = ['A', 'A1', 'A35kW', 'B', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'DE', 'Motorboot', 'Boot', 'BPT']
   
   // ✅ Theorielektionen: Preis kommt aus der pro Kategorie vom Tenant hinterlegten
-  // Preisregel (rule_type='theory' in pricing_rules, konfiguriert in der Kategorien-Verwaltung)
+  // Preisregel (rule_type='theory' in pricing_rules, konfiguriert in der Kategorien-Verwaltung).
+  // Never invent CHF 85 — appointments/save fail-closes with NO_PRICE_RULE without a theory row.
   if (appointmentType === 'theory') {
     const durationVal = Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes
 
@@ -537,36 +541,28 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     }
 
     const theoryRule = getPricingRule(categoryCode)
-    const theoryPricePerMinuteRappen = theoryRule?.theory_price_per_minute_rappen || 0
+    const priced = clientTheoryLessonPriceRappen({
+      theoryPricePerMinuteRappen: theoryRule?.theory_price_per_minute_rappen,
+      durationMinutes: durationVal,
+    })
 
-    let scaledPriceRappen: number
-    if (theoryPricePerMinuteRappen > 0) {
-      // ✅ Preis aus der vom Tenant konfigurierten Theorie-Preisregel dieser Kategorie
-      scaledPriceRappen = roundToNearestFranken(Math.round(theoryPricePerMinuteRappen * durationVal))
-      logger.debug(`📚 Theorielektion (Kategorie ${categoryCode}): ${durationVal}min → CHF ${(scaledPriceRappen / 100).toFixed(2)} (aus Preisregel)`)
+    if (priced.missingRule) {
+      logger.warn(`⚠️ Keine Theorie-Preisregel für Kategorie "${categoryCode}" – kein Client-Fallback`)
     } else {
-      // Fallback, falls für diese Kategorie (noch) keine Theorie-Preisregel existiert
-      const THEORY_BASE_RAPPEN = 8500 // 85 CHF for 45 minutes
-      const THEORY_BASE_DURATION_MIN = 45
-      scaledPriceRappen = roundToNearestFranken(Math.round((THEORY_BASE_RAPPEN / THEORY_BASE_DURATION_MIN) * durationVal))
-      logger.warn(`⚠️ Keine Theorie-Preisregel für Kategorie "${categoryCode}" gefunden - Verwende Standardpreis (85 CHF/45min)`)
-      logFallbackUsed(
-        'pricing',
-        `Keine Theorie-Preisregel für Kategorie "${categoryCode}" konfiguriert – Standardpreis (85 CHF/45min) verwendet.`,
-        { categoryCode, tenantId: theoryTenantId || null }
-      )
+      logger.debug(`📚 Theorielektion (Kategorie ${categoryCode}): ${durationVal}min → CHF ${(priced.priceRappen / 100).toFixed(2)} (aus Preisregel)`)
     }
 
     const result: CalculatedPrice = {
-      base_price_rappen: scaledPriceRappen,
+      base_price_rappen: priced.priceRappen,
       admin_fee_rappen: 0,
-      total_rappen: scaledPriceRappen,
-      base_price_chf: (scaledPriceRappen / 100).toFixed(2),
+      total_rappen: priced.priceRappen,
+      base_price_chf: (priced.priceRappen / 100).toFixed(2),
       admin_fee_chf: '0.00',
-      total_chf: (scaledPriceRappen / 100).toFixed(2),
+      total_chf: (priced.priceRappen / 100).toFixed(2),
       category_code: categoryCode,
       duration_minutes: durationMinutes,
-      appointment_number: 1
+      appointment_number: 1,
+      missing_price_rule: priced.missingRule,
     }
     
     return result

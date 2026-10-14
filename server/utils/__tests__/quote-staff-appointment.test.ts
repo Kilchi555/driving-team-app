@@ -371,6 +371,92 @@ describe('quoteStaffAppointmentOffer', () => {
     })
   })
 
+  it('theory with active theory rule quotes theory ppm × duration', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'theory', require_payment: true }],
+      rules: [{
+        tenant_id: TENANT,
+        id: 'b-theory',
+        rule_type: 'theory',
+        category_code: 'B',
+        price_per_minute_rappen: 188.8889,
+      }],
+    })
+    const quote = await quoteStaffAppointmentOffer(supabase, identity({
+      eventTypeCode: 'theory',
+      categoryCode: 'B',
+      durationMinutes: 45,
+    }))
+    expect(quote.kind).toBe('paid')
+    expect(quote.lessonPriceRappen).toBe(8500)
+    if (quote.kind === 'paid') {
+      expect(quote.rule).toEqual({ id: 'b-theory', rule_type: 'theory' })
+    }
+  })
+
+  it('theory without theory rule does not fall back to base_price (fail closed)', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'theory', require_payment: true }],
+      rules: [{
+        tenant_id: TENANT,
+        id: 'b-lesson',
+        rule_type: 'base_price',
+        category_code: 'B',
+        price_per_minute_rappen: 200,
+      }],
+    })
+    await expect(quoteStaffAppointmentOffer(supabase, identity({
+      eventTypeCode: 'theory',
+      categoryCode: 'B',
+      durationMinutes: 45,
+    }))).rejects.toMatchObject({
+      statusCode: 503,
+      data: { code: 'NO_PRICE_RULE' },
+    })
+  })
+
+  it('theory rule on category A does not price category B theory', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'theory', require_payment: true }],
+      rules: [{
+        tenant_id: TENANT,
+        id: 'a-theory',
+        rule_type: 'theory',
+        category_code: 'A',
+        price_per_minute_rappen: 188.8889,
+      }],
+    })
+    await expect(quoteStaffAppointmentOffer(supabase, identity({
+      eventTypeCode: 'theory',
+      categoryCode: 'B',
+      durationMinutes: 45,
+    }))).rejects.toMatchObject({
+      statusCode: 503,
+      data: { code: 'NO_PRICE_RULE' },
+    })
+  })
+
+  it('theory quote never uses another tenant theory rule', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'theory', require_payment: true }],
+      rules: [{
+        tenant_id: OTHER,
+        id: 'other-theory',
+        rule_type: 'theory',
+        category_code: 'B',
+        price_per_minute_rappen: 188.8889,
+      }],
+    })
+    await expect(quoteStaffAppointmentOffer(supabase, identity({
+      eventTypeCode: 'theory',
+      categoryCode: 'B',
+      durationMinutes: 45,
+    }))).rejects.toMatchObject({
+      statusCode: 503,
+      data: { code: 'NO_PRICE_RULE' },
+    })
+  })
+
   it('exam quote ignores planted client amounts; server base_price wins', async () => {
     const supabase = createOfferPriceSupabase({
       eventTypes: [{ tenant_id: TENANT, code: 'exam', require_payment: true }],

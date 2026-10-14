@@ -428,6 +428,64 @@ describe('POST /api/appointments/save staff pricing authority', () => {
     expect(inserts.payments).toHaveLength(0)
   })
 
+  it('theory with theory rule persists appointment + payment', async () => {
+    const inserts = { appointments: [] as unknown[], payments: [] as unknown[] }
+    mocks.getSupabaseAdmin.mockReturnValue(createSaveSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'theory', require_payment: true }],
+      rules: [{
+        tenant_id: TENANT,
+        id: 'b-theory',
+        rule_type: 'theory',
+        category_code: 'B',
+        price_per_minute_rappen: 188.8889,
+      }],
+      inserts,
+    }))
+    mocks.readBody.mockResolvedValue(appointmentBody({
+      type: 'B',
+      event_type_code: 'theory',
+      duration_minutes: 45,
+    }))
+
+    const { default: handler } = await handlerPromise
+    await handler({})
+    expect(inserts.appointments).toHaveLength(1)
+    expect(asPayment(inserts.payments[0]).lesson_price_rappen).toBe(8500)
+  })
+
+  it('theory with only base_price rejects with NO_PRICE_RULE and no write', async () => {
+    const inserts = { appointments: [] as unknown[], payments: [] as unknown[] }
+    mocks.getSupabaseAdmin.mockReturnValue(createSaveSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'theory', require_payment: true }],
+      rules: [{
+        tenant_id: TENANT,
+        id: 'b-lesson',
+        rule_type: 'base_price',
+        category_code: 'B',
+        price_per_minute_rappen: 200,
+      }],
+      inserts,
+    }))
+    // Planted client amount must not authorize the write
+    mocks.readBody.mockResolvedValue({
+      ...appointmentBody({
+        type: 'B',
+        event_type_code: 'theory',
+        duration_minutes: 45,
+      }),
+      totalAmountRappenForPayment: 8500,
+      basePriceRappen: 8500,
+    })
+
+    const { default: handler } = await handlerPromise
+    await expect(handler({})).rejects.toMatchObject({
+      statusCode: 503,
+      data: { code: 'NO_PRICE_RULE' },
+    })
+    expect(inserts.appointments).toHaveLength(0)
+    expect(inserts.payments).toHaveLength(0)
+  })
+
   it('A/B. planted 1 / 0 is ignored; paid + no rule rejects with no appointment or payment insert', async () => {
     const inserts = { appointments: [] as unknown[], payments: [] as unknown[] }
     mocks.getSupabaseAdmin.mockReturnValue(createSaveSupabase({
