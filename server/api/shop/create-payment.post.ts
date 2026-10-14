@@ -15,10 +15,12 @@ import {
   customVoucherCheckoutLimitError,
   customVoucherFulfillmentKey,
   isCustomAmountVoucher,
+  parseExactCustomVoucherQuantity,
   resolveCustomVoucherDescription,
   resolveCustomVoucherDisplayName,
   resolveCustomVoucherRecipient,
 } from '~/utils/shop-custom-voucher'
+import { fixedVoucherFulfillmentKey } from '~/server/utils/voucher-fulfillment-claim'
 
 export default defineEventHandler(async (event) => {
   // Follow same public-payment pattern as /api/payments/process-public:
@@ -182,22 +184,28 @@ export default defineEventHandler(async (event) => {
 
     for (const item of rawProducts) {
       const productId = item?.id || item?.product_id
-      let qty = Math.max(1, Math.min(100, Number(item?.quantity) || 1))
       const dbProduct = productById.get(productId)
       if (!dbProduct || dbProduct.is_active === false || dbProduct.show_in_shop === false) {
         throw createError({ statusCode: 400, message: `Ungültiges Produkt: ${productId}` })
       }
 
       const isCustom = isCustomAmountVoucher(dbProduct)
-      // Custom vouchers are always qty 1 — never merge/charge multiples of the template UUID.
+      let qty = 1
       if (isCustom) {
-        if (qty !== 1) {
-          throw createError({
-            statusCode: 400,
-            message: 'Individuelle Gutscheine können nur mit Menge 1 gekauft werden.',
-          })
+        // Reject floats/negatives/strings before any silent Math.max coercion.
+        const parsedQty = parseExactCustomVoucherQuantity(item?.quantity)
+        if (!parsedQty.ok) {
+          throw createError({ statusCode: 400, message: parsedQty.message })
         }
+        qty = parsedQty.quantity
+      } else if (item?.quantity === undefined || item?.quantity === null || item?.quantity === '') {
         qty = 1
+      } else {
+        const rawQty = Number(item?.quantity)
+        if (!Number.isInteger(rawQty) || rawQty < 1 || rawQty > 100) {
+          throw createError({ statusCode: 400, message: 'Ungültige Produktmenge' })
+        }
+        qty = rawQty
       }
 
       let unitPrice = Number(dbProduct.price_rappen || 0)
@@ -241,7 +249,10 @@ export default defineEventHandler(async (event) => {
         is_voucher: !!dbProduct.is_voucher,
         allow_custom_amount: !!dbProduct.allow_custom_amount,
         is_custom_amount_voucher: isCustom,
-        fulfillment_key: isCustom ? customVoucherFulfillmentKey(dbProduct.id) : undefined,
+        // Stable per-payment identity for webhook claim (custom + fixed voucher products).
+        fulfillment_key: isCustom
+          ? customVoucherFulfillmentKey(dbProduct.id)
+          : (dbProduct.is_voucher ? fixedVoucherFulfillmentKey(dbProduct.id, 0) : undefined),
       })
     }
 

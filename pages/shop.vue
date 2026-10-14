@@ -242,11 +242,12 @@
                       <span class="text-gray-600 truncate">{{ item.product.name }}</span>
                       <div class="flex items-center gap-1.5 flex-shrink-0">
                         <button @click="updateQuantity(item.product.id, Math.max(0, item.quantity - 1))"
-                                :disabled="item.quantity <= 1"
+                                :disabled="item.quantity <= 1 || isCustomAmountVoucher(item.product as any)"
                                 class="w-6 h-6 rounded-full border border-gray-300 text-gray-500 hover:border-gray-400 disabled:opacity-30 flex items-center justify-center text-xs">−</button>
                         <span class="w-5 text-center text-sm font-medium">{{ item.quantity }}</span>
                         <button @click="updateQuantity(item.product.id, item.quantity + 1)"
-                                class="w-6 h-6 rounded-full border flex items-center justify-center text-xs"
+                                :disabled="isCustomAmountVoucher(item.product as any)"
+                                class="w-6 h-6 rounded-full border flex items-center justify-center text-xs disabled:opacity-30"
                                 :style="{ borderColor: brandPrimary, color: brandPrimary }">+</button>
                       </div>
                     </div>
@@ -988,6 +989,7 @@ import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
 import {
   canAddCustomVoucherToCart,
+  clampCustomVoucherCartQuantity,
   isCustomAmountVoucher,
 } from '~/utils/shop-custom-voucher'
 
@@ -1896,11 +1898,21 @@ const updateQuantity = (productId: string, newQuantity: number) => {
   
   const item = selectedProducts.value.find(item => item.product.id === productId)
     if (item) {
-    // Produkt existiert bereits, aktualisiere Menge
+    // Individuelle Gutscheine: qty immer 1 — +/- darf den Server-Limit nicht umgehen.
+    const cappedQty = clampCustomVoucherCartQuantity(item.product as any, newQuantity)
+    if (isCustomAmountVoucher(item.product as any) && cappedQty !== newQuantity) {
+      showToastMessage('❌ Individuelle Gutscheine können nur mit Menge 1 gekauft werden.')
+      item.quantity = 1
+      item.total = item.product.price_rappen / 100
+      recalculateDiscounts()
+      saveImmediately()
+      return
+    }
+
     const oldQuantity = item.quantity
-    item.quantity = newQuantity
-    item.total = newQuantity * (item.product.price_rappen / 100)
-    logger.debug('📊 Quantity updated:', item.product.name, 'x', newQuantity)
+    item.quantity = cappedQty
+    item.total = cappedQty * (item.product.price_rappen / 100)
+    logger.debug('📊 Quantity updated:', item.product.name, 'x', cappedQty)
     
     // Recalculate discounts when quantity changes
     recalculateDiscounts()
@@ -1909,15 +1921,20 @@ const updateQuantity = (productId: string, newQuantity: number) => {
     saveImmediately()
     
     // Show toast notification for quantity changes
-    if (newQuantity > oldQuantity) {
-      showToastMessage(`📈 ${item.product.name} Menge auf ${newQuantity} erhöht`)
-    } else if (newQuantity < oldQuantity) {
-      showToastMessage(`📉 ${item.product.name} Menge auf ${newQuantity} verringert`)
+    if (cappedQty > oldQuantity) {
+      showToastMessage(`📈 ${item.product.name} Menge auf ${cappedQty} erhöht`)
+    } else if (cappedQty < oldQuantity) {
+      showToastMessage(`📉 ${item.product.name} Menge auf ${cappedQty} verringert`)
     }
   } else {
       // Produkt existiert noch nicht, füge es hinzu
       const product = availableProducts.value.find(p => p.id === productId)
       if (product) {
+        // Custom-amount template is excluded from catalog; still defend if it appears.
+        if (isCustomAmountVoucher(product as any)) {
+          showToastMessage('❌ Individuelle Gutscheine bitte über «Gutschein erstellen» hinzufügen.')
+          return
+        }
         const newItem = {
           product,
           quantity: newQuantity,

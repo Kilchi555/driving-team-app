@@ -78,3 +78,34 @@ export function resolveCustomVoucherRecipient(
 export function customVoucherFulfillmentKey(productId: string): string {
   return `custom-voucher:${productId}`
 }
+
+export const CUSTOM_VOUCHER_QTY_ONE_MESSAGE =
+  'Individuelle Gutscheine können nur mit Menge 1 gekauft werden.'
+
+/**
+ * Custom vouchers must be exactly quantity 1.
+ * Rejects missing-as-invalid only when `required` is true; otherwise undefined/null/'' → treat as 1.
+ * Never silently coerces negatives/floats/booleans/"1.0"/other strings into 1.
+ */
+export function parseExactCustomVoucherQuantity(
+  raw: unknown,
+  opts?: { required?: boolean },
+): { ok: true; quantity: 1 } | { ok: false; message: string } {
+  if (raw === undefined || raw === null || raw === '') {
+    if (opts?.required) {
+      return { ok: false, message: CUSTOM_VOUCHER_QTY_ONE_MESSAGE }
+    }
+    return { ok: true, quantity: 1 }
+  }
+  // Accept only canonical integer 1 or the exact string "1".
+  if (raw === 1 || raw === '1') {
+    return { ok: true, quantity: 1 }
+  }
+  return { ok: false, message: CUSTOM_VOUCHER_QTY_ONE_MESSAGE }
+}
+
+/** Clamp UI quantity updates for custom vouchers without mutating unrelated products. */
+export function clampCustomVoucherCartQuantity(product: CustomVoucherLike, requestedQty: number): number {
+  if (!isCustomAmountVoucher(product)) return requestedQty
+  return 1
+}

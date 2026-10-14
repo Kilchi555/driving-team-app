@@ -2,12 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
+  CUSTOM_VOUCHER_QTY_ONE_MESSAGE,
   CUSTOM_VOUCHER_SINGLE_CHECKOUT_MESSAGE,
   canAddCustomVoucherToCart,
+  clampCustomVoucherCartQuantity,
   customVoucherCheckoutLimitError,
   customVoucherFulfillmentKey,
   customVoucherUnitCount,
   isCustomAmountVoucher,
+  parseExactCustomVoucherQuantity,
   resolveCustomVoucherDisplayName,
 } from '~/utils/shop-custom-voucher'
 import { parseFeatureEnabled, splitShopCatalog } from '../shop-voucher-feature'
@@ -309,7 +312,51 @@ describe('shop create-payment custom voucher integrity', () => {
 
     await expect((await createPaymentHandler())(fakeEvent)).rejects.toMatchObject({
       statusCode: 400,
+      // qty>1 trips unit-count limit before the exact-qty parser.
+      message: CUSTOM_VOUCHER_SINGLE_CHECKOUT_MESSAGE,
     })
+  })
+
+  it('3c) rejects direct API manipulation of malformed custom voucher quantities', async () => {
+    // Values that inflate unit-count (>1) hit the checkout limit; others hit exact-qty parse.
+    const cases: Array<{ quantity: unknown; message: string }> = [
+      { quantity: 2, message: CUSTOM_VOUCHER_SINGLE_CHECKOUT_MESSAGE },
+      { quantity: 99, message: CUSTOM_VOUCHER_SINGLE_CHECKOUT_MESSAGE },
+      { quantity: '2', message: CUSTOM_VOUCHER_SINGLE_CHECKOUT_MESSAGE },
+      { quantity: 0, message: CUSTOM_VOUCHER_QTY_ONE_MESSAGE },
+      { quantity: -1, message: CUSTOM_VOUCHER_QTY_ONE_MESSAGE },
+      { quantity: 1.5, message: CUSTOM_VOUCHER_QTY_ONE_MESSAGE },
+      { quantity: true, message: CUSTOM_VOUCHER_QTY_ONE_MESSAGE },
+      { quantity: 'abc', message: CUSTOM_VOUCHER_QTY_ONE_MESSAGE },
+      { quantity: '1.0', message: CUSTOM_VOUCHER_QTY_ONE_MESSAGE },
+    ]
+    for (const { quantity, message } of cases) {
+      vi.resetModules()
+      mocks.getAuthenticatedUserWithDbId.mockResolvedValue(null)
+      mockCreatePayment({ products: [customDbProduct] })
+      mocks.readBody.mockResolvedValue({
+        tenant_id: TENANT,
+        total_amount_rappen: 5000,
+        products_price_rappen: 5000,
+        discount_amount_rappen: 0,
+        metadata: {
+          products: [{ id: CUSTOM_VOUCHER, quantity, unit_price_rappen: 5000 }],
+        },
+      })
+      await expect((await createPaymentHandler())(fakeEvent)).rejects.toMatchObject({
+        statusCode: 400,
+        message,
+      })
+    }
+  })
+
+  it('3d) client updateQuantity clamp cannot raise custom voucher above 1', () => {
+    expect(clampCustomVoucherCartQuantity({
+      is_voucher: true,
+      allow_custom_amount: true,
+      quantity: 1,
+    }, 5)).toBe(1)
+    expect(parseExactCustomVoucherQuantity(5).ok).toBe(false)
   })
 
   it('4) rejects amounts below min and above max bounds', async () => {
@@ -447,12 +494,16 @@ describe('shop create-payment custom voucher integrity', () => {
 })
 
 describe('webhook / products source contracts for custom vouchers', () => {
-  it('8) webhook uses fulfillment_key idempotency and refuses qty>1 custom vouchers', () => {
+  it('8) webhook uses atomic fulfillment_key claim and refuses qty>1 custom vouchers', () => {
     const src = readFileSync(resolve(process.cwd(), 'server/api/wallee/webhook.post.ts'), 'utf8')
+    expect(src).toContain('claimVoucherFulfillment')
     expect(src).toContain('fulfillment_key')
     expect(src).toContain('issuedFulfillmentKeys')
     expect(src).toContain('Refusing custom voucher fulfillment with quantity > 1')
     expect(src).toContain('display_name')
+    // Must not use name+amount or description-substring duplicate detection.
+    expect(src).not.toMatch(/v\.name === displayName && Number\(v\.amount_rappen\) === amountRappen/)
+    expect(src).not.toContain('description.includes(`[${fulfillmentKey}]`)')
   })
 
   it('10) products API exposes voucherCreationEnabled server-side with tenant scope', () => {
@@ -466,7 +517,26 @@ describe('webhook / products source contracts for custom vouchers', () => {
   it('create-payment enforces single custom voucher server-side', () => {
     const src = readFileSync(resolve(process.cwd(), 'server/api/shop/create-payment.post.ts'), 'utf8')
     expect(src).toContain('customVoucherCheckoutLimitError')
+    expect(src).toContain('parseExactCustomVoucherQuantity')
     expect(src).toContain('product_template_name')
     expect(src).toContain('is_custom_amount_voucher')
+    expect(src).toContain('fixedVoucherFulfillmentKey')
+  })
+
+  it('shop.vue clamps updateQuantity for custom vouchers', () => {
+    const src = readFileSync(resolve(process.cwd(), 'pages/shop.vue'), 'utf8')
+    expect(src).toContain('clampCustomVoucherCartQuantity')
+    expect(src).toContain('isCustomAmountVoucher(item.product as any)')
+  })
+
+  it('migration enforces UNIQUE (payment_id, fulfillment_key)', () => {
+    const sql = readFileSync(
+      resolve(process.cwd(), 'migrations/20261014_vouchers_fulfillment_key_unique.sql'),
+      'utf8',
+    )
+    expect(sql).toContain('fulfillment_key')
+    expect(sql).toContain('idx_vouchers_payment_fulfillment_key_unique')
+    expect(sql).toContain('UNIQUE INDEX')
+    expect(sql).toContain('(payment_id, fulfillment_key)')
   })
 })
