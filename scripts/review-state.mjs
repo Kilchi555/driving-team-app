@@ -729,13 +729,14 @@ function markerRecords(comments) {
 }
 
 export function selectCanonicalMarker(comments, options = {}) {
-  if (options.truncated === true) return null
+  if (options.truncated === true || options.stopped === true) return null
   const valid = markerRecords(comments).filter((record) => !record.invalid)
   valid.sort((left, right) => compareObservations(right.state, left.state) || left.id - right.id)
   return valid[0] || null
 }
 
-export function planPublication({ observation, currentHeadSha, comments, cancelled, commentsTruncated = false }) {
+export function planPublication({ observation, currentHeadSha, comments, cancelled, commentsTruncated = false, commentsStopped = false }) {
+  if (commentsStopped) return { action: 'skip', reason: 'cancelled', retireIds: [] }
   if (commentsTruncated) return { action: 'skip', reason: 'comments-truncated', retireIds: [] }
   if (cancelled || halted()) return { action: 'skip', reason: 'cancelled', retireIds: [] }
   if (!observation?.head_sha || currentHeadSha !== observation.head_sha) {
@@ -809,6 +810,7 @@ export function interpretPublishedState(comments, live = {}) {
     reason,
     state: null,
   })
+  if (live.commentsStopped === true) return refused('cancelled')
   if (live.commentsTruncated === true) return refused('comments_truncated')
   const list = Array.isArray(comments) ? comments : []
   const marked = list.filter((comment) => typeof comment?.body === 'string' && comment.body.includes(MARKER) && isTrustedMarkerAuthor(comment))
@@ -978,15 +980,15 @@ export async function githubPaginated(token, path, request = github) {
   const items = []
   let page = 1
   for (;;) {
-    if (halted()) return { items, truncated: true }
+    if (halted()) return { items, truncated: false, stopped: true }
     const separator = path.includes('?') ? '&' : '?'
     const { payload, headers } = await request(token, `${path}${separator}per_page=100&page=${page}`)
     const batch = Array.isArray(payload) ? payload : []
     items.push(...batch)
     const link = headers?.get?.('link') || ''
     const hasNext = link.includes('rel="next"') && batch.length > 0
-    if (!hasNext) return { items, truncated: false }
-    if (page >= MAX_LIST_PAGES) return { items, truncated: true }
+    if (!hasNext) return { items, truncated: false, stopped: false }
+    if (page >= MAX_LIST_PAGES) return { items, truncated: true, stopped: false }
     page += 1
   }
 }
@@ -1196,26 +1198,36 @@ async function loadRuleset(token, owner, name, baseRef) {
 }
 
 async function listComments(token, owner, name, number) {
-  const { items, truncated } = await githubPaginated(token, `/repos/${owner}/${name}/issues/${number}/comments`)
-  return { comments: items, truncated }
+  const { items, truncated, stopped } = await githubPaginated(token, `/repos/${owner}/${name}/issues/${number}/comments`)
+  return { comments: items, truncated, stopped }
 }
 
-async function listOpenPullNumbers(token, owner, name, sha) {
-  const { items, truncated } = await githubPaginated(token, `/repos/${owner}/${name}/commits/${encodeURIComponent(sha)}/pulls`)
+export async function listOpenPullNumbers(token, owner, name, sha, request = github) {
+  const { items, truncated, stopped } = await githubPaginated(
+    token,
+    `/repos/${owner}/${name}/commits/${encodeURIComponent(sha)}/pulls`,
+    request,
+  )
+  if (stopped) return { numbers: [], stopped: true }
   if (truncated) throw new Error('Pull request list pagination was truncated.')
-  return items.filter((pull) => pull.state === 'open').map((pull) => pull.number)
+  return { numbers: items.filter((pull) => pull.state === 'open').map((pull) => pull.number), stopped: false }
 }
 
-async function listOpenBasePullNumbers(token, owner, name) {
-  const { items, truncated } = await githubPaginated(token, `/repos/${owner}/${name}/pulls?state=open&base=main`)
+export async function listOpenBasePullNumbers(token, owner, name, request = github) {
+  const { items, truncated, stopped } = await githubPaginated(
+    token,
+    `/repos/${owner}/${name}/pulls?state=open&base=main`,
+    request,
+  )
+  if (stopped) return { numbers: [], stopped: true }
   if (truncated) throw new Error('Pull request list pagination was truncated.')
-  return items.map((pull) => pull.number)
+  return { numbers: items.map((pull) => pull.number), stopped: false }
 }
 
 function commentList(value) {
-  if (Array.isArray(value)) return { comments: value, truncated: false }
+  if (Array.isArray(value)) return { comments: value, truncated: false, stopped: false }
   if (value && Array.isArray(value.comments) && typeof value.truncated === 'boolean') {
-    return { comments: value.comments, truncated: value.truncated }
+    return { comments: value.comments, truncated: value.truncated, stopped: value.stopped === true }
   }
   throw new Error('Comment list is unavailable.')
 }
@@ -1244,8 +1256,9 @@ async function publishObservationLocked(client, number, state) {
   const head = await client.readHead(number)
   if (halted()) return 'cancelled'
   let listed = commentList(await client.listComments(number))
-  if (halted()) return 'cancelled'
+  if (listed.stopped) return 'cancelled'
   if (listed.truncated) return 'comments-truncated'
+  if (halted()) return 'cancelled'
   let comments = listed.comments
   let plan = planPublication({
     observation: state,
@@ -1264,8 +1277,9 @@ async function publishObservationLocked(client, number, state) {
     return 'stale-head'
   }
   listed = commentList(await client.listComments(number))
-  if (halted()) return 'cancelled'
+  if (listed.stopped) return 'cancelled'
   if (listed.truncated) return 'comments-truncated'
+  if (halted()) return 'cancelled'
   comments = listed.comments
   plan = planPublication({
     observation: state,
@@ -1287,8 +1301,9 @@ async function publishObservationLocked(client, number, state) {
     return 'stale-head'
   }
   listed = commentList(await client.listComments(number))
-  if (halted()) return 'cancelled'
+  if (listed.stopped) return 'cancelled'
   if (listed.truncated) return 'comments-truncated'
+  if (halted()) return 'cancelled'
   comments = listed.comments
   plan = planPublication({
     observation: state,
@@ -1309,6 +1324,10 @@ async function publishObservationLocked(client, number, state) {
 
   const headAfter = await client.readHead(number)
   const listedAfter = commentList(await client.listComments(number))
+  if (listedAfter.stopped) {
+    console.log(`#${number} stop requested after create; existing markers were left in place`)
+    return 'cancelled'
+  }
   if (listedAfter.truncated) {
     console.log(`#${number} comment list truncated after create; existing markers were left in place`)
     return 'comments-truncated'
@@ -1412,7 +1431,7 @@ async function resolvePullNumbers(token, owner, name) {
   if (requested) {
     const number = Number(requested)
     if (!Number.isInteger(number)) throw new Error('PR_NUMBER must be an integer')
-    return [number]
+    return { numbers: [number], stopped: false }
   }
   if (process.env.HEAD_SHA) return listOpenPullNumbers(token, owner, name, process.env.HEAD_SHA)
   if (process.env.EVENT_NAME === 'schedule' || process.env.EVENT_NAME === 'workflow_dispatch') {
@@ -1428,7 +1447,12 @@ async function main() {
   const [owner, name] = repository.split('/')
   if (!token || !owner || !name) throw new Error('GITHUB_TOKEN and GITHUB_REPOSITORY are required')
 
-  const numbers = await resolvePullNumbers(token, owner, name)
+  const resolved = await resolvePullNumbers(token, owner, name)
+  if (resolved.stopped) {
+    console.log('Stop requested. Remaining pull requests were not published.')
+    return
+  }
+  const numbers = resolved.numbers
   if (numbers.length === 0) {
     console.log('No open pull request to update.')
     return

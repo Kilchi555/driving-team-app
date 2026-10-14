@@ -13,6 +13,8 @@ import {
   extractMachineState,
   githubPaginated,
   interpretPublishedState,
+  listOpenBasePullNumbers,
+  listOpenPullNumbers,
   planPublication,
   planReconcile,
   publishObservation,
@@ -1429,8 +1431,67 @@ describe('comment pagination cap', () => {
       }
     })
     expect(calls).toBe(20)
-    expect(result.truncated).toBe(true)
-    expect(result.items).toHaveLength(20)
+    expect(result).toEqual({
+      items: Array.from({ length: 20 }, (_, index) => ({ id: index + 1 })),
+      truncated: true,
+      stopped: false,
+    })
+  })
+
+  it('returns a stopped empty prefix before the first fetch', async () => {
+    try {
+      requestStop()
+      let calls = 0
+      const result = await githubPaginated('token', '/repos/o/n/issues/1/comments', async () => {
+        calls += 1
+        return { payload: [{ id: 1 }], headers: { get: () => null } }
+      })
+      expect(calls).toBe(0)
+      expect(result).toEqual({ items: [], truncated: false, stopped: true })
+    } finally {
+      clearStopForTests()
+    }
+  })
+
+  it('marks a fetched page with a next link as stopped rather than truncated', async () => {
+    try {
+      let calls = 0
+      const result = await githubPaginated('token', '/repos/o/n/issues/1/comments', async () => {
+        calls += 1
+        requestStop()
+        return {
+          payload: [{ id: calls }],
+          headers: { get: (name: string) => (name === 'link' ? '<https://api.github.com?page=2>; rel="next"' : null) },
+        }
+      })
+      expect(calls).toBe(1)
+      expect(result).toEqual({ items: [{ id: 1 }], truncated: false, stopped: true })
+    } finally {
+      clearStopForTests()
+    }
+  })
+
+  it('returns a complete single page with both flags clear', async () => {
+    const result = await githubPaginated('token', '/repos/o/n/issues/1/comments', async () => ({
+      payload: [{ id: 7 }],
+      headers: { get: () => null },
+    }))
+    expect(result).toEqual({ items: [{ id: 7 }], truncated: false, stopped: false })
+  })
+
+  it('keeps a finished final page complete when cancellation arrives during that request', async () => {
+    try {
+      let calls = 0
+      const result = await githubPaginated('token', '/repos/o/n/issues/1/comments', async () => {
+        calls += 1
+        requestStop()
+        return { payload: [{ id: 4 }], headers: { get: () => null } }
+      })
+      expect(calls).toBe(1)
+      expect(result).toEqual({ items: [{ id: 4 }], truncated: false, stopped: false })
+    } finally {
+      clearStopForTests()
+    }
   })
 
   it('does not treat an older ready marker as authoritative when newer comments may be missing', () => {
@@ -1452,5 +1513,231 @@ describe('comment pagination cap', () => {
       commentsTruncated: true,
     })
     expect(plan).toEqual({ action: 'skip', reason: 'comments-truncated', retireIds: [] })
+    expect(selectCanonicalMarker(comments, { stopped: true })).toBeNull()
+    const stoppedPlan = planPublication({
+      observation: ready,
+      currentHeadSha: ready.head_sha,
+      comments,
+      cancelled: false,
+      commentsStopped: true,
+    })
+    expect(stoppedPlan).toEqual({ action: 'skip', reason: 'cancelled', retireIds: [] })
+    const stoppedRead = interpretPublishedState(comments, { headSha: ready.head_sha, commentsStopped: true })
+    expect(stoppedRead.usable_as_cache).toBe(false)
+    expect(stoppedRead.reason).toBe('cancelled')
+    expect(stoppedRead.state).toBeNull()
+    expect(stoppedRead.may_merge).toBe(false)
+  })
+})
+
+function nextLink(hasNext: boolean) {
+  return {
+    get: (name: string) => (name === 'link' && hasNext ? '<https://api.github.com?page=2>; rel="next"' : null),
+  }
+}
+
+describe('pull request enumeration stop', () => {
+  it('does not return a stopped pull list as a complete set', async () => {
+    try {
+      let calls = 0
+      const result = await listOpenPullNumbers('token', 'o', 'n', 'abc', async () => {
+        calls += 1
+        requestStop()
+        return { payload: [{ id: calls, number: 50 + calls, state: 'open' }], headers: nextLink(true) }
+      })
+      expect(calls).toBe(1)
+      expect(result).toEqual({ numbers: [], stopped: true })
+    } finally {
+      clearStopForTests()
+    }
+  })
+
+  it('does not return a stopped base pull list as a complete set', async () => {
+    try {
+      let calls = 0
+      const result = await listOpenBasePullNumbers('token', 'o', 'n', async () => {
+        calls += 1
+        requestStop()
+        return { payload: [{ id: calls, number: 80 + calls }], headers: nextLink(true) }
+      })
+      expect(calls).toBe(1)
+      expect(result).toEqual({ numbers: [], stopped: true })
+    } finally {
+      clearStopForTests()
+    }
+  })
+
+  it('still throws when pull pagination reaches the page cap', async () => {
+    let calls = 0
+    await expect(listOpenPullNumbers('token', 'o', 'n', 'abc', async () => {
+      calls += 1
+      return { payload: [{ id: calls, number: calls, state: 'open' }], headers: nextLink(true) }
+    })).rejects.toThrow('Pull request list pagination was truncated.')
+    expect(calls).toBe(20)
+  })
+
+  it('returns the finished pull page when cancellation arrives during that request', async () => {
+    try {
+      const result = await listOpenPullNumbers('token', 'o', 'n', 'abc', async () => {
+        requestStop()
+        return { payload: [{ id: 1, number: 9, state: 'open' }], headers: nextLink(false) }
+      })
+      expect(result).toEqual({ numbers: [9], stopped: false })
+    } finally {
+      clearStopForTests()
+    }
+  })
+
+  it('still throws when base pull pagination reaches the page cap', async () => {
+    let calls = 0
+    await expect(listOpenBasePullNumbers('token', 'o', 'n', async () => {
+      calls += 1
+      return { payload: [{ id: calls, number: calls }], headers: nextLink(true) }
+    })).rejects.toThrow('Pull request list pagination was truncated.')
+    expect(calls).toBe(20)
+  })
+})
+
+describe('publication stops before using an incomplete comment list', () => {
+  const head = 'abc123def456'
+
+  function seededClient(followUp?: { truncated: boolean, stopped: boolean, haltOnCompleteRead?: boolean }) {
+    const older = comment(1, observation({
+      headSha: head,
+      startedAt: '2026-10-04T06:00:00.000Z',
+      observedAt: '2026-10-04T06:00:01.000Z',
+      evaluationId: 'old-a',
+    }))
+    const middle = comment(3, observation({
+      headSha: head,
+      startedAt: '2026-10-04T07:00:00.000Z',
+      observedAt: '2026-10-04T07:00:01.000Z',
+      evaluationId: 'old-b',
+    }))
+    const comments = [older, middle]
+    let reads = 0
+    const calls: string[] = []
+    return {
+      calls,
+      comments,
+      async readHead() {
+        calls.push('readHead')
+        return head
+      },
+      async listComments() {
+        calls.push('listComments')
+        reads += 1
+        if (followUp?.haltOnCompleteRead && reads >= 4) {
+          requestStop()
+          return comments.map((item) => ({ ...item }))
+        }
+        if (followUp && reads >= 4) {
+          return {
+            comments: comments.filter((item) => item.id !== 2).map((item) => ({ ...item })),
+            truncated: followUp.truncated,
+            stopped: followUp.stopped,
+          }
+        }
+        return comments.map((item) => ({ ...item }))
+      },
+      async createComment(_number: number, body: string) {
+        calls.push('create')
+        comments.push({ id: 2, body, user: { login: 'github-actions[bot]' } })
+      },
+      async updateComment(id: number, body: string) {
+        calls.push(`update:${id}`)
+        const found = comments.find((item) => item.id === id)
+        if (!found) throw new Error(`missing comment ${id}`)
+        found.body = body
+      },
+    }
+  }
+
+  it('does not create a comment from a stopped pre-create list', async () => {
+    const client = seededClient()
+    client.listComments = async () => ({
+      comments: client.comments.map((item) => ({ ...item })),
+      truncated: false,
+      stopped: true,
+    })
+    const fresh = observation({
+      headSha: head,
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'fresh',
+    })
+    expect(await publishObservation(client, 368, fresh)).toBe('cancelled')
+    expect(client.calls).not.toContain('create')
+    expect(client.calls.filter((call) => call.startsWith('update'))).toEqual([])
+    expect(client.comments).toHaveLength(2)
+    expect(client.comments.every((item) => item.body.includes('<!-- simy-review-state -->'))).toBe(true)
+  })
+
+  it('cancels after create when the follow-up list is stopped and retires nothing', async () => {
+    const client = seededClient({ truncated: false, stopped: true })
+    const fresh = observation({
+      headSha: head,
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'fresh',
+    })
+    expect(await publishObservation(client, 368, fresh)).toBe('cancelled')
+    expect(client.calls).toContain('create')
+    expect(client.calls.filter((call) => call.startsWith('update'))).toEqual([])
+    expect(client.comments.map((item) => item.id)).toEqual([1, 3, 2])
+    expect(client.comments.every((item) => item.body.includes('<!-- simy-review-state -->'))).toBe(true)
+  })
+
+  it('cancels before create when stop arrives during a complete final-page read', async () => {
+    try {
+      const client = seededClient()
+      client.listComments = async () => {
+        requestStop()
+        return client.comments.map((item) => ({ ...item }))
+      }
+      const fresh = observation({
+        headSha: head,
+        startedAt: '2026-10-04T09:00:00.000Z',
+        observedAt: '2026-10-04T09:00:01.000Z',
+        evaluationId: 'fresh-final-page',
+      })
+      expect(await publishObservation(client, 368, fresh)).toBe('cancelled')
+      expect(client.calls).not.toContain('create')
+      expect(client.calls.filter((call) => call.startsWith('update'))).toEqual([])
+    } finally {
+      clearStopForTests()
+    }
+  })
+
+  it('does not report a stop during the final follow-up page as truncation', async () => {
+    try {
+      const client = seededClient({ truncated: false, stopped: false, haltOnCompleteRead: true })
+      const fresh = observation({
+        headSha: head,
+        startedAt: '2026-10-04T09:00:00.000Z',
+        observedAt: '2026-10-04T09:00:01.000Z',
+        evaluationId: 'fresh-final-follow-up',
+      })
+      expect(await publishObservation(client, 368, fresh)).toBe('published')
+      expect(client.calls).toContain('create')
+      expect(client.calls.filter((call) => call.startsWith('update'))).toEqual([])
+      expect(client.comments.every((item) => item.body.includes('<!-- simy-review-state -->'))).toBe(true)
+    } finally {
+      clearStopForTests()
+    }
+  })
+
+  it('keeps a genuine post-create truncation fail-closed', async () => {
+    const client = seededClient({ truncated: true, stopped: false })
+    const fresh = observation({
+      headSha: head,
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'fresh',
+    })
+    expect(await publishObservation(client, 368, fresh)).toBe('comments-truncated')
+    expect(client.calls).toContain('create')
+    expect(client.calls.filter((call) => call.startsWith('update'))).toEqual([])
+    expect(client.comments.every((item) => item.body.includes('<!-- simy-review-state -->'))).toBe(true)
   })
 })
