@@ -1,11 +1,12 @@
 # RCA — Public tenant registration rate-limit failure (2026-10-14)
 
-**Status:** Investigation complete (Phase 1)  
-**Related:** `docs/incidents/2026-10-14_suspicious-tenant-registration-donaldtrumpldt.md`
+**Status:** Phase 2 implementation complete (draft PR); staging migration validated on `simy-test`  
+**Related:** `docs/incidents/2026-10-14_suspicious-tenant-registration-donaldtrumpldt.md`  
+**Rollout:** `docs/incidents/2026-10-14_tenant-registration-abuse-rollout.md`
 
 ## Root cause (confirmed)
 
-`POST /api/tenants/register` calls `checkRateLimit(ip, 'tenant_register', 3, 3600_000)`, but production table `rate_limit_logs` still has:
+`POST /api/tenants/register` calls `checkRateLimit(ip, 'tenant_register', ...)`, but production table `rate_limit_logs` still has:
 
 ```sql
 CHECK (operation IN ('login', 'register', 'password_reset'))
@@ -18,14 +19,16 @@ Inserts with `operation = 'tenant_register'` (and `create_admin`, etc.) **fail t
 3. Fire-and-forgets the insert; CHECK errors are swallowed
 4. Fails **open** on query/client errors
 
-Live evidence: 0 rows for `tenant_register` / `create_admin` while hundreds of registrations used operation name `register` historically.
+Live evidence (Phase 1, read-only): 0 rows for `tenant_register` / `create_admin` while hundreds of registrations used operation name `register` historically.
+
+**Production still unrepaired as of Phase 2 evidence close** (project `unyjaetebnaexaflpyoc` / Driving Team App): CHECK remains the three-value allowlist; `tenant_registration_email_tokens` absent. No production migration was applied by this work.
 
 ## Contributing factors
 
 | Factor | Effect |
 |--------|--------|
 | Fire-and-forget insert | Concurrent instances never see each other’s attempts |
-| Process-local memory cache | Useless across serverless isolates |
+| Process-local memory cache used as security boundary | Useless across serverless isolates |
 | First `x-forwarded-for` hop | Client-spoofable IP for register / create-admin |
 | No email verification | Live `is_active` trial + `email_confirm: true` admin |
 | Weak placeholder heuristics | Celebrity / joke address data allowed |
@@ -36,19 +39,54 @@ Beyond the Trump-named cluster, later same-day trial tenants included `5donylad`
 
 ## Safest activation gate (chosen)
 
-Add `registration_status` + `email_verified_at`. Create tenants as **`is_active = false`** until email verification succeeds, then activate and issue the HMAC `registration_token` for `create-admin`. Do not auto-confirm Supabase email until after our verification step.
+Add `registration_status` + `email_verified_at`. Create tenants as **`is_active = false`** / `pending_email_verification` until email verification succeeds, then activate and issue the HMAC `registration_token` for `create-admin`. Do **not** use Supabase `email_confirm: true` to bypass application verification.
+
+### State transitions
+
+1. **Register (public):** tenant inserted `is_active=false`, `registration_status=pending_email_verification`, hashed single-use email token stored, verification email sent. **No** `registration_token` returned.
+2. **Verify (atomic RPC):** consume hashed token (`FOR UPDATE` + one-shot `used_at`) → `email_verified_at` set, `registration_status=email_verified`, `is_active=true` → issue tenant-bound HMAC `registration_token`.
+3. **Create-admin:** requires verified+active tenant + valid `registration_token`; creates admin without bypassing app email verification.
+4. **Staff invite / privileged paths:** reject unverified/inactive tenants.
 
 ## Fix package (this PR)
 
-1. Widen/drop `rate_limit_logs` operation CHECK; await inserts; fail-closed for abuse ops; `getClientIP`
-2. Email verification link (hashed single-use token) via Resend
-3. Gate create-admin / staff invites on verified + active
-4. Layered rate limits (IP + normalized email); optional/required hCaptcha when configured
-5. Richer audit logging (slug on failures; create-admin outcomes)
+1. **Migration** `sql_migrations/20261014_tenant_registration_abuse_protection.sql`
+   - Narrowly scoped **explicit** `rate_limit_logs.operation` CHECK allowlist (includes `tenant_register`, `create_admin`, verify/resend ops) + `sari_%` prefix — not an unrestricted column
+   - `consume_rate_limit()` with `pg_advisory_xact_lock` + count + insert in one transaction (atomic)
+   - Verification columns, hash-only token table, `consume_tenant_registration_email_token()`
+2. Rate limiter: await RPC persistence; fail-closed for abuse-sensitive ops; process memory is **non-authoritative soft cache only**
+3. Trusted `getClientIP` (Vercel / real-ip / socket / last XFF hop)
+4. Layered IP + normalized email limits; optional hCaptcha only when `TENANT_REGISTER_REQUIRE_HCAPTCHA=1` **and** secrets present
+5. Audit events for register/verify/rate-limit/admin outcomes (no raw tokens/secrets)
 
-**Not in this PR:** production migration apply, tenant suspension/deletion, automatic orphan cleanup job execution against production.
+**Not in this PR:** production migration apply, tenant suspension/deletion, automatic orphan cleanup against production.
 
----
+## Staging migration validation (simy-test)
+
+| Item | Evidence |
+|------|----------|
+| Project | `simy-test` (`kssqalisscxkhvorqwgy`), eu-west-1, ACTIVE_HEALTHY |
+| Migration name | `tenant_registration_abuse_protection_20261014` (version `20261014161558`) |
+| Pre-state | CHECK = `login\|register\|password_reset` only; no token table / verify RPCs |
+| Post-state | Allowlist CHECK accepts `tenant_register`, `create_admin`, verify/resend, `sari_%`; rejects unknown ops |
+| Atomic limiter | `consume_rate_limit` contains `pg_advisory_xact_lock`; max=3 → 3 allowed + 1 blocked |
+| Token consume | First consume activates tenant once; replay returns `used`; disposable tenant cleaned |
+| Production | Untouched — old CHECK still present; no token table |
+
+## Rate-limiter failure policy
+
+| Operation class | Limiter infrastructure failure |
+|-----------------|--------------------------------|
+| Abuse-sensitive (`tenant_register`, `tenant_register_email`, `create_admin`, verify/resend, etc.) | **Fail closed** — controlled retryable error; request denied |
+| Other operations | Documented soft-fail / existing behavior preserved where intentional |
+
+Enforcement path requires successful `consume_rate_limit` RPC for abuse ops. Soft in-process cache must not authorize traffic.
+
+## Captcha policy
+
+- **Required only when** `TENANT_REGISTER_REQUIRE_HCAPTCHA=1` and `HCAPTCHA_SECRET_KEY` is configured.
+- Presence of a secret alone does **not** enable enforcement.
+- When not required: registration proceeds without claiming bot protection is active.
 
 ## IMPLEMENTATION GATE
 

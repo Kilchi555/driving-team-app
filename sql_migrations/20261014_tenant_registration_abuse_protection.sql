@@ -1,24 +1,141 @@
 -- Tenant registration abuse protection (2026-10-14)
--- Apply in staging first. Do NOT apply via agent to production without rollout approval.
+-- Apply in staging/test first. Do NOT apply via agent to production without rollout approval.
 --
 -- Fixes:
 -- 1) rate_limit_logs.operation CHECK rejected 'tenant_register' / 'create_admin' → silent fail-open
--- 2) pending email verification columns + single-use hashed token table
+-- 2) atomic consume_rate_limit with transaction-scoped advisory lock
+-- 3) pending email verification columns + hashed single-use token table
+-- 4) atomic consume_tenant_registration_email_token for verify+activate
+--
+-- Rollback notes:
+-- - Dropping functions / re-adding old CHECK is possible BEFORE production traffic uses new ops.
+-- - After verification tokens are issued, rolling back token table / columns can strand pending signups.
+-- - Re-imposing the old three-value CHECK will again break tenant_register persistence.
 
 BEGIN;
 
--- ─── 1. rate_limit_logs: allow dynamic operation names ───────────────────────
+-- ─── 1. rate_limit_logs: narrowly scoped explicit operation allowlist ────────
 ALTER TABLE public.rate_limit_logs
   DROP CONSTRAINT IF EXISTS rate_limit_logs_operation_check;
 
--- Keep a soft length bound; do not re-introduce a closed enum of operations.
 ALTER TABLE public.rate_limit_logs
   ALTER COLUMN operation TYPE VARCHAR(80);
 
-COMMENT ON COLUMN public.rate_limit_logs.operation IS
-  'Operation key for rate limiting (e.g. login, register, tenant_register, create_admin). Not a closed enum.';
+-- Explicit allowlist of known operations + prefix for dynamic SARI ops.
+-- Intentionally NOT an unrestricted free-text column.
+ALTER TABLE public.rate_limit_logs
+  ADD CONSTRAINT rate_limit_logs_operation_check CHECK (
+    (
+      operation = ANY (ARRAY[
+        'accountant_accept',
+        'add_student',
+        'adjust_credit',
+        'admin_course_category_delete',
+        'admin_course_category_save',
+        'admin_course_create',
+        'admin_course_enrollments',
+        'admin_course_participants',
+        'admin_course_sessions',
+        'admin_courses_list',
+        'admin_dashboard_revenue_12m',
+        'admin_dashboard_summary',
+        'admin_import_users',
+        'admin_instructor_create_external',
+        'admin_payment_operations',
+        'admin_payments_overview',
+        'admin_resources_general_save',
+        'admin_room_create',
+        'admin_room_delete',
+        'admin_room_update',
+        'admin_staff_list',
+        'admin_user_details',
+        'admin_user_manage',
+        'admin_vehicle_create',
+        'admin_vehicle_delete',
+        'admin_vehicle_update',
+        'affiliate_lead_submit',
+        'anonymous_sale_checkout',
+        'booking_inquiry',
+        'booking_proposal',
+        'calculate_prices',
+        'cancel_customer',
+        'cancel_reservation',
+        'cancel_staff',
+        'cash_management',
+        'check_availability',
+        'check_client_contact',
+        'check_conflicts',
+        'client_invite_resend',
+        'client_invite_update',
+        'complete_onboarding',
+        'confirm_cash_payment',
+        'confirm_payout_otp',
+        'create_admin',
+        'create_appointment',
+        'customer_get_payment_page_data',
+        'customer_reglements',
+        'document_upload_onboarding',
+        'email_check',
+        'extract_logo_colors',
+        'generate_code',
+        'get_available_slots',
+        'get_learning_progress',
+        'get_product_sales',
+        'get_slots_for_pickup',
+        'get_tenant_branding_ip',
+        'get_users_with_stats',
+        'legacy_unscoped',
+        'login',
+        'onboarding_categories',
+        'onboarding_reglements',
+        'onboarding_terms',
+        'password_reset',
+        'register',
+        'register_guest',
+        'request_credit_withdrawal',
+        'request_onboarding_link',
+        'request_payout',
+        'resend_onboarding_self',
+        'resend_onboarding_sms',
+        'resend_registration_verification',
+        'reserve_slot',
+        'reset_failed_payment',
+        'rollback_registration',
+        'sari_public_lookup',
+        'save_discount',
+        'send_onboarding_sms',
+        'settle_and_email_payment',
+        'shop_create_payment',
+        'shop_find_or_create_guest_user',
+        'sms_send',
+        'staff_invite',
+        'staff_invite_email_check',
+        'staff_invite_resend',
+        'staff_invite_update',
+        'staff_register',
+        'switch_account',
+        'tenant_register',
+        'tenant_register_email',
+        'upcoming_course_registrations',
+        'update_tenant_branding',
+        'update_withdrawal_iban',
+        'upload_document_registration',
+        'use_credit_for_appointment',
+        'verify_onboarding_token',
+        'verify_registration_email',
+        'voucher_lookup',
+        'website_ai_optimize_ip',
+        'website_faq_research_ip',
+        'website_seo_advisor_ip'
+      ]::text[])
+    )
+    OR operation LIKE 'sari_%'
+  );
 
--- Atomic check+insert used by server/utils/rate-limiter.ts (service_role only).
+COMMENT ON COLUMN public.rate_limit_logs.operation IS
+  'Allowlisted rate-limit operation key. Includes tenant_register/create_admin. Dynamic SARI ops use sari_% prefix.';
+
+-- Atomic check+insert with transaction advisory lock (service_role only).
 CREATE OR REPLACE FUNCTION public.consume_rate_limit(
   p_operation text,
   p_ip_address text,
@@ -42,6 +159,7 @@ DECLARE
   v_oldest timestamptz;
   v_allowed boolean;
   v_retry integer;
+  v_lock_key bigint;
 BEGIN
   IF p_operation IS NULL OR length(trim(p_operation)) = 0 THEN
     RAISE EXCEPTION 'operation required';
@@ -52,6 +170,10 @@ BEGIN
   IF p_max_requests IS NULL OR p_max_requests < 1 THEN
     RAISE EXCEPTION 'max_requests invalid';
   END IF;
+
+  -- Serialize concurrent consumers for the same operation+IP (and email when present).
+  v_lock_key := hashtextextended(p_operation || chr(31) || p_ip_address || chr(31) || coalesce(lower(trim(p_email)), ''), 0);
+  PERFORM pg_advisory_xact_lock(v_lock_key);
 
   SELECT count(*), min(created_at)
     INTO v_count, v_oldest
@@ -134,8 +256,90 @@ CREATE INDEX IF NOT EXISTS idx_tenant_reg_email_tokens_expires
 
 ALTER TABLE public.tenant_registration_email_tokens ENABLE ROW LEVEL SECURITY;
 
--- No anon/authenticated policies: service_role only (bypasses RLS).
 COMMENT ON TABLE public.tenant_registration_email_tokens IS
   'Hashed single-use tokens for public tenant registration email verification. Never store raw tokens.';
+
+-- Atomic consume + activate (prevents concurrent double-verify).
+CREATE OR REPLACE FUNCTION public.consume_tenant_registration_email_token(
+  p_token_hash text
+)
+RETURNS TABLE (
+  ok boolean,
+  reason text,
+  tenant_id uuid,
+  email_normalized text,
+  slug text,
+  tenant_name text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_token public.tenant_registration_email_tokens%ROWTYPE;
+  v_tenant public.tenants%ROWTYPE;
+  v_now timestamptz := now();
+BEGIN
+  IF p_token_hash IS NULL OR length(p_token_hash) < 32 THEN
+    ok := false; reason := 'invalid'; RETURN NEXT; RETURN;
+  END IF;
+
+  SELECT * INTO v_token
+  FROM public.tenant_registration_email_tokens t
+  WHERE t.token_hash = p_token_hash
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    ok := false; reason := 'invalid'; RETURN NEXT; RETURN;
+  END IF;
+  IF v_token.used_at IS NOT NULL THEN
+    ok := false; reason := 'used'; RETURN NEXT; RETURN;
+  END IF;
+  IF v_token.expires_at < v_now THEN
+    ok := false; reason := 'expired'; RETURN NEXT; RETURN;
+  END IF;
+
+  SELECT * INTO v_tenant
+  FROM public.tenants tn
+  WHERE tn.id = v_token.tenant_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    ok := false; reason := 'tenant_missing'; RETURN NEXT; RETURN;
+  END IF;
+
+  IF lower(trim(coalesce(v_tenant.contact_email, ''))) <> v_token.email_normalized THEN
+    ok := false; reason := 'email_mismatch'; RETURN NEXT; RETURN;
+  END IF;
+
+  UPDATE public.tenant_registration_email_tokens
+  SET used_at = v_now
+  WHERE id = v_token.id
+    AND used_at IS NULL;
+
+  IF NOT FOUND THEN
+    ok := false; reason := 'used'; RETURN NEXT; RETURN;
+  END IF;
+
+  UPDATE public.tenants
+  SET
+    email_verified_at = coalesce(email_verified_at, v_now),
+    registration_status = 'email_verified',
+    is_active = true,
+    updated_at = v_now
+  WHERE id = v_tenant.id;
+
+  ok := true;
+  reason := NULL;
+  tenant_id := v_tenant.id;
+  email_normalized := v_token.email_normalized;
+  slug := v_tenant.slug;
+  tenant_name := v_tenant.name;
+  RETURN NEXT;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.consume_tenant_registration_email_token(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.consume_tenant_registration_email_token(text) TO service_role;
 
 COMMIT;

@@ -1,18 +1,15 @@
-import { defineEventHandler, getQuery, getHeader, createError } from 'h3'
+import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateEmail } from '~/server/utils/validators'
 import { isSpamEmail } from '~/server/utils/email-validator'
 import { isReservedSlug } from '~/server/utils/reserved-slugs'
+import { getClientIP } from '~/server/utils/ip-utils'
 
 const SLUG_RE = /^[a-z0-9-]{3,50}$/
 
 export default defineEventHandler(async (event) => {
-  const ipAddress =
-    getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() ||
-    getHeader(event, 'x-real-ip') ||
-    event.node.req.socket.remoteAddress ||
-    'unknown'
+  const ipAddress = getClientIP(event)
 
   // Rate limit: 60 availability checks per IP per minute
   const rateLimit = await checkRateLimit(ipAddress, 'check_availability', 60, 60 * 1000)

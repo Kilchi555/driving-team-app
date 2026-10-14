@@ -58,6 +58,7 @@ describe('registration-email-verification', () => {
     }
 
     const supabase = {
+      rpc: vi.fn(async () => ({ data: null, error: { message: 'function missing' } })),
       from: vi.fn((table: string) => {
         if (table === 'tenant_registration_email_tokens') {
           return {
@@ -125,6 +126,7 @@ describe('registration-email-verification', () => {
     const hash = hashRegistrationEmailToken(raw)
 
     const supabase = {
+      rpc: vi.fn(async () => ({ data: null, error: { message: 'function missing' } })),
       from: vi.fn((table: string) => {
         if (table === 'tenant_registration_email_tokens') {
           return {

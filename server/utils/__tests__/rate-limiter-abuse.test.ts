@@ -17,43 +17,19 @@ describe('rate-limiter abuse protection', () => {
     expect(result.retryAfter).toBeGreaterThanOrEqual(1)
   })
 
-  it('awaits insert and blocks after max attempts (insert-then-count fallback)', async () => {
-    type RateRow = { created_at: string; status: string; operation: string }
-    const rows: RateRow[] = []
-    const from = vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            gte: vi.fn(() => ({
-              order: vi.fn(async () => ({
-                data: rows.map((r) => ({ created_at: r.created_at, status: r.status })),
-                error: null,
-              })),
-              limit: vi.fn(async () => ({
-                data: rows
-                  .slice()
-                  .reverse()
-                  .map((r) => ({ created_at: r.created_at, status: r.status })),
-                error: null,
-              })),
-            })),
-          })),
-        })),
-      })),
-      insert: vi.fn(async (payload: RateRow & Record<string, unknown>) => {
-        rows.push({
-          created_at: new Date().toISOString(),
-          status: String(payload.status),
-          operation: String(payload.operation),
-        })
-        return { error: null }
-      }),
-    }))
-
+  it('uses atomic RPC and denies over-limit without relying on process memory', async () => {
+    let calls = 0
     vi.doMock('@supabase/supabase-js', () => ({
       createClient: () => ({
-        from,
-        rpc: vi.fn(async () => ({ data: null, error: { message: 'function missing' } })),
+        rpc: async () => {
+          calls += 1
+          const allowed = calls <= 2
+          return {
+            data: [{ allowed, request_count: calls, retry_after_seconds: 3600 }],
+            error: null,
+          }
+        },
+        from: vi.fn(),
       }),
     }))
 
@@ -70,28 +46,14 @@ describe('rate-limiter abuse protection', () => {
     expect(a.allowed).toBe(true)
     expect(b.allowed).toBe(true)
     expect(c.allowed).toBe(false)
-    // Third deny may be served from process cache after two persisted allows.
-    expect(rows.length).toBeGreaterThanOrEqual(2)
-    expect(rows.every((r) => r.operation === 'tenant_register')).toBe(true)
+    expect(calls).toBe(3)
   })
 
-  it('fails closed when insert persistence errors for abuse ops', async () => {
+  it('fails closed when atomic RPC is missing for abuse ops (no racy fallback)', async () => {
     vi.doMock('@supabase/supabase-js', () => ({
       createClient: () => ({
-        from: () => ({
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                gte: () => ({
-                  order: async () => ({ data: [], error: null }),
-                  limit: async () => ({ data: [], error: null }),
-                }),
-              }),
-            }),
-          }),
-          insert: async () => ({ error: { message: 'CHECK constraint' } }),
-        }),
-        rpc: async () => ({ data: null, error: { message: 'missing' } }),
+        rpc: async () => ({ data: null, error: { message: 'function missing' } }),
+        from: vi.fn(),
       }),
     }))
 
@@ -106,13 +68,10 @@ describe('rate-limiter abuse protection', () => {
     expect(result.storeUnavailable).toBe(true)
   })
 
-  it('uses atomic RPC result when available', async () => {
+  it('fails closed when RPC returns empty for create_admin', async () => {
     vi.doMock('@supabase/supabase-js', () => ({
       createClient: () => ({
-        rpc: async () => ({
-          data: [{ allowed: false, request_count: 4, retry_after_seconds: 120 }],
-          error: null,
-        }),
+        rpc: async () => ({ data: [], error: null }),
         from: vi.fn(),
       }),
     }))
@@ -123,8 +82,38 @@ describe('rate-limiter abuse protection', () => {
     const { checkRateLimit, __resetRateLimitCacheForTests } = await import('../rate-limiter')
     __resetRateLimitCacheForTests()
 
-    const result = await checkRateLimit('198.51.100.2', 'tenant_register', 3, 3600_000)
+    const result = await checkRateLimit('198.51.100.2', 'create_admin', 5, 3600_000)
     expect(result.allowed).toBe(false)
-    expect(result.retryAfter).toBe(120)
+    expect(result.storeUnavailable).toBe(true)
+  })
+
+  it('reproduces former CHECK mismatch: unsupported op names must not silently allow', async () => {
+    // Historical bug: inserts with tenant_register failed CHECK and were ignored while
+    // count stayed 0. Fail-closed + required RPC prevents that class of bypass.
+    vi.doMock('@supabase/supabase-js', () => ({
+      createClient: () => ({
+        rpc: async () => ({ data: null, error: { message: 'CHECK constraint' } }),
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                gte: () => ({
+                  order: async () => ({ data: [], error: null }),
+                }),
+              }),
+            }),
+          }),
+          insert: async () => ({ error: { message: 'CHECK constraint' } }),
+        }),
+      }),
+    }))
+
+    vi.stubEnv('SUPABASE_URL', 'https://example.supabase.co')
+    vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'test-service-role-key')
+
+    const { checkRateLimit, __resetRateLimitCacheForTests } = await import('../rate-limiter')
+    __resetRateLimitCacheForTests()
+    const result = await checkRateLimit('198.51.100.44', 'tenant_register', 3, 3600_000)
+    expect(result.allowed).toBe(false)
   })
 })

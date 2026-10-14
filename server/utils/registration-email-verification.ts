@@ -132,6 +132,7 @@ export type ConsumeVerificationResult =
 
 /**
  * Atomically consume a verification token and activate the tenant for onboarding.
+ * Prefers SQL `consume_tenant_registration_email_token` (FOR UPDATE) when migrated.
  * Registration HMAC token is issued only after successful verification.
  */
 export async function consumeRegistrationEmailToken(
@@ -143,6 +144,60 @@ export async function consumeRegistrationEmailToken(
   }
 
   const tokenHash = hashRegistrationEmailToken(rawToken)
+
+  // Preferred path: single DB transaction with row locks.
+  const { data: rpcRows, error: rpcError } = await supabase.rpc(
+    'consume_tenant_registration_email_token',
+    { p_token_hash: tokenHash },
+  )
+
+  if (!rpcError && Array.isArray(rpcRows) && rpcRows[0]) {
+    const row = rpcRows[0] as {
+      ok: boolean
+      reason: string | null
+      tenant_id: string | null
+      email_normalized: string | null
+      slug: string | null
+      tenant_name: string | null
+    }
+    if (!row.ok) {
+      const allowed = new Set([
+        'invalid',
+        'expired',
+        'used',
+        'email_mismatch',
+        'tenant_missing',
+        'already_verified',
+      ])
+      const reason = allowed.has(String(row.reason))
+        ? (row.reason as
+            | 'invalid'
+            | 'expired'
+            | 'used'
+            | 'email_mismatch'
+            | 'tenant_missing'
+            | 'already_verified')
+        : 'invalid'
+      return { ok: false, reason }
+    }
+    return {
+      ok: true,
+      tenantId: String(row.tenant_id),
+      email: String(row.email_normalized),
+      registrationToken: generateRegistrationToken(String(row.tenant_id)),
+      slug: String(row.slug || ''),
+      name: String(row.tenant_name || ''),
+    }
+  }
+
+  // Fallback for pre-migration environments / unit tests without RPC.
+  if (rpcError) {
+    console.warn(
+      '⚠️ consume_tenant_registration_email_token RPC unavailable, using conditional update fallback:',
+      rpcError.message,
+    )
+  }
+
   const { data: row, error } = await supabase
     .from('tenant_registration_email_tokens')
     .select('id, tenant_id, email_normalized, expires_at, used_at')
@@ -168,8 +223,6 @@ export async function consumeRegistrationEmailToken(
     return { ok: false, reason: 'email_mismatch' }
   }
 
-  // Mark token used first (single-use). If later steps fail, token stays consumed
-  // and a resend is required — prevents replay.
   const { data: consumed, error: consumeErr } = await supabase
     .from('tenant_registration_email_tokens')
     .update({ used_at: new Date().toISOString() })

@@ -39,13 +39,24 @@ describe('tenant registration abuse protection contracts', () => {
     expect(src).toContain('tenantAllowsPrivilegedOnboarding')
   })
 
-  it('migration widens rate_limit operation check and adds verification table', () => {
+  it('migration replaces CHECK with explicit allowlist including tenant_register/create_admin', () => {
     const sql = read('sql_migrations/20261014_tenant_registration_abuse_protection.sql')
     expect(sql).toContain('DROP CONSTRAINT IF EXISTS rate_limit_logs_operation_check')
+    expect(sql).toContain("ADD CONSTRAINT rate_limit_logs_operation_check")
+    expect(sql).toContain("'tenant_register'")
+    expect(sql).toContain("'create_admin'")
+    expect(sql).toContain('pg_advisory_xact_lock')
     expect(sql).toContain('consume_rate_limit')
+    expect(sql).toContain('consume_tenant_registration_email_token')
     expect(sql).toContain('tenant_registration_email_tokens')
     expect(sql).toContain('email_verified_at')
     expect(sql).toContain('registration_status')
+  })
+
+  it('check-availability uses getClientIP', () => {
+    const src = read('server/api/tenants/check-availability.get.ts')
+    expect(src).toContain('getClientIP')
+    expect(src.includes("x-forwarded-for')?.split(',')[0]")).toBe(false)
   })
 
   it('getClientIP does not trust the first X-Forwarded-For hop', () => {
