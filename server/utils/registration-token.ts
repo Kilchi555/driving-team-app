@@ -4,7 +4,8 @@
  * After `POST /api/tenants/register` succeeds, the server signs a token that
  * encodes the tenant_id + creation timestamp. Subsequent steps that operate on
  * the freshly-created tenant (create-admin, rollback-registration) must present
- * this token to prove they were initiated by the same registration flow.
+ * this token to prove they were initiated by the same registration flow
+ * (create-admin, rollback-registration, invite-staff-batch).
  *
  * This prevents an attacker who guesses or leaks a tenant UUID from hijacking
  * the half-finished registration (C-CA1, H-RB1 in the security audit).

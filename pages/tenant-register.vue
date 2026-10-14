@@ -3648,7 +3648,11 @@ async function continueAfterVerifiedRegistration(opts: {
     try {
       const inviteRes = await $fetch('/api/tenants/invite-staff-batch', {
         method: 'POST',
-        body: { tenant_id: tenantId, staff_list: staff },
+        body: {
+          tenant_id: tenantId,
+          registration_token: registrationToken,
+          staff_list: staff,
+        },
       }) as any
       staffInviteResults.value = inviteRes.results || []
     } catch (inviteErr: any) {
@@ -3910,6 +3914,24 @@ const submitRegistration = async () => {
       err.data?.message ||
       err.statusMessage ||
       err.message
+    const recovery = err.data?.data || err.data || {}
+
+    // Mail provider failure after tenant insert: keep pending tenant and allow resend.
+    if (
+      statusCode === 503 &&
+      recovery?.tenant_id &&
+      recovery?.requires_email_verification
+    ) {
+      createdTenantId.value = String(recovery.tenant_id)
+      createdTenantSlug.value = String(recovery.slug || createdTenantSlug.value || '')
+      pendingVerifyEmail.value =
+        String(recovery.contact_email || adminForm.value.email || '').trim()
+      currentStep.value = VERIFY_WAIT_STEP
+      error.value =
+        knownMessage ||
+        'Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte erneut senden.'
+      return
+    }
 
     const isUserFacing =
       !!knownMessage &&

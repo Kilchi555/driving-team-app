@@ -57,6 +57,7 @@ describe('registration-email-verification', () => {
       is_active: false,
     }
 
+    let adminExists = false
     const supabase = {
       rpc: vi.fn(async () => ({ data: null, error: { message: 'function missing' } })),
       from: vi.fn((table: string) => {
@@ -99,6 +100,22 @@ describe('registration-email-verification', () => {
             }),
           }
         }
+        if (table === 'users') {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  limit: () => ({
+                    maybeSingle: async () => ({
+                      data: adminExists ? { id: 'admin-1' } : null,
+                      error: null,
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          }
+        }
         throw new Error(`unexpected table ${table}`)
       }),
     } as unknown as import('@supabase/supabase-js').SupabaseClient
@@ -110,6 +127,13 @@ describe('registration-email-verification', () => {
       expect(first.email).toBe('owner@example.com')
     }
 
+    // Refresh before admin creation: re-issue HMAC (same email token is used).
+    const refresh = await consumeRegistrationEmailToken(supabase, raw)
+    expect(refresh.ok).toBe(true)
+    if (refresh.ok) expect(refresh.registrationToken).toBe('reg-token-abc')
+
+    // After admin exists, replay stays rejected.
+    adminExists = true
     const replay = await consumeRegistrationEmailToken(supabase, raw)
     expect(replay.ok).toBe(false)
     if (!replay.ok) expect(replay.reason).toBe('used')

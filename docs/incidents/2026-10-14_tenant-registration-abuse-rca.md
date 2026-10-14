@@ -77,10 +77,11 @@ Add `registration_status` + `email_verified_at`. Create tenants as **`is_active 
 
 | Operation class | Limiter infrastructure failure |
 |-----------------|--------------------------------|
-| Abuse-sensitive (`tenant_register`, `tenant_register_email`, `create_admin`, verify/resend, etc.) | **Fail closed** — controlled retryable error; request denied |
-| Other operations | Documented soft-fail / existing behavior preserved where intentional |
+| Abuse-sensitive (`REQUIRE_ATOMIC_RPC_OPERATIONS`: `tenant_register`, `tenant_register_email`, `create_admin`, verify/resend, rollback, `staff_register`) | **Fail closed** — require `consume_rate_limit` RPC; no insert-then-count fallback |
+| Auth ops (`login`, `register`, `password_reset`) | Fail closed if Supabase credentials missing / hard store failure; **may** use awaited insert-then-count when atomic RPC is not yet migrated (legacy CHECK still allows these three names). Intentional so previews/E2E remain usable before migration while registration stays fail-closed. |
+| Other operations | Soft-fail / existing behavior preserved where intentional |
 
-Enforcement path requires successful `consume_rate_limit` RPC for abuse ops. Soft in-process cache must not authorize traffic.
+Soft in-process cache must not authorize abuse-sensitive traffic.
 
 ## Captcha policy
 

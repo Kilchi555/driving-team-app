@@ -178,6 +178,15 @@ export async function consumeRegistrationEmailToken(
             | 'tenant_missing'
             | 'already_verified')
         : 'invalid'
+      // Refresh / double-submit after successful verify: re-issue HMAC only while
+      // the tenant is verified and still has no admin (prevents stranding).
+      if (reason === 'used' || reason === 'already_verified') {
+        const reissued = await reissueRegistrationTokenForVerifiedPendingAdmin(
+          supabase,
+          tokenHash,
+        )
+        if (reissued) return reissued
+      }
       return { ok: false, reason }
     }
     return {
@@ -205,7 +214,11 @@ export async function consumeRegistrationEmailToken(
     .maybeSingle()
 
   if (error || !row) return { ok: false, reason: 'invalid' }
-  if (row.used_at) return { ok: false, reason: 'used' }
+  if (row.used_at) {
+    const reissued = await reissueRegistrationTokenForVerifiedPendingAdmin(supabase, tokenHash)
+    if (reissued) return reissued
+    return { ok: false, reason: 'used' }
+  }
   if (new Date(row.expires_at).getTime() < Date.now()) {
     return { ok: false, reason: 'expired' }
   }
@@ -273,4 +286,55 @@ export function tenantAllowsPrivilegedOnboarding(tenant: {
     status === REGISTRATION_STATUS_EMAIL_VERIFIED ||
     status === REGISTRATION_STATUS_ACTIVE
   )
+}
+
+/**
+ * After a verification token is consumed, page refresh re-POSTs the same link.
+ * Re-issue the short-lived HMAC registration_token only when:
+ * - the email token hash matches a previously used row
+ * - the bound tenant is verified/active
+ * - no admin user exists yet
+ * Once an admin exists, replay stays rejected.
+ */
+async function reissueRegistrationTokenForVerifiedPendingAdmin(
+  supabase: SupabaseClient,
+  tokenHash: string,
+): Promise<Extract<ConsumeVerificationResult, { ok: true }> | null> {
+  const { data: tokenRow } = await supabase
+    .from('tenant_registration_email_tokens')
+    .select('tenant_id, email_normalized, used_at')
+    .eq('token_hash', tokenHash)
+    .maybeSingle()
+
+  if (!tokenRow?.used_at || !tokenRow.tenant_id) return null
+
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('id, name, slug, contact_email, email_verified_at, registration_status, is_active')
+    .eq('id', tokenRow.tenant_id)
+    .maybeSingle()
+
+  if (!tenant || !tenantAllowsPrivilegedOnboarding(tenant)) return null
+
+  const contactNormalized = normalizeRegistrationEmail(tenant.contact_email || '')
+  if (!contactNormalized || contactNormalized !== tokenRow.email_normalized) return null
+
+  const { data: existingAdmin } = await supabase
+    .from('users')
+    .select('id')
+    .eq('tenant_id', tenant.id)
+    .eq('role', 'admin')
+    .limit(1)
+    .maybeSingle()
+
+  if (existingAdmin) return null
+
+  return {
+    ok: true,
+    tenantId: tenant.id,
+    email: contactNormalized,
+    registrationToken: generateRegistrationToken(tenant.id),
+    slug: tenant.slug,
+    name: tenant.name,
+  }
 }

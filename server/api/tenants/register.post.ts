@@ -834,10 +834,19 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
     if (!verificationEmailSent) {
+      // Include tenant_id so the client can surface the verify-wait step and resend.
+      // Still omit registration_token (tenant remains inactive / unverified).
       throw createError({
         statusCode: 503,
         statusMessage:
-          'Registrierung gestartet, aber die Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte später erneut versuchen oder Support kontaktieren.',
+          'Registrierung gestartet, aber die Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte erneut senden.',
+        data: {
+          tenant_id: newTenant.id,
+          contact_email: newTenant.contact_email,
+          slug: newTenant.slug,
+          requires_email_verification: true,
+          verification_email_sent: false,
+        },
       })
     }
 

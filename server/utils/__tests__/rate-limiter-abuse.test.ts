@@ -116,4 +116,39 @@ describe('rate-limiter abuse protection', () => {
     const result = await checkRateLimit('198.51.100.44', 'tenant_register', 3, 3600_000)
     expect(result.allowed).toBe(false)
   })
+
+  it('allows login via awaited insert-then-count when atomic RPC is not migrated', async () => {
+    let inserted = false
+    vi.doMock('@supabase/supabase-js', () => ({
+      createClient: () => ({
+        rpc: async () => ({ data: null, error: { message: 'function missing' } }),
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                gte: () => ({
+                  order: async () => ({ data: [], error: null }),
+                }),
+              }),
+            }),
+          }),
+          insert: async () => {
+            inserted = true
+            return { error: null }
+          },
+        }),
+      }),
+    }))
+
+    vi.stubEnv('SUPABASE_URL', 'https://example.supabase.co')
+    vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'test-service-role-key')
+
+    const { checkRateLimit, __resetRateLimitCacheForTests } = await import('../rate-limiter')
+    __resetRateLimitCacheForTests()
+
+    const result = await checkRateLimit('198.51.100.77', 'login', 10, 60_000)
+    expect(result.allowed).toBe(true)
+    expect(result.storeUnavailable).toBeUndefined()
+    expect(inserted).toBe(true)
+  })
 })

@@ -34,9 +34,20 @@ describe('tenant registration abuse protection contracts', () => {
     expect(src).toContain('email_not_verified')
   })
 
-  it('invite-staff-batch blocks unverified tenants', () => {
+  it('invite-staff-batch requires registration_token, rate limit, and verified tenant', () => {
     const src = read('server/api/tenants/invite-staff-batch.post.ts')
     expect(src).toContain('tenantAllowsPrivilegedOnboarding')
+    expect(src).toContain('verifyRegistrationToken')
+    expect(src).toContain('checkRateLimit')
+    expect(src).toContain('getClientIP')
+    expect(src).toContain('registration_token')
+  })
+
+  it('register 503 mail failure returns tenant_id for controlled resend', () => {
+    const src = read('server/api/tenants/register.post.ts')
+    expect(src).toContain('verification_email_sent: false')
+    expect(src).toContain('tenant_id: newTenant.id')
+    expect(src).toContain('requires_email_verification: true')
   })
 
   it('migration replaces CHECK with explicit allowlist including tenant_register/create_admin', () => {

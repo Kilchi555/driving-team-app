@@ -3,8 +3,11 @@
  *
  * Abuse-sensitive operations FAIL CLOSED when the backing store is unavailable
  * or when persistence fails. Inserts are awaited (no fire-and-forget).
- * Enforcement uses SQL `consume_rate_limit` (advisory-locked). Process-local
- * memory is NEVER used as a security boundary for fail-closed operations.
+ * Registration/admin abuse ops require SQL `consume_rate_limit` (advisory-locked).
+ * Process-local memory is NEVER used as a security boundary for those ops.
+ * Login/register/password_reset fail closed when the store is unavailable, but
+ * may use awaited insert-then-count when the atomic RPC is not yet migrated
+ * (legacy CHECK still allows those three operation names).
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
@@ -35,18 +38,35 @@ const LIMITS: Record<string, { maxRequests: number; windowMs: number }> = {
   resend_registration_verification: { maxRequests: 5, windowMs: 60 * 60 * 1000 },
 }
 
-/** Operations that must not silently bypass protection on store failure. */
-export const FAIL_CLOSED_OPERATIONS = new Set([
+/**
+ * Abuse-sensitive registration / admin-creation ops.
+ * Require the atomic `consume_rate_limit` RPC — never fall back to racy
+ * insert-then-count (that path is what allowed the historical CHECK fail-open).
+ */
+export const REQUIRE_ATOMIC_RPC_OPERATIONS = new Set([
   'tenant_register',
   'tenant_register_email',
   'create_admin',
   'verify_registration_email',
   'resend_registration_verification',
+  'rollback_registration',
+  'staff_register',
+])
+
+/**
+ * Deny when Supabase credentials are missing or the durable store hard-fails.
+ * Includes login/register/password_reset so auth cannot silently bypass limits
+ * when the store is completely unavailable.
+ *
+ * Intentional: login/register/password_reset may use awaited insert-then-count
+ * when `consume_rate_limit` is not yet migrated (those ops are valid under the
+ * legacy three-value CHECK). Registration ops above must not.
+ */
+export const FAIL_CLOSED_OPERATIONS = new Set([
+  ...REQUIRE_ATOMIC_RPC_OPERATIONS,
   'login',
   'register',
   'password_reset',
-  'rollback_registration',
-  'staff_register',
 ])
 
 let supabaseClient: SupabaseClient | null = null
@@ -189,16 +209,19 @@ export async function checkRateLimit(
       })
     }
 
-    // Abuse ops: no racy fallback. Require migrated atomic RPC.
-    if (failClosed) {
+    const requireAtomic = REQUIRE_ATOMIC_RPC_OPERATIONS.has(String(operation))
+
+    // Registration/admin abuse ops: no racy fallback. Require migrated atomic RPC.
+    if (requireAtomic) {
       console.warn(
-        '⚠️ consume_rate_limit unavailable for fail-closed op; denying:',
+        '⚠️ consume_rate_limit unavailable for abuse op; denying:',
         rpcError?.message || 'empty result',
       )
       return denyStoreUnavailable(max)
     }
 
-    // Non-abuse fallback (awaited insert-then-count) — best-effort only.
+    // Legacy-compatible ops (login/register/password_reset/others): awaited
+    // insert-then-count. Not concurrency-perfect; acceptable until RPC is live.
     console.warn('⚠️ consume_rate_limit RPC unavailable, using insert-then-count:', rpcError?.message)
     const windowStart = new Date(now - baseWindow).toISOString()
     const { data: existing, error: selectError } = await supabase
@@ -211,7 +234,9 @@ export async function checkRateLimit(
 
     if (selectError) {
       console.warn('⚠️ Failed to query rate limit logs:', selectError.message)
-      return withRetry({ allowed: true, remaining: max - 1, limit: max, reset: baseWindow })
+      return failClosed
+        ? denyStoreUnavailable(max)
+        : withRetry({ allowed: true, remaining: max - 1, limit: max, reset: baseWindow })
     }
 
     const priorCount = existing?.length || 0
@@ -235,7 +260,9 @@ export async function checkRateLimit(
 
     if (insertError) {
       console.warn('⚠️ Failed to persist rate limit log:', insertError.message)
-      return withRetry({ allowed: true, remaining: max - 1, limit: max, reset: baseWindow })
+      return failClosed
+        ? denyStoreUnavailable(max)
+        : withRetry({ allowed: true, remaining: max - 1, limit: max, reset: baseWindow })
     }
 
     if (!isAllowed) softDenyHint.set(key, { resetTime })
