@@ -12,7 +12,7 @@
 
 - Repository: Kilchi555/driving-team-app
 - Branch: cursor/agent-handoff-protocol-b560
-- HEAD SHA: cdeba5087b1c05ba14b36a09eedd85e02be9c0db (protocol commit; tip advances with this handoff update — see section 6 for full commit list after push)
+- HEAD SHA: 62b5f1217f2b08e9b41b90bc7583129dfc53f0b9
 - Base SHA: 3b7fc0dd5fd047bf7aa6db1e4165d384450da52f (origin/main at branch creation)
 - Pull request: https://github.com/Kilchi555/driving-team-app/pull/432 (Draft)
 - Working tree: CLEAN (after handoff update commit)
@@ -68,7 +68,8 @@ Local validation:
 
 - Commit created: YES
   - `cdeba5087b1c05ba14b36a09eedd85e02be9c0db` — Add permanent Cursor agent handoff protocol
-  - follow-up — docs: record Draft PR #432 in agent handoff (branch tip after push)
+  - `62b5f1217f2b08e9b41b90bc7583129dfc53f0b9` — docs: record Draft PR #432 in agent handoff
+  - plus stamp commit updating this HEAD SHA field (branch tip after push; `git rev-parse HEAD`)
 - Remote push: YES — `origin/cursor/agent-handoff-protocol-b560`
 - Pull request created or updated: YES — Draft https://github.com/Kilchi555/driving-team-app/pull/432
 - Merge: NO
