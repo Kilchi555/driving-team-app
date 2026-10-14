@@ -13,8 +13,9 @@
 | Expected base | `0770ad2e` — **confirmed** |
 | `origin/main` at validation | `3b7fc0dd` (1 commit ahead of PR base: read-only PR review-state comment) |
 | Prior implementation SHAs | `64cc4202`, `5bd73152` |
-| Validation fix SHA | `8dc70643` (head after this validation) |
-| New commits since prior report | yes — `8dc70643` |
+| Validation fix SHA | `8dc70643` |
+| Handoff docs SHA | `634d850f` (current PR head) |
+| New commits since prior report | yes — `8dc70643`, `634d850f` |
 
 ## Files changed (full PR vs `0770ad2e`)
 
