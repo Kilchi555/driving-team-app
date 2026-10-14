@@ -209,6 +209,58 @@ export function buildTrialBalance(
     .sort((a, b) => a.number.localeCompare(b.number, 'de'))
 }
 
+export type CashToBankJournalAmount = {
+  amount_rappen: number | null
+  storno_of_id: string | null
+}
+
+/** Net bank increase already posted as a cash-to-bank transfer, in rappen. */
+export function netCashToBankRappen(rows: readonly CashToBankJournalAmount[]): number {
+  let net = 0
+  for (const row of rows) {
+    if (typeof row.amount_rappen !== 'number' || !Number.isInteger(row.amount_rappen) || row.amount_rappen <= 0) {
+      return Number.NaN
+    }
+    net += row.storno_of_id ? -row.amount_rappen : row.amount_rappen
+  }
+  return net
+}
+
+export type OpeningBankSeedPlan =
+  | { action: 'insert'; amountRappen: number }
+  | { action: 'skip'; reason: 'already_seeded' | 'no_unexplained_balance' }
+  | { action: 'reject'; reason: 'transfer_ledger_inconsistent' }
+
+/**
+ * Historical bank opening, excluding cash-to-bank transfers.
+ * An existing opening entry is left unchanged.
+ */
+export function openingBankSeedPlan(input: {
+  bankBalanceRappen: number
+  netTransferRappen: number
+  openingAlreadyExists: boolean
+}): OpeningBankSeedPlan {
+  if (input.openingAlreadyExists) return { action: 'skip', reason: 'already_seeded' }
+  if (!Number.isInteger(input.bankBalanceRappen) || !Number.isInteger(input.netTransferRappen) || input.netTransferRappen < 0) {
+    return { action: 'reject', reason: 'transfer_ledger_inconsistent' }
+  }
+  const unexplained = input.bankBalanceRappen - input.netTransferRappen
+  if (unexplained < 0) return { action: 'reject', reason: 'transfer_ledger_inconsistent' }
+  if (unexplained === 0) return { action: 'skip', reason: 'no_unexplained_balance' }
+  return { action: 'insert', amountRappen: unexplained }
+}
+
+export function openingBankSeedLines(amountRappen: number): LedgerLineDraft[] {
+  return [
+    { account_number: '1020', debit_rappen: amountRappen, credit_rappen: 0 },
+    { account_number: '9000', debit_rappen: 0, credit_rappen: amountRappen },
+  ]
+}
+
+export function isMissingRelationError(error: { code?: string | null }): boolean {
+  return error.code === '42P01' || error.code === 'PGRST205'
+}
+
 export function statementsFromTrial(rows: TrialBalanceRow[]) {
   const assets = rows.filter(r => r.type === 'asset').reduce((s, r) => s + r.balance_rappen, 0)
   const liabilities = rows.filter(r => r.type === 'liability').reduce((s, r) => s + r.balance_rappen, 0)

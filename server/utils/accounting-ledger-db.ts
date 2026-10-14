@@ -5,10 +5,15 @@ import {
   SYSTEM_ACCOUNT_NUMBERS,
   accountClassFromNumber,
   defaultAccountForCategory,
+  isMissingRelationError,
   ledgerLinesBalanced,
+  netCashToBankRappen,
+  openingBankSeedLines,
+  openingBankSeedPlan,
   proposeLedgerLines,
   resolveLineAccountIds,
   reverseLedgerLines,
+  type CashToBankJournalAmount,
 } from '~/server/utils/accounting-ledger'
 
 type Admin = ReturnType<typeof getSupabaseAdmin>
@@ -173,6 +178,28 @@ export async function syncEntryLedger(
   return rows.length
 }
 
+async function sumCashToBankNet(supabase: Admin, tenantId: string): Promise<number> {
+  const rows: CashToBankJournalAmount[] = []
+  let from = 0
+  for (;;) {
+    const { data, error } = await supabase
+      .from('cash_bank_transfer_journals')
+      .select('amount_rappen, storno_of_id')
+      .eq('tenant_id', tenantId)
+      .order('id', { ascending: true })
+      .range(from, from + 999)
+    if (error) {
+      if (isMissingRelationError(error)) return 0
+      throw new Error(error.message)
+    }
+    const page = data ?? []
+    rows.push(...page)
+    if (page.length < 1000) break
+    from += 1000
+  }
+  return netCashToBankRappen(rows)
+}
+
 export async function backfillTenantLedger(supabase: Admin, tenantId: string) {
   const accounts = await ensureTenantAccounts(supabase, tenantId)
   const byNumber = new Map(accounts.map(a => [a.number, a]))
@@ -262,44 +289,58 @@ export async function backfillTenantLedger(supabase: Admin, tenantId: string) {
 
   const bank = accounts.find(a => a.number === '1020')
   const opening = accounts.find(a => a.number === '9000')
-  const { data: tenant } = await supabase
+  const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
     .select('bank_balance_rappen')
     .eq('id', tenantId)
     .single()
+  if (tenantError) throw new Error(tenantError.message)
   const bankRappen = tenant?.bank_balance_rappen ?? 0
 
-  if (bank && opening && bankRappen > 0) {
-    const { data: existingOpen } = await supabase
+  if (bank && opening) {
+    const { data: existingOpen, error: openLookupError } = await supabase
       .from('accounting_entries')
       .select('id')
       .eq('tenant_id', tenantId)
       .eq('external_reference', 'opening-bank')
       .is('deleted_at', null)
       .maybeSingle()
-    if (!existingOpen) {
+    if (openLookupError) throw new Error(openLookupError.message)
+
+    const plan = openingBankSeedPlan({
+      bankBalanceRappen: bankRappen,
+      netTransferRappen: existingOpen ? 0 : await sumCashToBankNet(supabase, tenantId),
+      openingAlreadyExists: !!existingOpen,
+    })
+    if (plan.action === 'reject') {
+      throw new Error('Kasse-Bank-Umbuchungen sind mit dem Banksaldo nicht vereinbar')
+    }
+    if (plan.action === 'insert') {
+      const drafts = openingBankSeedLines(plan.amountRappen)
+      if (!ledgerLinesBalanced(drafts)) throw new Error('Soll und Haben stimmen nicht überein')
       const year = new Date().getFullYear()
       const { data: openEntry, error: openErr } = await supabase
         .from('accounting_entries')
         .insert({
           tenant_id: tenantId,
           type: 'income',
-          amount_rappen: bankRappen,
+          amount_rappen: plan.amountRappen,
           entry_date: `${year}-01-01`,
           description: 'Eröffnungsbilanz Bank',
           document_kind: 'debtor',
           is_paid: true,
           approval_status: 'approved',
           external_reference: 'opening-bank',
-          notes: 'Automatisch aus bisherigem Banksaldo',
+          notes: 'Automatisch aus bisherigem Banksaldo ohne Kasse-an-Bank-Umbuchungen',
         })
         .select('id')
         .single()
       if (openErr) throw new Error(openErr.message)
-      await supabase.from('accounting_journal_lines').insert([
-        { tenant_id: tenantId, entry_id: openEntry.id, account_id: bank.id, debit_rappen: bankRappen, credit_rappen: 0 },
-        { tenant_id: tenantId, entry_id: openEntry.id, account_id: opening.id, debit_rappen: 0, credit_rappen: bankRappen },
+      const { error: lineError } = await supabase.from('accounting_journal_lines').insert([
+        { tenant_id: tenantId, entry_id: openEntry.id, account_id: bank.id, debit_rappen: plan.amountRappen, credit_rappen: 0 },
+        { tenant_id: tenantId, entry_id: openEntry.id, account_id: opening.id, debit_rappen: 0, credit_rappen: plan.amountRappen },
       ])
+      if (lineError) throw new Error(lineError.message)
       posted += 2
     }
   }

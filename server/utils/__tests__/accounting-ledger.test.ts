@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest'
+import { isAccountingPlEntry } from '../accounting'
 import {
   CATEGORY_TO_ACCOUNT,
   KMU_DEFAULT_ACCOUNTS,
   accountClassFromNumber,
   defaultAccountForCategory,
+  isMissingRelationError,
   ledgerLinesBalanced,
+  netCashToBankRappen,
+  openingBankSeedLines,
+  openingBankSeedPlan,
   proposeLedgerLines,
   reverseLedgerLines,
   statementsFromTrial,
@@ -75,6 +80,85 @@ describe('proposeLedgerLines', () => {
     const storno = reverseLedgerLines(original)
     expect(ledgerLinesBalanced(storno)).toBe(true)
     expect(storno.find(l => l.account_number === '6000')?.credit_rappen).toBe(1000)
+  })
+
+  it('keeps a cash-to-bank transfer out of opening-bank income', () => {
+    const transfer = 10_000
+    const bankBefore = 50_000
+    const bankAfter = bankBefore + transfer
+    const journals = [{ amount_rappen: transfer, storno_of_id: null }]
+    const first = openingBankSeedPlan({
+      bankBalanceRappen: bankAfter,
+      netTransferRappen: netCashToBankRappen(journals),
+      openingAlreadyExists: false,
+    })
+    expect(first).toEqual({ action: 'insert', amountRappen: bankBefore })
+    if (first.action !== 'insert') return
+    expect(first.amountRappen).not.toBe(bankAfter)
+    const lines = openingBankSeedLines(first.amountRappen)
+    expect(ledgerLinesBalanced(lines)).toBe(true)
+    expect(lines).toEqual([
+      { account_number: '1020', debit_rappen: bankBefore, credit_rappen: 0 },
+      { account_number: '9000', debit_rappen: 0, credit_rappen: bankBefore },
+    ])
+    expect(isAccountingPlEntry({ document_kind: 'debtor', external_reference: 'opening-bank' })).toBe(false)
+
+    const repeated = openingBankSeedPlan({
+      bankBalanceRappen: bankAfter + 2_000,
+      netTransferRappen: netCashToBankRappen(journals),
+      openingAlreadyExists: true,
+    })
+    expect(repeated).toEqual({ action: 'skip', reason: 'already_seeded' })
+  })
+
+  it('leaves an existing opening balance unchanged when a transfer follows it', () => {
+    const plan = openingBankSeedPlan({
+      bankBalanceRappen: 45_000,
+      netTransferRappen: netCashToBankRappen([{ amount_rappen: 5_000, storno_of_id: null }]),
+      openingAlreadyExists: true,
+    })
+    expect(plan).toEqual({ action: 'skip', reason: 'already_seeded' })
+  })
+
+  it('seeds the restored bank after a transfer and its reversal', () => {
+    const originalBank = 70_000
+    const transfer = 8_000
+    const live = { amount_rappen: transfer, storno_of_id: null }
+    const reversed = [live, { amount_rappen: transfer, storno_of_id: 'journal-1' }]
+    const beforeReversal = openingBankSeedPlan({
+      bankBalanceRappen: originalBank + transfer,
+      netTransferRappen: netCashToBankRappen([live]),
+      openingAlreadyExists: false,
+    })
+    expect(beforeReversal).toEqual({ action: 'insert', amountRappen: originalBank })
+    const afterReversal = openingBankSeedPlan({
+      bankBalanceRappen: originalBank,
+      netTransferRappen: netCashToBankRappen(reversed),
+      openingAlreadyExists: false,
+    })
+    expect(afterReversal).toEqual({ action: 'insert', amountRappen: originalBank })
+    const secondSync = openingBankSeedPlan({
+      bankBalanceRappen: originalBank,
+      netTransferRappen: netCashToBankRappen(reversed),
+      openingAlreadyExists: true,
+    })
+    expect(secondSync).toEqual({ action: 'skip', reason: 'already_seeded' })
+  })
+
+  it('does not book income when the bank balance is only the transfer', () => {
+    expect(openingBankSeedPlan({
+      bankBalanceRappen: 10_000,
+      netTransferRappen: 10_000,
+      openingAlreadyExists: false,
+    })).toEqual({ action: 'skip', reason: 'no_unexplained_balance' })
+    expect(openingBankSeedPlan({
+      bankBalanceRappen: 8_000,
+      netTransferRappen: 10_000,
+      openingAlreadyExists: false,
+    })).toEqual({ action: 'reject', reason: 'transfer_ledger_inconsistent' })
+    expect(netCashToBankRappen([{ amount_rappen: null, storno_of_id: null }])).toBeNaN()
+    expect(isMissingRelationError({ code: 'PGRST205' })).toBe(true)
+    expect(isMissingRelationError({ code: '42501' })).toBe(false)
   })
 
   it('builds a balanced trial from lines', () => {
