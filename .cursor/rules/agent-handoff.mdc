@@ -1,0 +1,153 @@
+---
+description: Mandatory end-of-task SIMY Markdown handoff for every Cursor agent
+alwaysApply: true
+---
+
+# SIMY — Permanent Agent Handoff Protocol
+
+This rule is **mandatory** for every Cursor agent task in this repository. It grants **no** extra permissions.
+
+## Scope (always applies)
+
+Produce a handoff for **every** task type, including:
+
+- Bug fixes and feature implementation
+- Code reviews and security audits
+- Test and CI investigations
+- Pull request preparation and review
+- Merge and deployment tasks
+- Database migration preparation and execution
+- Investigations with **no** code changes
+- Blocked or incomplete tasks
+
+## Composition with existing rules
+
+Governance order is unchanged:
+
+1. Impact Analysis / Implementation Gate (`.cursor/rules/impact-analysis.mdc`) — when required
+2. Implementation (approved scope only)
+3. Tests / Verification
+4. Ship-to-main (`.cursor/rules/ship-to-main.mdc`) — PR / CI / merge / production
+5. **This rule** — end-of-task handoff (reporting only)
+
+A handoff status such as `PASS` or text like `READY_FOR_MERGE` is **not** authorization to merge, deploy, or change production data.
+
+## Enforcement limitation (honest)
+
+Project rules with `alwaysApply: true` in `.cursor/rules/*.mdc` are the supported Cursor mechanism for repository-wide agent instructions in this repo (same pattern as `ship-to-main.mdc`).
+
+**This is instruction, not a hard runtime gate.** Cursor cannot guarantee that every agent, subagent, external bot, or session without project rules will read or obey this file. Do not claim universal enforcement. Still write the handoff whenever this rule is in effect.
+
+## Mandatory Markdown handoff
+
+At the **end of every task**, create or update:
+
+`artifacts/handoffs/SIMY_HANDOFF.md`
+
+Create `artifacts/handoffs/` if missing.
+
+### Hard requirements
+
+- Valid, readable Markdown; self-contained; easy to copy from an iPhone
+- Short summary and next required action **at the top**
+- Include actual repository state and evidence
+- Never report an action or check as completed unless it actually was
+- Explicitly distinguish: `PASS` | `CONDITIONAL PASS` | `FAIL` | `BLOCKED` | `NOT RUN`
+- Record exact commit SHA and relevant PR URL whenever available
+- No secrets, tokens, credentials, private keys, or unnecessary personal data
+- Do not overwrite unrelated reports or delete previous evidence
+- Concurrent agents: do **not** silently overwrite another agent’s handoff. Write a task-specific file first:
+
+  `artifacts/handoffs/SIMY_HANDOFF_<short-task-id>.md`
+
+  Then consolidate into `artifacts/handoffs/SIMY_HANDOFF.md` only when safe.
+
+### Exact minimum structure
+
+Use this structure (section titles and fields required):
+
+```markdown
+# SIMY — Agent Handoff
+
+## 1. Summary
+
+- Status: PASS / CONDITIONAL PASS / FAIL / BLOCKED
+- Task:
+- What was accomplished:
+- Next action:
+- Human approval required: YES / NO
+
+## 2. Git State
+
+- Repository:
+- Branch:
+- HEAD SHA:
+- Base SHA:
+- Pull request:
+- Working tree: CLEAN / DIRTY / NOT CHECKED
+
+## 3. Changes
+
+- Files changed:
+- Important implementation details:
+- Requested work not completed:
+
+## 4. Verification
+
+- Unit tests: PASS | FAIL | BLOCKED | NOT RUN — <evidence>
+- Integration tests: PASS | FAIL | BLOCKED | NOT RUN — <evidence>
+- E2E tests: PASS | FAIL | BLOCKED | NOT RUN — <evidence>
+- Lint: PASS | FAIL | BLOCKED | NOT RUN — <evidence>
+- Typecheck: PASS | FAIL | BLOCKED | NOT RUN — <evidence>
+- Required CI checks: PASS | FAIL | BLOCKED | NOT RUN — <evidence>
+- Production smoke test: PASS | FAIL | BLOCKED | NOT RUN — <evidence>
+
+## 5. Risks and Open Issues
+
+- Known risks:
+- Failed or missing checks:
+- Unverified assumptions:
+- Remaining limitations:
+
+## 6. External Actions and Production Safety
+
+- Commit created: YES / NO / NOT APPLICABLE / NOT VERIFIED
+- Remote push: YES / NO / NOT APPLICABLE / NOT VERIFIED
+- Pull request created or updated: YES / NO / NOT APPLICABLE / NOT VERIFIED
+- Merge: YES / NO / NOT APPLICABLE / NOT VERIFIED
+- Deployment: YES / NO / NOT APPLICABLE / NOT VERIFIED
+- Production database changes: YES / NO / NOT APPLICABLE / NOT VERIFIED
+- Migration applied: YES / NO / NOT APPLICABLE / NOT VERIFIED
+- Real customer or financial data changed: YES / NO / NOT APPLICABLE / NOT VERIFIED
+- Other externally visible side effects: YES / NO / NOT APPLICABLE / NOT VERIFIED — <brief>
+
+## 7. Next Step
+
+- Exact recommended next action:
+- Required human decision or approval:
+- If blocked, the precise blocker and the minimum action needed to unblock it.
+```
+
+## Safety and authorization (handoff never expands permissions)
+
+- Do **not** merge merely because the handoff says ready / PASS.
+- Merge only when separately authorized and allowed by branch protection / Ship-to-main.
+- Do **not** apply production DB migrations, delete production data, change access controls, or perform destructive actions without required explicit human authorization.
+- Do **not** bypass required CI, branch protection, security controls, or deployment gates.
+- Report the actual deployed SHA before claiming a commit is live.
+- If blocked: still write the handoff and state the blocker clearly.
+- Keep the report factual and concise; **never fabricate evidence**.
+
+## End-of-task checklist
+
+Every agent must:
+
+1. Complete the task within its authorized scope
+2. Run the relevant permitted checks
+3. Create or update the Markdown handoff
+4. Verify the file exists and contains the actual final status
+5. Finish the Cursor response with **exactly**:
+   - the path of the handoff file
+   - a one-line status
+
+The Markdown file is the canonical copy-and-paste report. Keep the chat response short and point to the file.
