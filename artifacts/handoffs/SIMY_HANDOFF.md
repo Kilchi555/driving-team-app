@@ -14,8 +14,8 @@
 | `origin/main` at validation | `3b7fc0dd` (1 commit ahead of PR base: read-only PR review-state comment) |
 | Prior implementation SHAs | `64cc4202`, `5bd73152` |
 | Validation fix SHA | `8dc70643` |
-| Handoff docs SHA | `634d850f` (current PR head) |
-| New commits since prior report | yes — `8dc70643`, `634d850f` |
+| Handoff artifact commit | `634d850f` (and any follow-up docs tweak on this branch) |
+| New commits since prior report | yes — `8dc70643`, `634d850f`, plus this handoff refresh |
 
 ## Files changed (full PR vs `0770ad2e`)
 
