@@ -12,10 +12,10 @@
 
 - Repository: Kilchi555/driving-team-app
 - Branch: cursor/agent-handoff-protocol-b560
-- HEAD SHA: 62b5f1217f2b08e9b41b90bc7583129dfc53f0b9
+- HEAD SHA: (branch tip — authoritative value is PR #432 `headRefOid` / `git rev-parse HEAD` after push)
 - Base SHA: 3b7fc0dd5fd047bf7aa6db1e4165d384450da52f (origin/main at branch creation)
 - Pull request: https://github.com/Kilchi555/driving-team-app/pull/432 (Draft)
-- Working tree: CLEAN (after handoff update commit)
+- Working tree: CLEAN
 
 ## 3. Changes
 
@@ -63,13 +63,15 @@ Local validation:
 - Remaining limitations:
   - Draft PR must not be treated as merge authorization
   - Ship-to-main and branch protection remain authoritative for release
+  - A handoff file cannot stably contain its own commit SHA without lag; tip OID is authoritative on the PR
 
 ## 6. External Actions and Production Safety
 
 - Commit created: YES
   - `cdeba5087b1c05ba14b36a09eedd85e02be9c0db` — Add permanent Cursor agent handoff protocol
   - `62b5f1217f2b08e9b41b90bc7583129dfc53f0b9` — docs: record Draft PR #432 in agent handoff
-  - plus stamp commit updating this HEAD SHA field (branch tip after push; `git rev-parse HEAD`)
+  - `211713e8cb26f859bfac40b33f0b38f0d387ff5b` — docs: stamp handoff HEAD SHA for Draft PR #432
+  - plus tip commit(s) finalizing this handoff text (see PR #432 head OID)
 - Remote push: YES — `origin/cursor/agent-handoff-protocol-b560`
 - Pull request created or updated: YES — Draft https://github.com/Kilchi555/driving-team-app/pull/432
 - Merge: NO
