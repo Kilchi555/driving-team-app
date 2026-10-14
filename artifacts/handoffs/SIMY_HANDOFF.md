@@ -10,7 +10,7 @@
 | PR | https://github.com/Kilchi555/driving-team-app/pull/431 (draft) |
 | Base | `0770ad2e` |
 | Prior reviewed head | `d41cf295` |
-| Final HEAD (this fix) | *(filled after push)* |
+| Final HEAD (this fix) | `f8d216f8c1f84938768783938a816d34d64f3211` |
 
 ## IMPLEMENTATION GATE (authorized by user task)
 
