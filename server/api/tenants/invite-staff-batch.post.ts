@@ -49,12 +49,22 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
-    .select('id, name, slug, created_at, business_type, primary_color, logo_wide_url, logo_url, logo_square_url, from_email, resend_domain_verified')
+    .select('id, name, slug, created_at, business_type, primary_color, logo_wide_url, logo_url, logo_square_url, from_email, resend_domain_verified, is_active, email_verified_at, registration_status')
     .eq('id', tenant_id)
     .single()
 
   if (tenantError || !tenant) {
     throw createError({ statusCode: 404, statusMessage: 'Tenant nicht gefunden' })
+  }
+
+  const { tenantAllowsPrivilegedOnboarding } = await import(
+    '~/server/utils/registration-email-verification'
+  )
+  if (!tenantAllowsPrivilegedOnboarding(tenant)) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Einladungen erst nach E-Mail-Bestätigung möglich.',
+    })
   }
 
   const terms = await getTenantTerminology(supabase, tenant_id)
