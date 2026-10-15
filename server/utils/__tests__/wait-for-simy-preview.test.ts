@@ -6,6 +6,7 @@ import {
   classifyPreviewUrl,
   resolveE2EBaseURL,
   runPreviewWait,
+  selectMergeGroupPlaywrightUrl,
 } from '../../../scripts/wait-for-simy-preview.mjs'
 
 const QUEUE_SHA = 'mergegroupsha111'
@@ -72,29 +73,59 @@ describe('merge-group preview URL classification', () => {
     expect(() => assertMergeGroupPreviewUrl('')).toThrow(/missing-url/)
   })
 
-  it('rejects the production host without a slash, with a slash, a path, a query, or a port', () => {
+  it('rejects the production host for case, trailing dot, path, query, fragment, and port', () => {
     for (const value of [
       'https://app.simy.ch',
-      'https://APP.SIMY.CH/',
+      'https://APP.SIMY.CH',
+      'https://app.simy.ch.',
+      'https://APP.SIMY.CH./',
       'https://app.simy.ch/login',
       'https://app.simy.ch/login?next=1',
-      'https://app.simy.ch:443/admin',
+      'https://app.simy.ch/login?next=1#section',
+      'https://app.simy.ch.:443/admin?x=1#f',
+      'https://app.simy.ch:8443/admin?x=1#f',
+      'https://user:pass@app.simy.ch/login',
+      'https://user:pass@APP.SIMY.CH./login?q=1#frag',
     ]) {
       expect(classifyPreviewUrl(value).reason).toBe('production-host')
       expect(() => assertMergeGroupPreviewUrl(value)).toThrow(/production-host/)
+      expect(() => resolveE2EBaseURL({ eventName: 'merge_group', configured: value })).toThrow(/production-host/)
+      expect(() => selectMergeGroupPlaywrightUrl(value)).toThrow(/production-host/)
     }
   })
 
-  it('rejects a malformed URL', () => {
+  it('rejects a malformed URL, an empty URL, and a non-HTTPS URL', () => {
+    expect(classifyPreviewUrl('')).toMatchObject({ ok: false, reason: 'missing-url' })
     expect(classifyPreviewUrl('not a url').reason).toBe('malformed-url')
     expect(classifyPreviewUrl('http://preview.example.com').reason).toBe('malformed-url')
+    expect(classifyPreviewUrl('http://app.simy.ch').reason).toBe('malformed-url')
+    expect(() => selectMergeGroupPlaywrightUrl('http://simy-app-git-queue.vercel.app')).toThrow(/malformed-url/)
+  })
+
+  it('passes the same validated preview URL through to Playwright', () => {
+    const preview = 'https://user:pass@simy-app-git-queue.vercel.app/login?next=1#section'
+    expect(classifyPreviewUrl(preview)).toMatchObject({ ok: true, reason: 'non-production' })
+    expect(assertMergeGroupPreviewUrl(preview)).toBe(preview)
+    expect(selectMergeGroupPlaywrightUrl(preview)).toBe(preview)
+    expect(resolveE2EBaseURL({ eventName: 'merge_group', configured: preview })).toBe(preview)
+    expect(selectMergeGroupPlaywrightUrl('https://app.simy.ch@simy-app-git-queue.vercel.app/path')).toBe(
+      'https://app.simy.ch@simy-app-git-queue.vercel.app/path',
+    )
   })
 
   it('does not let playwright default to production for merge_group', () => {
     expect(() => resolveE2EBaseURL({ eventName: 'merge_group', configured: '' })).toThrow(/missing-url/)
+    expect(() => resolveE2EBaseURL({ eventName: 'merge_group', configured: 'https://app.simy.ch.' })).toThrow(/production-host/)
     expect(resolveE2EBaseURL({ eventName: 'merge_group', configured: PREVIEW_URL })).toBe(PREVIEW_URL)
     expect(resolveE2EBaseURL({ eventName: 'pull_request', configured: '' })).toBe(PRODUCTION_FALLBACK_URL)
+    expect(resolveE2EBaseURL({ eventName: 'push', configured: '' })).toBe(PRODUCTION_FALLBACK_URL)
     expect(resolveE2EBaseURL({ eventName: '', configured: '' })).toBe(PRODUCTION_FALLBACK_URL)
+  })
+
+  it('fails closed when a merge-group preview is skipped, without returning the production URL', () => {
+    expect(() => selectMergeGroupPlaywrightUrl(PREVIEW_URL, { skipped: true })).toThrow(/missing-or-skipped/)
+    expect(() => selectMergeGroupPlaywrightUrl('', { skipped: true })).toThrow(/missing-or-skipped/)
+    expect(() => selectMergeGroupPlaywrightUrl(PRODUCTION_FALLBACK_URL, { skipped: true })).toThrow(/missing-or-skipped/)
   })
 })
 
@@ -183,6 +214,28 @@ describe('preview waiter', () => {
     expect(result).toMatchObject({ exitCode: 1, wrote: null, reason: 'production-host' })
     expect(writes).toEqual([])
   })
+
+  it('does not write a trailing-dot production URL for merge_group', async () => {
+    const productionDot = 'https://user:pass@app.simy.ch./login?next=1#section'
+    const { result, writes } = await run({
+      mode: 'merge_group',
+      gh: deploymentGh({ url: productionDot }),
+    })
+    expect(result).toMatchObject({ exitCode: 1, wrote: null, reason: 'production-host' })
+    expect(writes).toEqual([])
+    expect(writes.some((row) => row.url === PRODUCTION_FALLBACK_URL)).toBe(false)
+  })
+
+  it('writes the exact preview URL and not a rewritten host', async () => {
+    const preview = 'https://simy-app-git-queue.vercel.app/login?next=1#section'
+    const { result, writes } = await run({
+      mode: 'merge_group',
+      gh: deploymentGh({ url: preview }),
+    })
+    expect(result).toMatchObject({ exitCode: 0, wrote: preview, reason: 'ready' })
+    expect(writes).toEqual([{ url: preview, skipped: false }])
+    expect(selectMergeGroupPlaywrightUrl(preview)).toBe(preview)
+  })
 })
 
 describe('workflow wiring', () => {
@@ -202,7 +255,13 @@ describe('workflow wiring', () => {
     const guardAt = ci.indexOf('merge_group preview rejected: missing-or-skipped')
     expect(guardAt).toBeGreaterThan(0)
     expect(guardAt).toBeLessThan(playwrightAt)
+    expect(ci).toContain('selectMergeGroupPlaywrightUrl')
     expect(ci).toContain('assertMergeGroupPreviewUrl')
+    expect(ci.indexOf('selectMergeGroupPlaywrightUrl')).toBeLessThan(playwrightAt)
+    expect(ci.indexOf('assertMergeGroupPreviewUrl(process.env.E2E_BASE_URL)')).toBeLessThan(playwrightAt)
+    expect(ci).toContain('export E2E_BASE_URL="${PREVIEW_URL:-https://app.simy.ch}"')
+    expect(ci).toContain('export E2E_BASE_URL="https://app.simy.ch"')
+    expect(ci).not.toContain('export E2E_BASE_URL="$PREVIEW_URL"')
     expect(ci).not.toContain("github.event_name == 'merge_group' && steps.preview.outputs.url || 'https://app.simy.ch'")
   })
 

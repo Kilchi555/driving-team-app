@@ -107,8 +107,8 @@ jobs:
               echo "merge_group preview rejected: missing-or-skipped"
               exit 1
             fi
-            export E2E_BASE_URL="$PREVIEW_URL"
-            node --input-type=module -e "import { assertMergeGroupPreviewUrl } from './scripts/wait-for-simy-preview.mjs'; assertMergeGroupPreviewUrl(process.env.E2E_BASE_URL)"
+            E2E_BASE_URL="$(node --input-type=module -e "import { selectMergeGroupPlaywrightUrl } from './scripts/wait-for-simy-preview.mjs'; process.stdout.write(selectMergeGroupPlaywrightUrl(process.env.PREVIEW_URL || '', { skipped: process.env.PREVIEW_SKIPPED === 'true' }))")" || exit 1
+            export E2E_BASE_URL
           elif [ "$E2E_EVENT_NAME" = "pull_request" ]; then
             export E2E_BASE_URL="${PREVIEW_URL:-https://app.simy.ch}"
           else
@@ -119,9 +119,8 @@ jobs:
             https://app.simy.ch|https://app.simy.ch/) ;;
             *) using_preview=true ;;
           esac
-          if [ "$E2E_EVENT_NAME" = "merge_group" ] && [ "$using_preview" != "true" ]; then
-            echo "merge_group preview rejected: production-host"
-            exit 1
+          if [ "$E2E_EVENT_NAME" = "merge_group" ]; then
+            node --input-type=module -e "import { assertMergeGroupPreviewUrl } from './scripts/wait-for-simy-preview.mjs'; if (assertMergeGroupPreviewUrl(process.env.E2E_BASE_URL) !== process.env.E2E_BASE_URL) process.exit(1)"
           fi
           if [ "$E2E_EVENT_NAME" = "pull_request" ] && [ "$using_preview" = true ] && [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
             echo "VERCEL_AUTOMATION_BYPASS_SECRET is not set"

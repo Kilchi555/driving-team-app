@@ -9,8 +9,9 @@
  *
  * merge_group mode is fail-closed. A missing, skipped, canceled, failed,
  * timed-out, malformed, or production URL exits non-zero and does not
- * write PRODUCTION_FALLBACK_URL. Rejecting the host app.simy.ch does not
- * prove the selected preview uses an isolated database.
+ * write PRODUCTION_FALLBACK_URL. The production hostname is compared after
+ * URL parsing, case-folding, and stripping trailing DNS dots. Rejecting
+ * that host does not prove the selected preview uses an isolated database.
  */
 import { appendFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
@@ -26,6 +27,10 @@ export function isSimyAppPreview(environment) {
   return /preview/i.test(environment || '') && /simy-app/i.test(environment || '')
 }
 
+function normalizedHostname(hostname) {
+  return String(hostname || '').toLowerCase().replace(/\.+$/u, '')
+}
+
 export function classifyPreviewUrl(value) {
   if (typeof value !== 'string' || value.trim() === '') {
     return { ok: false, reason: 'missing-url', host: '' }
@@ -37,9 +42,12 @@ export function classifyPreviewUrl(value) {
     return { ok: false, reason: 'malformed-url', host: '' }
   }
   if (url.protocol !== 'https:') {
-    return { ok: false, reason: 'malformed-url', host: url.hostname || '' }
+    return { ok: false, reason: 'malformed-url', host: normalizedHostname(url.hostname) }
   }
-  const host = url.hostname.toLowerCase()
+  const host = normalizedHostname(url.hostname)
+  if (host === '') {
+    return { ok: false, reason: 'malformed-url', host: '' }
+  }
   if (host === PRODUCTION_HOST) {
     return { ok: false, reason: 'production-host', host }
   }
@@ -53,13 +61,21 @@ export function assertMergeGroupPreviewUrl(value) {
     error.reason = verdict.reason
     throw error
   }
-  return verdict
+  return value
+}
+
+export function selectMergeGroupPlaywrightUrl(previewUrl, { skipped = false } = {}) {
+  if (skipped) {
+    const error = new Error('merge_group preview rejected: missing-or-skipped')
+    error.reason = 'missing-or-skipped'
+    throw error
+  }
+  return assertMergeGroupPreviewUrl(previewUrl)
 }
 
 export function resolveE2EBaseURL({ eventName = '', configured = '' } = {}) {
   if (eventName === 'merge_group') {
-    assertMergeGroupPreviewUrl(configured)
-    return configured
+    return assertMergeGroupPreviewUrl(configured)
   }
   return configured || PRODUCTION_FALLBACK_URL
 }
