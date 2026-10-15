@@ -321,8 +321,8 @@
                   <p class="text-sm font-semibold text-gray-900 whitespace-pre-line">{{ invoice.billing_company_name || displayCustomer.name || '—' }}</p>
                   <p v-if="invoice.billing_contact_person" class="text-sm text-gray-500 mt-0.5">{{ invoice.billing_contact_person }}</p>
                   <div class="mt-3 text-sm text-gray-700 leading-relaxed space-y-0.5">
-                    <p v-if="invoice.billing_street || invoice.billing_street_number">
-                      {{ [invoice.billing_street, invoice.billing_street_number].filter(Boolean).join(' ') }}
+                    <p v-if="invoiceBillingStreetLine">
+                      {{ invoiceBillingStreetLine }}
                     </p>
                     <p v-if="invoice.billing_zip || invoice.billing_city">
                       {{ [invoice.billing_zip, invoice.billing_city].filter(Boolean).join(' ') }}
@@ -906,6 +906,7 @@ import DunningSendDialog from './DunningSendDialog.vue'
 // ProductSelectorModal entfernt (Rechnung ist read-only bzgl. Positionen)
 import type { InvoiceStatus, PaymentStatus } from '~/types/invoice'
 import { looksLikeCourseSessionsDescription, displayCourseSessionsDescription } from '~/utils/format-course-sessions'
+import { formatInvoiceStreetLine, joinStreetAndNumber } from '~/utils/billing-address-map'
 import { presentStoredInvoiceLine } from '~/server/utils/invoice-line-snapshot'
 
 function invoiceLineView(item: {
@@ -1088,6 +1089,7 @@ const onPdfMenuAction = async (kind: 'invoice' | 'dunning') => {
 }
 
 const isQuote = computed(() => (props.invoice as any)?.document_kind === 'quote')
+const invoiceBillingStreetLine = computed(() => formatInvoiceStreetLine(props.invoice || {}))
 const quoteState = computed(() => quoteLifecycle(props.invoice as any))
 const quoteValidUntil = computed(() => {
   const inv = props.invoice as any
@@ -1329,8 +1331,11 @@ const displayCustomer = computed(() => {
     email: emailIsRemoved ? (inv?.billing_email || '') : rawEmail,
     phone: c?.phone || inv?.customer_phone || '',
     addressLine1: hasUserAddress
-      ? `${street} ${streetNr}`.trim()
-      : `${inv?.billing_street || ''} ${inv?.billing_street_number || ''}`.trim(),
+      ? joinStreetAndNumber(street, streetNr)
+      : formatInvoiceStreetLine({
+          billing_street: inv?.billing_street,
+          billing_street_number: inv?.billing_street_number,
+        }),
     addressLine2: hasUserAddress
       ? `${zip} ${city}`.trim()
       : `${inv?.billing_zip || ''} ${inv?.billing_city || ''}`.trim(),
@@ -1685,8 +1690,8 @@ const getProductsTotal = () => {
 const getCustomerAddress = () => {
   if (!props.invoice) return '';
   const addressParts = [];
-  if (props.invoice.billing_street) addressParts.push(props.invoice.billing_street);
-  if (props.invoice.billing_street_number) addressParts.push(props.invoice.billing_street_number);
+  const streetLine = formatInvoiceStreetLine(props.invoice);
+  if (streetLine) addressParts.push(streetLine);
   if (props.invoice.billing_zip) addressParts.push(props.invoice.billing_zip);
   if (props.invoice.billing_city) addressParts.push(props.invoice.billing_city);
   if (props.invoice.billing_country) addressParts.push(props.invoice.billing_country);
