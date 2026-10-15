@@ -18,8 +18,11 @@ import { pathToFileURL } from 'node:url'
  *    waits until this process has exited, then reads GitHub again.
  * 2. publishObservation holds an in-process lock for the whole write.
  *    Two calls cannot interleave their reads and writes.
- * 3. Publication appends a new comment. It never patches a marker body
- *    over another observation. Retirement removes the marker from losers.
+ * 3. Publication updates the existing trusted canonical marker in place
+ *    when one exists. It creates a comment only when none exists. When
+ *    the semantic observation (excluding started_at / observed_at /
+ *    evaluation_id) is unchanged, it performs no write. Retirement
+ *    removes the marker from non-canonical trusted duplicates only.
  * 4. started_at is taken before any read. The canonical marker is the
  *    greatest started_at, then observed_at, then evaluation_id. A
  *    snapshot that started before the canonical observed_at is not
@@ -29,10 +32,9 @@ import { pathToFileURL } from 'node:url'
  *
  * Freshness. Review-thread resolution is not an event this workflow
  * receives. event_driven refresh is not a time bound.
- * freshness.max_lag_minutes is 15 only when this workflow file is
- * present on the repository default branch, which is what makes the
- * schedule real. Otherwise the guarantee is none and max_lag_minutes
- * is null.
+ * freshness.max_lag_minutes is 15 only when the default-branch workflow
+ * file contains an active schedule cron. Otherwise the guarantee is
+ * none and max_lag_minutes is null.
  *
  * Ruleset. Expected check names are policy. They are never copied over
  * an empty, missing, or unreadable live ruleset. Those states cannot
@@ -676,6 +678,53 @@ export function compareObservations(left, right) {
   return String(left?.evaluation_id || '').localeCompare(String(right?.evaluation_id || ''))
 }
 
+const VOLATILE_OBSERVATION_KEYS = new Set(['started_at', 'observed_at', 'evaluation_id'])
+
+export function stableStringify(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value)
+  if (Array.isArray(value)) return `[${value.map((entry) => stableStringify(entry)).join(',')}]`
+  const keys = Object.keys(value).sort()
+  return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`
+}
+
+export function stableObservationPayload(state) {
+  if (!state || typeof state !== 'object') return null
+  const copy = { ...state }
+  for (const key of VOLATILE_OBSERVATION_KEYS) delete copy[key]
+  return copy
+}
+
+export function observationsSemanticallyEqual(left, right) {
+  const a = stableObservationPayload(left)
+  const b = stableObservationPayload(right)
+  if (!a || !b) return false
+  return stableStringify(a) === stableStringify(b)
+}
+
+export function workflowScheduleEnabled(yamlText) {
+  if (typeof yamlText !== 'string' || !yamlText) return false
+  const withoutComments = yamlText.replace(/^\s*#.*$/gm, '')
+  return /^[ \t]*schedule:\s*$/m.test(withoutComments) && /^[ \t]*-\s*cron:/m.test(withoutComments)
+}
+
+export function retryDelayMs(headers, attempt, random = Math.random) {
+  const raw = headers?.get?.('retry-after') || headers?.get?.('Retry-After')
+  const retryAfter = Number(raw)
+  if (Number.isFinite(retryAfter) && retryAfter >= 0) {
+    return Math.min(60_000, Math.max(0, Math.ceil(retryAfter * 1000)))
+  }
+  const base = Math.min(30_000, 500 * (2 ** Math.max(0, attempt)))
+  return Math.min(60_000, Math.round(base + random() * 250))
+}
+
+export function shouldRetryGitHubStatus(status) {
+  return status === 429 || status === 502 || status === 503 || status === 504
+}
+
+function sleep(ms, sleepImpl = (delay) => new Promise((resolve) => setTimeout(resolve, delay))) {
+  return sleepImpl(ms)
+}
+
 function freshnessConsistent(state) {
   const fresh = state?.freshness
   if (!fresh || fresh.live !== false || fresh.covers_thread_resolution !== false || fresh.event_driven !== true) return false
@@ -755,6 +804,17 @@ export function planPublication({ observation, currentHeadSha, comments, cancell
   }
   if (canonical && (canonical.state.observed_at >= observation.started_at || compareObservations(canonical.state, observation) >= 0)) {
     return { action: 'skip', reason: 'stale-snapshot', retireIds: retireOthers(canonical.id) }
+  }
+  if (canonical) {
+    if (observationsSemanticallyEqual(canonical.state, observation)) {
+      return { action: 'skip', reason: 'unchanged', retireIds: retireOthers(canonical.id) }
+    }
+    return {
+      action: 'update',
+      commentId: canonical.id,
+      reason: 'publish',
+      retireIds: retireOthers(canonical.id),
+    }
   }
   return {
     action: 'create',
@@ -949,31 +1009,55 @@ export function buildEvaluationInput({
   }
 }
 
-async function github(token, path, { method = 'GET', body, tolerate = [] } = {}) {
-  const response = await fetch(path.startsWith('http') ? path : `${API}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  })
-  const text = await response.text()
-  let payload = null
-  if (text) {
-    try {
-      payload = JSON.parse(text)
-    } catch {
-      payload = text
+const GITHUB_MAX_RETRIES = 3
+
+async function github(token, path, {
+  method = 'GET',
+  body,
+  tolerate = [],
+  fetchImpl = fetch,
+  sleepImpl,
+  random = Math.random,
+  maxRetries = GITHUB_MAX_RETRIES,
+} = {}) {
+  let attempt = 0
+  while (true) {
+    if (halted()) throw new Error('GitHub request cancelled')
+    const response = await fetchImpl(path.startsWith('http') ? path : `${API}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    })
+    const text = await response.text()
+    let payload = null
+    if (text) {
+      try {
+        payload = JSON.parse(text)
+      } catch {
+        payload = text
+      }
     }
+    if (response.ok || tolerate.includes(response.status)) {
+      return { payload, headers: response.headers, status: response.status }
+    }
+    const retryable = shouldRetryGitHubStatus(response.status)
+    if (!retryable || attempt >= maxRetries) {
+      const message = payload && typeof payload === 'object' ? payload.message : text
+      const error = new Error(`GitHub ${method} ${path} failed (${response.status}): ${message}`)
+      error.status = response.status
+      error.retryable = retryable
+      throw error
+    }
+    const delay = retryDelayMs(response.headers, attempt, random)
+    console.warn(`GitHub ${method} ${path} returned ${response.status}; retry ${attempt + 1}/${maxRetries} in ${delay}ms`)
+    await sleep(delay, sleepImpl)
+    attempt += 1
   }
-  if (!response.ok && !tolerate.includes(response.status)) {
-    const message = payload && typeof payload === 'object' ? payload.message : text
-    throw new Error(`GitHub ${method} ${path} failed (${response.status}): ${message}`)
-  }
-  return { payload, headers: response.headers, status: response.status }
 }
 
 export async function githubPaginated(token, path, request = github) {
@@ -1295,9 +1379,9 @@ async function publishObservationLocked(client, number, state) {
     return plan.reason
   }
 
-  const headBeforeCreate = await client.readHead(number)
-  if (halted() || headBeforeCreate !== state.head_sha) {
-    console.log(`#${number} superseded before create: live ${headBeforeCreate}`)
+  const headBeforeWrite = await client.readHead(number)
+  if (halted() || headBeforeWrite !== state.head_sha) {
+    console.log(`#${number} superseded before write: live ${headBeforeWrite}`)
     return 'stale-head'
   }
   listed = commentList(await client.listComments(number))
@@ -1307,29 +1391,42 @@ async function publishObservationLocked(client, number, state) {
   comments = listed.comments
   plan = planPublication({
     observation: state,
-    currentHeadSha: headBeforeCreate,
+    currentHeadSha: headBeforeWrite,
     comments,
     cancelled: halted(),
   })
-  if (plan.action !== 'create') {
-    if (plan.action === 'skip' && plan.reason !== 'stale-head' && plan.reason !== 'cancelled') {
+  if (plan.action === 'skip') {
+    if (plan.reason !== 'stale-head' && plan.reason !== 'cancelled') {
       await retireComments(client, plan.retireIds, selectCanonicalMarker(comments)?.state || null)
     }
-    console.log(`#${number} ${plan.reason} at create barrier`)
+    console.log(`#${number} ${plan.reason} at write barrier`)
     return plan.reason
   }
+  if (plan.action !== 'create' && plan.action !== 'update') {
+    console.log(`#${number} refused unexpected publish action ${plan.action}`)
+    return 'refused'
+  }
 
-  await client.createComment(number, renderReviewComment(state))
-  console.log(`Created review-state comment on #${number}`)
+  const body = renderReviewComment(state)
+  if (plan.action === 'update') {
+    if (!Number.isInteger(plan.commentId)) {
+      throw new Error('Update plan is missing a trusted canonical comment id')
+    }
+    await client.updateComment(plan.commentId, body)
+    console.log(`Updated review-state comment ${plan.commentId} on #${number}`)
+  } else {
+    await client.createComment(number, body)
+    console.log(`Created review-state comment on #${number}`)
+  }
 
   const headAfter = await client.readHead(number)
   const listedAfter = commentList(await client.listComments(number))
   if (listedAfter.stopped) {
-    console.log(`#${number} stop requested after create; existing markers were left in place`)
+    console.log(`#${number} stop requested after write; remaining markers were left in place`)
     return 'cancelled'
   }
   if (listedAfter.truncated) {
-    console.log(`#${number} comment list truncated after create; existing markers were left in place`)
+    console.log(`#${number} comment list truncated after write; remaining markers were left in place`)
     return 'comments-truncated'
   }
   const commentsAfter = listedAfter.comments
@@ -1340,7 +1437,7 @@ async function publishObservationLocked(client, number, state) {
     console.log(`#${number} unpublished stale observation after head moved to ${headAfter}`)
     return 'stale-head'
   }
-  return 'published'
+  return plan.action === 'update' ? 'updated' : 'published'
 }
 
 export async function publishObservation(client, number, state) {
@@ -1375,7 +1472,14 @@ export async function readWorkflowOnDefaultBranch(request, owner, name) {
       `/repos/${owner}/${name}/contents/.github/workflows/review-state.yml?ref=${encodeURIComponent(branch)}`,
       { tolerate: [404] },
     )
-    return file?.status === 200
+    if (file?.status !== 200) return false
+    const payload = file.payload
+    if (!payload || typeof payload.content !== 'string') return false
+    const encoding = payload.encoding || 'base64'
+    const text = encoding === 'base64'
+      ? Buffer.from(payload.content.replace(/\n/g, ''), 'base64').toString('utf8')
+      : payload.content
+    return workflowScheduleEnabled(text)
   } catch (error) {
     console.error(`Scheduled freshness could not be confirmed: ${error instanceof Error ? error.message : String(error)}`)
     return false
@@ -1458,22 +1562,41 @@ async function main() {
     return
   }
 
+  console.log(
+    `Publishing review state for ${numbers.length} pull request(s) (event=${process.env.EVENT_NAME || 'unknown'})`,
+  )
+
   let failed = false
+  let processed = 0
   for (const number of numbers) {
     if (halted()) {
-      console.log('Stop requested. Remaining pull requests were not published.')
+      console.log(`Stop requested after ${processed}/${numbers.length}. Remaining pull requests were not published.`)
       break
     }
     try {
       const result = await updateOne(token, owner, name, number)
+      processed += 1
       if (result === 'comments-truncated') {
         throw new Error('Issue comment pagination was truncated. No authoritative review state was selected.')
       }
     } catch (error) {
       failed = true
+      processed += 1
+      const status = error && typeof error === 'object' ? error.status : undefined
+      if (status === 401 || status === 403) {
+        console.error(`#${number} authorization failed (${status}); stopping remaining pull requests`)
+        process.exitCode = 1
+        return
+      }
+      if (status === 429) {
+        console.error(`#${number} rate limited after retries; stopping remaining pull requests`)
+        process.exitCode = 1
+        return
+      }
       console.error(`#${number} ${error instanceof Error ? error.message : String(error)}`)
     }
   }
+  console.log(`Finished ${processed}/${numbers.length} pull request(s)`)
   if (failed) process.exitCode = 1
 }
 
@@ -1492,4 +1615,5 @@ export {
   NOISE_CHECK_NAMES,
   NOISE_REASON,
   EXPECTED_RULESET_NAME,
+  github,
 }
