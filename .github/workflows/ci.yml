@@ -15,6 +15,7 @@ name: CI
 
 on:
   pull_request:
+  merge_group:
   push:
     branches: [main]
 
@@ -65,12 +66,13 @@ jobs:
 
       - name: Wait for Vercel preview
         id: preview
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          E2E_PREVIEW_SHA: ${{ github.event.pull_request.head.sha }}
-          E2E_PREVIEW_REF: ${{ github.head_ref }}
+          E2E_PREVIEW_SHA: ${{ github.event_name == 'merge_group' && github.event.merge_group.head_sha || github.event.pull_request.head.sha }}
+          E2E_PREVIEW_REF: ${{ github.event_name == 'merge_group' && github.event.merge_group.head_ref || github.head_ref }}
           E2E_PREVIEW_AUTHOR: ${{ github.event.pull_request.user.login }}
+          E2E_PREVIEW_MODE: ${{ github.event_name }}
         run: node scripts/wait-for-simy-preview.mjs
 
       - name: Setup Node.js
@@ -96,14 +98,32 @@ jobs:
           E2E_DEMO_PASSWORD: ${{ secrets.E2E_DEMO_PASSWORD }}
           E2E_ISOLATION_PASSWORD: ${{ secrets.E2E_ISOLATION_PASSWORD }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-          E2E_BASE_URL: ${{ github.event_name == 'pull_request' && steps.preview.outputs.url || 'https://app.simy.ch' }}
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          PREVIEW_SKIPPED: ${{ steps.preview.outputs.skipped }}
+          E2E_EVENT_NAME: ${{ github.event_name }}
         run: |
+          if [ "$E2E_EVENT_NAME" = "merge_group" ]; then
+            if [ "$PREVIEW_SKIPPED" = "true" ] || [ -z "$PREVIEW_URL" ]; then
+              echo "merge_group preview rejected: missing-or-skipped"
+              exit 1
+            fi
+            export E2E_BASE_URL="$PREVIEW_URL"
+            node --input-type=module -e "import { assertMergeGroupPreviewUrl } from './scripts/wait-for-simy-preview.mjs'; assertMergeGroupPreviewUrl(process.env.E2E_BASE_URL)"
+          elif [ "$E2E_EVENT_NAME" = "pull_request" ]; then
+            export E2E_BASE_URL="${PREVIEW_URL:-https://app.simy.ch}"
+          else
+            export E2E_BASE_URL="https://app.simy.ch"
+          fi
           using_preview=false
           case "${E2E_BASE_URL}" in
             https://app.simy.ch|https://app.simy.ch/) ;;
             *) using_preview=true ;;
           esac
-          if [ "${{ github.event_name }}" = "pull_request" ] && [ "$using_preview" = true ] && [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+          if [ "$E2E_EVENT_NAME" = "merge_group" ] && [ "$using_preview" != "true" ]; then
+            echo "merge_group preview rejected: production-host"
+            exit 1
+          fi
+          if [ "$E2E_EVENT_NAME" = "pull_request" ] && [ "$using_preview" = true ] && [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
             echo "VERCEL_AUTOMATION_BYPASS_SECRET is not set"
             exit 1
           fi
