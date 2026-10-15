@@ -1926,6 +1926,7 @@ import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
 import { snapDuration, type BookingPrefill } from '~/utils/booking-prefill'
+import { formatInTenantZone, formatSlotTimeLabel, resolveSlotTimeZone } from '~/utils/slot-display-time'
 import { mergeTerminology, isDrivingSchoolBusinessType, resolveEventTypeLabel } from '~/composables/useTerminology'
 import { sanitizeSvgMarkup } from '~/utils/sanitize-tenant-html'
 import { publicBookingPayloadFromSelection } from '~/utils/booking-offer-identity'
@@ -2974,6 +2975,38 @@ const subcategoryStepTitle = computed(() =>
     : 'Wähle deine Unterkategorie'
 )
 
+const bookingTimeZone = computed(() => resolveSlotTimeZone(currentTenant.value?.timezone))
+
+const formatTime = (dateTimeString: string) => formatSlotTimeLabel(dateTimeString, bookingTimeZone.value)
+
+const formatDate = (dateTimeString: string) => formatInTenantZone(
+  dateTimeString,
+  bookingTimeZone.value,
+  { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' },
+  'de-DE',
+)
+
+const formatBookingWeekday = (iso: string) => formatInTenantZone(
+  iso,
+  bookingTimeZone.value,
+  { weekday: 'long' },
+  'de-DE',
+)
+
+const formatBookingNumericDate = (iso: string) => formatInTenantZone(
+  iso,
+  bookingTimeZone.value,
+  { day: '2-digit', month: '2-digit', year: 'numeric' },
+  'de-DE',
+)
+
+const formatBookingDayMonth = (iso: string, locale: string) => formatInTenantZone(
+  iso,
+  bookingTimeZone.value,
+  { day: '2-digit', month: '2-digit' },
+  locale,
+)
+
 const groupedTimeSlots = computed(() => {
   if (!availableTimeSlots.value || availableTimeSlots.value.length === 0) return []
   
@@ -2997,9 +3030,8 @@ const groupedTimeSlots = computed(() => {
     
     // Get day info
     const firstSlot = slots[0]
-    const slotDate = new Date(firstSlot.start_time)
-    const dayName = slotDate.toLocaleDateString('de-DE', { weekday: 'long', timeZone: 'Europe/Zurich' })
-    const dateFormatted = slotDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zurich' })
+    const dayName = formatBookingWeekday(firstSlot.start_time)
+    const dateFormatted = formatBookingNumericDate(firstSlot.start_time)
     
     return {
       dayKey,
@@ -3044,9 +3076,9 @@ const currentWeekRangeLabel = computed(() => {
   if (!allSlots?.length) return ''
   const weekSlots = allSlots.filter((s: any) => s.week_number === currentWeek.value)
   if (!weekSlots.length) return ''
-  const start = new Date(weekSlots[0].start_time)
-  const end = new Date(weekSlots[weekSlots.length - 1].start_time)
-  const fmt = (d: Date) => d.toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit' })
+  const start = weekSlots[0].start_time
+  const end = weekSlots[weekSlots.length - 1].start_time
+  const fmt = (iso: string) => formatBookingDayMonth(iso, 'de-CH')
   return `${fmt(start)} – ${fmt(end)}`
 })
 
@@ -3139,28 +3171,6 @@ const categoryChoiceGridClass = (itemCount: number, items: any[]) => {
 }
 
 // Methods
-const formatTime = (dateTimeString: string) => {
-  // Convert UTC to Zurich timezone
-  const date = new Date(dateTimeString)
-  return date.toLocaleTimeString('sv-SE', {
-    timeZone: 'Europe/Zurich',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-const formatDate = (dateTimeString: string) => {
-  // Convert UTC to Zurich timezone
-  const date = new Date(dateTimeString)
-  return date.toLocaleDateString('de-DE', {
-    timeZone: 'Europe/Zurich',
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
-
 const loadStaffForCategory = async () => {
   if (!canSearch.value || !currentTenant.value) return
   
@@ -3510,8 +3520,8 @@ const getWeeksForLocation = (location: any) => {
     // Get start and end date for this week
     const firstSlot = slots[0]
     const lastSlot = slots[slots.length - 1]
-    const startDate = new Date(firstSlot.start_time).toLocaleDateString('de-DE', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit' })
-    const endDate = new Date(lastSlot.start_time).toLocaleDateString('de-DE', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit' })
+    const startDate = formatBookingDayMonth(firstSlot.start_time, 'de-DE')
+    const endDate = formatBookingDayMonth(lastSlot.start_time, 'de-DE')
     
     return {
       number: weekNumber,
@@ -4455,9 +4465,9 @@ const generateTimeSlotsForSpecificCombination = async () => {
         duration_minutes: slot.duration_minutes,
         is_available: true, // Already filtered by API
         week_number: Math.max(1, Math.min(4, weeksDiff + 1)),
-        day_name: slotStartDate.toLocaleDateString('de-DE', { weekday: 'long', timeZone: 'Europe/Zurich' }),
-        date_formatted: slotStartDate.toLocaleDateString('de-DE', { timeZone: 'Europe/Zurich' }),
-        time_formatted: slotStartDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }),
+        day_name: formatBookingWeekday(slot.start_time),
+        date_formatted: formatBookingNumericDate(slot.start_time),
+        time_formatted: formatSlotTimeLabel(slot.start_time, bookingTimeZone.value),
         category_code: slot.category_code,
         has_conflict: false, // Will be set below
         is_primary_reservation: slot.is_primary_reservation // Preserve for debugging
@@ -6172,8 +6182,7 @@ const generateFreeDaySlots = async (staff: any, location: any, targetDate: Date,
     
     const endTimeUtc = new Date(slotTimeUtc.getTime() + duration * 60000)
     
-    // For display, convert back to Zurich time
-    const slotTimeLocal = new Date(slotTimeUtc.getTime() + offsetMs)
+    const slotIso = slotTimeUtc.toISOString()
     
     slots.push({
       id: `${staff.id}-${location.id}-${slotTimeUtc.getTime()}`,
@@ -6181,14 +6190,14 @@ const generateFreeDaySlots = async (staff: any, location: any, targetDate: Date,
       staff_name: `${staff.first_name} ${staff.last_name}`,
       location_id: location.id,
       location_name: location.name,
-      start_time: slotTimeUtc.toISOString(),
+      start_time: slotIso,
       end_time: endTimeUtc.toISOString(),
       duration_minutes: duration,
       is_available: true,
       week_number: Math.ceil((targetDate.getTime() - new Date().getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1,
-      day_name: slotTimeLocal.toLocaleDateString('de-DE', { weekday: 'long', timeZone: 'Europe/Zurich' }),
-      date_formatted: slotTimeLocal.toLocaleDateString('de-DE', { timeZone: 'Europe/Zurich' }),
-      time_formatted: slotTimeLocal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
+      day_name: formatBookingWeekday(slotIso),
+      date_formatted: formatBookingNumericDate(slotIso),
+      time_formatted: formatSlotTimeLabel(slotIso, bookingTimeZone.value)
     })
   }
   
@@ -6337,8 +6346,7 @@ const generateSlotsInRange = async (staff: any, location: any, targetDate: Date,
     // Skip if slot doesn't fit in range
     if (slotEndTimeUtc.getTime() > endTimeUtc.getTime()) continue
     
-    // For display, convert back to local time
-    const slotTimeLocal = new Date(slotTimeUtc.getTime() + offsetMs)
+    const slotIso = slotTimeUtc.toISOString()
     
     slots.push({
       id: `${staff.id}-${location.id}-${slotTimeUtc.getTime()}`,
@@ -6346,14 +6354,14 @@ const generateSlotsInRange = async (staff: any, location: any, targetDate: Date,
       staff_name: `${staff.first_name} ${staff.last_name}`,
       location_id: location.id,
       location_name: location.name,
-      start_time: slotTimeUtc.toISOString(),
+      start_time: slotIso,
       end_time: slotEndTimeUtc.toISOString(),
       duration_minutes: duration,
       is_available: true,
       week_number: Math.ceil((targetDate.getTime() - new Date().getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1,
-      day_name: slotTimeLocal.toLocaleDateString('de-DE', { weekday: 'long', timeZone: 'Europe/Zurich' }),
-      date_formatted: slotTimeLocal.toLocaleDateString('de-DE', { timeZone: 'Europe/Zurich' }),
-      time_formatted: slotTimeLocal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
+      day_name: formatBookingWeekday(slotIso),
+      date_formatted: formatBookingNumericDate(slotIso),
+      time_formatted: formatSlotTimeLabel(slotIso, bookingTimeZone.value)
     })
   }
   

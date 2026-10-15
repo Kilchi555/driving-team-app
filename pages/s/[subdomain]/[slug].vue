@@ -232,7 +232,7 @@
           <article v-for="c in block.content.items" :key="c.id" class="lp-course">
             <p v-if="c.category" class="lp-meta">{{ c.category }}</p>
             <h3>{{ c.title }}</h3>
-            <p v-if="c.starts_at">{{ formatCourseDate(c.starts_at) }}</p>
+            <p v-if="c.when_label">{{ c.when_label }}</p>
             <p v-if="c.location" class="lp-meta">{{ c.location }}</p>
             <div class="lp-course-meta">
               <span
@@ -1062,20 +1062,6 @@ function formatRating(value: number | string) {
   const n = Number(value)
   if (!Number.isFinite(n)) return String(value)
   return n.toFixed(1).replace(/\.0$/, '')
-}
-
-function formatCourseDate(iso: string) {
-  try {
-    return new Intl.DateTimeFormat('de-CH', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(iso))
-  } catch {
-    return iso
-  }
 }
 
 function displaySlots(block: any) {

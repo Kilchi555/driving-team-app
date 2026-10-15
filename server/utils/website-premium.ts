@@ -246,6 +246,8 @@ export type UpcomingCourseCard = {
   title: string
   category: string | null
   starts_at: string | null
+  /** School-local wall clock. Render this instead of formatting starts_at in the browser. */
+  when_label?: string | null
   ends_at?: string | null
   location: string | null
   spots_left: number | null

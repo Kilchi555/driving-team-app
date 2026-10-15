@@ -11,6 +11,7 @@ import { resolveBusinessType, applyCategoryAndEventTypeDefaults, applyEvaluation
 import { isReservedSlug } from '~/server/utils/reserved-slugs'
 import { SAAS_TRIAL_DAYS } from '~/utils/saas-trial'
 import { defaultVatRateForBusinessType } from '~/server/utils/invoice-vat'
+import { parseTenantTimeZoneWrite } from '~/utils/slot-display-time'
 
 interface TenantRegistrationData {
   name: string
@@ -947,6 +948,10 @@ function validateTenantData(data: TenantRegistrationData): string | null {
   if (!colorRegex.test(data.secondary_color)) {
     return 'Ungültige Zweitfarbe (Format: #RRGGBB)'
   }
+
+  const zoneWrite = parseTenantTimeZoneWrite(data.timezone)
+  if (!zoneWrite.ok) return zoneWrite.error
+  data.timezone = zoneWrite.timezone
 
   return null // Alles OK
 }

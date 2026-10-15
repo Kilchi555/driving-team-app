@@ -8,7 +8,7 @@ import {
   formatSlotDayLabel,
   formatSlotTimeLabel,
   resolveSlotTimeZone,
-} from '../../../../utils/slot-display-time'
+} from '../utils/slot-display-time'
 
 const DT_TENANT_ID = '64259d68-195a-4c68-8875-f1b44d962830'
 const BOOKING_BASE = 'https://app.simy.ch/booking/availability/driving-team'

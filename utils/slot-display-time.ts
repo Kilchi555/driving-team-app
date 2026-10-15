@@ -93,3 +93,57 @@ export function formatSlotDayLabel(iso: string, timeZone?: string | null): strin
     return String(iso).slice(0, 10)
   }
 }
+
+/** True only for a real IANA name. Display fallback must not use this for writes. */
+export function isValidIanaTimeZone(value: unknown): boolean {
+  const tz = String(value ?? '').trim()
+  if (!tz || tz.length > 100) return false
+  try {
+    new Intl.DateTimeFormat('en-GB', { timeZone: tz }).format(0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Registration write. Empty keeps the column default. A provided value must be
+ * a valid IANA zone and is stored as given — not rewritten to Europe/Zurich.
+ */
+export function parseTenantTimeZoneWrite(
+  value: unknown,
+): { ok: true; timezone: string } | { ok: false; error: string } {
+  const raw = value == null ? '' : String(value).trim()
+  if (!raw) return { ok: true, timezone: DEFAULT_SLOT_TIMEZONE }
+  if (!isValidIanaTimeZone(raw)) return { ok: false, error: 'Zeitzone ist ungültig' }
+  return { ok: true, timezone: raw }
+}
+
+export function formatInTenantZone(
+  iso: string,
+  timeZone: unknown,
+  options: Intl.DateTimeFormatOptions,
+  locale = 'de-CH',
+): string {
+  if (!iso) return ''
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      ...options,
+      timeZone: resolveSlotTimeZone(timeZone),
+    }).format(new Date(iso))
+  } catch {
+    return ''
+  }
+}
+
+/** Course card clock. Same options as the old client formatter, with an explicit zone. */
+export function formatCourseWhenLabel(iso: string, timeZone?: string | null): string {
+  return formatInTenantZone(iso, timeZone, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  })
+}
