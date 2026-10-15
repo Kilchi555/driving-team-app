@@ -456,6 +456,241 @@ describe('reconcileWebsiteLiveEntitlement', () => {
   })
 })
 
+describe('fail-closed hardening: include_setup + hosting product', () => {
+  it('include_setup missing → unknown (not confirmed_paid)', () => {
+    expect(
+      reconcileWebsiteSetupEvidence(
+        baseObs({
+          setup_checkout: {
+            payment_status: 'paid',
+            metadata_product: 'website',
+            metadata_tenant_id: TENANT,
+          },
+        }),
+      ),
+    ).toEqual({ state: 'unknown' })
+  })
+
+  it('include_setup null → unknown', () => {
+    expect(
+      reconcileWebsiteSetupEvidence(
+        baseObs({
+          setup_checkout: {
+            payment_status: 'paid',
+            metadata_product: 'website',
+            metadata_tenant_id: TENANT,
+            include_setup: null,
+          },
+        }),
+      ),
+    ).toEqual({ state: 'unknown' })
+  })
+
+  it('include_setup false → unknown', () => {
+    expect(
+      reconcileWebsiteSetupEvidence(
+        baseObs({
+          setup_checkout: {
+            payment_status: 'paid',
+            metadata_product: 'website',
+            metadata_tenant_id: TENANT,
+            include_setup: false,
+          },
+        }),
+      ),
+    ).toEqual({ state: 'unknown' })
+  })
+
+  it('include_setup true + paid → confirmed_paid', () => {
+    expect(
+      reconcileWebsiteSetupEvidence(
+        baseObs({
+          setup_checkout: {
+            payment_status: 'paid',
+            metadata_product: 'website',
+            metadata_tenant_id: TENANT,
+            include_setup: true,
+          },
+        }),
+      ).state,
+    ).toBe('confirmed_paid')
+  })
+
+  it('no_payment_required never confirms CHF-490 setup without explicit product rule', () => {
+    expect(
+      reconcileWebsiteSetupEvidence(
+        baseObs({
+          setup_checkout: {
+            payment_status: 'no_payment_required',
+            metadata_product: 'website',
+            metadata_tenant_id: TENANT,
+            include_setup: true,
+          },
+        }),
+      ),
+    ).toEqual({ state: 'unknown' })
+  })
+
+  it('hosting metadata_product missing → unknown (not active)', () => {
+    expect(
+      reconcileWebsiteHostingEvidence(
+        baseObs({
+          hosting_subscription: {
+            status: 'active',
+            metadata_tenant_id: TENANT,
+            hosting_plan: 'host',
+          },
+        }),
+      ),
+    ).toEqual({ state: 'unknown' })
+  })
+
+  it('hosting metadata_product empty → unknown', () => {
+    expect(
+      reconcileWebsiteHostingEvidence(
+        baseObs({
+          hosting_subscription: {
+            status: 'active',
+            metadata_product: '',
+            metadata_tenant_id: TENANT,
+            hosting_plan: 'host',
+          },
+        }),
+      ),
+    ).toEqual({ state: 'unknown' })
+  })
+
+  it('hosting metadata_product unknown → unknown (or conflicting with local plan)', () => {
+    expect(
+      reconcileWebsiteHostingEvidence(
+        baseObs({
+          hosting_subscription: {
+            status: 'active',
+            metadata_product: 'saas_starter',
+            metadata_tenant_id: TENANT,
+            hosting_plan: 'host',
+          },
+        }),
+      ),
+    ).toEqual({ state: 'unknown' })
+
+    expect(
+      reconcileWebsiteHostingEvidence(
+        baseObs({
+          local: { website_hosting_plan: 'host' },
+          hosting_subscription: {
+            status: 'active',
+            metadata_product: 'saas_starter',
+            metadata_tenant_id: TENANT,
+            hosting_plan: 'host',
+          },
+        }),
+      ),
+    ).toEqual({ state: 'conflicting' })
+  })
+
+  it('hosting metadata_product website + active host/care remains valid', () => {
+    expect(
+      reconcileWebsiteHostingEvidence(
+        baseObs({
+          hosting_subscription: {
+            status: 'active',
+            metadata_product: 'website',
+            metadata_tenant_id: TENANT,
+            hosting_plan: 'host',
+          },
+        }),
+      ),
+    ).toEqual({ state: 'active', plan: 'host' })
+
+    expect(
+      reconcileWebsiteHostingEvidence(
+        baseObs({
+          hosting_subscription: {
+            status: 'active',
+            metadata_product: 'website',
+            metadata_tenant_id: TENANT,
+            hosting_plan: 'care',
+          },
+        }),
+      ),
+    ).toEqual({ state: 'active', plan: 'care' })
+  })
+
+  it('cross-tenant mismatch remains MANUAL_REVIEW', () => {
+    const result = reconcileWebsiteLiveEntitlement(
+      baseObs({
+        setup_checkout: {
+          payment_status: 'paid',
+          metadata_product: 'website',
+          metadata_tenant_id: OTHER,
+          include_setup: true,
+        },
+        hosting_subscription: {
+          status: 'active',
+          metadata_product: 'website',
+          metadata_tenant_id: TENANT,
+          hosting_plan: 'host',
+        },
+      }),
+    )
+    expect(result.decision.status).toBe('MANUAL_REVIEW')
+    expect(result.setup_evidence).toEqual({ state: 'conflicting' })
+  })
+
+  it('refunds and disputes remain fail-closed after hardening', () => {
+    const refunded = reconcileWebsiteLiveEntitlement(
+      baseObs({
+        setup_checkout: {
+          payment_status: 'paid',
+          metadata_product: 'website',
+          metadata_tenant_id: TENANT,
+          include_setup: true,
+        },
+        hosting_subscription: {
+          status: 'active',
+          metadata_product: 'website',
+          metadata_tenant_id: TENANT,
+          hosting_plan: 'host',
+        },
+        refunds: [{ status: 'succeeded' }],
+      }),
+    )
+    expect(refunded.decision.status).toBe('MANUAL_REVIEW')
+
+    const disputed = reconcileWebsiteLiveEntitlement(
+      baseObs({
+        setup_checkout: {
+          payment_status: 'paid',
+          metadata_product: 'website',
+          metadata_tenant_id: TENANT,
+          include_setup: true,
+        },
+        hosting_subscription: {
+          status: 'active',
+          metadata_product: 'website',
+          metadata_tenant_id: TENANT,
+          hosting_plan: 'host',
+        },
+        disputes: [{ status: 'needs_response' }],
+      }),
+    )
+    expect(disputed.decision.status).toBe('MANUAL_REVIEW')
+  })
+
+  it('WEBSITE_ENTITLEMENT_ENFORCEMENT_WIRED remains immutable false', () => {
+    expect(WEBSITE_ENTITLEMENT_ENFORCEMENT_WIRED).toBe(false)
+    const injected = {
+      ...baseObs(),
+      WEBSITE_ENTITLEMENT_ENFORCEMENT_WIRED: true,
+      enforcement_wired: true,
+    } as WebsiteEntitlementObservations
+    const { enforced } = assertWebsiteLiveEntitlementOrThrow(injected)
+    expect(enforced).toBe(false)
+    expect(WEBSITE_ENTITLEMENT_ENFORCEMENT_WIRED).toBe(false)
+  })
+})
+
 describe('server entitlement gate preparation (not wired)', () => {
   it('prepareWebsiteLiveEntitlementDecision delegates to reconciler', () => {
     const prepared = prepareWebsiteLiveEntitlementDecision(

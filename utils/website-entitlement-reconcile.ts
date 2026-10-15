@@ -44,11 +44,19 @@ export type WebsiteSetupCheckoutObservation = {
   /** Must be `website` for this observation to count as website setup evidence. */
   metadata_product?: string | null
   metadata_tenant_id?: string | null
+  /**
+   * Must be the boolean `true` to confirm setup was in scope.
+   * Missing / null / false / other values never confirm setup payment.
+   */
   include_setup?: boolean | null
 }
 
 export type WebsiteHostingSubscriptionObservation = {
   status: string
+  /**
+   * Must be exactly `website` (established product metadata rule).
+   * Missing / empty / unknown → not valid website hosting evidence.
+   */
   metadata_product?: string | null
   metadata_tenant_id?: string | null
   /**
@@ -212,20 +220,29 @@ export function reconcileWebsiteSetupEvidence(
       return { state: 'unknown' }
     }
 
-    const includeSetup = checkout.include_setup !== false
+    // Fail-closed: only an explicit boolean true confirms setup was in scope.
+    // Missing, null, false, or non-boolean values never confirm setup payment.
+    const includeSetup = checkout.include_setup === true
     const paymentStatus = String(checkout.payment_status).toLowerCase()
 
-    if (paymentStatus === 'paid' || paymentStatus === 'no_payment_required') {
+    if (paymentStatus === 'paid') {
       if (!includeSetup) {
-        // Hosting-only checkout does not prove setup payment.
-        if (localPaidAt) return { state: 'unknown' }
+        // Hosting-only / ambiguous checkout does not prove setup payment.
         return { state: 'unknown' }
       }
       return { state: 'confirmed_paid', paidAt: localPaidAt }
     }
 
+    if (paymentStatus === 'no_payment_required') {
+      // CHF 490 setup is never treated as paid from a $0 / no_payment_required
+      // status without a separate, explicitly authorized product rule (none today).
+      return { state: 'unknown' }
+    }
+
     if (paymentStatus === 'unpaid') {
       if (localPaidAt) return { state: 'conflicting' }
+      // Unpaid is authoritative non-payment only when setup was explicitly in scope.
+      if (!includeSetup) return { state: 'unknown' }
       return { state: 'confirmed_unpaid' }
     }
 
@@ -269,9 +286,15 @@ export function reconcileWebsiteHostingEvidence(
   const localPlan = obs.local?.website_hosting_plan ?? null
 
   if (sub && typeof sub === 'object' && sub.status != null) {
-    if (sub.metadata_product != null && !isWebsiteProduct(sub.metadata_product) && sub.metadata_product !== '') {
-      // Explicit non-website product on the subscription observation.
-      if (localPlan) return { state: 'conflicting' }
+    // Fail-closed product identity: only the established checkout/webhook rule
+    // `metadata.product === 'website'` qualifies. Missing, empty, or unknown
+    // values are not active website hosting. This pure module does not invent
+    // price-ID or Stripe product-ID lookups (caller must resolve those first).
+    if (!isWebsiteProduct(sub.metadata_product ?? null)) {
+      const raw = sub.metadata_product
+      const explicitOther =
+        raw != null && String(raw).trim() !== '' && !isWebsiteProduct(raw)
+      if (explicitOther && localPlan) return { state: 'conflicting' }
       return { state: 'unknown' }
     }
     if (ownership !== 'matched') {
