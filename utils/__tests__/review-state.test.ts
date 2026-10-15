@@ -15,6 +15,7 @@ import {
   interpretPublishedState,
   listOpenBasePullNumbers,
   listOpenPullNumbers,
+  observationsSemanticallyEqual,
   planPublication,
   planReconcile,
   publishObservation,
@@ -24,7 +25,11 @@ import {
   resolveCodeql,
   resolveRulesetPolicy,
   retirementBody,
+  retryDelayMs,
   selectCanonicalMarker,
+  shouldRetryGitHubStatus,
+  workflowScheduleEnabled,
+  github,
 } from '../../scripts/review-state.mjs'
 
 const passing = {
@@ -607,6 +612,7 @@ describe('comment publication barrier', () => {
       startedAt: '2026-10-04T08:00:00.000Z',
       observedAt: '2026-10-04T08:00:01.000Z',
       evaluationId: 'same-a',
+      requiredChecks: { ...passing, 'Test and lint': 'pending' },
     })
     const second = observation({
       startedAt: '2026-10-04T08:05:00.000Z',
@@ -625,7 +631,20 @@ describe('comment publication barrier', () => {
       comments: [comment(5, first)],
       cancelled: false,
     })
-    expect(afterFirst.action).toBe('create')
+    expect(afterFirst.action).toBe('update')
+    expect(afterFirst.commentId).toBe(5)
+    const sameAgain = planPublication({
+      observation: observation({
+        startedAt: '2026-10-04T08:10:00.000Z',
+        observedAt: '2026-10-04T08:10:01.000Z',
+        evaluationId: 'same-c',
+      }),
+      currentHeadSha: second.head_sha,
+      comments: [comment(5, second)],
+      cancelled: false,
+    })
+    expect(sameAgain.action).toBe('skip')
+    expect(sameAgain.reason).toBe('unchanged')
     const blocked = planPublication({
       observation: first,
       currentHeadSha: first.head_sha,
@@ -794,9 +813,6 @@ function memoryGitHub(head: string) {
     },
     async updateComment(id: number, body: string) {
       calls.push('update')
-      if (body.includes('<!-- simy-review-state -->')) {
-        throw new Error('publisher patched a marker body')
-      }
       const found = comments.find((comment) => comment.id === id)
       if (!found) throw new Error(`missing comment ${id}`)
       found.body = body
@@ -927,7 +943,30 @@ describe('publisher write barrier', () => {
     expect(activeMarker(client)?.body).toContain('"evaluation_id": "current"')
   })
 
-  it('replaces an older same-head comment without patching its marker body', async () => {
+  it('updates an older same-head comment in place instead of appending', async () => {
+    const client = memoryGitHub(head)
+    const first = snapshot({
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T08:00:01.000Z',
+      evaluationId: 'first',
+      requiredChecks: { ...passing, 'Test and lint': 'pending' },
+    })
+    const second = snapshot({
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'second',
+    })
+    expect(await publishObservation(client, 368, first)).toBe('published')
+    expect(await publishObservation(client, 368, second)).toBe('updated')
+    const markers = client.comments.filter((comment) => comment.body.includes('<!-- simy-review-state -->'))
+    expect(markers).toHaveLength(1)
+    expect(markers[0]?.id).toBe(1)
+    expect(markers[0]?.body).toContain('"evaluation_id": "second"')
+    expect(client.calls.filter((call) => call === 'create')).toEqual(['create'])
+    expect(client.calls.filter((call) => call === 'update')).toEqual(['update'])
+  })
+
+  it('skips a second write when the semantic observation is unchanged', async () => {
     const client = memoryGitHub(head)
     const first = snapshot({
       startedAt: '2026-10-04T08:00:00.000Z',
@@ -939,12 +978,12 @@ describe('publisher write barrier', () => {
       observedAt: '2026-10-04T09:00:01.000Z',
       evaluationId: 'second',
     })
+    expect(observationsSemanticallyEqual(first, second)).toBe(true)
     expect(await publishObservation(client, 368, first)).toBe('published')
-    expect(await publishObservation(client, 368, second)).toBe('published')
-    const markers = client.comments.filter((comment) => comment.body.includes('<!-- simy-review-state -->'))
-    expect(markers).toHaveLength(1)
-    expect(markers[0]?.body).toContain('"evaluation_id": "second"')
-    expect(client.comments.some((comment) => comment.body.includes('not canonical'))).toBe(true)
+    expect(await publishObservation(client, 368, second)).toBe('unchanged')
+    expect(client.calls.filter((call) => call === 'create')).toEqual(['create'])
+    expect(client.calls.filter((call) => call === 'update')).toEqual([])
+    expect(activeMarker(client)?.body).toContain('"evaluation_id": "first"')
   })
 })
 
@@ -1046,7 +1085,7 @@ describe('freshness contract', () => {
     expect(result.actionable_for_automation).toBe(false)
   })
 
-  it('reads scheduled availability from the default branch, not from the pull request head', async () => {
+  it('reads scheduled availability from an active cron on the default branch workflow', async () => {
     const paths: string[] = []
     const absent = await readWorkflowOnDefaultBranch(async (path) => {
       paths.push(path)
@@ -1058,11 +1097,43 @@ describe('freshness contract', () => {
     expect(absent).toBe(false)
     expect(paths.some((path) => path.includes('ref=main'))).toBe(true)
 
+    const scheduledYaml = [
+      'name: Review state',
+      'on:',
+      '  schedule:',
+      "    - cron: '*/15 * * * *'",
+      '  workflow_dispatch:',
+    ].join('\n')
     const present = await readWorkflowOnDefaultBranch(async (path) => {
-      if (path.includes('/contents/')) return { status: 200, payload: { type: 'file' } }
+      if (path.includes('/contents/')) {
+        return {
+          status: 200,
+          payload: {
+            type: 'file',
+            encoding: 'base64',
+            content: Buffer.from(scheduledYaml).toString('base64'),
+          },
+        }
+      }
       return { status: 200, payload: { default_branch: 'main' } }
     }, 'Kilchi555', 'driving-team-app')
     expect(present).toBe(true)
+
+    const containedYaml = readFileSync('.github/workflows/review-state.yml', 'utf8')
+    const contained = await readWorkflowOnDefaultBranch(async (path) => {
+      if (path.includes('/contents/')) {
+        return {
+          status: 200,
+          payload: {
+            type: 'file',
+            encoding: 'base64',
+            content: Buffer.from(containedYaml).toString('base64'),
+          },
+        }
+      }
+      return { status: 200, payload: { default_branch: 'main' } }
+    }, 'Kilchi555', 'driving-team-app')
+    expect(contained).toBe(false)
   })
 })
 
@@ -1151,13 +1222,16 @@ describe('markdown cell escaping', () => {
 })
 
 describe('review-state workflow safety', () => {
-  it('asks only for read and comment permissions and refreshes threads on a schedule', () => {
+  it('asks only for read and comment permissions and keeps the schedule contained', () => {
     const workflow = readFileSync('.github/workflows/review-state.yml', 'utf8')
     expect(workflow).toContain('contents: read')
     expect(workflow).toContain('pull-requests: write')
     expect(workflow).toContain('checks: read')
     expect(workflow).toContain('persist-credentials: false')
-    expect(workflow).toContain("cron: '*/15 * * * *'")
+    expect(workflow).toContain('INCIDENT CONTAINMENT')
+    expect(workflow).toContain('workflow_dispatch:')
+    expect(workflowScheduleEnabled(workflow)).toBe(false)
+    expect(workflow).not.toMatch(/^  schedule:/m)
     expect(workflow).toContain('group: simy-review-state')
     expect(workflow).toContain('cancel-in-progress: false')
     const jobsAt = workflow.indexOf('\njobs:\n')
@@ -1180,6 +1254,7 @@ describe('review-state workflow safety', () => {
     const script = readFileSync('scripts/review-state.mjs', 'utf8')
     expect(script).toContain('SIGTERM')
     expect(script).toContain('stale-head')
+    expect(script).toContain("action: 'update'")
     expect(script).not.toContain('contents: write')
   })
 
@@ -1207,6 +1282,7 @@ describe('trusted canonical marker author', () => {
       startedAt: '2026-10-04T09:00:00.000Z',
       observedAt: '2026-10-04T09:00:01.000Z',
       evaluationId: 'bot',
+      requiredChecks: { ...passing, 'Test and lint': 'pending' },
     })
     const forged = observation({
       headSha: head,
@@ -1229,8 +1305,9 @@ describe('trusted canonical marker author', () => {
       comments,
       cancelled: false,
     })
-    expect(plan.action).toBe('create')
-    expect(plan.retireIds).toEqual([1])
+    expect(plan.action).toBe('update')
+    expect(plan.commentId).toBe(1)
+    expect(plan.retireIds).toEqual([])
     expect(plan.retireIds).not.toContain(2)
   })
 
@@ -1267,6 +1344,7 @@ describe('trusted canonical marker author', () => {
       startedAt: '2026-10-04T09:00:00.000Z',
       observedAt: '2026-10-04T09:00:01.000Z',
       evaluationId: 'legit',
+      requiredChecks: { ...passing, 'Test and lint': 'pending' },
     })
     expect(await publishObservation(client, 368, legit)).toBe('published')
     const forged = observation({
@@ -1282,7 +1360,7 @@ describe('trusted canonical marker author', () => {
       observedAt: '2026-10-04T10:00:01.000Z',
       evaluationId: 'next',
     })
-    expect(await publishObservation(client, 368, next)).toBe('published')
+    expect(await publishObservation(client, 368, next)).toBe('updated')
     const attacker = client.comments.find((item) => item.id === 99)
     expect(attacker?.body).toContain(MARKER)
     expect(attacker?.body).toContain('"evaluation_id": "forged"')
@@ -1607,12 +1685,14 @@ describe('publication stops before using an incomplete comment list', () => {
       startedAt: '2026-10-04T06:00:00.000Z',
       observedAt: '2026-10-04T06:00:01.000Z',
       evaluationId: 'old-a',
+      requiredChecks: { ...passing, 'Test and lint': 'pending' },
     }))
     const middle = comment(3, observation({
       headSha: head,
       startedAt: '2026-10-04T07:00:00.000Z',
       observedAt: '2026-10-04T07:00:01.000Z',
       evaluationId: 'old-b',
+      requiredChecks: { ...passing, 'Test and lint': 'pending' },
     }))
     const comments = [older, middle]
     let reads = 0
@@ -1673,7 +1753,7 @@ describe('publication stops before using an incomplete comment list', () => {
     expect(client.comments.every((item) => item.body.includes('<!-- simy-review-state -->'))).toBe(true)
   })
 
-  it('cancels after create when the follow-up list is stopped and retires nothing', async () => {
+  it('cancels after update when the follow-up list is stopped and retires nothing', async () => {
     const client = seededClient({ truncated: false, stopped: true })
     const fresh = observation({
       headSha: head,
@@ -1682,10 +1762,12 @@ describe('publication stops before using an incomplete comment list', () => {
       evaluationId: 'fresh',
     })
     expect(await publishObservation(client, 368, fresh)).toBe('cancelled')
-    expect(client.calls).toContain('create')
-    expect(client.calls.filter((call) => call.startsWith('update'))).toEqual([])
-    expect(client.comments.map((item) => item.id)).toEqual([1, 3, 2])
+    expect(client.calls).not.toContain('create')
+    expect(client.calls).toContain('update:3')
+    expect(client.calls.filter((call) => call === 'update:1')).toEqual([])
+    expect(client.comments.map((item) => item.id)).toEqual([1, 3])
     expect(client.comments.every((item) => item.body.includes('<!-- simy-review-state -->'))).toBe(true)
+    expect(client.comments.find((item) => item.id === 3)?.body).toContain('"evaluation_id": "fresh"')
   })
 
   it('cancels before create when stop arrives during a complete final-page read', async () => {
@@ -1718,16 +1800,17 @@ describe('publication stops before using an incomplete comment list', () => {
         observedAt: '2026-10-04T09:00:01.000Z',
         evaluationId: 'fresh-final-follow-up',
       })
-      expect(await publishObservation(client, 368, fresh)).toBe('published')
-      expect(client.calls).toContain('create')
-      expect(client.calls.filter((call) => call.startsWith('update'))).toEqual([])
+      expect(await publishObservation(client, 368, fresh)).toBe('updated')
+      expect(client.calls).not.toContain('create')
+      expect(client.calls).toContain('update:3')
+      expect(client.calls.filter((call) => call === 'update:1')).toEqual([])
       expect(client.comments.every((item) => item.body.includes('<!-- simy-review-state -->'))).toBe(true)
     } finally {
       clearStopForTests()
     }
   })
 
-  it('keeps a genuine post-create truncation fail-closed', async () => {
+  it('keeps a genuine post-write truncation fail-closed', async () => {
     const client = seededClient({ truncated: true, stopped: false })
     const fresh = observation({
       headSha: head,
@@ -1736,8 +1819,239 @@ describe('publication stops before using an incomplete comment list', () => {
       evaluationId: 'fresh',
     })
     expect(await publishObservation(client, 368, fresh)).toBe('comments-truncated')
-    expect(client.calls).toContain('create')
-    expect(client.calls.filter((call) => call.startsWith('update'))).toEqual([])
+    expect(client.calls).not.toContain('create')
+    expect(client.calls).toContain('update:3')
+    expect(client.calls.filter((call) => call === 'update:1')).toEqual([])
     expect(client.comments.every((item) => item.body.includes('<!-- simy-review-state -->'))).toBe(true)
+  })
+})
+
+describe('idempotent publication and API failure policy', () => {
+  const head = 'abc123def456'
+
+  it('creates exactly once when no trusted marker exists', async () => {
+    const client = memoryGitHub(head)
+    const state = observation({ headSha: head, evaluationId: 'one' })
+    expect(await publishObservation(client, 10, state)).toBe('published')
+    expect(client.calls.filter((call) => call === 'create')).toHaveLength(1)
+    expect(client.comments.filter((item) => item.body.includes(MARKER))).toHaveLength(1)
+  })
+
+  it('updates the existing marker when the decision changes and never creates a second', async () => {
+    const client = memoryGitHub(head)
+    const waiting = observation({
+      headSha: head,
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T08:00:01.000Z',
+      evaluationId: 'wait',
+      requiredChecks: { ...passing, 'E2E login': 'pending' },
+    })
+    const ready = observation({
+      headSha: head,
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'ready',
+    })
+    expect(await publishObservation(client, 10, waiting)).toBe('published')
+    expect(await publishObservation(client, 10, ready)).toBe('updated')
+    expect(client.calls.filter((call) => call === 'create')).toHaveLength(1)
+    expect(client.comments.filter((item) => item.body.includes(MARKER))).toHaveLength(1)
+    expect(activeMarker(client)?.body).toContain('"next_action": "ready_for_human_merge"')
+  })
+
+  it('is idempotent across a third execution with unchanged inputs', async () => {
+    const client = memoryGitHub(head)
+    const first = observation({
+      headSha: head,
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T08:00:01.000Z',
+      evaluationId: 'a',
+    })
+    const second = observation({
+      headSha: head,
+      startedAt: '2026-10-04T08:10:00.000Z',
+      observedAt: '2026-10-04T08:10:01.000Z',
+      evaluationId: 'b',
+    })
+    const third = observation({
+      headSha: head,
+      startedAt: '2026-10-04T08:20:00.000Z',
+      observedAt: '2026-10-04T08:20:01.000Z',
+      evaluationId: 'c',
+    })
+    expect(await publishObservation(client, 10, first)).toBe('published')
+    expect(await publishObservation(client, 10, second)).toBe('unchanged')
+    expect(await publishObservation(client, 10, third)).toBe('unchanged')
+    expect(client.calls.filter((call) => call === 'create')).toHaveLength(1)
+    expect(client.calls.filter((call) => call === 'update')).toHaveLength(0)
+  })
+
+  it('handles an interrupted create by updating the surviving marker on rerun', async () => {
+    const client = memoryGitHub(head)
+    const first = observation({
+      headSha: head,
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T08:00:01.000Z',
+      evaluationId: 'interrupted',
+      requiredChecks: { ...passing, 'Dependency review': 'pending' },
+    })
+    expect(await publishObservation(client, 10, first)).toBe('published')
+    const resumed = observation({
+      headSha: head,
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'resumed',
+    })
+    expect(await publishObservation(client, 10, resumed)).toBe('updated')
+    expect(client.comments.filter((item) => item.body.includes(MARKER))).toHaveLength(1)
+  })
+
+  it('updates the canonical marker and retires duplicate trusted markers', async () => {
+    const older = observation({
+      headSha: head,
+      startedAt: '2026-10-04T07:00:00.000Z',
+      observedAt: '2026-10-04T07:00:01.000Z',
+      evaluationId: 'dup-a',
+      requiredChecks: { ...passing, 'Test and lint': 'pending' },
+    })
+    const newer = observation({
+      headSha: head,
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T08:00:01.000Z',
+      evaluationId: 'dup-b',
+      requiredChecks: { ...passing, 'Test and lint': 'pending' },
+    })
+    const next = observation({
+      headSha: head,
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'dup-c',
+    })
+    const client = memoryGitHub(head)
+    client.comments.push(comment(1, older), comment(2, newer))
+    expect(await publishObservation(client, 10, next)).toBe('updated')
+    expect(client.calls.filter((call) => call === 'create')).toEqual([])
+    const markers = client.comments.filter((item) => item.body.includes(MARKER))
+    expect(markers).toHaveLength(1)
+    expect(markers[0]?.id).toBe(2)
+    expect(markers[0]?.body).toContain('"evaluation_id": "dup-c"')
+    expect(client.comments.find((item) => item.id === 1)?.body).toContain('not canonical')
+  })
+
+  it('treats a malformed trusted marker as non-canonical and creates a replacement', () => {
+    const malformed = {
+      id: 7,
+      user: { login: 'github-actions[bot]' },
+      body: `${MARKER}\n\`\`\`json\n{not-json\n\`\`\`\n`,
+    }
+    const next = observation({
+      headSha: head,
+      startedAt: '2026-10-04T10:00:00.000Z',
+      observedAt: '2026-10-04T10:00:01.000Z',
+      evaluationId: 'repair',
+    })
+    const plan = planPublication({
+      observation: next,
+      currentHeadSha: head,
+      comments: [malformed],
+      cancelled: false,
+    })
+    expect(plan.action).toBe('create')
+    expect(plan.retireIds).toEqual([7])
+  })
+
+  it('ignores unexpected authors when planning an update', () => {
+    const bot = observation({
+      headSha: head,
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T08:00:01.000Z',
+      evaluationId: 'bot',
+      requiredChecks: { ...passing, 'E2E login': 'pending' },
+    })
+    const next = observation({
+      headSha: head,
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'next',
+    })
+    const plan = planPublication({
+      observation: next,
+      currentHeadSha: head,
+      comments: [comment(1, bot), comment(2, next, 'stranger')],
+      cancelled: false,
+    })
+    expect(plan.action).toBe('update')
+    expect(plan.commentId).toBe(1)
+    expect(plan.retireIds).toEqual([])
+  })
+
+  it('retries transient GitHub failures with bounded backoff and Retry-After', async () => {
+    const sleeps: number[] = []
+    let attempts = 0
+    const result = await github('token', '/rate', {
+      maxRetries: 2,
+      random: () => 0,
+      sleepImpl: async (ms: number) => {
+        sleeps.push(ms)
+      },
+      fetchImpl: async () => {
+        attempts += 1
+        if (attempts < 3) {
+          return {
+            ok: false,
+            status: 429,
+            headers: { get: (name: string) => (name.toLowerCase() === 'retry-after' ? '1' : null) },
+            text: async () => JSON.stringify({ message: 'rate limit' }),
+          }
+        }
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => null },
+          text: async () => JSON.stringify({ ok: true }),
+        }
+      },
+    })
+    expect(result.status).toBe(200)
+    expect(attempts).toBe(3)
+    expect(sleeps).toEqual([1000, 1000])
+    expect(shouldRetryGitHubStatus(403)).toBe(false)
+    expect(shouldRetryGitHubStatus(502)).toBe(true)
+    expect(retryDelayMs({ get: () => '2' }, 0, () => 0)).toBe(2000)
+  })
+
+  it('does not retry permanent authorization failures', async () => {
+    let attempts = 0
+    await expect(github('token', '/forbidden', {
+      maxRetries: 3,
+      sleepImpl: async () => {
+        throw new Error('should not sleep')
+      },
+      fetchImpl: async () => {
+        attempts += 1
+        return {
+          ok: false,
+          status: 403,
+          headers: { get: () => null },
+          text: async () => JSON.stringify({ message: 'forbidden' }),
+        }
+      },
+    })).rejects.toMatchObject({ status: 403, retryable: false })
+    expect(attempts).toBe(1)
+  })
+
+  it('detects schedule containment in workflow YAML', () => {
+    expect(workflowScheduleEnabled([
+      'on:',
+      '  schedule:',
+      "    - cron: '*/15 * * * *'",
+    ].join('\n'))).toBe(true)
+    expect(workflowScheduleEnabled([
+      'on:',
+      '  # schedule:',
+      "  #   - cron: '*/15 * * * *'",
+      '  workflow_dispatch:',
+    ].join('\n'))).toBe(false)
+    expect(workflowScheduleEnabled(readFileSync('.github/workflows/review-state.yml', 'utf8'))).toBe(false)
   })
 })

@@ -2,14 +2,21 @@
 # Does not merge, approve, push, deploy, or call Supabase.
 #
 # The comment is an observation cache. It is not permission to merge or
-# to modify code. Publication appends a comment and never patches one
-# observation over another. The canonical comment is the greatest
-# started_at. A snapshot that started earlier cannot become authoritative.
+# to modify code. Publication updates the canonical trusted marker in
+# place when one exists, creates only when none exists, and skips when
+# the semantic observation is unchanged. The canonical comment is the
+# greatest started_at among trusted markers. A snapshot that started
+# earlier cannot become authoritative.
+#
+# INCIDENT CONTAINMENT (2026-10-15 notification storm / run 38666954356):
+# The cron schedule is intentionally removed so main cannot fan out
+# createComment across all open PRs. Re-enable only after idempotent
+# publish is verified on main. workflow_dispatch remains for diagnostics.
 #
 # Review-thread resolution is not an event this workflow receives. The
-# JSON must not claim a finite thread-age bound unless this file is on
-# the default branch, which is what makes the 15-minute schedule real.
-# check_run and schedule run from the default branch.
+# JSON must not claim a finite thread-age bound unless a schedule trigger
+# is present on the default-branch workflow file.
+# check_run runs from the default branch.
 #
 # Concurrency sits on the publish job, not the workflow. A check_run
 # whose job if skips never takes the publishing slot. cancel-in-progress
@@ -29,8 +36,8 @@ on:
     types: [created, edited, deleted]
   check_run:
     types: [completed]
-  schedule:
-    - cron: '*/15 * * * *'
+  # schedule intentionally omitted — see INCIDENT CONTAINMENT above.
+  # Previous: schedule: [ cron: '*/15 * * * *' ]
   workflow_dispatch:
 
 permissions:
