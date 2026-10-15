@@ -9,7 +9,15 @@ import {
   buildEvaluationInput,
   cell,
   clearStopForTests,
+  compareProcessingOrder,
+  decisionEquivalent,
   evaluateReviewState,
+  executeReviewPass,
+  formatRunSummary,
+  loadRulesetCatalog,
+  loadSharedRunContext,
+  processingStamp,
+  RUN_BUDGET_MS,
   extractMachineState,
   githubPaginated,
   interpretPublishedState,
@@ -619,22 +627,36 @@ describe('comment publication barrier', () => {
       comments: [],
       cancelled: false,
     }).action).toBe('create')
-    const afterFirst = planPublication({
+    const repeated = planPublication({
       observation: second,
       currentHeadSha: second.head_sha,
       comments: [comment(5, first)],
       cancelled: false,
     })
+    expect(repeated).toMatchObject({ action: 'skip', reason: 'unchanged', retireIds: [] })
+    const changed = observation({
+      startedAt: '2026-10-04T08:06:00.000Z',
+      observedAt: '2026-10-04T08:06:01.000Z',
+      evaluationId: 'same-c',
+      requiredChecks: { ...passing, 'Test and lint': 'fail' },
+    })
+    const afterFirst = planPublication({
+      observation: changed,
+      currentHeadSha: changed.head_sha,
+      comments: [comment(5, first)],
+      cancelled: false,
+    })
     expect(afterFirst.action).toBe('create')
+    expect(afterFirst.retireIds).toEqual([5])
     const blocked = planPublication({
       observation: first,
       currentHeadSha: first.head_sha,
-      comments: [comment(5, second)],
+      comments: [comment(6, changed)],
       cancelled: false,
     })
     expect(blocked.action).toBe('skip')
     expect(blocked.reason).toBe('stale-snapshot')
-    expect(blocked.retireIds).not.toContain(5)
+    expect(blocked.retireIds).not.toContain(6)
   })
 
   it('keeps a newer different-head comment when an older overlapping run finishes later', () => {
@@ -927,7 +949,7 @@ describe('publisher write barrier', () => {
     expect(activeMarker(client)?.body).toContain('"evaluation_id": "current"')
   })
 
-  it('replaces an older same-head comment without patching its marker body', async () => {
+  it('replaces an older same-head comment when the decision inputs change', async () => {
     const client = memoryGitHub(head)
     const first = snapshot({
       startedAt: '2026-10-04T08:00:00.000Z',
@@ -938,13 +960,37 @@ describe('publisher write barrier', () => {
       startedAt: '2026-10-04T09:00:00.000Z',
       observedAt: '2026-10-04T09:00:01.000Z',
       evaluationId: 'second',
+      requiredChecks: { ...passing, 'Test and lint': 'fail' },
     })
+    expect(second.next_action).toBe('fix')
     expect(await publishObservation(client, 368, first)).toBe('published')
     expect(await publishObservation(client, 368, second)).toBe('published')
     const markers = client.comments.filter((comment) => comment.body.includes('<!-- simy-review-state -->'))
     expect(markers).toHaveLength(1)
     expect(markers[0]?.body).toContain('"evaluation_id": "second"')
     expect(client.comments.some((comment) => comment.body.includes('not canonical'))).toBe(true)
+  })
+
+  it('does not create or retire when the head and decision inputs are unchanged', async () => {
+    const client = memoryGitHub(head)
+    const first = snapshot({
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T08:00:01.000Z',
+      evaluationId: 'first',
+    })
+    const repeat = snapshot({
+      startedAt: '2026-10-04T10:00:00.000Z',
+      observedAt: '2026-10-04T10:00:01.000Z',
+      evaluationId: 'repeat',
+    })
+    expect(await publishObservation(client, 368, first)).toBe('published')
+    client.calls.length = 0
+    expect(await publishObservation(client, 368, repeat)).toBe('unchanged')
+    expect(client.calls.filter((call) => call === 'create')).toEqual([])
+    expect(client.calls.filter((call) => call === 'update')).toEqual([])
+    const markers = client.comments.filter((comment) => comment.body.includes('<!-- simy-review-state -->'))
+    expect(markers).toHaveLength(1)
+    expect(markers[0]?.body).toContain('"evaluation_id": "first"')
   })
 })
 
@@ -1217,11 +1263,25 @@ describe('trusted canonical marker author', () => {
     const comments = [comment(1, bot), comment(2, forged, 'attacker')]
     expect(selectCanonicalMarker(comments)?.id).toBe(1)
     expect(selectCanonicalMarker(comments)?.state?.evaluation_id).toBe('bot')
-    const next = observation({
+    const repeated = observation({
       headSha: head,
       startedAt: '2026-10-04T10:00:00.000Z',
       observedAt: '2026-10-04T10:00:01.000Z',
       evaluationId: 'next',
+    })
+    const unchanged = planPublication({
+      observation: repeated,
+      currentHeadSha: head,
+      comments,
+      cancelled: false,
+    })
+    expect(unchanged).toMatchObject({ action: 'skip', reason: 'unchanged', retireIds: [] })
+    const next = observation({
+      headSha: head,
+      startedAt: '2026-10-04T11:00:00.000Z',
+      observedAt: '2026-10-04T11:00:01.000Z',
+      evaluationId: 'changed',
+      requiredChecks: { ...passing, 'Test and lint': 'fail' },
     })
     const plan = planPublication({
       observation: next,
@@ -1281,6 +1341,7 @@ describe('trusted canonical marker author', () => {
       startedAt: '2026-10-04T10:00:00.000Z',
       observedAt: '2026-10-04T10:00:01.000Z',
       evaluationId: 'next',
+      requiredChecks: { ...passing, 'Test and lint': 'fail' },
     })
     expect(await publishObservation(client, 368, next)).toBe('published')
     const attacker = client.comments.find((item) => item.id === 99)
@@ -1680,6 +1741,7 @@ describe('publication stops before using an incomplete comment list', () => {
       startedAt: '2026-10-04T09:00:00.000Z',
       observedAt: '2026-10-04T09:00:01.000Z',
       evaluationId: 'fresh',
+      requiredChecks: { ...passing, 'Test and lint': 'fail' },
     })
     expect(await publishObservation(client, 368, fresh)).toBe('cancelled')
     expect(client.calls).toContain('create')
@@ -1717,6 +1779,7 @@ describe('publication stops before using an incomplete comment list', () => {
         startedAt: '2026-10-04T09:00:00.000Z',
         observedAt: '2026-10-04T09:00:01.000Z',
         evaluationId: 'fresh-final-follow-up',
+        requiredChecks: { ...passing, 'Test and lint': 'fail' },
       })
       expect(await publishObservation(client, 368, fresh)).toBe('published')
       expect(client.calls).toContain('create')
@@ -1734,10 +1797,246 @@ describe('publication stops before using an incomplete comment list', () => {
       startedAt: '2026-10-04T09:00:00.000Z',
       observedAt: '2026-10-04T09:00:01.000Z',
       evaluationId: 'fresh',
+      requiredChecks: { ...passing, 'Test and lint': 'fail' },
     })
     expect(await publishObservation(client, 368, fresh)).toBe('comments-truncated')
     expect(client.calls).toContain('create')
     expect(client.calls.filter((call) => call.startsWith('update'))).toEqual([])
     expect(client.comments.every((item) => item.body.includes('<!-- simy-review-state -->'))).toBe(true)
+  })
+})
+
+describe('bounded fair processing', () => {
+  it('keeps the script budget inside the eight-minute job', () => {
+    expect(RUN_BUDGET_MS).toBe(6 * 60 * 1000)
+    expect(RUN_BUDGET_MS).toBeLessThan(8 * 60 * 1000)
+  })
+
+  it('stops before the next PR and still finishes the PR already started', async () => {
+    const finished: number[] = []
+    let clock = 0
+    const pass = await executeReviewPass({
+      numbers: [1, 2, 3, 4, 5],
+      budgetMs: 10,
+      probeReserveMs: 0,
+      startedAtMs: 0,
+      now: () => clock,
+      probe: async () => ({ stamp: null, unknown: false }),
+      processOne: async (number) => {
+        clock += 4
+        finished.push(number)
+        return { ok: true, completedAt: '2026-10-15T00:00:00.000Z', creates: 1, retirements: 1 }
+      },
+    })
+    expect(finished).toEqual([1, 2, 3])
+    expect(pass.stats.processed).toBe(3)
+    expect(pass.stats.deferred).toBe(2)
+    expect(pass.stats.failed).toBe(0)
+    expect(pass.stats.complete).toBe(false)
+    expect(pass.stats.remaining).toBe(2)
+    expect(pass.deferred).toEqual([4, 5])
+    expect(formatRunSummary('schedule', pass.stats)).toContain('complete=false')
+    expect(formatRunSummary('schedule', pass.stats)).toContain('remaining=2')
+  })
+
+  it('processes past the previous cutoff on the next invocation', async () => {
+    const stamps = new Map<number, string | null>([[10, null], [20, null], [30, null], [40, null]])
+    async function run() {
+      let clock = 0
+      return executeReviewPass({
+        numbers: [40, 10, 30, 20],
+        budgetMs: 10,
+        probeReserveMs: 0,
+        startedAtMs: 0,
+        now: () => clock,
+        probe: async (number) => ({ stamp: stamps.get(number) ?? null, unknown: false }),
+        processOne: async (number) => {
+          clock += 5
+          stamps.set(number, '2026-10-15T01:00:00.000Z')
+          return { ok: true, completedAt: '2026-10-15T01:00:00.000Z' }
+        },
+      })
+    }
+    const first = await run()
+    expect(first.stats.lastCompleted).toBe(20)
+    expect(first.deferred.sort((a, b) => a - b)).toEqual([30, 40])
+    const second = await run()
+    expect(second.stats.processed).toBe(2)
+    expect([30, 40]).toContain(second.stats.lastCompleted)
+    expect(second.deferred.sort((a, b) => a - b)).toEqual([10, 20])
+  })
+
+  it('orders equal timestamps by pull number and puts a new PR first', () => {
+    const ordered = [
+      { number: 30, stamp: '2026-10-15T02:00:00.000Z', unknown: false },
+      { number: 20, stamp: '2026-10-15T01:00:00.000Z', unknown: false },
+      { number: 10, stamp: '2026-10-15T01:00:00.000Z', unknown: false },
+      { number: 50, stamp: null, unknown: false },
+      { number: 40, stamp: null, unknown: true },
+    ].sort(compareProcessingOrder)
+    expect(ordered.map((item) => item.number)).toEqual([50, 10, 20, 30, 40])
+  })
+
+  it('does not treat a truncated comment list as a never-processed PR', () => {
+    const ready = observation({})
+    expect(processingStamp([comment(1, ready)], { truncated: true })).toEqual({ stamp: null, unknown: true })
+    expect(processingStamp([comment(1, ready)], { stopped: false, truncated: false }).stamp).toBe(ready.observed_at)
+    expect(processingStamp([{ id: 2, body: 'no marker', user: { login: 'github-actions[bot]' } }])).toEqual({
+      stamp: null,
+      unknown: false,
+    })
+  })
+
+  it('keeps going after one PR fails and does not count that PR as processed', async () => {
+    const seen: number[] = []
+    const pass = await executeReviewPass({
+      numbers: [3, 1, 2],
+      budgetMs: 100,
+      probeReserveMs: 0,
+      startedAtMs: 0,
+      now: () => 0,
+      probe: async () => ({ stamp: null, unknown: false }),
+      processOne: async (number) => {
+        seen.push(number)
+        if (number === 1) throw new Error('Pull request 1 was not found')
+        return { ok: true, completedAt: '2026-10-15T03:00:00.000Z' }
+      },
+    })
+    expect(seen).toEqual([1, 2, 3])
+    expect(pass.stats.processed).toBe(2)
+    expect(pass.stats.failed).toBe(1)
+    expect(pass.stats.complete).toBe(false)
+    expect(pass.stats.lastCompleted).toBe(3)
+  })
+
+  it('reconciles a create that was not retired without creating another marker', async () => {
+    const client = memoryGitHub('abc123def456')
+    const older = observation({
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T08:00:01.000Z',
+      evaluationId: 'older',
+    })
+    const created = observation({
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'created-then-killed',
+    })
+    client.comments.push(comment(1, older), comment(2, created))
+    const repeat = observation({
+      startedAt: '2026-10-04T10:00:00.000Z',
+      observedAt: '2026-10-04T10:00:01.000Z',
+      evaluationId: 'repeat',
+    })
+    expect(decisionEquivalent(created, repeat)).toBe(true)
+    expect(await publishObservation(client, 368, repeat)).toBe('unchanged')
+    expect(client.calls.filter((call) => call === 'create')).toEqual([])
+    expect(client.calls.filter((call) => call === 'update')).toEqual(['update'])
+    const live = client.comments.filter((item) => item.body.includes('<!-- simy-review-state -->'))
+    expect(live).toHaveLength(1)
+    expect(live[0]?.body).toContain('"evaluation_id": "created-then-killed"')
+  })
+
+  it('retires a malformed extra marker and does not treat it as unchanged by itself', async () => {
+    const client = memoryGitHub('abc123def456')
+    const valid = observation({
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'valid',
+    })
+    client.comments.push(
+      comment(1, valid),
+      { id: 9, body: `${MARKER}\n\n\`\`\`json\n{}\n\`\`\``, user: { login: 'github-actions[bot]' } },
+    )
+    const repeat = observation({
+      startedAt: '2026-10-04T10:00:00.000Z',
+      observedAt: '2026-10-04T10:00:01.000Z',
+      evaluationId: 'repeat',
+    })
+    expect(await publishObservation(client, 368, repeat)).toBe('unchanged')
+    expect(client.calls.filter((call) => call === 'create')).toEqual([])
+    expect(client.comments.find((item) => item.id === 9)?.body.includes(MARKER)).toBe(false)
+    const onlyMalformed = memoryGitHub('abc123def456')
+    onlyMalformed.comments.push({ id: 4, body: `${MARKER}\nnot json`, user: { login: 'github-actions[bot]' } })
+    expect(await publishObservation(onlyMalformed, 368, repeat)).toBe('published')
+    expect(onlyMalformed.calls.filter((call) => call === 'create')).toEqual(['create'])
+  })
+
+  it('reads the ruleset catalog once and still selects by base ref', async () => {
+    const paths: string[] = []
+    const request = async (_token: string, path: string) => {
+      paths.push(path)
+      if (path.endsWith('/rulesets')) {
+        return {
+          payload: [
+            { id: 7, target: 'branch', enforcement: 'active' },
+            { id: 8, target: 'branch', enforcement: 'active' },
+          ],
+        }
+      }
+      if (path.endsWith('/rulesets/7')) {
+        return {
+          payload: {
+            id: 7,
+            name: 'Protect main — Required CI',
+            conditions: { ref_name: { include: ['refs/heads/main'], exclude: [] } },
+            rules: [{
+              type: 'required_status_checks',
+              parameters: { required_status_checks: [{ context: 'Test and lint' }, { context: 'E2E login' }, { context: 'Dependency review' }] },
+            }],
+          },
+        }
+      }
+      return {
+        payload: {
+          id: 8,
+          name: 'Other',
+          conditions: { ref_name: { include: ['refs/heads/develop'], exclude: [] } },
+          rules: [],
+        },
+      }
+    }
+    const first = await loadRulesetCatalog('token', 'o', 'n', request)
+    const second = await loadRulesetCatalog('token', 'o', 'n', request)
+    expect(first.stopped).toBe(false)
+    expect(paths.filter((path) => path.includes('/rulesets'))).toHaveLength(6)
+    const catalogReads = paths.length
+    const mainPolicy = resolveRulesetPolicy(first.rulesets, 'main')
+    const otherPolicy = resolveRulesetPolicy(second.rulesets, 'develop')
+    expect(mainPolicy.verified).toBe(true)
+    expect(mainPolicy.matches_expected).toBe(true)
+    expect(otherPolicy.verified).toBe(true)
+    expect(otherPolicy.matches_expected).toBe(false)
+    expect(paths.length).toBe(catalogReads)
+  })
+
+  it('loads shared workflow and ruleset state once per invocation', async () => {
+    const originalFetch = globalThis.fetch
+    const paths: string[] = []
+    globalThis.fetch = async (input: RequestInfo | URL) => {
+      const url = String(input)
+      paths.push(url)
+      if (url.endsWith('/repos/o/n')) {
+        return new Response(JSON.stringify({ default_branch: 'main' }), { status: 200 })
+      }
+      if (url.includes('/contents/.github/workflows/review-state.yml')) {
+        return new Response(JSON.stringify({ content: '' }), { status: 200 })
+      }
+      if (url.endsWith('/rulesets')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+      return new Response(JSON.stringify({ message: 'unexpected' }), { status: 500 })
+    }
+    try {
+      const context = await loadSharedRunContext('token', 'o', 'n')
+      const mainRules = context.rulesetFor('main')
+      const again = context.rulesetFor('main')
+      expect(context.scheduleAvailable).toBe(true)
+      expect(mainRules.verified).toBe(false)
+      expect(again.verified).toBe(false)
+      expect(paths.filter((path) => path.includes('/rulesets'))).toHaveLength(1)
+      expect(paths.filter((path) => path.includes('/contents/.github/workflows/review-state.yml'))).toHaveLength(1)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
   })
 })

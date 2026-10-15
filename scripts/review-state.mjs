@@ -17,9 +17,12 @@ import { pathToFileURL } from 'node:url'
  *    at a time and does not cancel the in-progress run. A later event
  *    waits until this process has exited, then reads GitHub again.
  * 2. publishObservation holds an in-process lock for the whole write.
- *    Two calls cannot interleave their reads and writes.
- * 3. Publication appends a new comment. It never patches a marker body
- *    over another observation. Retirement removes the marker from losers.
+ *    That lock does not cross runners. One running job is the workflow
+ *    concurrency group, which this process does not reconfigure.
+ * 3. Publication appends a new comment only when the head or the decision
+ *    inputs changed. An unchanged canonical marker is not rewritten.
+ *    Retirement still removes non-canonical markers. A later run reconciles
+ *    a create that was not followed by retirement.
  * 4. started_at is taken before any read. The canonical marker is the
  *    greatest started_at, then observed_at, then evaluation_id. A
  *    snapshot that started before the canonical observed_at is not
@@ -676,6 +679,149 @@ export function compareObservations(left, right) {
   return String(left?.evaluation_id || '').localeCompare(String(right?.evaluation_id || ''))
 }
 
+const VOLATILE_DECISION_KEYS = new Set(['started_at', 'observed_at', 'evaluation_id'])
+
+function withoutVolatile(value) {
+  if (Array.isArray(value)) return value.map((item) => withoutVolatile(item))
+  if (!value || typeof value !== 'object') return value
+  const out = {}
+  for (const key of Object.keys(value).sort()) {
+    if (VOLATILE_DECISION_KEYS.has(key)) continue
+    out[key] = withoutVolatile(value[key])
+  }
+  return out
+}
+
+export function decisionEquivalent(left, right) {
+  if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false
+  if (typeof left.head_sha !== 'string' || !left.head_sha || left.head_sha !== right.head_sha) return false
+  return JSON.stringify(withoutVolatile(left)) === JSON.stringify(withoutVolatile(right))
+}
+
+// Leave room for checkout, setup, and the PR already in progress. The job
+// limit stays 8 minutes; this process stops starting new PRs earlier.
+export const RUN_BUDGET_MS = 6 * 60 * 1000
+
+export function processingStamp(comments, { truncated = false, stopped = false } = {}) {
+  if (truncated || stopped) return { stamp: null, unknown: true }
+  const canonical = selectCanonicalMarker(comments)
+  if (!canonical?.state || typeof canonical.state.observed_at !== 'string' || !canonical.state.observed_at) {
+    return { stamp: null, unknown: false }
+  }
+  return { stamp: canonical.state.observed_at, unknown: false }
+}
+
+export function compareProcessingOrder(left, right) {
+  const rank = (item) => {
+    if (item.unknown) return 2
+    if (item.stamp == null) return 0
+    return 1
+  }
+  const byRank = rank(left) - rank(right)
+  if (byRank !== 0) return byRank
+  if (left.stamp != null && right.stamp != null && left.stamp !== right.stamp) {
+    return left.stamp < right.stamp ? -1 : 1
+  }
+  return left.number - right.number
+}
+
+export function formatRunSummary(event, stats) {
+  return [
+    'review-state summary',
+    `event=${event || 'unknown'}`,
+    `enumerated=${stats.enumerated ?? 0}`,
+    `processed=${stats.processed ?? 0}`,
+    `deferred=${stats.deferred ?? 0}`,
+    `failed=${stats.failed ?? 0}`,
+    `last_completed=${stats.lastCompleted ?? 'none'}`,
+    `last_completed_at=${stats.lastCompletedAt ?? 'none'}`,
+    `complete=${stats.complete === true}`,
+    `creates=${stats.creates ?? 0}`,
+    `retirements=${stats.retirements ?? 0}`,
+    `unchanged=${stats.unchanged ?? 0}`,
+    `recovery=${stats.recovery ?? 0}`,
+    `remaining=${stats.remainingUnknown ? 'unknown' : (stats.remaining ?? 0)}`,
+  ].join(' ')
+}
+
+export async function executeReviewPass({
+  numbers,
+  budgetMs = RUN_BUDGET_MS,
+  now = Date.now,
+  startedAtMs = now(),
+  probeReserveMs,
+  probe,
+  processOne,
+}) {
+  const reserve = probeReserveMs ?? Math.min(30_000, Math.floor(budgetMs / 10))
+  const stats = {
+    enumerated: numbers.length,
+    processed: 0,
+    deferred: 0,
+    failed: 0,
+    creates: 0,
+    retirements: 0,
+    unchanged: 0,
+    recovery: 0,
+    lastCompleted: null,
+    lastCompletedAt: null,
+    complete: false,
+    remaining: numbers.length,
+    remainingUnknown: false,
+  }
+  const ranked = []
+  const deferred = []
+  let index = 0
+  for (; index < numbers.length; index += 1) {
+    const elapsed = now() - startedAtMs
+    if (elapsed >= budgetMs) break
+    if (ranked.length > 0 && elapsed >= budgetMs - reserve) break
+    const number = numbers[index]
+    try {
+      const probed = await probe(number)
+      ranked.push({
+        number,
+        stamp: probed?.stamp ?? null,
+        unknown: probed?.unknown === true,
+      })
+    } catch (error) {
+      stats.failed += 1
+      console.error(`#${number} failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+  for (let rest = index; rest < numbers.length; rest += 1) deferred.push(numbers[rest])
+  ranked.sort(compareProcessingOrder)
+  for (const item of ranked) {
+    if (now() - startedAtMs >= budgetMs) {
+      deferred.push(item.number)
+      console.log(`#${item.number} deferred: budget`)
+      continue
+    }
+    try {
+      const result = await processOne(item.number)
+      if (!result?.ok) {
+        stats.failed += 1
+        console.error(`#${item.number} failed: observation was not completed`)
+        continue
+      }
+      stats.processed += 1
+      stats.lastCompleted = item.number
+      stats.lastCompletedAt = result.completedAt || new Date(now()).toISOString()
+      stats.creates += result.creates || 0
+      stats.retirements += result.retirements || 0
+      stats.unchanged += result.unchanged || 0
+      stats.recovery += result.recovery || 0
+    } catch (error) {
+      stats.failed += 1
+      console.error(`#${item.number} failed: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+  stats.deferred = deferred.length
+  stats.remaining = deferred.length
+  stats.complete = stats.failed === 0 && stats.deferred === 0 && stats.processed === stats.enumerated
+  return { stats, deferred }
+}
+
 function freshnessConsistent(state) {
   const fresh = state?.freshness
   if (!fresh || fresh.live !== false || fresh.covers_thread_resolution !== false || fresh.event_driven !== true) return false
@@ -755,6 +901,9 @@ export function planPublication({ observation, currentHeadSha, comments, cancell
   }
   if (canonical && (canonical.state.observed_at >= observation.started_at || compareObservations(canonical.state, observation) >= 0)) {
     return { action: 'skip', reason: 'stale-snapshot', retireIds: retireOthers(canonical.id) }
+  }
+  if (canonical?.state && decisionEquivalent(canonical.state, observation)) {
+    return { action: 'skip', reason: 'unchanged', retireIds: retireOthers(canonical.id) }
   }
   return {
     action: 'create',
@@ -1178,22 +1327,41 @@ export function resolveRulesetPolicy(rulesets, baseRef) {
   return parsed
 }
 
-async function loadRuleset(token, owner, name, baseRef) {
+export async function loadRulesetCatalog(token, owner, name, request = github) {
+  const { payload } = await request(token, `/repos/${owner}/${name}/rulesets`)
+  const summaries = Array.isArray(payload) ? payload : []
+  const branchRules = summaries.filter((ruleset) => ruleset.target === 'branch' && ruleset.enforcement === 'active')
+  const full = []
+  for (const summary of branchRules) {
+    if (halted()) return { stopped: true, rulesets: full }
+    const { payload: body } = await request(token, `/repos/${owner}/${name}/rulesets/${summary.id}`)
+    full.push(body)
+  }
+  return { stopped: false, rulesets: full }
+}
+
+export async function loadSharedRunContext(token, owner, name) {
+  const scheduleAvailable = await readWorkflowOnDefaultBranch(
+    (path, options) => github(token, path, options),
+    owner,
+    name,
+  )
+  let catalog = null
+  let rulesetStopped = false
   try {
-    if (!baseRef) return unverifiedRuleset()
-    const { payload } = await github(token, `/repos/${owner}/${name}/rulesets`)
-    const summaries = Array.isArray(payload) ? payload : []
-    const branchRules = summaries.filter((ruleset) => ruleset.target === 'branch' && ruleset.enforcement === 'active')
-    const full = []
-    for (const summary of branchRules) {
-      if (halted()) return unverifiedRuleset()
-      const { payload: body } = await github(token, `/repos/${owner}/${name}/rulesets/${summary.id}`)
-      full.push(body)
-    }
-    return resolveRulesetPolicy(full, baseRef)
+    const loaded = await loadRulesetCatalog(token, owner, name)
+    if (loaded.stopped) rulesetStopped = true
+    else catalog = loaded.rulesets
   } catch (error) {
     console.error(`Ruleset could not be verified: ${error instanceof Error ? error.message : String(error)}`)
-    return unverifiedRuleset()
+    catalog = null
+  }
+  return {
+    scheduleAvailable: scheduleAvailable === true,
+    rulesetFor(baseRef) {
+      if (rulesetStopped || !catalog || !baseRef) return unverifiedRuleset()
+      return resolveRulesetPolicy(catalog, baseRef)
+    },
   }
 }
 
@@ -1241,17 +1409,18 @@ export function withPublicationLock(key, fn) {
   return run
 }
 
-async function retireComments(client, ids, canonical) {
+async function retireComments(client, ids, canonical, tally) {
   for (const id of ids) {
     if (halted()) return
     const body = retirementBody(canonical)
     if (body.includes(MARKER)) throw new Error('Retirement note must not contain the review-state marker')
     await client.updateComment(id, body)
+    if (tally) tally.retirements += 1
     console.log(`Retired non-canonical review-state comment ${id}`)
   }
 }
 
-async function publishObservationLocked(client, number, state) {
+async function publishObservationLocked(client, number, state, tally = null) {
   if (halted()) return 'cancelled'
   const head = await client.readHead(number)
   if (halted()) return 'cancelled'
@@ -1266,7 +1435,17 @@ async function publishObservationLocked(client, number, state) {
     comments,
     cancelled: halted(),
   })
-  if (plan.action === 'skip' && (plan.reason === 'stale-head' || plan.reason === 'cancelled')) {
+  if (plan.action === 'skip' && (plan.reason === 'stale-head' || plan.reason === 'cancelled' || plan.reason === 'unchanged')) {
+    if (plan.reason === 'unchanged') {
+      const retirementsBefore = tally?.retirements || 0
+      if (plan.retireIds.length > 0) {
+        await retireComments(client, plan.retireIds, selectCanonicalMarker(comments)?.state || null, tally)
+      }
+      if (tally) {
+        tally.recovery += tally.retirements - retirementsBefore
+        tally.unchanged += 1
+      }
+    }
     console.log(`#${number} ${plan.reason}: observation ${state.head_sha}, live ${head}`)
     return plan.reason
   }
@@ -1289,7 +1468,7 @@ async function publishObservationLocked(client, number, state) {
   })
   if (plan.action === 'skip') {
     if (plan.reason !== 'stale-head' && plan.reason !== 'cancelled') {
-      await retireComments(client, plan.retireIds, selectCanonicalMarker(comments)?.state || null)
+      await retireComments(client, plan.retireIds, selectCanonicalMarker(comments)?.state || null, tally)
     }
     console.log(`#${number} ${plan.reason}`)
     return plan.reason
@@ -1313,13 +1492,14 @@ async function publishObservationLocked(client, number, state) {
   })
   if (plan.action !== 'create') {
     if (plan.action === 'skip' && plan.reason !== 'stale-head' && plan.reason !== 'cancelled') {
-      await retireComments(client, plan.retireIds, selectCanonicalMarker(comments)?.state || null)
+      await retireComments(client, plan.retireIds, selectCanonicalMarker(comments)?.state || null, tally)
     }
     console.log(`#${number} ${plan.reason} at create barrier`)
     return plan.reason
   }
 
   await client.createComment(number, renderReviewComment(state))
+  if (tally) tally.creates += 1
   console.log(`Created review-state comment on #${number}`)
 
   const headAfter = await client.readHead(number)
@@ -1335,7 +1515,7 @@ async function publishObservationLocked(client, number, state) {
   const commentsAfter = listedAfter.comments
   const reconcile = planReconcile({ observation: state, currentHeadSha: headAfter, comments: commentsAfter })
   const canonical = headAfter === state.head_sha ? selectCanonicalMarker(commentsAfter) : null
-  if (!halted()) await retireComments(client, reconcile.retireIds, canonical?.state || null)
+  if (!halted()) await retireComments(client, reconcile.retireIds, canonical?.state || null, tally)
   if (headAfter !== state.head_sha) {
     console.log(`#${number} unpublished stale observation after head moved to ${headAfter}`)
     return 'stale-head'
@@ -1343,8 +1523,8 @@ async function publishObservationLocked(client, number, state) {
   return 'published'
 }
 
-export async function publishObservation(client, number, state) {
-  return withPublicationLock(number, () => publishObservationLocked(client, number, state))
+export async function publishObservation(client, number, state, tally = null) {
+  return withPublicationLock(number, () => publishObservationLocked(client, number, state, tally))
 }
 
 function createGitHubClient(token, owner, name) {
@@ -1382,20 +1562,16 @@ export async function readWorkflowOnDefaultBranch(request, owner, name) {
   }
 }
 
-async function updateOne(token, owner, name, number) {
+async function updateOne(token, owner, name, number, context, tally) {
   if (halted()) return 'cancelled'
   const startedAt = new Date().toISOString()
-  const scheduleAvailable = await readWorkflowOnDefaultBranch(
-    (path, options) => github(token, path, options),
-    owner,
-    name,
-  )
+  const scheduleAvailable = context.scheduleAvailable === true
   if (halted()) return 'cancelled'
   const pull = await loadPullRequest(token, owner, name, number)
   if (halted()) return 'cancelled'
   const checks = await loadChecks(token, owner, name, pull.headSha)
   if (halted()) return 'cancelled'
-  const ruleset = await loadRuleset(token, owner, name, pull.baseRefName)
+  const ruleset = context.rulesetFor(pull.baseRefName)
   const observedAt = new Date().toISOString()
   const evaluationId = makeEvaluationId({
     runId: process.env.GITHUB_RUN_ID,
@@ -1421,7 +1597,7 @@ async function updateOne(token, owner, name, number) {
     throw new Error('Refusing to publish a comment whose machine state does not round-trip')
   }
   if (halted()) return 'cancelled'
-  const result = await publishObservation(createGitHubClient(token, owner, name), number, state)
+  const result = await publishObservation(createGitHubClient(token, owner, name), number, state, tally)
   console.log(`#${number} next_action=${state.next_action} freshness=${state.freshness.guarantee} publish=${result}`)
   return result
 }
@@ -1440,41 +1616,93 @@ async function resolvePullNumbers(token, owner, name) {
   throw new Error('PR_NUMBER or HEAD_SHA is required')
 }
 
+function emptySummary(extra = {}) {
+  return {
+    enumerated: 0,
+    processed: 0,
+    deferred: 0,
+    failed: 0,
+    creates: 0,
+    retirements: 0,
+    unchanged: 0,
+    recovery: 0,
+    lastCompleted: null,
+    lastCompletedAt: null,
+    complete: false,
+    remaining: 0,
+    remainingUnknown: false,
+    ...extra,
+  }
+}
+
 async function main() {
   installStopHandlers()
   const token = process.env.GITHUB_TOKEN
   const repository = process.env.GITHUB_REPOSITORY || ''
   const [owner, name] = repository.split('/')
   if (!token || !owner || !name) throw new Error('GITHUB_TOKEN and GITHUB_REPOSITORY are required')
+  const event = process.env.EVENT_NAME || 'unknown'
+  const startedAtMs = Date.now()
 
   const resolved = await resolvePullNumbers(token, owner, name)
   if (resolved.stopped) {
     console.log('Stop requested. Remaining pull requests were not published.')
+    console.log(formatRunSummary(event, emptySummary({ remainingUnknown: true })))
     return
   }
   const numbers = resolved.numbers
   if (numbers.length === 0) {
     console.log('No open pull request to update.')
+    console.log(formatRunSummary(event, emptySummary({ complete: true })))
     return
   }
 
-  let failed = false
-  for (const number of numbers) {
-    if (halted()) {
-      console.log('Stop requested. Remaining pull requests were not published.')
-      break
-    }
-    try {
-      const result = await updateOne(token, owner, name, number)
+  const context = await loadSharedRunContext(token, owner, name)
+  if (halted()) {
+    console.log('Stop requested. Remaining pull requests were not published.')
+    console.log(formatRunSummary(event, emptySummary({
+      enumerated: numbers.length,
+      deferred: numbers.length,
+      remaining: numbers.length,
+    })))
+    return
+  }
+
+  const tally = { creates: 0, retirements: 0, unchanged: 0, recovery: 0 }
+  const pass = await executeReviewPass({
+    numbers,
+    startedAtMs,
+    probe: async (number) => {
+      const listed = await listComments(token, owner, name, number)
+      return processingStamp(listed.comments, listed)
+    },
+    processOne: async (number) => {
+      const before = {
+        creates: tally.creates,
+        retirements: tally.retirements,
+        unchanged: tally.unchanged,
+        recovery: tally.recovery,
+      }
+      const result = await updateOne(token, owner, name, number, context, tally)
       if (result === 'comments-truncated') {
         throw new Error('Issue comment pagination was truncated. No authoritative review state was selected.')
       }
-    } catch (error) {
-      failed = true
-      console.error(`#${number} ${error instanceof Error ? error.message : String(error)}`)
-    }
+      if (result === 'cancelled') return { ok: false }
+      return {
+        ok: true,
+        completedAt: new Date().toISOString(),
+        creates: tally.creates - before.creates,
+        retirements: tally.retirements - before.retirements,
+        unchanged: tally.unchanged - before.unchanged,
+        recovery: tally.recovery - before.recovery,
+      }
+    },
+  })
+  console.log(formatRunSummary(event, pass.stats))
+  if (pass.deferred.length > 0) {
+    console.log(`review-state deferred reason=budget numbers=${pass.deferred.join(',')}`)
   }
-  if (failed) process.exitCode = 1
+  if (pass.stats.failed > 0) process.exitCode = 1
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
