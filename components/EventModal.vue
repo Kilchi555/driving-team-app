@@ -995,6 +995,7 @@
 
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { logger } from '~/utils/logger'
+import { customerIdToRestore, selectorValueForLoadedCustomer } from '~/utils/appointment-customer-link'
 import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { useTerminology } from '~/composables/useTerminology'
 import { useSmsService } from '~/composables/useSmsService'
@@ -6309,13 +6310,11 @@ const handleEditModeLessonType = async () => {
     selectedLessonType.value = formData.value.appointment_type || 'lesson'
     selectedCategory.value = formData.value.type ? { code: formData.value.type } : null
     
-    // ✅ STUDENT LADEN FÜR EDIT MODE - NUR FÜR LEKTIONEN
+    // Lessons that populateFormFromAppointment did not resolve get a second load.
+    // Andere Terminart customers are loaded inside populateFormFromAppointment.
     if (formData.value.user_id && !selectedStudent.value && isLessonType(formData.value.eventType)) {
       logger.debug('👤 Loading student for edit mode:', formData.value.user_id)
       await loadStudentForEdit(formData.value.user_id)
-    } else if (formData.value.user_id && !isLessonType(formData.value.eventType)) {
-      logger.debug('🚫 Not loading student for other event type:', formData.value.eventType)
-      selectedStudent.value = null
     }
     
     logger.debug('🎯 EDIT MODE: formData.appointment_type:', formData.value.appointment_type)
@@ -6485,25 +6484,21 @@ const triggerInitialCalculations = async () => {
 
 const loadStudentForEdit = async (userId: string) => {
   try {
-    // ✅ PRÜFE ZUERST: Ist das ein bezahlbarer Termin (Lektion)?
-    if (!isLessonType(formData.value.eventType)) {
-      logger.debug('🚫 Not loading student for other event type:', formData.value.eventType)
-      selectedStudent.value = null
-      return
-    }
-    
-    // ✅ USE BACKEND API
-    // This bypasses the 406 Not Acceptable error from direct users table queries
     const response = await $fetch('/api/admin/get-user-for-edit', {
       query: { user_id: userId }
     }) as { success?: boolean, user?: any }
-    
-    if (response?.user) {
-      selectedStudent.value = response.user
-      logger.debug('👤 Student loaded for edit mode via API:', response.user.first_name)
+
+    const callerTenantId = props.currentUser?.tenant_id || null
+    const student = selectorValueForLoadedCustomer(userId, response?.user, { callerTenantId })
+    selectedStudent.value = student
+    if (student) {
+      logger.debug('👤 Student loaded for edit mode via API:', student.first_name)
+    } else {
+      logger.debug('⚠️ Linked customer could not be loaded for edit; selector left empty:', userId)
     }
   } catch (err) {
     console.error('❌ Error loading student for edit:', err)
+    selectedStudent.value = null
   }
 }
 
@@ -6810,13 +6805,18 @@ const initializePastedAppointment = async () => {
       })
     }
     
-    // ✅ Student laden falls user_id vorhanden UND es ist eine Lektion
-    if (formData.value.user_id && isLessonType(formData.value.eventType)) {
-      logger.debug('👤 Loading student for pasted appointment:', formData.value.user_id)
-      await modalForm.loadStudentById(formData.value.user_id)
+    // Restore a real linked customer for lessons and Andere Terminart.
+    // The staff placeholder (user_id === staff_id) stays an empty selector.
+    const pastedCustomerId = customerIdToRestore({
+      userId: formData.value.user_id,
+      staffId: formData.value.staff_id,
+      eventType: formData.value.eventType,
+    })
+    if (pastedCustomerId) {
+      logger.debug('👤 Loading customer for pasted appointment:', pastedCustomerId)
+      await modalForm.loadStudentById(pastedCustomerId)
       logger.debug('🎯 Student loaded, selectedStudent:', selectedStudent.value?.first_name || 'not found')
     } else if (formData.value.user_id && !isLessonType(formData.value.eventType)) {
-      logger.debug('🚫 Not loading student for other event type:', formData.value.eventType)
       selectedStudent.value = null
     }
     

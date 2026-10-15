@@ -13,6 +13,12 @@ import { useFallbackLogger } from '~/composables/useFallbackLogger'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { staffRequiresCategory } from '~/utils/staff-category-defaults'
 import { buildStaffC1PaymentMetadata } from '~/utils/staff-payment-c1-metadata'
+import {
+  customerIdToRestore,
+  persistedAppointmentUserId,
+  selectorValueForLoadedCustomer,
+  shouldApplyLinkedCustomerAutoDiscount,
+} from '~/utils/appointment-customer-link'
 
 // Types (können später in separates types file)
 interface AppointmentData {
@@ -412,23 +418,25 @@ const useEventModalForm = (currentUser?: any, refs?: {
     
     logger.debug('✅ Form populated with type:', formData.value.type)
     
-    // ✅ Load linked customer when user_id is set (lessons + other terminarten).
-    // Skip when user_id is only the staff placeholder (no customer selected).
-    const linkedCustomerId = formData.value.user_id
-    const shouldLoadStudent = !!(
-      linkedCustomerId &&
-      (formData.value.eventType === 'lesson' || linkedCustomerId !== formData.value.staff_id)
-    )
-    logger.debug('🔍 Student loading check:', {
-      user_id: linkedCustomerId,
+    // Load the linked customer for lessons and Andere Terminart.
+    // Other terminarten store staff_id in user_id when no customer was chosen.
+    const linkedCustomerId = customerIdToRestore({
+      userId: formData.value.user_id,
+      staffId: formData.value.staff_id,
       eventType: formData.value.eventType,
-      shouldLoadStudent
     })
-    
-    if (shouldLoadStudent) {
+    logger.debug('🔍 Student loading check:', {
+      user_id: formData.value.user_id,
+      linkedCustomerId,
+      eventType: formData.value.eventType,
+      shouldLoadStudent: !!linkedCustomerId
+    })
+
+    if (linkedCustomerId) {
       logger.debug('🎯 Loading student by ID:', linkedCustomerId)
-      loadStudentById(linkedCustomerId)
+      await loadStudentById(linkedCustomerId)
     } else {
+      selectedStudent.value = null
       logger.debug('ℹ️ Skipping student load - no linked customer')
     }
     
@@ -449,39 +457,48 @@ const useEventModalForm = (currentUser?: any, refs?: {
     return isChargeableEventType(eventType)
   }
 
-  // ✅ Load student by ID for existing appointments
+  // Load the linked customer for an existing appointment.
+  // Non-lesson types are included. A missing, deleted, or cross-tenant record
+  // leaves the selector empty and does not replace formData.user_id.
   const loadStudentById = async (userId: string) => {
+    const requestedId = customerIdToRestore({
+      userId,
+      staffId: formData.value.staff_id,
+      eventType: formData.value.eventType,
+    })
+    if (!requestedId) {
+      selectedStudent.value = null
+      return
+    }
+
+    if (selectedStudent.value?.id && selectedStudent.value.id !== requestedId) {
+      selectedStudent.value = null
+    }
+
     try {
-      logger.debug('📞 loadStudentById called with userId:', userId)
-      
-      // ✅ PRÜFE ZUERST: Ist das ein bezahlbarer Termin (Lektion)?
-      if (!isLessonType(formData.value.eventType)) {
-        logger.debug('🚫 Not loading student for other event type:', formData.value.eventType)
-        selectedStudent.value = null
+      logger.debug('📞 loadStudentById called with userId:', requestedId)
+      const { user: student } = await $fetch('/api/admin/get-user-for-edit', {
+        query: { user_id: requestedId }
+      }) as { user?: (Student & { tenant_id?: string | null }) | null }
+
+      const callerTenantId = currentUser?.tenant_id || useAuthStore().userProfile?.tenant_id || null
+      const selectorValue = selectorValueForLoadedCustomer(requestedId, student, { callerTenantId })
+      selectedStudent.value = selectorValue
+
+      if (!selectorValue) {
+        logger.debug('⚠️ Linked customer could not be loaded; selector left empty:', requestedId)
         return
       }
-      
-      logger.debug('🔍 Loading student via backend API...')
-      const { user: student } = await $fetch('/api/admin/get-user-for-edit', {
-        query: { user_id: userId }
-      })
 
-      logger.debug('📊 Student query result:', { student })
+      logger.debug('✅ Customer loaded for existing appointment:', selectorValue.first_name, selectorValue.last_name)
+      logger.debug('🎯 selectedStudent.value now set to:', selectorValue.id)
 
-      if (student) {
-        selectedStudent.value = student
-        logger.debug('✅ Student loaded for existing appointment:', student.first_name, student.last_name)
-        logger.debug('🎯 selectedStudent.value now set to:', selectedStudent.value?.id)
-
-        // Auto-apply sticky discount if no discount is already set (create mode only)
-        if (!formData.value.discount || formData.value.discount === 0) {
-          await loadStudentAutoDiscount(student.id)
-        }
-      } else {
-        logger.debug('⚠️ No student found with ID:', userId)
+      if (shouldApplyLinkedCustomerAutoDiscount(isLessonType(formData.value.eventType), formData.value.discount)) {
+        await loadStudentAutoDiscount(selectorValue.id)
       }
     } catch (err) {
       console.error('❌ Error in loadStudentById:', err)
+      selectedStudent.value = null
     }
   }
 
@@ -894,9 +911,13 @@ const useEventModalForm = (currentUser?: any, refs?: {
       const dbUser = authStore.userProfile
       
       // Appointment Data
-      // ✅ FIX: Für "other" EventTypes ohne Schüler, verwende staff_id als user_id
-      // WICHTIG: user_id darf NIEMALS null sein - Foreign Key Constraint!
-      const userId = formData.value.user_id || formData.value.staff_id || dbUser.id
+      // Other event types without a customer keep staff_id as user_id.
+      // user_id is NOT NULL. A selected customer id is persisted as-is.
+      const userId = persistedAppointmentUserId({
+        selectedCustomerId: formData.value.user_id,
+        staffId: formData.value.staff_id,
+        fallbackUserId: dbUser.id,
+      })
       
       if (!userId) {
         throw new Error('Kein gültiger User für diesen Termin vorhanden')
