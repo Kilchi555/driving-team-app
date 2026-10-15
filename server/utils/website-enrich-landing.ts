@@ -345,6 +345,7 @@ async function enrichLandingPremiumInner(
         tenantId: tenant.id,
         bookingUrl: landing.bookingUrl,
         leadTimeHours: tenant.minimum_booking_lead_time_hours,
+        timeZone: tenant.timezone,
       })
     } catch {
       slots = []

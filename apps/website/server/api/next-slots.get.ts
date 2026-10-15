@@ -4,6 +4,11 @@
  */
 import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import { resolveNextSlotsFilter } from '~/server/utils/next-slots-map'
+import {
+  formatSlotDayLabel,
+  formatSlotTimeLabel,
+  resolveSlotTimeZone,
+} from '../../../../utils/slot-display-time'
 
 const DT_TENANT_ID = '64259d68-195a-4c68-8875-f1b44d962830'
 const BOOKING_BASE = 'https://app.simy.ch/booking/availability/driving-team'
@@ -38,29 +43,6 @@ type CacheEntry = {
 
 const memoryCache = new Map<string, CacheEntry>()
 
-function formatDayLabel(iso: string) {
-  try {
-    return new Intl.DateTimeFormat('de-CH', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    }).format(new Date(iso))
-  } catch {
-    return iso.slice(0, 10)
-  }
-}
-
-function formatTimeLabel(iso: string) {
-  try {
-    return new Intl.DateTimeFormat('de-CH', {
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(iso))
-  } catch {
-    return iso.slice(11, 16)
-  }
-}
-
 function categoryLabel(code: string | null) {
   if (!code) return 'Termin'
   return code.replace(/_/g, ' ')
@@ -75,12 +57,13 @@ function buildBookUrl(row: {
   if (row.category_code) params.set('category', String(row.category_code))
   if (row.location_id) params.set('location', String(row.location_id))
   params.set('prefill', 'partial')
+  // Booking page matches this against the UTC date prefix of start_time.
   params.set('date', String(row.start_time).slice(0, 10))
   // Prefer %20 over "+" so Vue Router category matching stays reliable
   return `${BOOKING_BASE}?${params.toString().replace(/\+/g, '%20')}`
 }
 
-function diversify(rows: any[]): DtTeaserSlot[] {
+function diversify(rows: any[], timeZone: string): DtTeaserSlot[] {
   const perCat = new Map<string, number>()
   const seen = new Set<string>()
   const out: DtTeaserSlot[] = []
@@ -102,8 +85,8 @@ function diversify(rows: any[]): DtTeaserSlot[] {
       duration_minutes: row.duration_minutes != null ? Number(row.duration_minutes) : null,
       category_code: row.category_code || null,
       label: categoryLabel(row.category_code || null),
-      day_label: formatDayLabel(start),
-      time_label: formatTimeLabel(start),
+      day_label: formatSlotDayLabel(start, timeZone),
+      time_label: formatSlotTimeLabel(start, timeZone),
       location_id: row.location_id || null,
       location_name: locJoin?.name || null,
       book_url: buildBookUrl(row),
@@ -194,7 +177,14 @@ export default defineEventHandler(async (event) => {
     hint = usedFallback ? filter.fallbackHint || null : null
   }
 
-  const slots = diversify(rows)
+  const { data: tenantZone, error: zoneError } = await supabase
+    .from('tenants')
+    .select('timezone')
+    .eq('id', DT_TENANT_ID)
+    .maybeSingle()
+  if (zoneError) console.error('[next-slots] timezone', zoneError.message)
+  const timeZone = resolveSlotTimeZone(zoneError ? null : tenantZone?.timezone)
+  const slots = diversify(rows, timeZone)
   const defaultLocationId = filter.locationIds[0] || null
   const defaultCategory = filter.categories[0] || null
   memoryCache.set(cacheKey, {
