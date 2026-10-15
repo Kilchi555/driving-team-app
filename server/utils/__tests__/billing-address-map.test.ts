@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
   billingAddressHasContent,
+  companyInvoiceSearchHit,
   companyNameMatchesSearch,
   flattenCompanyName,
+  formatInvoiceStreetLine,
+  initialCompanySelection,
+  invoicePartyAddress,
   normalizeMultilineCompanyName,
+  privateCustomerSearchHit,
   resolveDefaultBillingSource,
+  resolveInvoiceStreetNumber,
   snapshotBillingCompanyName,
 } from '~/utils/billing-address-map'
 
@@ -144,5 +150,135 @@ describe('companyNameMatchesSearch', () => {
       expect(token.length).toBeGreaterThan(0)
       expect(storedLf.toLowerCase()).toContain(token.toLowerCase())
     }
+  })
+})
+
+describe('company invoice house number', () => {
+  it('keeps street_nr on a company search result', () => {
+    expect(companyInvoiceSearchHit({
+      id: 'co-1',
+      name: 'Muster AG',
+      street: 'Bahnhofstrasse',
+      street_nr: '12a',
+      zip: '8001',
+      city: 'Zürich',
+    })).toMatchObject({ street: 'Bahnhofstrasse', street_nr: '12a', zip: '8001', city: 'Zürich' })
+  })
+
+  it('sets billing_street_number from company number 12', () => {
+    expect(invoicePartyAddress({ street: 'Bahnhofstrasse', street_nr: '12', zip: '8001', city: 'Zürich' }))
+      .toMatchObject({ billing_street: 'Bahnhofstrasse', billing_street_number: '12' })
+  })
+
+  it('preserves the suffix 12a exactly', () => {
+    expect(invoicePartyAddress({ street: 'Bahnhofstrasse', street_nr: '12a' }).billing_street_number).toBe('12a')
+  })
+
+  it('clears the previous number when the next company has none', () => {
+    const withNumber = invoicePartyAddress({ street: 'Bahnhofstrasse', street_nr: '12', zip: '8001', city: 'Zürich' })
+    const cleared = invoicePartyAddress({ street: 'Industrieweg', street_nr: null, zip: '8400', city: 'Winterthur' })
+    expect(withNumber.billing_street_number).toBe('12')
+    expect(cleared.billing_street_number).toBe('')
+    expect(cleared.billing_street).toBe('Industrieweg')
+  })
+
+  it('does not carry a house number from one company to the next', () => {
+    const form = {
+      billing_street: '',
+      billing_street_number: '',
+      billing_zip: '',
+      billing_city: '',
+    }
+    Object.assign(form, invoicePartyAddress({ street: 'Bahnhofstrasse', street_nr: '12', zip: '8001', city: 'Zürich' }))
+    expect(form.billing_street_number).toBe('12')
+    Object.assign(form, invoicePartyAddress({ street: 'Seestrasse', street_nr: '12a', zip: '8002', city: 'Zürich' }))
+    expect(form.billing_street_number).toBe('12a')
+    Object.assign(form, invoicePartyAddress({ street: 'Industrieweg', street_nr: null, zip: '8400', city: 'Winterthur' }))
+    expect(form.billing_street).toBe('Industrieweg')
+    expect(form.billing_street_number).toBe('')
+  })
+
+  it('keeps the house number from the company directory entry', () => {
+    const selected = initialCompanySelection({
+      id: 'co-1',
+      name: 'Muster AG',
+      street: 'Bahnhofstrasse',
+      street_nr: '12a',
+      zip: '8001',
+      city: 'Zürich',
+    })
+    expect(selected.street_nr).toBe('12a')
+    expect(invoicePartyAddress(selected).billing_street_number).toBe('12a')
+  })
+})
+
+describe('private customer invoice address', () => {
+  it('copies the searched address onto the invoice form', () => {
+    const hit = privateCustomerSearchHit({
+      id: 'user-1',
+      first_name: 'Anna',
+      last_name: 'Meier',
+      email: 'anna@example.ch',
+      street: 'Bahnhofstrasse',
+      street_nr: '12',
+      zip: '8001',
+      city: 'Zürich',
+    })
+    expect(hit).toMatchObject({
+      street: 'Bahnhofstrasse',
+      street_nr: '12',
+      zip: '8001',
+      city: 'Zürich',
+    })
+    expect(invoicePartyAddress(hit)).toMatchObject({
+      billing_street: 'Bahnhofstrasse',
+      billing_street_number: '12',
+      billing_zip: '8001',
+      billing_city: 'Zürich',
+    })
+  })
+})
+
+describe('invoice street line', () => {
+  it('renders the canonical billing_street_number', () => {
+    expect(formatInvoiceStreetLine({
+      billing_street: 'Bahnhofstrasse',
+      billing_street_number: '12',
+      billing_street_nr: '99',
+    })).toBe('Bahnhofstrasse 12')
+    expect(resolveInvoiceStreetNumber({
+      billing_street_number: '12a',
+      billing_street_nr: '4',
+    })).toBe('12a')
+  })
+
+  it('uses billing_street_nr only when the canonical number is absent', () => {
+    expect(formatInvoiceStreetLine({
+      billing_street: 'Bahnhofstrasse',
+      billing_street_nr: '12a',
+    })).toBe('Bahnhofstrasse 12a')
+    expect(formatInvoiceStreetLine({
+      billing_street: 'Bahnhofstrasse',
+      billing_street_number: '',
+      billing_street_nr: '12',
+    })).toBe('Bahnhofstrasse')
+  })
+
+  it('does not duplicate a number already embedded in the street', () => {
+    expect(formatInvoiceStreetLine({
+      billing_street: 'Bahnhofstrasse 12',
+      billing_street_number: '12',
+    })).toBe('Bahnhofstrasse 12')
+    expect(formatInvoiceStreetLine({
+      billing_street: 'Bahnhofstrasse 12a',
+      billing_street_number: '12a',
+    })).toBe('Bahnhofstrasse 12a')
+  })
+
+  it('keeps a differing suffix', () => {
+    expect(formatInvoiceStreetLine({
+      billing_street: 'Bahnhofstrasse 12',
+      billing_street_number: '12a',
+    })).toBe('Bahnhofstrasse 12 12a')
   })
 })

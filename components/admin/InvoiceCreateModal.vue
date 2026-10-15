@@ -768,6 +768,12 @@ import {
   swapDocumentBodyTexts,
 } from '~/server/utils/invoice-quote'
 import {
+  companyInvoiceSearchHit,
+  initialCompanySelection,
+  invoicePartyAddress,
+  privateCustomerSearchHit,
+} from '~/utils/billing-address-map'
+import {
   XMarkIcon,
   PlusIcon,
   ArrowPathIcon
@@ -842,28 +848,8 @@ function searchCustomers() {
       $fetch('/api/admin/users/search', { query: { q } }),
       $fetch('/api/admin/companies', { query: { search: q } }),
     ])
-    const userList = (usersRes.value?.users || []).map((u: any) => ({
-      id: u.id, type: 'user',
-      name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
-      subtitle: u.email || '',
-      email: u.email || '',
-      phone: u.phone || '',
-      street: u.street || '',
-      street_nr: u.street_nr || '',
-      zip: u.zip || '',
-      city: u.city || '',
-    }))
-    const companyList = (companiesRes.value?.companies || []).map((c: any) => ({
-      id: c.id, type: 'company',
-      name: c.name,
-      subtitle: c.contact_person ? `${c.contact_person} · ${c.email || ''}` : (c.email || ''),
-      email: c.email || '',
-      phone: c.phone || '',
-      contact_person: c.contact_person || '',
-      street: c.street || '',
-      zip: c.zip || '',
-      city: c.city || '',
-    }))
+    const userList = (usersRes.value?.users || []).map((u: any) => privateCustomerSearchHit(u))
+    const companyList = (companiesRes.value?.companies || []).map((c: any) => companyInvoiceSearchHit(c))
     customerResults.value = [...userList, ...companyList].slice(0, 10)
     isSearchingCustomers.value = false
   }, 280)
@@ -882,9 +868,7 @@ function applyCustomer(r: any) {
     formData.value.billing_company_name = r.name
     formData.value.billing_contact_person = r.contact_person || ''
     formData.value.billing_email = r.email || ''
-    formData.value.billing_street = r.street || ''
-    formData.value.billing_zip = r.zip || ''
-    formData.value.billing_city = r.city || ''
+    Object.assign(formData.value, invoicePartyAddress(r))
     availableCreditRappen.value = 0
     applyAvailableCredit.value = false
   } else {
@@ -896,10 +880,7 @@ function applyCustomer(r: any) {
     formData.value.billing_company_name = ''
     formData.value.billing_contact_person = r.name
     formData.value.billing_email = r.email || ''
-    formData.value.billing_street = r.street || ''
-    formData.value.billing_street_number = r.street_nr || ''
-    formData.value.billing_zip = r.zip || ''
-    formData.value.billing_city = r.city || ''
+    Object.assign(formData.value, invoicePartyAddress(r))
     onCustomerSelected(r)
     loadStudentCredit(r.id)
   }
@@ -1233,10 +1214,7 @@ const onCustomerSelected = (user: any) => {
   if (user) {
     // Kundenadresse vorausfüllen
     formData.value.billing_email = user.email || ''
-    formData.value.billing_street = user.street || ''
-    formData.value.billing_street_number = user.street_nr || ''
-    formData.value.billing_zip = user.zip || ''
-    formData.value.billing_city = user.city || ''
+    Object.assign(formData.value, invoicePartyAddress(user))
     // Load open items for new user
     selectedOpenItemIds.value = new Set()
     openItems.value = []
@@ -1482,17 +1460,7 @@ onMounted(async () => {
 
   // Pre-select company if passed in (e.g. opened from company detail modal)
   if (props.initialCompany) {
-    applyCustomer({
-      id: props.initialCompany.id,
-      type: 'company',
-      name: props.initialCompany.name,
-      contact_person: props.initialCompany.contact_person || '',
-      email: props.initialCompany.email || '',
-      phone: props.initialCompany.phone || '',
-      street: props.initialCompany.street || '',
-      zip: props.initialCompany.zip || '',
-      city: props.initialCompany.city || '',
-    })
+    applyCustomer(initialCompanySelection(props.initialCompany))
   }
 })
 
