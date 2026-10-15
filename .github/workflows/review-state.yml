@@ -8,10 +8,9 @@
 # greatest started_at among trusted markers. A snapshot that started
 # earlier cannot become authoritative.
 #
-# INCIDENT CONTAINMENT (2026-10-15 notification storm / run 38666954356):
-# The cron schedule is intentionally removed so main cannot fan out
-# createComment across all open PRs. Re-enable only after idempotent
-# publish is verified on main. workflow_dispatch remains for diagnostics.
+# The 2026-10-15 notification storm (run 38666954356) came from append-only
+# creates on the schedule fan-out. Publication on this file updates or skips
+# instead. The documented cron is restored. workflow_dispatch remains.
 #
 # Review-thread resolution is not an event this workflow receives. The
 # JSON must not claim a finite thread-age bound unless a schedule trigger
@@ -36,8 +35,8 @@ on:
     types: [created, edited, deleted]
   check_run:
     types: [completed]
-  # schedule intentionally omitted — see INCIDENT CONTAINMENT above.
-  # Previous: schedule: [ cron: '*/15 * * * *' ]
+  schedule:
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 permissions:
