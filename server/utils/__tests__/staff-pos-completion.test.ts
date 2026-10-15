@@ -246,7 +246,7 @@ describe('legacy completion bypass', () => {
     const update = src.indexOf(".update(")
     expect(guard).toBeGreaterThan(0)
     expect(update).toBeGreaterThan(guard)
-    expect(src).not.toContain(".eq('tenant_id'")
+    expect(src).toContain(".eq('tenant_id', staffUser.tenant_id)")
   })
 
   it('keeps manage mark-completed closed for deferred', () => {

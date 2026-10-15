@@ -7,6 +7,8 @@ import {
   groupProductSalesByAppointment,
 } from '~/server/utils/invoice-product-lines'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
 
@@ -20,20 +22,32 @@ export default defineEventHandler(async (event) => {
     ? { id: authUser.db_user_id, tenant_id: authUser.tenant_id }
     : null
 
-  if (!userProfile) throw createError({ statusCode: 403, message: 'User profile not found' })
+  if (!userProfile?.tenant_id || !UUID_RE.test(String(userProfile.tenant_id))) {
+    throw createError({ statusCode: 403, message: 'User profile not found' })
+  }
 
   const query = getQuery(event)
-  const { invoice_id } = query
+  const invoiceId = typeof query.invoice_id === 'string' ? query.invoice_id : ''
 
-  if (!invoice_id) {
+  if (!UUID_RE.test(invoiceId)) {
     throw createError({ statusCode: 400, message: 'Missing invoice_id' })
   }
 
   try {
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('invoices')
+      .select('id')
+      .eq('id', invoiceId)
+      .eq('tenant_id', userProfile.tenant_id)
+      .maybeSingle()
+
+    if (invoiceError) throw mapSupabaseError(invoiceError)
+    if (!invoice) throw createError({ statusCode: 404, message: 'Invoice not found' })
+
     const { data: items, error } = await supabase
       .from('invoice_items')
       .select('*')
-      .eq('invoice_id', invoice_id)
+      .eq('invoice_id', invoiceId)
       .order('sort_order')
 
     if (error) throw mapSupabaseError(error)
@@ -54,13 +68,15 @@ export default defineEventHandler(async (event) => {
       .from('product_sales')
       .select('appointment_id, product_id, quantity, total_price_rappen, products(id, name)')
       .in('appointment_id', appointmentIds)
+      .or(`tenant_id.eq.${userProfile.tenant_id},tenant_id.is.null`)
 
     const productsByApt = groupProductSalesByAppointment((productSales || []) as any[])
     const expanded = expandProductsAsSeparateLines(baseItems as any[], productsByApt)
 
     return { success: true, data: expanded }
   } catch (err: any) {
+    if (err?.statusCode) throw err
     console.error('Error fetching invoice items:', err)
-    throw createError({ statusCode: 500, message: err.message })
+    throw createError({ statusCode: 500, message: 'Error fetching invoice items' })
   }
 })

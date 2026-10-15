@@ -1,10 +1,16 @@
 // server/api/invoices/mark-invoice-paid.post.ts
 // Markiert eine Rechnung als bezahlt — NUR für Admins
+// Dieser Pfad ruft kein mark_invoice_paid_core auf. Die Buchung bleibt die
+// bestehende sequentielle Service-Role-Abfolge; nur die Schreib- und Lese-
+// prädikate sind auf den authentifizierten Tenant begrenzt.
 
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { applyInvoiceCreditOnPaid } from '~/server/utils/invoice-credit'
 import { applyStaffPosCreditsForPaidInvoice } from '~/server/utils/staff-pos-completion'
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -18,7 +24,7 @@ export default defineEventHandler(async (event) => {
     .eq('auth_user_id', authUser.id)
     .single()
 
-  if (!staffUser || !['admin', 'tenant_admin'].includes(staffUser.role)) {
+  if (!staffUser || !['admin', 'tenant_admin'].includes(staffUser.role) || !UUID_RE.test(String(staffUser.tenant_id || ''))) {
     throw createError({ statusCode: 403, statusMessage: 'Nur Admins dürfen Rechnungen als bezahlt markieren' })
   }
 
@@ -84,7 +90,7 @@ export default defineEventHandler(async (event) => {
   const invoiceStatus = isPartial ? 'sent' : 'paid'   // partial keeps invoice open
 
   // Rechnung als bezahlt (oder Teilzahlung) markieren
-  const { error } = await supabase
+  const { data: updatedInvoice, error } = await supabase
     .from('invoices')
     .update({
       payment_status: paymentStatus,
@@ -99,8 +105,13 @@ export default defineEventHandler(async (event) => {
       updated_at: now,
     })
     .eq('id', invoice_id)
+    .eq('tenant_id', staffUser.tenant_id)
+    .select('id')
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+  if (!updatedInvoice?.length) {
+    throw createError({ statusCode: 404, statusMessage: 'Rechnung nicht gefunden' })
+  }
 
   // Jede Zahlung als eigene Zeile in invoice_payments protokollieren
   await supabase
@@ -130,6 +141,7 @@ export default defineEventHandler(async (event) => {
       .from('invoice_items')
       .select('appointment_id')
       .eq('invoice_id', invoice_id)
+      .or(`tenant_id.eq.${staffUser.tenant_id},tenant_id.is.null`)
       .not('appointment_id', 'is', null)
 
     if (invoiceItems && invoiceItems.length > 0) {

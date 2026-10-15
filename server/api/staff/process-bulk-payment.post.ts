@@ -69,6 +69,9 @@ export default defineEventHandler(async (event) => {
     }
 
     const tenantId = userProfile.tenant_id
+    if (!tenantId) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
 
     // ✅ LAYER 3: INPUT VALIDATION
     const body = await readBody(event)
@@ -120,6 +123,11 @@ export default defineEventHandler(async (event) => {
         statusCode: 409,
         statusMessage: 'Staff-POS-Zahlungen können nicht über die Sammelzahlung abgeschlossen werden.',
       })
+    }
+
+    const loadedPaymentIds = new Set((allPayments as any[]).map((payment) => String(payment.id)))
+    if (payment_ids.some((id: unknown) => !loadedPaymentIds.has(String(id)))) {
+      throw createError({ statusCode: 404, statusMessage: 'Zahlung nicht gefunden' })
     }
 
     // Calculate remaining due per payment (total - credit - already paid via earlier partial payments)
@@ -284,15 +292,20 @@ export default defineEventHandler(async (event) => {
           }
         }
 
-        const { error: updateError } = await supabaseAdmin
+        const { data: updatedPayment, error: updateError } = await supabaseAdmin
           .from('payments')
           .update(updateData)
           .eq('id', paymentId)
           .eq('tenant_id', tenantId)
+          .select('id')
 
-        if (updateError) {
+        if (updateError || !updatedPayment?.length) {
           logger.error(`❌ Error updating payment ${paymentId}:`, updateError)
-          results.push({ payment_id: paymentId, success: false, error: updateError.message })
+          results.push({
+            payment_id: paymentId,
+            success: false,
+            error: updateError?.message || 'Zahlung nicht gefunden',
+          })
           continue
         }
 
@@ -338,6 +351,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ Sync linked invoices after cash settlement (same rules as /api/invoices/mark-paid)
+    let invoiceSyncFailed = false
     if (method === 'cash') {
       const invoiceIds = [...new Set(
         (allPayments as any[])
@@ -347,17 +361,25 @@ export default defineEventHandler(async (event) => {
 
       for (const invoiceId of invoiceIds) {
         try {
-          const { data: invoicePayments } = await supabaseAdmin
+          const { data: tenantPayments } = await supabaseAdmin
             .from('payments')
             .select('id, payment_status')
             .eq('invoice_id', invoiceId)
+            .eq('tenant_id', tenantId)
 
-          const allPaid = !!invoicePayments?.length && invoicePayments.every(p => p.payment_status === 'completed')
-          const anyPaid = !!invoicePayments?.some(p => p.payment_status === 'completed' || p.payment_status === 'partial')
+          const { data: unsetTenantPayments } = await supabaseAdmin
+            .from('payments')
+            .select('id, payment_status')
+            .eq('invoice_id', invoiceId)
+            .is('tenant_id', null)
+
+          const invoicePayments = [...(tenantPayments || []), ...(unsetTenantPayments || [])]
+          const allPaid = !!invoicePayments.length && invoicePayments.every(p => p.payment_status === 'completed')
+          const anyPaid = !!invoicePayments.some(p => p.payment_status === 'completed' || p.payment_status === 'partial')
 
           // Staff may settle payment rows; only admin/tenant_admin flip the invoice header to paid/partial
           if (['admin', 'tenant_admin', 'super_admin', 'superadmin'].includes(userProfile.role) && anyPaid) {
-            await supabaseAdmin
+            const { data: updatedInvoice, error: invoiceUpdateError } = await supabaseAdmin
               .from('invoices')
               .update({
                 payment_status: allPaid ? 'paid' : 'partial',
@@ -365,6 +387,13 @@ export default defineEventHandler(async (event) => {
                 updated_at: now,
               })
               .eq('id', invoiceId)
+              .eq('tenant_id', tenantId)
+              .select('id')
+
+            if (invoiceUpdateError || !updatedInvoice?.length) {
+              invoiceSyncFailed = true
+              logger.warn(`⚠️ Invoice sync skipped for ${invoiceId}: outside tenant or missing`)
+            }
           }
         } catch (invErr: any) {
           logger.warn(`⚠️ Invoice sync failed for ${invoiceId}:`, invErr?.message)
@@ -434,14 +463,16 @@ export default defineEventHandler(async (event) => {
       failureCount: payment_ids.length - successCount
     })
 
+    const failedCount = results.filter(r => !r.success).length
+
     return {
-      success: true,
+      success: failedCount === 0 && !invoiceSyncFailed,
       results,
       credit_added_rappen: creditAdded,
       summary: {
         total: payment_ids.length,
         successful: successCount,
-        failed: payment_ids.length - successCount
+        failed: failedCount
       }
     }
 
