@@ -369,19 +369,19 @@ async function reissueRegistrationTokenForVerifiedPendingAdmin(
     return { ok: false, reason: 'email_mismatch' }
   }
 
-  const { data: existingAdmin } = await supabase
-    .from('users')
-    .select('id')
-    .eq('tenant_id', tenant.id)
-    .eq('role', 'admin')
-    .limit(1)
-    .maybeSingle()
-
-  if (existingAdmin) {
+  // Admin existence is checked twice (before expensive work / immediately
+  // pre-mint) to shrink the sequential TOCTOU window. This does NOT close a
+  // true concurrent race against create-admin without a shared DB transaction
+  // spanning both paths (out of scope for this minimal remediation).
+  // create-admin still rejects a second primary admin (409).
+  if (await tenantHasAdminUser(supabase, tenant.id)) {
     return { ok: false, reason: 'used' }
   }
 
   try {
+    if (await tenantHasAdminUser(supabase, tenant.id)) {
+      return { ok: false, reason: 'used' }
+    }
     return {
       ok: true,
       tenantId: tenant.id,
@@ -397,4 +397,19 @@ async function reissueRegistrationTokenForVerifiedPendingAdmin(
     )
     return { ok: false, reason: 'invalid' }
   }
+}
+
+/** True if any admin user row exists for the tenant (registration reissue gate). */
+async function tenantHasAdminUser(
+  supabase: SupabaseClient,
+  tenantId: string,
+): Promise<boolean> {
+  const { data: existingAdmin } = await supabase
+    .from('users')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('role', 'admin')
+    .limit(1)
+    .maybeSingle()
+  return !!existingAdmin
 }

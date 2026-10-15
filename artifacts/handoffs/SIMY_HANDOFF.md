@@ -1,78 +1,63 @@
-# SIMY Handoff — PR #431 Token Security Fixes
+# SIMY Handoff — PR #431 Minimal Token-Security Remediation
 
-**Date:** 2026-10-14  
-**Verdict:** **IMPLEMENTED — DRAFT PR UPDATED; AWAITING CI + HUMAN STAGING SMOKE**
+**Date:** 2026-10-15  
+**Verdict:** **IMPLEMENTED (partial race closure) — DRAFT UPDATED**
 
 ## Identity
 
 | Item | Value |
 |------|--------|
 | PR | https://github.com/Kilchi555/driving-team-app/pull/431 (draft) |
+| Prior tip | `4569491a` |
 | Base | `0770ad2e` |
-| Prior reviewed head | `d41cf295` |
-| Final HEAD (this fix) | `f8d216f8c1f84938768783938a816d34d64f3211` |
+| Final HEAD | *(after push)* |
 
-## IMPLEMENTATION GATE (authorized by user task)
+## Changes (minimal)
 
-```
-Change: Bound registration-token reissue + remove insecure HMAC secret fallback
-CHANGE CLASS: Authentication, Authorization
-Change Risk: CRITICAL (security fix within approved PR #431 scope)
-Hotspots: P0 Authentication
-Decision: User authorized Priority 1 + Priority 2 implementation
-Out of scope: undraft/merge/deploy/prod migration/prod config
-```
+1. **Exact equality unit test** — `isWithinRegistrationTokenReissueWindow(t, Date.parse(t)) === false`  
+   File: `server/utils/__tests__/registration-email-verification.test.ts`
 
-## Fixes by finding
+2. **Sequential TOCTOU narrowing** — double `tenantHasAdminUser` probe immediately before mint; comment documents residual concurrent race  
+   File: `server/utils/registration-email-verification.ts`
 
-### P1 — Bound reissue (`registration-email-verification.ts`)
+3. **Regression** — admin appears between probes → reissue returns `used`  
+   Same test file
 
-- **Authoritative deadline:** existing `tenant_registration_email_tokens.expires_at` (set at issue; never updated on consume/replay).
-- **No new migration** — schema already has the deadline.
-- `isWithinRegistrationTokenReissueWindow()` fail-closes on null/empty/malformed timestamps.
-- Reissue requires: used token + verified/active tenant + no admin + `now < expires_at`.
-- Past deadline → `expired`; after admin → `used`.
-- Files: `server/utils/registration-email-verification.ts`
+4. **Honest residual-risk doc** — `docs/incidents/2026-10-14_registration-token-reissue-race.md`
 
-### P2 — Fail-closed secret (`registration-token.ts`)
+## Race-condition analysis
 
-- Removed hardcoded `insecure-dev-secret-change-in-production`.
-- `getRegistrationTokenSecret()` requires `NUXT_REGISTRATION_TOKEN_SECRET` trimmed length ≥ 32 or throws `RegistrationTokenSecretError`.
-- `generateRegistrationToken` throws if misconfigured; `verifyRegistrationToken` returns `false` (fail-closed, no secret leakage).
-- Verify API returns 503 if secret missing before consume; consume refuses to mutate if secret unset.
-- Callers (create-admin / invite-staff-batch / rollback / send-welcome-email): verify → false → existing 403 paths.
-- Docs: rollout §1 marks secret **Required**; presence/length check without printing values.
-- Files: `server/utils/registration-token.ts`, `server/api/tenants/verify-registration-email.post.ts`, `docs/incidents/2026-10-14_tenant-registration-abuse-rollout.md`
+| Approach | Outcome |
+|----------|---------|
+| Shared DB txn spanning reissue mint + create-admin | Would require moving/signing secret in DB or folding create-admin into one RPC → **broad rewrite, rejected** |
+| App-only double-check | **Done** — shrinks sequential window; unit-tested |
+| True concurrent close | **Not claimed** — residual documented |
 
-## Tests run (local)
+`create-admin` still returns 409 if a primary admin already exists — late HMAC cannot create a second primary admin.
+
+## Tests run (real)
 
 ```
-npx vitest run registration-token / registration-email-verification /
-  registration-upload-grant / tenant-registration-abuse-contract / rate-limiter-abuse
-→ 5 files, 43+ tests PASS (re-run after contract update)
-npm run lint → PASS
+npx vitest run registration-email-verification / registration-token / tenant-registration-abuse-contract
+→ exit 0 (24 tests)
+
+npx eslint registration-email-verification.ts + test —max-warnings 0
+→ exit 0
+
+npm run lint
+→ exit 0
 ```
 
-**Not run:** Resend/UI live signup, multi-connection concurrency harness, Production anything.
+**Not run:** live Resend/UI, multi-connection concurrency, staging/Production config.
 
-## Migration status
+## CI
 
-- **No new migration** for P1 (uses existing `expires_at`).
-- Prior abuse-protection migration: staging (simy-test) applied earlier; **Production still unapplied** (must stay so).
-
-## Staging gate (human — simy-test)
-
-Exact steps: `docs/incidents/2026-10-14_tenant-registration-abuse-rollout.md` §4.
-
-Must confirm: `NUXT_REGISTRATION_TOKEN_SECRET` length ≥ 32, Resend delivers, verify→admin, refresh within `expires_at` recovers, after admin / after expiry replay rejected. **Do not** set `TENANT_REGISTER_REQUIRE_HCAPTCHA=1` until UI posts captcha tokens.
-
-## Remaining risks / human gates
-
-1. Required CI must be green on final HEAD (Test and lint + E2E login).
-2. Human Resend/UI smoke on simy-test before production enablement.
-3. Ensure every deploy target has `NUXT_REGISTRATION_TOKEN_SECRET` set (no fallback).
-4. Still **do not** merge/undraft/deploy/apply Production migration without explicit later authorization.
+Required Actions on final head: report after push (subscribe). Prior tip `4569491a` had Test and lint + E2E green.
 
 ## Non-actions
 
-No undraft, merge, deploy, Production migration, or Production config/data changes.
+No merge, undraft, deploy, Production/simy-test access, migration apply, secret inspection, or live email testing.
+
+## Remaining risks
+
+Concurrent reissue-vs-create-admin may still mint one post-admin HMAC (TTL-bound). Not fixed atomically in this scope — see race doc.

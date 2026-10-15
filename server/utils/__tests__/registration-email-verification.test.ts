@@ -43,6 +43,15 @@ describe('registration-email-verification', () => {
     expect(isWithinRegistrationTokenReissueWindow('2026-10-14T12:00:01.000Z', now)).toBe(true)
   })
 
+  it('rejects exact expiry equality (now === expires_at)', async () => {
+    const { isWithinRegistrationTokenReissueWindow } = await import(
+      '../registration-email-verification'
+    )
+    const t = '2026-10-14T12:00:00.000Z'
+    expect(isWithinRegistrationTokenReissueWindow(t, Date.parse(t))).toBe(false)
+    expect(isWithinRegistrationTokenReissueWindow(new Date(t), Date.parse(t))).toBe(false)
+  })
+
   it('reissues within expires_at, rejects after expiry, and does not extend the absolute window', async () => {
     const {
       consumeRegistrationEmailToken,
@@ -239,6 +248,87 @@ describe('registration-email-verification', () => {
         registration_status: 'email_verified',
       }),
     ).toBe(true)
+  })
+
+  it('rejects reissue when an admin appears between the pre-mint checks (sequential TOCTOU)', async () => {
+    const {
+      consumeRegistrationEmailToken,
+      hashRegistrationEmailToken,
+      mintRegistrationEmailToken,
+    } = await import('../registration-email-verification')
+
+    const raw = mintRegistrationEmailToken()
+    const hash = hashRegistrationEmailToken(raw)
+    const tokenRow = {
+      id: 'tok-race',
+      tenant_id: '33333333-3333-3333-3333-333333333333',
+      email_normalized: 'race@example.com',
+      expires_at: new Date(Date.now() + 60_000).toISOString(),
+      used_at: new Date().toISOString(),
+    }
+    const tenant = {
+      id: tokenRow.tenant_id,
+      name: 'Race',
+      slug: 'race',
+      contact_email: 'race@example.com',
+      email_verified_at: new Date().toISOString(),
+      registration_status: 'email_verified',
+      is_active: true,
+    }
+
+    // First admin probe: absent; second (pre-mint): present — simulates create-admin winning the race.
+    let adminProbe = 0
+    const supabase = {
+      rpc: vi.fn(async () => ({
+        data: [{ ok: false, reason: 'used', tenant_id: null, email_normalized: null, slug: null, tenant_name: null }],
+        error: null,
+      })),
+      from: vi.fn((table: string) => {
+        if (table === 'tenant_registration_email_tokens') {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({ data: { ...tokenRow, token_hash: hash }, error: null }),
+              }),
+            }),
+          }
+        }
+        if (table === 'tenants') {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({ data: tenant, error: null }),
+              }),
+            }),
+          }
+        }
+        if (table === 'users') {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  limit: () => ({
+                    maybeSingle: async () => {
+                      adminProbe += 1
+                      return {
+                        data: adminProbe >= 2 ? { id: 'admin-won' } : null,
+                        error: null,
+                      }
+                    },
+                  }),
+                }),
+              }),
+            }),
+          }
+        }
+        throw new Error(`unexpected table ${table}`)
+      }),
+    } as unknown as import('@supabase/supabase-js').SupabaseClient
+
+    const result = await consumeRegistrationEmailToken(supabase, raw)
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.reason).toBe('used')
+    expect(adminProbe).toBeGreaterThanOrEqual(2)
   })
 
   it('refuses consume when registration token secret is not configured', async () => {
