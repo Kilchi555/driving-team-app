@@ -39,25 +39,26 @@ App | Default was pending at the earlier read and was **FAILURE** at `2026-10-15
 | Shared workflow-file and ruleset reads once per process | met |
 | Six-minute script budget; in-flight pull request, including retirement, finishes | met |
 | Fair order from canonical `observed_at`; truncated lists sort last | met |
-| Unchanged decision skips create and retirement | met |
-| Changed decision still appends and retires | met |
+| Unchanged decision skips write (keep #435 idempotent publish) | met |
+| Changed decision updates the canonical marker in place (#435), does not append | met |
 | Extra or malformed trusted markers retire without a new create | met |
-| One failure does not stop later pull requests | met |
+| Non-auth failure does not stop later pull requests; 401/403/429 stop remaining | met |
 | Secret-free summary log | met |
 | Live schedule log of this head | not met |
 
 ## Facts
 
 - The controller change is in `scripts/review-state.mjs` and `utils/__tests__/review-state.test.ts`.
+- Prep merge onto `254a2d95` keeps #435 update-in-place and #439 restored cron; adds #437 budget/ordering only.
 - `withPublicationLock` is still an in-process lock. Cross-runner exclusion is the existing job concurrency group.
-- Sparse `schedule` creation remains unproven. The cron was not edited.
-- No post-merge schedule run exists, because the pull request is not merged.
+- Sparse `schedule` creation remains unproven. The cron was not edited in this prep.
+- No post-merge schedule run exists for the prepared head, because this prep was not pushed or merged.
 
 ## Human merge prerequisites
 
 1. Keep the pull request draft until a person marks it ready.
-2. Squash-merge only after Test and lint, E2E login, and Dependency review are green on the current head.
-3. Leave PR #435 unmerged if the cron must stay. That branch removes the schedule.
+2. Apply this prepared merge result to PR #437 only with explicit human authorization (push/replace strategy is a human decision).
+3. Squash- or merge only after Test and lint, E2E login, and Dependency review are green on the current head.
 4. After merge, wait for a natural `schedule` run. Do not dispatch one. Read its log before claiming the budget, order, or unchanged-skip behaved as intended.
 
 ## Not done

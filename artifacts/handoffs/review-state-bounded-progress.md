@@ -18,12 +18,12 @@ The parent of the head commit is the base SHA. Cron, `timeout-minutes`, and `can
 - `scripts/review-state.mjs` reads the default-branch workflow file and the ruleset catalog once per process. `rulesetFor(baseRef)` still selects per base.
 - A six-minute script budget stops the loop before the next pull request. The pull request already started, including retirement, is finished by that call. GitHub’s eight-minute job limit is unchanged.
 - Order is the canonical marker `observed_at` on the pull request: never processed, then oldest, then lower pull-request number. Truncated comment lists sort last.
-- Unchanged head and decision inputs skip create and retirement PATCH. A real decision change still appends and retires. Duplicate or malformed trusted markers are retired when the canonical decision still matches, without another create.
-- One failure does not stop later pull requests and is not counted as processed. The summary log sets `complete=false` when work remains or a pull request failed.
+- Unchanged semantic observations skip write (keep #435 update-in-place / unchanged skip). A real decision change updates the trusted canonical marker in place; it does not append a second marker. Duplicate or malformed trusted markers are retired when the canonical decision still matches.
+- Non-auth PR failures do not stop later pull requests and are not counted as processed. 401/403/429 still stop the remaining set. The summary log sets `complete=false` when work remains or a pull request failed.
 
 ## Tests
 
-- `./node_modules/.bin/vitest run utils/__tests__/review-state.test.ts` — exit 0, 83 passed
+- `./node_modules/.bin/vitest run utils/__tests__/review-state.test.ts` — exit 0, 93 passed (prep merge onto main)
 - `npx eslint --max-warnings 0 scripts/review-state.mjs utils/__tests__/review-state.test.ts` — exit 0
 - `git diff --check` — exit 0
 
