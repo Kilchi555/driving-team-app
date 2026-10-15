@@ -17,12 +17,16 @@ import { pathToFileURL } from 'node:url'
  *    at a time and does not cancel the in-progress run. A later event
  *    waits until this process has exited, then reads GitHub again.
  * 2. publishObservation holds an in-process lock for the whole write.
- *    That lock does not cross runners. One running job is the workflow
- *    concurrency group, which this process does not reconfigure.
- * 3. Publication appends a new comment only when the head or the decision
- *    inputs changed. An unchanged canonical marker is not rewritten.
- *    Retirement still removes non-canonical markers. A later run reconciles
- *    a create that was not followed by retirement.
+ *    Two calls cannot interleave their reads and writes. That lock does
+ *    not cross runners; one running job is the workflow concurrency group.
+ * 3. Publication updates the existing trusted canonical marker in place
+ *    when one exists. It creates a comment only when none exists. When
+ *    the semantic observation (excluding started_at / observed_at /
+ *    evaluation_id) is unchanged, it performs no write. Retirement
+ *    removes the marker from non-canonical trusted duplicates only.
+ *    Schedule and dispatch passes also use a six-minute script budget and
+ *    process the stalest open pull requests first so the eight-minute job
+ *    limit does not cancel mid-write without progress accounting.
  * 4. started_at is taken before any read. The canonical marker is the
  *    greatest started_at, then observed_at, then evaluation_id. A
  *    snapshot that started before the canonical observed_at is not
@@ -32,10 +36,9 @@ import { pathToFileURL } from 'node:url'
  *
  * Freshness. Review-thread resolution is not an event this workflow
  * receives. event_driven refresh is not a time bound.
- * freshness.max_lag_minutes is 15 only when this workflow file is
- * present on the repository default branch, which is what makes the
- * schedule real. Otherwise the guarantee is none and max_lag_minutes
- * is null.
+ * freshness.max_lag_minutes is 15 only when the default-branch workflow
+ * file contains an active schedule cron. Otherwise the guarantee is
+ * none and max_lag_minutes is null.
  *
  * Ruleset. Expected check names are policy. They are never copied over
  * an empty, missing, or unreadable live ruleset. Those states cannot
@@ -679,24 +682,53 @@ export function compareObservations(left, right) {
   return String(left?.evaluation_id || '').localeCompare(String(right?.evaluation_id || ''))
 }
 
-const VOLATILE_DECISION_KEYS = new Set(['started_at', 'observed_at', 'evaluation_id'])
+const VOLATILE_OBSERVATION_KEYS = new Set(['started_at', 'observed_at', 'evaluation_id'])
 
-function withoutVolatile(value) {
-  if (Array.isArray(value)) return value.map((item) => withoutVolatile(item))
-  if (!value || typeof value !== 'object') return value
-  const out = {}
-  for (const key of Object.keys(value).sort()) {
-    if (VOLATILE_DECISION_KEYS.has(key)) continue
-    out[key] = withoutVolatile(value[key])
+export function stableStringify(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value)
+  if (Array.isArray(value)) return `[${value.map((entry) => stableStringify(entry)).join(',')}]`
+  const keys = Object.keys(value).sort()
+  return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`
+}
+
+export function stableObservationPayload(state) {
+  if (!state || typeof state !== 'object') return null
+  const copy = { ...state }
+  for (const key of VOLATILE_OBSERVATION_KEYS) delete copy[key]
+  return copy
+}
+
+export function observationsSemanticallyEqual(left, right) {
+  const a = stableObservationPayload(left)
+  const b = stableObservationPayload(right)
+  if (!a || !b) return false
+  return stableStringify(a) === stableStringify(b)
+}
+
+export function workflowScheduleEnabled(yamlText) {
+  if (typeof yamlText !== 'string' || !yamlText) return false
+  const withoutComments = yamlText.replace(/^\s*#.*$/gm, '')
+  return /^[ \t]*schedule:\s*$/m.test(withoutComments) && /^[ \t]*-\s*cron:/m.test(withoutComments)
+}
+
+export function retryDelayMs(headers, attempt, random = Math.random) {
+  const raw = headers?.get?.('retry-after') || headers?.get?.('Retry-After')
+  const retryAfter = Number(raw)
+  if (Number.isFinite(retryAfter) && retryAfter >= 0) {
+    return Math.min(60_000, Math.max(0, Math.ceil(retryAfter * 1000)))
   }
-  return out
+  const base = Math.min(30_000, 500 * (2 ** Math.max(0, attempt)))
+  return Math.min(60_000, Math.round(base + random() * 250))
 }
 
-export function decisionEquivalent(left, right) {
-  if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false
-  if (typeof left.head_sha !== 'string' || !left.head_sha || left.head_sha !== right.head_sha) return false
-  return JSON.stringify(withoutVolatile(left)) === JSON.stringify(withoutVolatile(right))
+export function shouldRetryGitHubStatus(status) {
+  return status === 429 || status === 502 || status === 503 || status === 504
 }
+
+function sleep(ms, sleepImpl = (delay) => new Promise((resolve) => setTimeout(resolve, delay))) {
+  return sleepImpl(ms)
+}
+
 
 // Leave room for checkout, setup, and the PR already in progress. The job
 // limit stays 8 minutes; this process stops starting new PRs earlier.
@@ -773,6 +805,7 @@ export async function executeReviewPass({
   const deferred = []
   let index = 0
   for (; index < numbers.length; index += 1) {
+    if (halted()) break
     const elapsed = now() - startedAtMs
     if (elapsed >= budgetMs) break
     if (ranked.length > 0 && elapsed >= budgetMs - reserve) break
@@ -792,6 +825,10 @@ export async function executeReviewPass({
   for (let rest = index; rest < numbers.length; rest += 1) deferred.push(numbers[rest])
   ranked.sort(compareProcessingOrder)
   for (const item of ranked) {
+    if (halted()) {
+      deferred.push(item.number)
+      continue
+    }
     if (now() - startedAtMs >= budgetMs) {
       deferred.push(item.number)
       console.log(`#${item.number} deferred: budget`)
@@ -818,7 +855,7 @@ export async function executeReviewPass({
   }
   stats.deferred = deferred.length
   stats.remaining = deferred.length
-  stats.complete = stats.failed === 0 && stats.deferred === 0 && stats.processed === stats.enumerated
+  stats.complete = stats.failed === 0 && stats.deferred === 0 && stats.processed === stats.enumerated && !halted()
   return { stats, deferred }
 }
 
@@ -902,8 +939,16 @@ export function planPublication({ observation, currentHeadSha, comments, cancell
   if (canonical && (canonical.state.observed_at >= observation.started_at || compareObservations(canonical.state, observation) >= 0)) {
     return { action: 'skip', reason: 'stale-snapshot', retireIds: retireOthers(canonical.id) }
   }
-  if (canonical?.state && decisionEquivalent(canonical.state, observation)) {
-    return { action: 'skip', reason: 'unchanged', retireIds: retireOthers(canonical.id) }
+  if (canonical) {
+    if (observationsSemanticallyEqual(canonical.state, observation)) {
+      return { action: 'skip', reason: 'unchanged', retireIds: retireOthers(canonical.id) }
+    }
+    return {
+      action: 'update',
+      commentId: canonical.id,
+      reason: 'publish',
+      retireIds: retireOthers(canonical.id),
+    }
   }
   return {
     action: 'create',
@@ -1098,31 +1143,55 @@ export function buildEvaluationInput({
   }
 }
 
-async function github(token, path, { method = 'GET', body, tolerate = [] } = {}) {
-  const response = await fetch(path.startsWith('http') ? path : `${API}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  })
-  const text = await response.text()
-  let payload = null
-  if (text) {
-    try {
-      payload = JSON.parse(text)
-    } catch {
-      payload = text
+const GITHUB_MAX_RETRIES = 3
+
+async function github(token, path, {
+  method = 'GET',
+  body,
+  tolerate = [],
+  fetchImpl = fetch,
+  sleepImpl,
+  random = Math.random,
+  maxRetries = GITHUB_MAX_RETRIES,
+} = {}) {
+  let attempt = 0
+  while (true) {
+    if (halted()) throw new Error('GitHub request cancelled')
+    const response = await fetchImpl(path.startsWith('http') ? path : `${API}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    })
+    const text = await response.text()
+    let payload = null
+    if (text) {
+      try {
+        payload = JSON.parse(text)
+      } catch {
+        payload = text
+      }
     }
+    if (response.ok || tolerate.includes(response.status)) {
+      return { payload, headers: response.headers, status: response.status }
+    }
+    const retryable = shouldRetryGitHubStatus(response.status)
+    if (!retryable || attempt >= maxRetries) {
+      const message = payload && typeof payload === 'object' ? payload.message : text
+      const error = new Error(`GitHub ${method} ${path} failed (${response.status}): ${message}`)
+      error.status = response.status
+      error.retryable = retryable
+      throw error
+    }
+    const delay = retryDelayMs(response.headers, attempt, random)
+    console.warn(`GitHub ${method} ${path} returned ${response.status}; retry ${attempt + 1}/${maxRetries} in ${delay}ms`)
+    await sleep(delay, sleepImpl)
+    attempt += 1
   }
-  if (!response.ok && !tolerate.includes(response.status)) {
-    const message = payload && typeof payload === 'object' ? payload.message : text
-    throw new Error(`GitHub ${method} ${path} failed (${response.status}): ${message}`)
-  }
-  return { payload, headers: response.headers, status: response.status }
 }
 
 export async function githubPaginated(token, path, request = github) {
@@ -1327,6 +1396,7 @@ export function resolveRulesetPolicy(rulesets, baseRef) {
   return parsed
 }
 
+
 export async function loadRulesetCatalog(token, owner, name, request = github) {
   const { payload } = await request(token, `/repos/${owner}/${name}/rulesets`)
   const summaries = Array.isArray(payload) ? payload : []
@@ -1362,6 +1432,25 @@ export async function loadSharedRunContext(token, owner, name) {
       if (rulesetStopped || !catalog || !baseRef) return unverifiedRuleset()
       return resolveRulesetPolicy(catalog, baseRef)
     },
+  }
+}
+
+async function loadRuleset(token, owner, name, baseRef) {
+  try {
+    if (!baseRef) return unverifiedRuleset()
+    const { payload } = await github(token, `/repos/${owner}/${name}/rulesets`)
+    const summaries = Array.isArray(payload) ? payload : []
+    const branchRules = summaries.filter((ruleset) => ruleset.target === 'branch' && ruleset.enforcement === 'active')
+    const full = []
+    for (const summary of branchRules) {
+      if (halted()) return unverifiedRuleset()
+      const { payload: body } = await github(token, `/repos/${owner}/${name}/rulesets/${summary.id}`)
+      full.push(body)
+    }
+    return resolveRulesetPolicy(full, baseRef)
+  } catch (error) {
+    console.error(`Ruleset could not be verified: ${error instanceof Error ? error.message : String(error)}`)
+    return unverifiedRuleset()
   }
 }
 
@@ -1409,7 +1498,7 @@ export function withPublicationLock(key, fn) {
   return run
 }
 
-async function retireComments(client, ids, canonical, tally) {
+async function retireComments(client, ids, canonical, tally = null) {
   for (const id of ids) {
     if (halted()) return
     const body = retirementBody(canonical)
@@ -1474,9 +1563,9 @@ async function publishObservationLocked(client, number, state, tally = null) {
     return plan.reason
   }
 
-  const headBeforeCreate = await client.readHead(number)
-  if (halted() || headBeforeCreate !== state.head_sha) {
-    console.log(`#${number} superseded before create: live ${headBeforeCreate}`)
+  const headBeforeWrite = await client.readHead(number)
+  if (halted() || headBeforeWrite !== state.head_sha) {
+    console.log(`#${number} superseded before write: live ${headBeforeWrite}`)
     return 'stale-head'
   }
   listed = commentList(await client.listComments(number))
@@ -1486,30 +1575,43 @@ async function publishObservationLocked(client, number, state, tally = null) {
   comments = listed.comments
   plan = planPublication({
     observation: state,
-    currentHeadSha: headBeforeCreate,
+    currentHeadSha: headBeforeWrite,
     comments,
     cancelled: halted(),
   })
-  if (plan.action !== 'create') {
-    if (plan.action === 'skip' && plan.reason !== 'stale-head' && plan.reason !== 'cancelled') {
+  if (plan.action === 'skip') {
+    if (plan.reason !== 'stale-head' && plan.reason !== 'cancelled') {
       await retireComments(client, plan.retireIds, selectCanonicalMarker(comments)?.state || null, tally)
     }
-    console.log(`#${number} ${plan.reason} at create barrier`)
+    console.log(`#${number} ${plan.reason} at write barrier`)
     return plan.reason
   }
+  if (plan.action !== 'create' && plan.action !== 'update') {
+    console.log(`#${number} refused unexpected publish action ${plan.action}`)
+    return 'refused'
+  }
 
-  await client.createComment(number, renderReviewComment(state))
-  if (tally) tally.creates += 1
-  console.log(`Created review-state comment on #${number}`)
+  const body = renderReviewComment(state)
+  if (plan.action === 'update') {
+    if (!Number.isInteger(plan.commentId)) {
+      throw new Error('Update plan is missing a trusted canonical comment id')
+    }
+    await client.updateComment(plan.commentId, body)
+    console.log(`Updated review-state comment ${plan.commentId} on #${number}`)
+  } else {
+    await client.createComment(number, body)
+    if (tally) tally.creates += 1
+    console.log(`Created review-state comment on #${number}`)
+  }
 
   const headAfter = await client.readHead(number)
   const listedAfter = commentList(await client.listComments(number))
   if (listedAfter.stopped) {
-    console.log(`#${number} stop requested after create; existing markers were left in place`)
+    console.log(`#${number} stop requested after write; remaining markers were left in place`)
     return 'cancelled'
   }
   if (listedAfter.truncated) {
-    console.log(`#${number} comment list truncated after create; existing markers were left in place`)
+    console.log(`#${number} comment list truncated after write; remaining markers were left in place`)
     return 'comments-truncated'
   }
   const commentsAfter = listedAfter.comments
@@ -1520,7 +1622,7 @@ async function publishObservationLocked(client, number, state, tally = null) {
     console.log(`#${number} unpublished stale observation after head moved to ${headAfter}`)
     return 'stale-head'
   }
-  return 'published'
+  return plan.action === 'update' ? 'updated' : 'published'
 }
 
 export async function publishObservation(client, number, state, tally = null) {
@@ -1555,23 +1657,38 @@ export async function readWorkflowOnDefaultBranch(request, owner, name) {
       `/repos/${owner}/${name}/contents/.github/workflows/review-state.yml?ref=${encodeURIComponent(branch)}`,
       { tolerate: [404] },
     )
-    return file?.status === 200
+    if (file?.status !== 200) return false
+    const payload = file.payload
+    if (!payload || typeof payload.content !== 'string') return false
+    const encoding = payload.encoding || 'base64'
+    const text = encoding === 'base64'
+      ? Buffer.from(payload.content.replace(/\n/g, ''), 'base64').toString('utf8')
+      : payload.content
+    return workflowScheduleEnabled(text)
   } catch (error) {
     console.error(`Scheduled freshness could not be confirmed: ${error instanceof Error ? error.message : String(error)}`)
     return false
   }
 }
 
-async function updateOne(token, owner, name, number, context, tally) {
+async function updateOne(token, owner, name, number, context = null, tally = null) {
   if (halted()) return 'cancelled'
   const startedAt = new Date().toISOString()
-  const scheduleAvailable = context.scheduleAvailable === true
+  const scheduleAvailable = context
+    ? context.scheduleAvailable === true
+    : await readWorkflowOnDefaultBranch(
+      (path, options) => github(token, path, options),
+      owner,
+      name,
+    )
   if (halted()) return 'cancelled'
   const pull = await loadPullRequest(token, owner, name, number)
   if (halted()) return 'cancelled'
   const checks = await loadChecks(token, owner, name, pull.headSha)
   if (halted()) return 'cancelled'
-  const ruleset = context.rulesetFor(pull.baseRefName)
+  const ruleset = context
+    ? context.rulesetFor(pull.baseRefName)
+    : await loadRuleset(token, owner, name, pull.baseRefName)
   const observedAt = new Date().toISOString()
   const evaluationId = makeEvaluationId({
     runId: process.env.GITHUB_RUN_ID,
@@ -1683,18 +1800,35 @@ async function main() {
         unchanged: tally.unchanged,
         recovery: tally.recovery,
       }
-      const result = await updateOne(token, owner, name, number, context, tally)
-      if (result === 'comments-truncated') {
-        throw new Error('Issue comment pagination was truncated. No authoritative review state was selected.')
-      }
-      if (result === 'cancelled') return { ok: false }
-      return {
-        ok: true,
-        completedAt: new Date().toISOString(),
-        creates: tally.creates - before.creates,
-        retirements: tally.retirements - before.retirements,
-        unchanged: tally.unchanged - before.unchanged,
-        recovery: tally.recovery - before.recovery,
+      try {
+        const result = await updateOne(token, owner, name, number, context, tally)
+        if (result === 'comments-truncated') {
+          throw new Error('Issue comment pagination was truncated. No authoritative review state was selected.')
+        }
+        if (result === 'cancelled') return { ok: false }
+        return {
+          ok: true,
+          completedAt: new Date().toISOString(),
+          creates: tally.creates - before.creates,
+          retirements: tally.retirements - before.retirements,
+          unchanged: tally.unchanged - before.unchanged,
+          recovery: tally.recovery - before.recovery,
+        }
+      } catch (error) {
+        const status = error && typeof error === 'object' ? error.status : undefined
+        if (status === 401 || status === 403) {
+          console.error(`#${number} authorization failed (${status}); stopping remaining pull requests`)
+          process.exitCode = 1
+          requestStop()
+          throw error
+        }
+        if (status === 429) {
+          console.error(`#${number} rate limited after retries; stopping remaining pull requests`)
+          process.exitCode = 1
+          requestStop()
+          throw error
+        }
+        throw error
       }
     },
   })
@@ -1720,4 +1854,5 @@ export {
   NOISE_CHECK_NAMES,
   NOISE_REASON,
   EXPECTED_RULESET_NAME,
+  github,
 }
