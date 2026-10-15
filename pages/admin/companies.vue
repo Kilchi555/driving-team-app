@@ -303,7 +303,17 @@
                 </button>
               </div>
             </div>
-            <div v-if="companyInvoices.length === 0" class="text-center py-8 text-gray-400 text-sm">
+            <div v-if="invoiceLoadPhase === 'loading'" class="text-center py-8 text-gray-400 text-sm">
+              Rechnungen werden geladen…
+            </div>
+            <div v-else-if="invoiceLoadPhase === 'error'" class="text-center py-8 text-sm space-y-3">
+              <p class="text-red-600">{{ invoiceLoadError }}</p>
+              <button type="button" @click="loadCompanyInvoices"
+                class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">
+                Erneut versuchen
+              </button>
+            </div>
+            <div v-else-if="companyInvoices.length === 0" class="text-center py-8 text-gray-400 text-sm">
               Noch keine Rechnungen.
             </div>
             <div v-else class="space-y-2">
@@ -387,6 +397,12 @@ import { useTenantBranding } from '~/composables/useTenantBranding'
 import InvoiceCreateModal from '~/components/admin/InvoiceCreateModal.vue'
 import CorrespondenceComposeModal from '~/components/admin/CorrespondenceComposeModal.vue'
 import { companyNameMatchesSearch, flattenCompanyName } from '~/utils/billing-address-map'
+import {
+  applyCompanyInvoiceResult,
+  companyInvoiceLoadErrorMessage,
+  companyInvoicesPath,
+  startCompanyInvoiceRequest,
+} from '~/utils/company-invoice-load'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Firmenkunden' })
@@ -550,16 +566,46 @@ async function removeUser(user: any) {
 
 // ── Rechnungen ───────────────────────────────────────────────────────────────
 const companyInvoices = ref<any[]>([])
+const invoiceLoadGeneration = ref(0)
+const invoiceLoadPhase = ref<'loading' | 'ready' | 'error'>('loading')
+const invoiceLoadError = ref('')
 const showInvoiceCreateModal = ref(false)
 const showCorrespondenceCompose = ref(false)
 
 async function loadCompanyInvoices() {
-  if (!editingCompany.value?.id) return
+  const companyId = editingCompany.value?.id
+  if (!companyId) return
+  const generation = ++invoiceLoadGeneration.value
+  const started = startCompanyInvoiceRequest(companyId, generation)
+  invoiceLoadPhase.value = started.view.phase
+  invoiceLoadError.value = ''
+  companyInvoices.value = []
+  const current = () => ({
+    companyId: editingCompany.value?.id ?? null,
+    generation: invoiceLoadGeneration.value,
+  })
   try {
-    const res: any = await $fetch('/api/admin/invoices/list', { query: { company_id: editingCompany.value.id } })
-    companyInvoices.value = res.invoices || []
-  } catch {
+    const res: any = await $fetch(companyInvoicesPath(companyId))
+    const invoices = Array.isArray(res?.invoices) ? res.invoices : null
+    const next = applyCompanyInvoiceResult(
+      started.request,
+      current(),
+      invoices ? { ok: true, invoices } : { ok: false, error: companyInvoiceLoadErrorMessage(null) },
+    )
+    if (!next) return
+    companyInvoices.value = next.invoices
+    invoiceLoadPhase.value = next.phase
+    invoiceLoadError.value = next.error
+  } catch (err: unknown) {
+    const next = applyCompanyInvoiceResult(
+      started.request,
+      current(),
+      { ok: false, error: companyInvoiceLoadErrorMessage(err) },
+    )
+    if (!next) return
     companyInvoices.value = []
+    invoiceLoadPhase.value = 'error'
+    invoiceLoadError.value = next.error
   }
 }
 
