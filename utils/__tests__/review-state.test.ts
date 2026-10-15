@@ -16,6 +16,7 @@ import {
   formatRunSummary,
   githubPaginated,
   interpretPublishedState,
+  isStoppingGitHubStatus,
   listOpenBasePullNumbers,
   listOpenPullNumbers,
   loadRulesetCatalog,
@@ -23,6 +24,7 @@ import {
   observationsSemanticallyEqual,
   planPublication,
   planReconcile,
+  probeOrder,
   processingStamp,
   publishObservation,
   readWorkflowOnDefaultBranch,
@@ -2300,5 +2302,147 @@ describe('bounded fair processing', () => {
     } finally {
       globalThis.fetch = originalFetch
     }
+  })
+
+  it('treats 401, 403, and 429 as stopping statuses without weakening 5xx retries', () => {
+    expect(isStoppingGitHubStatus(401)).toBe(true)
+    expect(isStoppingGitHubStatus(403)).toBe(true)
+    expect(isStoppingGitHubStatus(429)).toBe(true)
+    expect(isStoppingGitHubStatus(500)).toBe(false)
+    expect(shouldRetryGitHubStatus(429)).toBe(true)
+    expect(shouldRetryGitHubStatus(503)).toBe(true)
+    expect(shouldRetryGitHubStatus(401)).toBe(false)
+  })
+
+  it('builds a fair probe order from a newest-first GitHub list', () => {
+    expect(probeOrder([50, 10, 40, 20], { rotationKey: '0' })).toEqual([10, 20, 40, 50])
+    expect(probeOrder([50, 10, 40, 20], { rotationKey: '2' })).toEqual([40, 50, 10, 20])
+  })
+
+  it('stops probing after 401 and does not list later pull requests', async () => {
+    clearStopForTests()
+    process.exitCode = undefined
+    const probed: number[] = []
+    const unauthorized = Object.assign(new Error('unauthorized'), { status: 401 })
+    const pass = await executeReviewPass({
+      numbers: [30, 10, 20],
+      budgetMs: 100,
+      probeReserveMs: 0,
+      startedAtMs: 0,
+      now: () => 0,
+      rotationKey: '0',
+      probe: async (number) => {
+        probed.push(number)
+        if (number === 10) throw unauthorized
+        return { stamp: null, unknown: false }
+      },
+      processOne: async () => ({ ok: true, completedAt: '2026-10-15T04:00:00.000Z' }),
+    })
+    expect(probed).toEqual([10])
+    expect(pass.stats.failed).toBe(1)
+    expect(pass.stats.processed).toBe(0)
+    expect(pass.deferred.sort((a, b) => a - b)).toEqual([20, 30])
+    expect(pass.stats.complete).toBe(false)
+    expect(process.exitCode).toBe(1)
+    clearStopForTests()
+    process.exitCode = undefined
+  })
+
+  it('stops probing after 403 and after exhausted 429', async () => {
+    for (const status of [403, 429]) {
+      clearStopForTests()
+      process.exitCode = undefined
+      const probed: number[] = []
+      const err = Object.assign(new Error(`status ${status}`), { status })
+      const pass = await executeReviewPass({
+        numbers: [5, 1, 2],
+        budgetMs: 100,
+        probeReserveMs: 0,
+        startedAtMs: 0,
+        now: () => 0,
+        rotationKey: '0',
+        probe: async (number) => {
+          probed.push(number)
+          if (number === 1) throw err
+          return { stamp: null, unknown: false }
+        },
+        processOne: async () => ({ ok: true }),
+      })
+      expect(probed).toEqual([1])
+      expect(pass.stats.failed).toBe(1)
+      expect(pass.deferred.sort((a, b) => a - b)).toEqual([2, 5])
+      expect(process.exitCode).toBe(1)
+      clearStopForTests()
+      process.exitCode = undefined
+    }
+  })
+
+  it('under a probe budget prefers older numbers from a newest-first GitHub list', async () => {
+    clearStopForTests()
+    const probed: number[] = []
+    let clock = 0
+    // Reserve processing budget so probe cost alone truncates the window.
+    const pass = await executeReviewPass({
+      numbers: [50, 40, 30, 20, 10],
+      budgetMs: 20,
+      probeReserveMs: 8,
+      startedAtMs: 0,
+      now: () => clock,
+      rotationKey: '0',
+      probe: async (number) => {
+        clock += 4
+        probed.push(number)
+        return { stamp: null, unknown: false }
+      },
+      processOne: async () => ({ ok: true, completedAt: '2026-10-15T05:00:00.000Z', creates: 0 }),
+    })
+    expect(probed).toEqual([10, 20, 30])
+    expect(pass.stats.processed).toBe(3)
+    expect(pass.deferred.sort((a, b) => a - b)).toEqual([40, 50])
+    clearStopForTests()
+  })
+
+  it('rotates the probe window across runs so deferred numbers are eventually probed', async () => {
+    clearStopForTests()
+    const probedFirst: number[] = []
+    const probedSecond: number[] = []
+    let clock = 0
+    const first = await executeReviewPass({
+      numbers: [50, 40, 30, 20, 10],
+      budgetMs: 20,
+      probeReserveMs: 8,
+      startedAtMs: 0,
+      now: () => clock,
+      rotationKey: '0',
+      probe: async (number) => {
+        clock += 4
+        probedFirst.push(number)
+        return { stamp: null, unknown: false }
+      },
+      processOne: async () => ({ ok: true, completedAt: '2026-10-15T06:00:00.000Z' }),
+    })
+    expect(probedFirst).toEqual([10, 20, 30])
+    expect(first.stats.processed).toBe(3)
+    expect(first.deferred).toEqual([40, 50])
+
+    clock = 0
+    const second = await executeReviewPass({
+      numbers: [50, 40, 30, 20, 10],
+      budgetMs: 20,
+      probeReserveMs: 8,
+      startedAtMs: 0,
+      now: () => clock,
+      rotationKey: '3',
+      probe: async (number) => {
+        clock += 4
+        probedSecond.push(number)
+        return { stamp: null, unknown: false }
+      },
+      processOne: async () => ({ ok: true, completedAt: '2026-10-15T06:01:00.000Z' }),
+    })
+    expect(probedSecond).toEqual([40, 50, 10])
+    expect(second.stats.processed).toBe(3)
+    expect(second.deferred.sort((a, b) => a - b)).toEqual([20, 30])
+    clearStopForTests()
   })
 })

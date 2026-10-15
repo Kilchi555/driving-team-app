@@ -725,8 +725,28 @@ export function shouldRetryGitHubStatus(status) {
   return status === 429 || status === 502 || status === 503 || status === 504
 }
 
+/** Auth and exhausted rate limits must stop the remaining work set. */
+export function isStoppingGitHubStatus(status) {
+  return status === 401 || status === 403 || status === 429
+}
+
 function sleep(ms, sleepImpl = (delay) => new Promise((resolve) => setTimeout(resolve, delay))) {
   return sleepImpl(ms)
+}
+
+/**
+ * Build a fair probe sequence. GitHub lists open PRs newest-first; walking that
+ * prefix under a budget starves older PRs. Sorting by number alone would then
+ * starve higher numbers that never get probed. Rotate a stable ascending list
+ * by `rotationKey` (default: GITHUB_RUN_ID) so successive cron ticks advance.
+ */
+export function probeOrder(numbers, { rotationKey = process.env.GITHUB_RUN_ID || '0' } = {}) {
+  const sorted = [...numbers].sort((left, right) => left - right)
+  if (sorted.length <= 1) return sorted
+  const parsed = Number.parseInt(String(rotationKey), 10)
+  const offset = Number.isFinite(parsed) ? Math.abs(parsed) % sorted.length : 0
+  if (offset === 0) return sorted
+  return sorted.slice(offset).concat(sorted.slice(0, offset))
 }
 
 
@@ -784,6 +804,7 @@ export async function executeReviewPass({
   probeReserveMs,
   probe,
   processOne,
+  rotationKey,
 }) {
   const reserve = probeReserveMs ?? Math.min(30_000, Math.floor(budgetMs / 10))
   const stats = {
@@ -803,13 +824,16 @@ export async function executeReviewPass({
   }
   const ranked = []
   const deferred = []
+  const ordered = rotationKey === undefined
+    ? probeOrder(numbers)
+    : probeOrder(numbers, { rotationKey })
   let index = 0
-  for (; index < numbers.length; index += 1) {
+  for (; index < ordered.length; index += 1) {
     if (halted()) break
     const elapsed = now() - startedAtMs
     if (elapsed >= budgetMs) break
     if (ranked.length > 0 && elapsed >= budgetMs - reserve) break
-    const number = numbers[index]
+    const number = ordered[index]
     try {
       const probed = await probe(number)
       ranked.push({
@@ -819,10 +843,19 @@ export async function executeReviewPass({
       })
     } catch (error) {
       stats.failed += 1
+      const status = error && typeof error === 'object' ? error.status : undefined
       console.error(`#${number} failed: ${error instanceof Error ? error.message : String(error)}`)
+      if (isStoppingGitHubStatus(status)) {
+        console.error(`#${number} stopping remaining pull requests after ${status}`)
+        process.exitCode = 1
+        requestStop()
+        // Advance past the failed PR so it is not also listed as deferred.
+        index += 1
+        break
+      }
     }
   }
-  for (let rest = index; rest < numbers.length; rest += 1) deferred.push(numbers[rest])
+  for (let rest = index; rest < ordered.length; rest += 1) deferred.push(ordered[rest])
   ranked.sort(compareProcessingOrder)
   for (const item of ranked) {
     if (halted()) {
@@ -850,7 +883,13 @@ export async function executeReviewPass({
       stats.recovery += result.recovery || 0
     } catch (error) {
       stats.failed += 1
+      const status = error && typeof error === 'object' ? error.status : undefined
       console.error(`#${item.number} failed: ${error instanceof Error ? error.message : String(error)}`)
+      if (isStoppingGitHubStatus(status)) {
+        console.error(`#${item.number} stopping remaining pull requests after ${status}`)
+        process.exitCode = 1
+        requestStop()
+      }
     }
   }
   stats.deferred = deferred.length
