@@ -9,8 +9,9 @@
 |------|--------|
 | PR | https://github.com/Kilchi555/driving-team-app/pull/431 (draft) |
 | Prior tip | `4569491a` |
-| Base | `0770ad2e` |
-| Final HEAD | `90f2c8cc666d5beb7f7b3212c9d2c8cfd0628dc7` |
+| Base | `0770ad2e` (local; remote main may be ahead) |
+| Remediation commit | `c5ee5bff0b9a722acd3f63c26d10efe265932929` |
+| PR headOid | authoritative via GitHub after push (docs tip may trail by handoff-only commits) |
 
 ## Changes (minimal)
 
@@ -52,7 +53,7 @@ npm run lint
 
 ## CI
 
-Required Actions on final head: report after push (subscribe). Prior tip `4569491a` had Test and lint + E2E green.
+Required Actions (`Test and lint`, `E2E login`) must be green on the exact PR headOid after this push. Prior tip `4569491a` had both green.
 
 ## Non-actions
 
