@@ -205,3 +205,160 @@ export async function deactivateTenantUser(opts: {
 
   return { success: true }
 }
+
+/**
+ * Server-side mirror of `canManageUser` in composables/useAdminHierarchy.ts.
+ * The database caller row is the authority, not a tenant id from the request body.
+ */
+export function evaluateUserManagement(
+  caller: LifecycleUser,
+  target: LifecycleUser,
+): { ok: true } | { ok: false; statusCode: 403; statusMessage: string } {
+  if (caller.is_active === false || caller.deleted_at) {
+    return { ok: false, statusCode: 403, statusMessage: 'Forbidden' }
+  }
+
+  if (caller.role === 'super_admin') return { ok: true }
+
+  if (caller.role !== 'admin' || !caller.tenant_id || caller.tenant_id !== target.tenant_id) {
+    return { ok: false, statusCode: 403, statusMessage: 'Forbidden: Tenant mismatch' }
+  }
+
+  if (caller.is_primary_admin === true) {
+    if (target.is_primary_admin === true && target.id !== caller.id) {
+      return {
+        ok: false,
+        statusCode: 403,
+        statusMessage: 'Der Hauptadministrator eines anderen Kontos kann hier nicht geändert werden',
+      }
+    }
+    return { ok: true }
+  }
+
+  if (target.role === 'staff' || target.role === 'client') return { ok: true }
+
+  return { ok: false, statusCode: 403, statusMessage: 'Dieser Benutzer kann nicht verwaltet werden' }
+}
+
+export type ActiveStatusResult = {
+  success: true
+  data: {
+    id: string
+    is_active: boolean
+    deleted_at: string | null
+  }
+}
+
+/**
+ * Ordinary active/inactive toggle.
+ * Writes only `is_active`. Never clears `deleted_at` or deletion metadata,
+ * and never reactivates a deleted account.
+ */
+export async function setUserActiveStatus(opts: {
+  supabase: SupabaseClient
+  caller: LifecycleUser
+  targetUserId: string
+  nextActive: boolean
+  authUserId?: string | null
+  ipAddress?: string | null
+}): Promise<ActiveStatusResult> {
+  if (!opts.targetUserId) {
+    throw createError({ statusCode: 400, statusMessage: 'Missing required field: user_id' })
+  }
+  if (typeof opts.nextActive !== 'boolean') {
+    throw createError({ statusCode: 400, statusMessage: 'is_active muss true oder false sein' })
+  }
+
+  const { data: target, error } = await opts.supabase
+    .from('users')
+    .select(`${TARGET_COLS}, deletion_reason`)
+    .eq('id', opts.targetUserId)
+    .maybeSingle()
+
+  if (error) {
+    throw createError({ statusCode: 500, statusMessage: 'Status konnte nicht gespeichert werden' })
+  }
+  if (!target) {
+    throw createError({ statusCode: 404, statusMessage: 'User not found' })
+  }
+
+  const management = evaluateUserManagement(opts.caller, target as LifecycleUser)
+  if (!management.ok) {
+    throw createError({ statusCode: management.statusCode, statusMessage: management.statusMessage })
+  }
+
+  if (target.deleted_at) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'Gelöschte Benutzer können über die Statusaktion nicht geändert werden',
+    })
+  }
+
+  if (!opts.nextActive && target.role === 'admin') {
+    const activeAdminCount = await countActiveAdmins(opts.supabase, target.tenant_id)
+    const decision = evaluateDeactivation({
+      caller: opts.caller,
+      target: target as LifecycleUser,
+      activeAdminCount,
+    })
+    if (!decision.ok) {
+      throw createError({ statusCode: decision.statusCode, statusMessage: decision.statusMessage })
+    }
+  }
+
+  let storedActive = target.is_active === true
+  if (storedActive !== opts.nextActive) {
+    let query = opts.supabase
+      .from('users')
+      .update({ is_active: opts.nextActive })
+      .eq('id', target.id)
+
+    query = target.tenant_id
+      ? query.eq('tenant_id', target.tenant_id)
+      : query.is('tenant_id', null)
+
+    const { data: updated, error: updateError } = await query
+      .is('deleted_at', null)
+      .select('id, is_active, deleted_at')
+      .maybeSingle()
+
+    if (updateError) {
+      throw createError({ statusCode: 500, statusMessage: 'Status konnte nicht gespeichert werden' })
+    }
+    if (!updated || updated.deleted_at || updated.is_active !== opts.nextActive) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Gelöschte Benutzer können über die Statusaktion nicht geändert werden',
+      })
+    }
+    storedActive = updated.is_active === true
+  }
+
+  if (!opts.nextActive && target.auth_user_id) {
+    await revokeAuthSessions(opts.supabase, target.auth_user_id)
+  }
+
+  await logAudit({
+    user_id: opts.caller.id,
+    auth_user_id: opts.authUserId || undefined,
+    action: 'user_active_status_changed',
+    resource_type: 'user',
+    resource_id: target.id,
+    status: 'success',
+    ip_address: opts.ipAddress || undefined,
+    tenant_id: target.tenant_id || undefined,
+    details: {
+      is_active: storedActive,
+      target_role: target.role,
+    },
+  })
+
+  return {
+    success: true,
+    data: {
+      id: target.id,
+      is_active: storedActive,
+      deleted_at: null,
+    },
+  }
+}
