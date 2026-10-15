@@ -1119,21 +1119,21 @@ describe('freshness contract', () => {
     }, 'Kilchi555', 'driving-team-app')
     expect(present).toBe(true)
 
-    const containedYaml = readFileSync('.github/workflows/review-state.yml', 'utf8')
-    const contained = await readWorkflowOnDefaultBranch(async (path) => {
+    const liveYaml = readFileSync('.github/workflows/review-state.yml', 'utf8')
+    const live = await readWorkflowOnDefaultBranch(async (path) => {
       if (path.includes('/contents/')) {
         return {
           status: 200,
           payload: {
             type: 'file',
             encoding: 'base64',
-            content: Buffer.from(containedYaml).toString('base64'),
+            content: Buffer.from(liveYaml).toString('base64'),
           },
         }
       }
       return { status: 200, payload: { default_branch: 'main' } }
     }, 'Kilchi555', 'driving-team-app')
-    expect(contained).toBe(false)
+    expect(live).toBe(true)
   })
 })
 
@@ -1222,16 +1222,17 @@ describe('markdown cell escaping', () => {
 })
 
 describe('review-state workflow safety', () => {
-  it('asks only for read and comment permissions and keeps the schedule contained', () => {
+  it('asks only for read and comment permissions and keeps the documented schedule', () => {
     const workflow = readFileSync('.github/workflows/review-state.yml', 'utf8')
     expect(workflow).toContain('contents: read')
     expect(workflow).toContain('pull-requests: write')
     expect(workflow).toContain('checks: read')
     expect(workflow).toContain('persist-credentials: false')
-    expect(workflow).toContain('INCIDENT CONTAINMENT')
+    expect(workflow).toContain("cron: '*/15 * * * *'")
+    expect(workflow).toContain('timeout-minutes: 8')
     expect(workflow).toContain('workflow_dispatch:')
-    expect(workflowScheduleEnabled(workflow)).toBe(false)
-    expect(workflow).not.toMatch(/^  schedule:/m)
+    expect(workflowScheduleEnabled(workflow)).toBe(true)
+    expect(workflow).toMatch(/^ {2}schedule:/m)
     expect(workflow).toContain('group: simy-review-state')
     expect(workflow).toContain('cancel-in-progress: false')
     const jobsAt = workflow.indexOf('\njobs:\n')
@@ -2052,6 +2053,6 @@ describe('idempotent publication and API failure policy', () => {
       "  #   - cron: '*/15 * * * *'",
       '  workflow_dispatch:',
     ].join('\n'))).toBe(false)
-    expect(workflowScheduleEnabled(readFileSync('.github/workflows/review-state.yml', 'utf8'))).toBe(false)
+    expect(workflowScheduleEnabled(readFileSync('.github/workflows/review-state.yml', 'utf8'))).toBe(true)
   })
 })
