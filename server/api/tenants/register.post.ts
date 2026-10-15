@@ -1,16 +1,23 @@
 // server/api/tenants/register.post.ts
-// ✅ SECURITY HARDENED: Rate limiting, XSS protection, audit logging
+// ✅ SECURITY HARDENED: Rate limiting, XSS protection, audit logging, email verification
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
 import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
-import { generateRegistrationToken } from '~/server/utils/registration-token'
 import { resolveBusinessType, applyCategoryAndEventTypeDefaults, applyEvaluationDefaults, resolveWorkingDaysTemplate } from '~/server/utils/business-type-presets'
 import { isReservedSlug } from '~/server/utils/reserved-slugs'
 import { SAAS_TRIAL_DAYS } from '~/utils/saas-trial'
 import { defaultVatRateForBusinessType } from '~/server/utils/invoice-vat'
+import { getClientIP } from '~/server/utils/ip-utils'
+import { tenantRegisterRequiresHcaptcha, verifyHCaptcha } from '~/server/utils/hcaptcha'
+import {
+  issueRegistrationEmailToken,
+  normalizeRegistrationEmail,
+  REGISTRATION_STATUS_PENDING,
+  sendRegistrationVerificationEmail,
+} from '~/server/utils/registration-email-verification'
 
 interface TenantRegistrationData {
   name: string
@@ -64,12 +71,14 @@ interface RegistrationResponse {
 
 export default defineEventHandler(async (event): Promise<RegistrationResponse> => {
   const startTime = Date.now()
+  // Captured for failure audits (never log secrets)
+  let attemptedSlug: string | undefined
+  let attemptedEmailMasked: string | undefined
+  let ipAddress = '0.0.0.0'
+
   try {
-    // ✅ LAYER 1: Get client IP for rate limiting
-    const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
-                      getHeader(event, 'x-real-ip') || 
-                      event.node.req.socket.remoteAddress || 
-                      'unknown'
+    // ✅ LAYER 1: Spoof-resistant client IP
+    ipAddress = getClientIP(event)
 
     // Nur POST erlaubt
     if (event.method !== 'POST') {
@@ -79,7 +88,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       })
     }
 
-    // ✅ LAYER 2: Rate limiting (3 tenant registrations per hour per IP)
+    // ✅ LAYER 2: Rate limiting (3 tenant registrations per hour per IP) — fail-closed
     const rateLimit = await checkRateLimit(ipAddress, 'tenant_register', 3, 3600 * 1000)
     if (!rateLimit.allowed) {
       logger.warn('⚠️ Rate limit exceeded for tenant registration:', ipAddress)
@@ -144,6 +153,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     let logoSquareFile: File | null = null
     let logoBuffer: Buffer | null = null
     let logoSquareBuffer: Buffer | null = null
+    let captchaToken: string | undefined
 
     // FormData-Felder verarbeiten
     logger.debug('🔍 Processing FormData fields:')
@@ -162,6 +172,8 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
           type: field.type || 'image/webp'
         })
         logger.debug(`  ✅ Processed square logo file: ${field.filename}`)
+      } else if (field.name === 'captcha_token' && field.data) {
+        captchaToken = field.data.toString()
       } else if (field.name && field.data) {
         // Text-Felder
         const value = field.data.toString()
@@ -177,15 +189,51 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     // Logo-Files zu data hinzufügen
     data.logo_file = logoFile
     data.logo_square_file = logoSquareFile
+    attemptedSlug = data.slug?.trim() || undefined
 
     logger.debug('🏢 Starting tenant registration for:', data.name)
-    logger.debug('📊 Final data object:', JSON.stringify(data, null, 2))
+
+    // ✅ LAYER 2b: hCaptcha when configured (existing HCAPTCHA_* secrets)
+    if (tenantRegisterRequiresHcaptcha()) {
+      const captcha = await verifyHCaptcha(captchaToken, {
+        requireConfigured: true,
+        remoteip: ipAddress,
+      })
+      if (!captcha.ok) {
+        logger.warn('⚠️ Tenant registration captcha failed:', captcha.reason)
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Captcha-Überprüfung fehlgeschlagen. Bitte erneut versuchen.',
+        })
+      }
+    }
 
     // ✅ LAYER 3: Email validation (format + disposable check)
     if (!validateEmail(data.contact_email).valid) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Ungültige E-Mail-Adresse'
+      })
+    }
+
+    const normalizedEmail = normalizeRegistrationEmail(data.contact_email)
+    data.contact_email = normalizedEmail
+    attemptedEmailMasked = normalizedEmail
+      ? `${normalizedEmail.slice(0, 2)}***@${normalizedEmail.split('@')[1] || ''}`
+      : undefined
+
+    // Layered rate limit by normalized email (same budget as IP)
+    const emailRate = await checkRateLimit(
+      `email:${normalizedEmail}`,
+      'tenant_register_email',
+      3,
+      3600 * 1000,
+      normalizedEmail
+    )
+    if (!emailRate.allowed) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: `Zu viele Registrierungen. Bitte warten Sie ${emailRate.retryAfter} Sekunden.`,
       })
     }
 
@@ -347,11 +395,14 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         timezone: data.timezone || 'Europe/Zurich',
         currency: 'CHF',
         language: data.language || 'de',
-        is_active: true,
+        // Inactive until contact email is verified (abuse protection).
+        is_active: false,
         is_trial: true,
         trial_ends_at: trialEndsAt.toISOString(),
         subscription_plan: 'trial',
         subscription_status: 'active',
+        registration_status: REGISTRATION_STATUS_PENDING,
+        email_verified_at: null,
         // Neue Felder
         uid_number:    data.uid_number?.trim()    || null,
         qr_iban:       data.qr_iban?.trim()       || null,
@@ -739,7 +790,27 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     // the SMS invite / Wallee setup that only exist by then), so it's kept
     // as the single source and this earlier duplicate was removed.
 
-    // ✅ LAYER 5: Audit logging - Success
+    // Issue email verification (registration_token is NOT returned until verify succeeds)
+    let verificationEmailSent = false
+    try {
+      const { rawToken } = await issueRegistrationEmailToken({
+        supabase,
+        tenantId: newTenant.id,
+        email: newTenant.contact_email,
+        ipAddress,
+      })
+      await sendRegistrationVerificationEmail({
+        to: newTenant.contact_email,
+        tenantName: newTenant.name,
+        rawToken,
+      })
+      verificationEmailSent = true
+    } catch (verifyMailErr: any) {
+      logger.error('TenantRegister', 'Registration verification email failed', verifyMailErr)
+      // Tenant stays inactive / pending. Do not mark verified. Client may resend.
+    }
+
+    // ✅ LAYER 5: Audit logging - Success (pending verification)
     await logAudit({
       action: 'tenant_registration',
       tenant_id: newTenant.id,
@@ -755,13 +826,34 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         business_type: newTenant.business_type,
         website_only: !!newTenant.website_only,
         has_logo: !!logoUrl,
-        duration_ms: Date.now() - startTime
+        duration_ms: Date.now() - startTime,
+        registration_status: REGISTRATION_STATUS_PENDING,
+        requires_email_verification: true,
+        verification_email_sent: verificationEmailSent,
       }
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
-    const response = {
+    if (!verificationEmailSent) {
+      // Include tenant_id so the client can surface the verify-wait step and resend.
+      // Still omit registration_token (tenant remains inactive / unverified).
+      throw createError({
+        statusCode: 503,
+        statusMessage:
+          'Registrierung gestartet, aber die Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte erneut senden.',
+        data: {
+          tenant_id: newTenant.id,
+          contact_email: newTenant.contact_email,
+          slug: newTenant.slug,
+          requires_email_verification: true,
+          verification_email_sent: false,
+        },
+      })
+    }
+
+    return {
       success: true,
-      registration_token: generateRegistrationToken(newTenant.id),
+      requires_email_verification: true,
+      // Intentionally omit registration_token until email is verified.
       tenant: {
         id: newTenant.id,
         name: newTenant.name,
@@ -771,18 +863,34 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         logo_url: newTenant.logo_url,
         primary_color: newTenant.primary_color,
         secondary_color: newTenant.secondary_color,
-        website_only: !!newTenant.website_only
+        website_only: !!newTenant.website_only,
+        registration_status: REGISTRATION_STATUS_PENDING,
+        is_active: false,
       }
     }
-    
-    logger.debug('📤 Sending response:', JSON.stringify(response, null, 2))
-    return response
 
   } catch (error: any) {
     console.error('❌ Tenant registration error:', error)
 
-    // ✅ LAYER 5: Audit logging - Failure
-    const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 'unknown'
+    // Propagate rate limits and hard HTTP errors to the client as real status codes
+    const statusCode = Number(error?.statusCode || 0)
+    if (statusCode === 429 || statusCode === 503) {
+      await logAudit({
+        action: 'tenant_registration',
+        resource_type: 'tenant',
+        ip_address: ipAddress,
+        status: 'failed',
+        error_message: error.statusMessage || error.message,
+        details: {
+          slug: attemptedSlug || null,
+          contact_email_masked: attemptedEmailMasked || null,
+          duration_ms: Date.now() - startTime,
+          failure_class: statusCode === 429 ? 'rate_limited' : 'verification_email_failed',
+        }
+      }).catch(() => {})
+      throw error
+    }
+
     await logAudit({
       action: 'tenant_registration',
       resource_type: 'tenant',
@@ -790,9 +898,10 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       status: 'failed',
       error_message: error.statusMessage || error.message,
       details: {
-        slug: (error as any).slug,
-        contact_email: (error as any).contact_email,
-        duration_ms: Date.now() - startTime
+        slug: attemptedSlug || (error as any).slug || null,
+        contact_email_masked: attemptedEmailMasked || null,
+        duration_ms: Date.now() - startTime,
+        failure_class: statusCode >= 400 && statusCode < 500 ? 'client_error' : 'server_error',
       }
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
     

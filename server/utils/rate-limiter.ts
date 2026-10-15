@@ -1,135 +1,127 @@
 /**
- * Rate limiter using Supabase for persistent storage
- * This allows rate limits to work across multiple server instances
- * and be queryable for admin dashboard analytics
- * 
- * Features:
- * - Persistent storage in Supabase for cross-instance consistency
- * - In-memory cache for performance
- * - Exponential Backoff: repeated blocks increase wait time
+ * Rate limiter using Supabase for persistent, cross-instance enforcement.
+ *
+ * Abuse-sensitive operations FAIL CLOSED when the backing store is unavailable
+ * or when persistence fails. Inserts are awaited (no fire-and-forget).
+ * Registration/admin abuse ops require SQL `consume_rate_limit` (advisory-locked).
+ * Process-local memory is NEVER used as a security boundary for those ops.
+ * Login/register/password_reset fail closed when the store is unavailable, but
+ * may use awaited insert-then-count when the atomic RPC is not yet migrated
+ * (legacy CHECK still allows those three operation names).
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-// In-memory cache for performance (5 minute TTL)
-const requestCache = new Map<string, { count: number; resetTime: number; backoffLevel?: number }>()
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+/** Soft UX cache only — never authoritative for FAIL_CLOSED_OPERATIONS. */
+const softDenyHint = new Map<string, { resetTime: number }>()
+const CACHE_TTL = 5 * 60 * 1000
 
-// Rate limit configurations for different operations
-const LIMITS = {
-  register: { maxRequests: 5, windowMs: 60 * 1000 }, // 5 per minute
-  password_reset: { maxRequests: 5, windowMs: 15 * 60 * 1000 }, // 5 per 15 minutes
-  login: { maxRequests: 10, windowMs: 60 * 1000 }, // 10 per minute
-  process_payment: { maxRequests: 20, windowMs: 60 * 1000 }, // 20 per minute
-  customer_get_payment_page_data: { maxRequests: 30, windowMs: 60 * 1000 }, // 30 per minute
-  settle_and_email_payment: { maxRequests: 10, windowMs: 60 * 1000 }, // 10 per minute
-  confirm_cash_payment: { maxRequests: 30, windowMs: 60 * 1000 }, // 30 per minute
-  save_discount: { maxRequests: 1000, windowMs: 60 * 1000 }, // 1000 per minute - testing (reduce later)
-  cancel_appointment: { maxRequests: 100, windowMs: 60 * 60 * 1000 }, // 100 per hour (staff can cancel many appointments)
-  cancel_staff: { maxRequests: 100, windowMs: 60 * 60 * 1000 }, // 100 per hour (staff cancellations)
-  cancel_customer: { maxRequests: 50, windowMs: 60 * 60 * 1000 }, // 50 per hour (customer cancellations)
-  use_credit_for_appointment: { maxRequests: 50, windowMs: 60 * 60 * 1000 }, // ✅ NEW: 50 per hour
-  booking_proposal: { maxRequests: 5, windowMs: 60 * 60 * 1000 }, // 5 per hour per IP
-  booking_inquiry: { maxRequests: 5, windowMs: 60 * 60 * 1000 }, // 5 per hour per IP
+const LIMITS: Record<string, { maxRequests: number; windowMs: number }> = {
+  register: { maxRequests: 5, windowMs: 60 * 1000 },
+  password_reset: { maxRequests: 5, windowMs: 15 * 60 * 1000 },
+  login: { maxRequests: 10, windowMs: 60 * 1000 },
+  process_payment: { maxRequests: 20, windowMs: 60 * 1000 },
+  customer_get_payment_page_data: { maxRequests: 30, windowMs: 60 * 1000 },
+  settle_and_email_payment: { maxRequests: 10, windowMs: 60 * 1000 },
+  confirm_cash_payment: { maxRequests: 30, windowMs: 60 * 1000 },
+  save_discount: { maxRequests: 1000, windowMs: 60 * 1000 },
+  cancel_appointment: { maxRequests: 100, windowMs: 60 * 60 * 1000 },
+  cancel_staff: { maxRequests: 100, windowMs: 60 * 60 * 1000 },
+  cancel_customer: { maxRequests: 50, windowMs: 60 * 60 * 1000 },
+  use_credit_for_appointment: { maxRequests: 50, windowMs: 60 * 60 * 1000 },
+  booking_proposal: { maxRequests: 5, windowMs: 60 * 60 * 1000 },
+  booking_inquiry: { maxRequests: 5, windowMs: 60 * 60 * 1000 },
+  tenant_register: { maxRequests: 3, windowMs: 60 * 60 * 1000 },
+  tenant_register_email: { maxRequests: 3, windowMs: 60 * 60 * 1000 },
+  create_admin: { maxRequests: 5, windowMs: 60 * 60 * 1000 },
+  verify_registration_email: { maxRequests: 20, windowMs: 60 * 60 * 1000 },
+  resend_registration_verification: { maxRequests: 5, windowMs: 60 * 60 * 1000 },
 }
 
-// Exponential Backoff multipliers (in minutes)
-// After N consecutive blocks, wait time = baseWindow * multiplier[N]
-const BACKOFF_MULTIPLIERS = [
-  1,    // 1st block: 1x (1 minute)
-  2,    // 2nd block: 2x (2 minutes)
-  5,    // 3rd block: 5x (5 minutes)
-  15,   // 4th block: 15x (15 minutes)
-  60,   // 5th block: 60x (1 hour)
-  240,  // 6th+ block: 240x (4 hours)
-]
+/**
+ * Abuse-sensitive registration / admin-creation ops.
+ * Require the atomic `consume_rate_limit` RPC — never fall back to racy
+ * insert-then-count (that path is what allowed the historical CHECK fail-open).
+ */
+export const REQUIRE_ATOMIC_RPC_OPERATIONS = new Set([
+  'tenant_register',
+  'tenant_register_email',
+  'create_admin',
+  'verify_registration_email',
+  'resend_registration_verification',
+  'rollback_registration',
+  'staff_register',
+])
 
-let supabaseClient: any = null
+/**
+ * Deny when Supabase credentials are missing or the durable store hard-fails.
+ * Includes login/register/password_reset so auth cannot silently bypass limits
+ * when the store is completely unavailable.
+ *
+ * Intentional: login/register/password_reset may use awaited insert-then-count
+ * when `consume_rate_limit` is not yet migrated (those ops are valid under the
+ * legacy three-value CHECK). Registration ops above must not.
+ */
+export const FAIL_CLOSED_OPERATIONS = new Set([
+  ...REQUIRE_ATOMIC_RPC_OPERATIONS,
+  'login',
+  'register',
+  'password_reset',
+])
 
-function getSupabaseClient() {
+let supabaseClient: SupabaseClient | null = null
+
+/** Test helper — clears soft hint cache between cases. */
+export function __resetRateLimitCacheForTests() {
+  softDenyHint.clear()
+  supabaseClient = null
+}
+
+function getSupabaseClient(): SupabaseClient | null {
   if (!supabaseClient) {
     const supabaseUrl = process.env.SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    
     if (!supabaseUrl || !serviceRoleKey) {
       console.warn('⚠️ Supabase credentials not configured for rate limiter')
       return null
     }
-    
     supabaseClient = createClient(supabaseUrl, serviceRoleKey)
   }
-  
   return supabaseClient
-}
-
-/**
- * Calculate exponential backoff multiplier based on number of recent blocks
- * @param blockCount Number of consecutive blocks this IP has experienced
- * @returns multiplier to apply to base window
- */
-function getBackoffMultiplier(blockCount: number): number {
-  if (blockCount <= 0) return 1
-  if (blockCount > BACKOFF_MULTIPLIERS.length) return BACKOFF_MULTIPLIERS[BACKOFF_MULTIPLIERS.length - 1]
-  return BACKOFF_MULTIPLIERS[blockCount - 1]
-}
-
-/**
- * Count consecutive blocks for an IP (looking back 24 hours)
- * Used to determine exponential backoff level
- */
-async function getConsecutiveBlockCount(
-  supabase: any,
-  operation: string,
-  ipAddress: string
-): Promise<number> {
-  try {
-    // Look at last 24 hours of attempts
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    
-    const { data: recentLogs, error } = await supabase
-      .from('rate_limit_logs')
-      .select('status, created_at')
-      .eq('operation', operation)
-      .eq('ip_address', ipAddress)
-      .gte('created_at', oneDayAgo)
-      .order('created_at', { ascending: false })
-      .limit(20) // Only need last 20 to find consecutive blocks
-    
-    if (error || !recentLogs) return 0
-    
-    // Count consecutive blocks from the end
-    let consecutiveBlocks = 0
-    for (const log of recentLogs) {
-      if (log.status === 'blocked') {
-        consecutiveBlocks++
-      } else {
-        // Stop counting at first allowed request
-        break
-      }
-    }
-    
-    return consecutiveBlocks
-  } catch (err) {
-    console.warn('⚠️ Failed to calculate backoff:', err)
-    return 0
-  }
 }
 
 export type RateLimitResult = {
   allowed: boolean
   remaining: number
   limit: number
-  /** Milliseconds until the window resets */
   reset: number
-  /** Seconds until retry is allowed (ceil of reset/1000) — for API clients */
   retryAfter: number
+  /** Present when the limiter denied because the backing store failed (fail-closed). */
+  storeUnavailable?: boolean
+}
+
+function withRetry(result: Omit<RateLimitResult, 'retryAfter'>): RateLimitResult {
+  return {
+    ...result,
+    retryAfter: Math.max(1, Math.ceil((result.reset || 0) / 1000)),
+  }
+}
+
+function denyStoreUnavailable(max: number): RateLimitResult {
+  return withRetry({
+    allowed: false,
+    remaining: 0,
+    limit: max,
+    reset: 60_000,
+    storeUnavailable: true,
+  })
 }
 
 /**
  * Persistent rate limit check.
  *
  * Signature: checkRateLimit(key, operation, maxRequests?, windowMs?, email?, tenantId?)
- * `windowMs` is milliseconds. Prefer `3600 * 1000` for one hour — bare `3600` is 3.6s.
+ * `windowMs` is milliseconds.
  */
 export async function checkRateLimit(
   ipAddress: string,
@@ -139,7 +131,6 @@ export async function checkRateLimit(
   email?: string,
   tenantId?: string
 ): Promise<RateLimitResult> {
-  // Compat: older call sites used checkRateLimit(key, maxRequests, windowMs)
   if (typeof operation === 'number') {
     const legacyMax = operation
     const legacyWindow = typeof maxRequests === 'number' ? maxRequests : undefined
@@ -153,10 +144,14 @@ export async function checkRateLimit(
   }
 
   const now = Date.now()
-  const config = LIMITS[operation as keyof typeof LIMITS] || { maxRequests: maxRequests || 10, windowMs: windowMs || 60000 }
+  const config = LIMITS[operation as string] || {
+    maxRequests: maxRequests || 10,
+    windowMs: windowMs || 60_000,
+  }
   const max = maxRequests ?? config.maxRequests
   const baseWindow = windowMs ?? config.windowMs
   const key = `${operation}:${ipAddress}`
+  const failClosed = FAIL_CLOSED_OPERATIONS.has(String(operation))
 
   if (typeof baseWindow === 'number' && baseWindow > 0 && baseWindow < 1000) {
     console.warn(
@@ -164,109 +159,134 @@ export async function checkRateLimit(
     )
   }
 
-  const withRetry = (result: Omit<RateLimitResult, 'retryAfter'>): RateLimitResult => ({
-    ...result,
-    retryAfter: Math.max(1, Math.ceil((result.reset || 0) / 1000)),
-  })
-  
-  // Check in-memory cache first
-  const cached = requestCache.get(key)
-  if (cached && cached.resetTime > now) {
-    const allowed = cached.count < max
-    const remaining = Math.max(0, max - cached.count - 1)
-    const reset = cached.resetTime - now
-    
-    if (allowed) {
-      cached.count++
+  // Soft UX hint only for non-fail-closed ops. Abuse ops always hit durable store.
+  if (!failClosed) {
+    const hint = softDenyHint.get(key)
+    if (hint && hint.resetTime > now) {
+      return withRetry({
+        allowed: false,
+        remaining: 0,
+        limit: max,
+        reset: hint.resetTime - now,
+      })
     }
-    
-    return withRetry({ allowed, remaining, limit: max, reset })
   }
-  
-  // Query Supabase for requests in the time window
+
   const supabase = getSupabaseClient()
-  const allowedFallback = withRetry({ allowed: true, remaining: max - 1, limit: max, reset: 0 })
-  
   if (!supabase) {
-    // Fallback to in-memory if Supabase not available
-    return allowedFallback
+    return failClosed
+      ? denyStoreUnavailable(max)
+      : withRetry({ allowed: true, remaining: max - 1, limit: max, reset: baseWindow })
   }
-  
+
+  const windowSeconds = Math.max(1, Math.floor(baseWindow / 1000))
+
   try {
-    const windowStart = new Date(now - baseWindow).toISOString()
-
-    // Run request count + consecutive block count in parallel (two DB reads at once)
-    const [{ data: logs, error }, blockCount] = await Promise.all([
-      supabase
-        .from('rate_limit_logs')
-        .select('status, created_at')
-        .eq('operation', operation)
-        .eq('ip_address', ipAddress)
-        .gte('created_at', windowStart)
-        .order('created_at', { ascending: true }),
-      getConsecutiveBlockCount(supabase, operation, ipAddress),
-    ])
-
-    if (error) {
-      console.warn('⚠️ Failed to query rate limit logs:', error.message)
-      return allowedFallback
-    }
-
-    const count = logs?.length || 0
-    const isAllowed = count < max
-    const remaining = Math.max(0, max - count - 1)
-    const backoffMultiplier = getBackoffMultiplier(blockCount)
-    const effectiveWindow = baseWindow * backoffMultiplier
-
-    let resetTime = new Date(windowStart).getTime() + effectiveWindow
-    if (logs && logs.length > 0 && logs[0].created_at) {
-      resetTime = new Date(logs[0].created_at).getTime() + effectiveWindow
-    }
-
-    const reset = Math.max(0, resetTime - now)
-
-    if (!isAllowed) {
-      console.warn(`⛔ Rate limit exceeded for ${operation} from ${ipAddress} (${blockCount} consecutive blocks)`)
-    }
-
-    requestCache.set(key, {
-      count: isAllowed ? count + 1 : count,
-      resetTime,
-      backoffLevel: blockCount
+    const { data: rpcRows, error: rpcError } = await supabase.rpc('consume_rate_limit', {
+      p_operation: operation,
+      p_ip_address: ipAddress,
+      p_max_requests: max,
+      p_window_seconds: windowSeconds,
+      p_email: email || null,
+      p_tenant_id: tenantId || null,
     })
 
-    // Fire-and-forget: DB log insert never blocks the caller
-    supabase
-      .from('rate_limit_logs')
-      .insert({
-        operation,
-        ip_address: ipAddress,
-        email: email || null,
-        status: isAllowed ? 'allowed' : 'blocked',
-        request_count: count + 1,
-        max_requests: max,
-        window_seconds: Math.floor(baseWindow / 1000),
-        tenant_id: tenantId || null
+    if (!rpcError && Array.isArray(rpcRows) && rpcRows[0]) {
+      const row = rpcRows[0] as {
+        allowed: boolean
+        request_count: number
+        retry_after_seconds: number
+      }
+      const resetMs = Math.max(1000, (row.retry_after_seconds || windowSeconds) * 1000)
+      if (!row.allowed && !failClosed) {
+        softDenyHint.set(key, { resetTime: now + resetMs })
+      }
+      return withRetry({
+        allowed: !!row.allowed,
+        remaining: Math.max(0, max - row.request_count),
+        limit: max,
+        reset: resetMs,
       })
-      .then(() => {})
-      .catch(() => {})
+    }
 
-    return withRetry({ allowed: isAllowed, remaining, limit: max, reset })
-  } catch (err: any) {
-    console.warn('⚠️ Rate limit check error:', err.message)
-    return allowedFallback
+    const requireAtomic = REQUIRE_ATOMIC_RPC_OPERATIONS.has(String(operation))
+
+    // Registration/admin abuse ops: no racy fallback. Require migrated atomic RPC.
+    if (requireAtomic) {
+      console.warn(
+        '⚠️ consume_rate_limit unavailable for abuse op; denying:',
+        rpcError?.message || 'empty result',
+      )
+      return denyStoreUnavailable(max)
+    }
+
+    // Legacy-compatible ops (login/register/password_reset/others): awaited
+    // insert-then-count. Not concurrency-perfect; acceptable until RPC is live.
+    console.warn('⚠️ consume_rate_limit RPC unavailable, using insert-then-count:', rpcError?.message)
+    const windowStart = new Date(now - baseWindow).toISOString()
+    const { data: existing, error: selectError } = await supabase
+      .from('rate_limit_logs')
+      .select('created_at')
+      .eq('operation', operation)
+      .eq('ip_address', ipAddress)
+      .gte('created_at', windowStart)
+      .order('created_at', { ascending: true })
+
+    if (selectError) {
+      console.warn('⚠️ Failed to query rate limit logs:', selectError.message)
+      return failClosed
+        ? denyStoreUnavailable(max)
+        : withRetry({ allowed: true, remaining: max - 1, limit: max, reset: baseWindow })
+    }
+
+    const priorCount = existing?.length || 0
+    const isAllowed = priorCount < max
+    const nextCount = priorCount + 1
+    let resetTime = now + baseWindow
+    if (existing && existing.length > 0 && existing[0].created_at) {
+      resetTime = new Date(existing[0].created_at).getTime() + baseWindow
+    }
+
+    const { error: insertError } = await supabase.from('rate_limit_logs').insert({
+      operation,
+      ip_address: ipAddress,
+      email: email || null,
+      status: isAllowed ? 'allowed' : 'blocked',
+      request_count: nextCount,
+      max_requests: max,
+      window_seconds: windowSeconds,
+      tenant_id: tenantId || null,
+    })
+
+    if (insertError) {
+      console.warn('⚠️ Failed to persist rate limit log:', insertError.message)
+      return failClosed
+        ? denyStoreUnavailable(max)
+        : withRetry({ allowed: true, remaining: max - 1, limit: max, reset: baseWindow })
+    }
+
+    if (!isAllowed) softDenyHint.set(key, { resetTime })
+
+    return withRetry({
+      allowed: isAllowed,
+      remaining: Math.max(0, max - nextCount),
+      limit: max,
+      reset: Math.max(0, resetTime - now),
+    })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.warn('⚠️ Rate limit check error:', message)
+    return failClosed
+      ? denyStoreUnavailable(max)
+      : withRetry({ allowed: true, remaining: max - 1, limit: max, reset: baseWindow })
   }
 }
 
-// Cleanup old cache entries periodically
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
     const now = Date.now()
-    for (const [key, value] of requestCache.entries()) {
-      if (value.resetTime + CACHE_TTL < now) {
-        requestCache.delete(key)
-      }
+    for (const [key, value] of softDenyHint.entries()) {
+      if (value.resetTime + CACHE_TTL < now) softDenyHint.delete(key)
     }
-  }, 60 * 1000) // Cleanup every minute
+  }, 60 * 1000)
 }
-

@@ -1,8 +1,8 @@
 // server/api/tenants/invite-staff-batch.post.ts
 // Batch-Einladung von Mitarbeitern (staff) direkt im Onboarding-Flow.
-// Kein JWT erforderlich – Tenant muss in den letzten 30 Minuten erstellt worden sein.
-// Versand nur per E-Mail (kein SMS).
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
+// No JWT — requires post-verify registration_token + verified/active tenant
+// created within the last 30 minutes. Email only (no SMS).
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { normalizePhoneNumber } from '~/server/utils/sms'
@@ -19,6 +19,10 @@ import {
   checkEmailAvailableForStaff,
   emailConflictMessage,
 } from '~/server/utils/email-availability'
+import { verifyRegistrationToken } from '~/server/utils/registration-token'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getClientIP } from '~/server/utils/ip-utils'
+import { tenantAllowsPrivilegedOnboarding } from '~/server/utils/registration-email-verification'
 
 interface StaffEntry {
   first_name: string
@@ -29,14 +33,27 @@ interface StaffEntry {
 }
 
 export default defineEventHandler(async (event) => {
+  const ipAddress = getClientIP(event)
+  const rateLimit = await checkRateLimit(ipAddress, 'staff_invite', 10, 3600 * 1000)
+  if (!rateLimit.allowed) {
+    throw createError({ statusCode: 429, statusMessage: 'Zu viele Anfragen. Bitte warten.' })
+  }
+
   const body = await readBody(event)
-  const { tenant_id, staff_list } = body as {
+  const { tenant_id, staff_list, registration_token } = body as {
     tenant_id: string
     staff_list: StaffEntry[]
+    registration_token?: string
   }
 
   if (!tenant_id) {
     throw createError({ statusCode: 400, statusMessage: 'tenant_id fehlt' })
+  }
+  if (!verifyRegistrationToken(registration_token, tenant_id)) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Ungültiger oder abgelaufener Registrierungstoken',
+    })
   }
   if (!Array.isArray(staff_list) || staff_list.length === 0) {
     throw createError({ statusCode: 400, statusMessage: 'staff_list fehlt oder leer' })
@@ -49,12 +66,19 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
-    .select('id, name, slug, created_at, business_type, primary_color, logo_wide_url, logo_url, logo_square_url, from_email, resend_domain_verified')
+    .select('id, name, slug, created_at, business_type, primary_color, logo_wide_url, logo_url, logo_square_url, from_email, resend_domain_verified, is_active, email_verified_at, registration_status')
     .eq('id', tenant_id)
     .single()
 
   if (tenantError || !tenant) {
     throw createError({ statusCode: 404, statusMessage: 'Tenant nicht gefunden' })
+  }
+
+  if (!tenantAllowsPrivilegedOnboarding(tenant)) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Einladungen erst nach E-Mail-Bestätigung möglich.',
+    })
   }
 
   const terms = await getTenantTerminology(supabase, tenant_id)

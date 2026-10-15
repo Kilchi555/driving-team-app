@@ -1,17 +1,14 @@
 // server/api/tenants/rollback-registration.post.ts
 // Called by the frontend when create-admin fails after a successful tenant insert.
 // Deletes the orphaned tenant so the slug becomes available again.
-import { defineEventHandler, createError, readBody, getHeader } from 'h3'
+import { defineEventHandler, createError, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { verifyRegistrationToken } from '~/server/utils/registration-token'
+import { getClientIP } from '~/server/utils/ip-utils'
 
 export default defineEventHandler(async (event) => {
-  const ipAddress =
-    getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() ||
-    getHeader(event, 'x-real-ip') ||
-    event.node.req.socket.remoteAddress ||
-    'unknown'
+  const ipAddress = getClientIP(event)
 
   // Rate limit: 10 rollback attempts per IP per hour
   const rateLimit = await checkRateLimit(ipAddress, 'rollback_registration', 10, 3600 * 1000)

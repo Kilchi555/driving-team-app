@@ -66,7 +66,36 @@
       </div>
 
       <!-- Form Content -->
-      <form v-if="currentStep !== SUCCESS_STEP" @submit.prevent="submitRegistration" class="px-6 sm:px-10 py-6 sm:py-8">
+      <!-- Email verification wait (after register, before create-admin) -->
+      <div v-if="currentStep === VERIFY_WAIT_STEP" class="px-6 sm:px-10 py-8 sm:py-10">
+        <div class="max-w-md mx-auto text-center space-y-4">
+          <div class="mx-auto w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center">
+            <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <h2 class="text-xl font-bold text-gray-900">Bitte E-Mail bestätigen</h2>
+          <p class="text-sm text-gray-600 leading-relaxed">
+            Wir haben einen Bestätigungslink an
+            <strong class="text-gray-900">{{ pendingVerifyEmail }}</strong>
+            gesendet. Klicke den Link, um fortzufahren und dein Admin-Konto zu erstellen.
+          </p>
+          <p class="text-xs text-gray-500">Der Link ist eine Stunde gültig und kann nur einmal verwendet werden.</p>
+          <button
+            type="button"
+            class="w-full py-2.5 rounded-xl text-white font-semibold text-sm disabled:opacity-50"
+            :style="{ background: formData.primary_color || '#2563EB' }"
+            :disabled="resendBusy"
+            @click="resendVerificationEmail"
+          >
+            {{ resendBusy ? 'Wird gesendet…' : 'E-Mail erneut senden' }}
+          </button>
+          <p v-if="resendMessage" class="text-sm text-green-700">{{ resendMessage }}</p>
+          <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
+        </div>
+      </div>
+
+      <form v-if="currentStep !== SUCCESS_STEP && currentStep !== VERIFY_WAIT_STEP" @submit.prevent="submitRegistration" class="px-6 sm:px-10 py-6 sm:py-8">
 
         <!-- ═══ STEP 0: Grunddaten ═══ -->
         <div v-if="currentStep === 0 && isWebsiteOnlySignup" class="space-y-6">
@@ -2208,6 +2237,8 @@ definePageMeta({ layout: false })
 
 const LOADING_STEP = 8
 const SUCCESS_STEP = 9
+/** Shown after tenant row is created but before email verification / create-admin. */
+const VERIFY_WAIT_STEP = 10
 
 const route = useRoute()
 const isWebsiteMode = computed(() => route.query.mode === 'website')
@@ -3082,9 +3113,30 @@ const error       = ref<string | null>(null)
 const createdTenantSlug    = ref('')
 const createdTenantId      = ref('')
 const createdCustomerNumber = ref('')
+const pendingVerifyEmail   = ref('')
+const resendBusy           = ref(false)
+const resendMessage        = ref('')
 const logoInput = ref<HTMLInputElement>()
 const logoSquareInput = ref<HTMLInputElement>()
 const registerCardEl = ref<HTMLElement | null>(null)
+
+async function resendVerificationEmail() {
+  if (!createdTenantId.value || !pendingVerifyEmail.value || resendBusy.value) return
+  resendBusy.value = true
+  resendMessage.value = ''
+  error.value = null
+  try {
+    await $fetch('/api/tenants/resend-registration-verification', {
+      method: 'POST',
+      body: { tenant_id: createdTenantId.value, email: pendingVerifyEmail.value },
+    })
+    resendMessage.value = 'Falls die Registrierung offen ist, wurde eine E-Mail gesendet.'
+  } catch (e: any) {
+    error.value = e?.data?.statusMessage || e?.message || 'Erneutes Senden fehlgeschlagen.'
+  } finally {
+    resendBusy.value = false
+  }
+}
 
 /** After step changes, jump to top — otherwise mobile keeps the previous scroll mid-page. */
 const scrollRegisterToTop = () => {
@@ -3545,6 +3597,93 @@ function applyWebsiteOnlySignupDefaults() {
   if (formData.value.slug.length >= 3) checkSlug(formData.value.slug)
 }
 
+async function continueAfterVerifiedRegistration(opts: {
+  tenantId: string
+  registrationToken: string
+  admin: { email: string; password: string; first_name: string; last_name: string; phone?: string }
+  staff: Array<{ first_name: string; last_name: string; phone?: string; email?: string; is_self?: boolean }>
+}) {
+  const { tenantId, registrationToken, admin, staff } = opts
+
+  let adminRes: any
+  try {
+    adminRes = await $fetch('/api/tenants/create-admin', {
+      method: 'POST',
+      body: {
+        email: admin.email,
+        password: admin.password,
+        first_name: admin.first_name,
+        last_name: admin.last_name,
+        phone: admin.phone,
+        tenant_id: tenantId,
+        registration_token: registrationToken,
+      },
+    }) as any
+  } catch (adminErr: any) {
+    try {
+      await $fetch('/api/tenants/rollback-registration', {
+        method: 'POST',
+        body: { tenant_id: tenantId, registration_token: registrationToken },
+      })
+    } catch (rollbackErr) {
+      console.warn('Rollback failed:', rollbackErr)
+    }
+    throw adminErr
+  }
+
+  if (!adminRes.success) {
+    try {
+      await $fetch('/api/tenants/rollback-registration', {
+        method: 'POST',
+        body: { tenant_id: tenantId, registration_token: registrationToken },
+      })
+    } catch (rollbackErr) {
+      console.warn('Rollback failed:', rollbackErr)
+    }
+    throw new Error('Admin-Konto konnte nicht erstellt werden: ' + (adminRes.message || ''))
+  }
+
+  if (staff.length > 0) {
+    setProgressActive('staff')
+    try {
+      const inviteRes = await $fetch('/api/tenants/invite-staff-batch', {
+        method: 'POST',
+        body: {
+          tenant_id: tenantId,
+          registration_token: registrationToken,
+          staff_list: staff,
+        },
+      }) as any
+      staffInviteResults.value = inviteRes.results || []
+    } catch (inviteErr: any) {
+      staffInviteResults.value = staff.map(s => ({
+        name: `${s.first_name} ${s.last_name}`.trim(),
+        status: 'failed',
+        message: inviteErr?.data?.statusMessage || inviteErr?.message || 'Einladung konnte nicht gesendet werden',
+      }))
+    }
+    markProgressDone('staff')
+  }
+
+  setProgressActive('welcome')
+  try {
+    await $fetch('/api/tenants/send-welcome-email', {
+      method: 'POST',
+      body: { tenantId, registration_token: registrationToken },
+    })
+  } catch (welcomeErr) {
+    console.warn('Welcome email failed (non-critical):', welcomeErr)
+  }
+  markProgressDone('welcome')
+  setupProgressDetail.value = 'Fast fertig…'
+
+  void saveCredentials(
+    admin.email,
+    admin.password,
+    `${admin.first_name} ${admin.last_name}`.trim(),
+  )
+}
+
 const submitRegistration = async () => {
   if (!canSubmit.value) return
   applyWebsiteOnlySignupDefaults()
@@ -3733,105 +3872,36 @@ const submitRegistration = async () => {
     }
 
     finishRegisterSubProgress()
-    setProgressActive('admin')
 
     createdTenantSlug.value     = response.tenant.slug
     createdCustomerNumber.value = response.tenant.customer_number
     createdTenantId.value       = response.tenant.id
-    const registrationToken     = response.registration_token as string | undefined
+    pendingVerifyEmail.value    = response.tenant.contact_email || adminForm.value.email || ''
 
-    // website_status is set server-side when website_only=1 (register.post).
-
-    // 2. Create admin user (dedicated endpoint)
-    let adminRes: any
-    try {
-      adminRes = await $fetch('/api/tenants/create-admin', {
-        method: 'POST',
-        body: {
-          email:              adminForm.value.email,
-          password:           adminForm.value.password,
-          first_name:         adminForm.value.first_name,
-          last_name:          adminForm.value.last_name,
-          phone:              adminForm.value.phone,
-          tenant_id:          response.tenant.id,
-          registration_token: registrationToken,
-        }
-      }) as any
-    } catch (adminErr: any) {
-      // Rollback: Tenant löschen, damit der Slug wieder verwendbar ist
-      try {
-        await $fetch('/api/tenants/rollback-registration', {
-          method: 'POST',
-          body: { tenant_id: response.tenant.id, registration_token: registrationToken }
-        })
-      } catch (rollbackErr) {
-        console.warn('Rollback failed:', rollbackErr)
-      }
-      // Re-throw original error to preserve status code for outer catch handler
-      throw adminErr
+    // Abuse protection: registration_token is issued only after email verification.
+    // Stop here and ask the user to confirm their mailbox, then continue on /tenant-register/verify.
+    if (response.requires_email_verification || !response.registration_token) {
+      currentStep.value = VERIFY_WAIT_STEP
+      return
     }
 
-    if (!adminRes.success) {
-      // Rollback: Tenant löschen, damit der Slug wieder verwendbar ist
-      try {
-        await $fetch('/api/tenants/rollback-registration', {
-          method: 'POST',
-          body: { tenant_id: response.tenant.id, registration_token: registrationToken }
-        })
-      } catch (rollbackErr) {
-        console.warn('Rollback failed:', rollbackErr)
-      }
-      throw new Error('Admin-Konto konnte nicht erstellt werden: ' + (adminRes.message || ''))
-    }
-
-    // 3. Invite staff (non-critical)
-    const filledStaff = filledStaffPreview.map(s => ({
-      first_name: s.first_name.trim(),
-      last_name: s.last_name.trim(),
-      phone: s.phone.trim() || undefined,
-      email: (s.email || '').trim(),
-      is_self: staffAdminIsSelf.value && s === staffList.value[0],
-    }))
-    if (!isWebsiteOnlySignup.value && filledStaff.length > 0) {
-      setProgressActive('staff')
-      try {
-        const inviteRes = await $fetch('/api/tenants/invite-staff-batch', {
-          method: 'POST',
-          body: { tenant_id: response.tenant.id, staff_list: filledStaff }
-        }) as any
-        staffInviteResults.value = inviteRes.results || []
-      } catch (inviteErr: any) {
-        // Set synthetic failed result so the user sees what happened on the success screen
-        staffInviteResults.value = filledStaff.map(s => ({
-          name: `${s.first_name} ${s.last_name}`.trim(),
-          status: 'failed',
-          message: inviteErr?.data?.statusMessage || inviteErr?.message || 'Einladung konnte nicht gesendet werden'
-        }))
-      }
-      markProgressDone('staff')
-    }
-
-    // 4. Send welcome email (non-critical)
-    setProgressActive('welcome')
-    try {
-      await $fetch('/api/tenants/send-welcome-email', {
-        method: 'POST',
-        body: { tenantId: response.tenant.id, registration_token: registrationToken }
-      })
-    } catch (welcomeErr) {
-      console.warn('Welcome email failed (non-critical):', welcomeErr)
-    }
-    markProgressDone('welcome')
-    setupProgressDetail.value = 'Fast fertig…'
-
-    // Offer to save credentials — never block the success screen (Chrome's
-    // PasswordCredential.store can hang until the user dismisses a prompt).
-    void saveCredentials(
-      adminForm.value.email,
-      adminForm.value.password,
-      `${adminForm.value.first_name} ${adminForm.value.last_name}`.trim()
-    )
-
+    // Legacy path (pre-migration backends that still return registration_token immediately)
+    const registrationToken = response.registration_token as string
+    setProgressActive('admin')
+    await continueAfterVerifiedRegistration({
+      tenantId: response.tenant.id,
+      registrationToken,
+      admin: { ...adminForm.value },
+      staff: (!isWebsiteOnlySignup.value
+        ? filledStaffPreview.map(s => ({
+            first_name: s.first_name.trim(),
+            last_name: s.last_name.trim(),
+            phone: s.phone.trim() || undefined,
+            email: (s.email || '').trim(),
+            is_self: staffAdminIsSelf.value && s === staffList.value[0],
+          }))
+        : []),
+    })
     currentStep.value = SUCCESS_STEP
     localStorage.removeItem(STORAGE_KEY)
 
@@ -3844,6 +3914,24 @@ const submitRegistration = async () => {
       err.data?.message ||
       err.statusMessage ||
       err.message
+    const recovery = err.data?.data || err.data || {}
+
+    // Mail provider failure after tenant insert: keep pending tenant and allow resend.
+    if (
+      statusCode === 503 &&
+      recovery?.tenant_id &&
+      recovery?.requires_email_verification
+    ) {
+      createdTenantId.value = String(recovery.tenant_id)
+      createdTenantSlug.value = String(recovery.slug || createdTenantSlug.value || '')
+      pendingVerifyEmail.value =
+        String(recovery.contact_email || adminForm.value.email || '').trim()
+      currentStep.value = VERIFY_WAIT_STEP
+      error.value =
+        knownMessage ||
+        'Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte erneut senden.'
+      return
+    }
 
     const isUserFacing =
       !!knownMessage &&
