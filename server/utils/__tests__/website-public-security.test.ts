@@ -120,6 +120,7 @@ describe('public tenant allowlist', () => {
       website_only: true,
       booking_policy: 'internal',
       minimum_booking_lead_time_hours: 24,
+      timezone: 'Europe/Zurich',
     }
     for (const key of FORBIDDEN) row[key] = `secret-${key}`
 
@@ -141,6 +142,7 @@ describe('public tenant allowlist', () => {
     expect(tenant?.sari_client_secret).toBeUndefined()
     expect(tenant?.sari_username).toBeUndefined()
     expect(tenant?.sari_password).toBeUndefined()
+    expect(tenant?.timezone).toBeUndefined()
   })
 
   it('selects an allowlist and never star', () => {
@@ -154,6 +156,8 @@ describe('public tenant allowlist', () => {
     expect(fields).toContain('invoice_city')
     expect(fields).toContain('id')
     expect(fields).toContain('minimum_booking_lead_time_hours')
+    expect(fields).toContain('timezone')
+    expect(PUBLIC_WEBSITE_TENANT_RESPONSE_FIELDS).not.toContain('timezone')
   })
 })
 

@@ -3,6 +3,8 @@ import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 
+const USER_SEARCH_SELECT = 'id, first_name, last_name, email, phone, role, company_id, street, street_nr, zip, city'
+
 /**
  * GET /api/admin/users/search?q=<query>
  * Searches tenant students by name or email (case-insensitive substring).
@@ -17,7 +19,7 @@ export default defineEventHandler(async (event) => {
   if (company_id && !q) {
     const { data, error } = await supabase
       .from('users')
-      .select('id, first_name, last_name, email, phone, role, company_id')
+      .select(USER_SEARCH_SELECT)
       .eq('tenant_id', profile.tenant_id)
       .eq('company_id', company_id)
       .order('first_name')
@@ -37,7 +39,7 @@ export default defineEventHandler(async (event) => {
 
   const { data, error } = await supabase
     .from('users')
-    .select('id, first_name, last_name, email, phone, role, company_id')
+    .select(USER_SEARCH_SELECT)
     .eq('tenant_id', profile.tenant_id)
     .eq('role', 'client')
     .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%`)

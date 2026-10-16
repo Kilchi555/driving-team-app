@@ -13,6 +13,7 @@ import { defineEventHandler, readBody, createError, getMethod } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { parseTenantTimeZoneWrite } from '~/utils/slot-display-time'
 
 async function verifySuperAdmin(event: any) {
   const authUser = await getAuthenticatedUser(event)
@@ -64,6 +65,13 @@ export default defineEventHandler(async (event) => {
   // ── POST: neuen Tenant erstellen ─────────────────────────────────────
   if (method === 'POST') {
     const body = await readBody(event)
+    if (body && Object.prototype.hasOwnProperty.call(body, 'timezone')) {
+      const zoneWrite = parseTenantTimeZoneWrite(body.timezone)
+      if (!zoneWrite.ok) {
+        throw createError({ statusCode: 400, message: zoneWrite.error })
+      }
+      body.timezone = zoneWrite.timezone
+    }
     const { data, error } = await supabase
       .from('tenants')
       .insert([body])

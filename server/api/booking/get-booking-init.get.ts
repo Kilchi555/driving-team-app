@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
   // Resolve slug to tenant
   const { data: tenant, error: tenantErr } = await supabase
     .from('tenants')
-    .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, logo_square_url, logo_wide_url, booking_policy, wallee_enabled')
+    .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, logo_square_url, logo_wide_url, booking_policy, wallee_enabled, timezone')
     .eq('slug', slug)
     .single()
 

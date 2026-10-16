@@ -110,7 +110,7 @@
                   <div v-if="!editingViewAddress" class="space-y-0.5">
                     <p v-if="localViewBilling.company_name" class="text-sm font-semibold text-gray-800">{{ localViewBilling.company_name }}</p>
                     <p v-if="localViewBilling.contact_person" class="text-sm font-semibold text-gray-800">{{ localViewBilling.contact_person }}</p>
-                    <p v-if="localViewBilling.street" class="text-xs text-gray-500">{{ localViewBilling.street }}</p>
+                    <p v-if="viewStreetLine" class="text-xs text-gray-500">{{ viewStreetLine }}</p>
                     <p v-if="localViewBilling.zip || localViewBilling.city" class="text-xs text-gray-500">{{ localViewBilling.zip }} {{ localViewBilling.city }}</p>
                     <p v-if="localViewBilling.email" class="text-xs break-all" :style="{ color: primaryColor }">{{ localViewBilling.email }}</p>
                     <p v-if="!localViewBilling.contact_person && !localViewBilling.company_name" class="text-xs text-orange-400 italic">Keine Rechnungsadresse</p>
@@ -146,7 +146,7 @@
                   <div v-if="!editingAddress" class="space-y-0.5">
                     <p v-if="localBilling.company_name" class="text-xs font-semibold text-gray-500">{{ localBilling.company_name }}</p>
                     <p v-if="billingPersonLabel" class="text-sm font-semibold text-gray-800">{{ billingPersonLabel }}</p>
-                    <p v-if="localBilling.street" class="text-xs text-gray-500">{{ joinStreetAndNumber(localBilling.street, localBilling.street_nr) }}</p>
+                    <p v-if="draftStreetLine" class="text-xs text-gray-500">{{ draftStreetLine }}</p>
                     <p v-if="localBilling.zip || localBilling.city" class="text-xs text-gray-500">{{ localBilling.zip }} {{ localBilling.city }}</p>
                     <p v-if="localBilling.email" class="text-xs break-all" :style="{ color: primaryColor }">{{ localBilling.email }}</p>
                     <p v-if="!localBilling.street && !localBilling.zip" class="text-xs text-orange-500 italic">Keine Adresse hinterlegt</p>
@@ -475,7 +475,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { billingPersonNameParts, collapseDuplicatePersonName, formatBillingPersonLabel, joinStreetAndNumber } from '~/utils/billing-address-map'
+import { billingPersonNameParts, collapseDuplicatePersonName, formatBillingPersonLabel, formatInvoiceStreetLine, joinStreetAndNumber, resolveInvoiceStreetNumber } from '~/utils/billing-address-map'
 import { useDynamicBranding } from '~/composables/useDynamicBranding'
 import { openPdf as openPdfUtil } from '~/utils/openPdf'
 import { presentStoredInvoiceLine } from '~/server/utils/invoice-line-snapshot'
@@ -541,6 +541,7 @@ interface InvoiceDraft {
   billing_last_name?: string
   billing_company_name?: string
   billing_street?: string
+  billing_street_number?: string | null
   billing_street_nr?: string
   billing_zip?: string
   billing_city?: string
@@ -585,6 +586,8 @@ const props = defineProps<{
     billing_contact_person?: string
     billing_company_name?: string
     billing_street?: string
+    billing_street_number?: string | null
+    billing_street_nr?: string | null
     billing_zip?: string
     billing_city?: string
     billing_email?: string
@@ -643,6 +646,7 @@ const localViewBilling = ref({
   company_name: '',
   contact_person: '',
   street: '',
+  street_nr: '',
   zip: '',
   city: '',
   email: '',
@@ -675,6 +679,15 @@ const billingErrors = ref({
 const billingPersonLabel = computed(() =>
   formatBillingPersonLabel(localBilling.value.first_name, localBilling.value.last_name)
 )
+
+const draftStreetLine = computed(() => formatInvoiceStreetLine({
+  billing_street: localBilling.value.street,
+  billing_street_number: localBilling.value.street_nr,
+}))
+const viewStreetLine = computed(() => formatInvoiceStreetLine({
+  billing_street: localViewBilling.value.street,
+  billing_street_number: localViewBilling.value.street_nr,
+}))
 
 const isBillingComplete = computed(() => {
   if (creditCoversInvoice.value) return true
@@ -715,7 +728,7 @@ watch(() => props.draft, (d) => {
       first_name: person.first_name,
       last_name: person.last_name,
       street: d.billing_street || '',
-      street_nr: d.billing_street_nr || (d as any).billing_street_nr || '',
+      street_nr: resolveInvoiceStreetNumber(d),
       zip: d.billing_zip || '',
       city: d.billing_city || '',
       email: d.billing_email || '',
@@ -732,6 +745,7 @@ watch(() => props.viewInvoice, (v) => {
       company_name: v.billing_company_name || '',
       contact_person: collapseDuplicatePersonName(v.billing_contact_person),
       street: v.billing_street || '',
+      street_nr: resolveInvoiceStreetNumber(v),
       zip: v.billing_zip || '',
       city: v.billing_city || '',
       email: v.billing_email || '',
@@ -901,6 +915,7 @@ function toggleViewAddressEdit() {
         company_name: v.billing_company_name || '',
         contact_person: v.billing_contact_person || '',
         street: v.billing_street || '',
+        street_nr: resolveInvoiceStreetNumber(v),
         zip: v.billing_zip || '',
         city: v.billing_city || '',
         email: v.billing_email || '',

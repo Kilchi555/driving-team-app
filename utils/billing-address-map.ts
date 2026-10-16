@@ -106,6 +106,125 @@ export function joinStreetAndNumber(street?: string | null, number?: string | nu
   return `${collapsedStreet} ${collapsedNumber}`
 }
 
+function addressText(value?: string | null): string {
+  return value == null ? '' : String(value)
+}
+
+export type InvoicePartyAddress = {
+  billing_street: string
+  billing_street_number: string
+  billing_zip: string
+  billing_city: string
+}
+
+/** Always replace the previous party address, including a blank house number. */
+export function invoicePartyAddress(party: {
+  street?: string | null
+  street_nr?: string | null
+  zip?: string | null
+  city?: string | null
+}): InvoicePartyAddress {
+  return {
+    billing_street: addressText(party.street),
+    billing_street_number: addressText(party.street_nr),
+    billing_zip: addressText(party.zip),
+    billing_city: addressText(party.city),
+  }
+}
+
+export function companyInvoiceSearchHit(company: {
+  id: string
+  name?: string | null
+  contact_person?: string | null
+  email?: string | null
+  phone?: string | null
+  street?: string | null
+  street_nr?: string | null
+  zip?: string | null
+  city?: string | null
+}) {
+  const address = invoicePartyAddress(company)
+  return {
+    id: company.id,
+    type: 'company' as const,
+    name: company.name || '',
+    subtitle: company.contact_person
+      ? `${company.contact_person} · ${company.email || ''}`
+      : (company.email || ''),
+    email: company.email || '',
+    phone: company.phone || '',
+    contact_person: company.contact_person || '',
+    street: address.billing_street,
+    street_nr: address.billing_street_number,
+    zip: address.billing_zip,
+    city: address.billing_city,
+  }
+}
+
+export function initialCompanySelection(company: {
+  id: string
+  name: string
+  contact_person?: string | null
+  email?: string | null
+  phone?: string | null
+  street?: string | null
+  street_nr?: string | null
+  zip?: string | null
+  city?: string | null
+}) {
+  return companyInvoiceSearchHit({
+    ...company,
+    name: company.name,
+  })
+}
+
+export function privateCustomerSearchHit(user: {
+  id: string
+  first_name?: string | null
+  last_name?: string | null
+  email?: string | null
+  phone?: string | null
+  street?: string | null
+  street_nr?: string | null
+  zip?: string | null
+  city?: string | null
+}) {
+  const address = invoicePartyAddress(user)
+  const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim()
+  return {
+    id: user.id,
+    type: 'user' as const,
+    name,
+    subtitle: user.email || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    street: address.billing_street,
+    street_nr: address.billing_street_number,
+    zip: address.billing_zip,
+    city: address.billing_city,
+  }
+}
+
+/**
+ * Canonical invoice column wins. An explicit empty string stays empty.
+ * `billing_street_nr` is only the draft/legacy fallback when the column is absent.
+ */
+export function resolveInvoiceStreetNumber(source: {
+  billing_street_number?: string | null
+  billing_street_nr?: string | null
+}): string {
+  if (source.billing_street_number != null) return source.billing_street_number
+  return source.billing_street_nr ?? ''
+}
+
+export function formatInvoiceStreetLine(source: {
+  billing_street?: string | null
+  billing_street_number?: string | null
+  billing_street_nr?: string | null
+}): string {
+  return joinStreetAndNumber(source.billing_street, resolveInvoiceStreetNumber(source))
+}
+
 function normalizeCountry(country?: string | null): string {
   if (!country || country === 'CH') return 'Schweiz'
   return country
