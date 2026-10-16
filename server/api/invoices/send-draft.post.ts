@@ -5,6 +5,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { persistAndSendInvoiceDraft } from '~/server/utils/invoice-persist-and-send'
+import { InvoiceCompanyLinkError } from '~/server/utils/invoice-company-link'
 import { applyStudentCreditToPayments } from '~/server/utils/apply-student-credit'
 import { computeVatAmountRappen } from '~/server/utils/invoice-vat'
 
@@ -113,6 +114,13 @@ export default defineEventHandler(async (event) => {
       student_email: draft.billing_email,
     }
   } catch (err: any) {
+    if (err instanceof InvoiceCompanyLinkError) {
+      throw createError({
+        statusCode: err.statusCode,
+        statusMessage: err.message,
+        message: err.message,
+      })
+    }
     throw createError({
       statusCode: 500,
       statusMessage: err?.message || 'Failed to create invoice',

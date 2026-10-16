@@ -20,6 +20,7 @@ import {
   uniquePaymentIds,
 } from '~/server/utils/invoice-tenant-guards'
 import { formatBillingPersonLabel, joinStreetAndNumber, snapshotBillingCompanyName } from '~/utils/billing-address-map'
+import { companyIdForInvoiceInsert } from '~/server/utils/invoice-company-link'
 
 export type InvoiceDraftPayload = {
   user_id: string
@@ -47,6 +48,8 @@ export type InvoiceDraftPayload = {
   payment_terms?: string | null
   footer_text?: string | null
   payment_ids?: string[]
+  /** Explicit company record. Never inferred from the billing name or users.company_id. */
+  company_id?: string | null
   items: any[]
   student?: { id?: string; name?: string; email?: string | null }
   qr_iban?: string | null
@@ -147,6 +150,8 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
     throw new Error('Tenant mismatch')
   }
 
+  const linkedCompanyId = await companyIdForInvoiceInsert(supabase, tenantId, draft)
+
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
     .select('id, name, legal_company_name, contact_email, contact_person_first_name, contact_person_last_name, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_window_side, from_email, resend_domain_verified')
@@ -182,6 +187,7 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
     .insert({
       tenant_id: tenantId,
       user_id: draft.user_id,
+      company_id: linkedCompanyId,
       staff_id: draft.staff_id || actor.id,
       invoice_number: invoiceNumber,
       invoice_date: draft.invoice_date,
