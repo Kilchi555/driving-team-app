@@ -3,10 +3,12 @@
 Date: 2026-10-16  
 Repository: `Kilchi555/driving-team-app`  
 Branch: `cursor/company-invoice-future-writes-ea11`  
+Draft PR: https://github.com/Kilchi555/driving-team-app/pull/461  
 Base (`origin/main`): `ecf9694ff5b6626539ad0230fee2ca1c3a3d6121`  
 Implementation commit: `90fbae28474dd9f77e091465d09d7470ff93cdf8`  
+Head when draft #461 was opened: `8f0b1d24833ff32e78e9c03c617da5f4931a9c02`  
 PR #459 head, not modified: `e568b2957c39bfb497d58d6172bab20107ef65fb`  
-Draft PR head: the commit that records this implementation SHA. It is the child of `90fbae28474dd9f77e091465d09d7470ff93cdf8`. The pull request description copies `git rev-parse HEAD` after the push, because a commit cannot store its own hash.
+This follow-up commit only records the PR URL and that head. The pull request description is updated to the branch tip after this commit.
 
 No backfill ran. No migration was added or applied. No production SQL, invoice update, payment update, or deploy ran. PR #459 was not edited, undrafted, or merged.
 
