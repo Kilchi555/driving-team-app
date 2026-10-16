@@ -4,6 +4,7 @@
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { settlementFailure } from '~/server/utils/payment-settlement'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { isStaffProductSalePayment } from '~/utils/staff-product-sale-display'
 
@@ -72,68 +73,16 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Zahlung auf completed + cash setzen
-  const { data: updatedPayments, error: paymentError } = await supabase
-    .from('payments')
-    .update({
-      payment_status: 'completed',
-      payment_method: 'cash',
-      paid_at: now,
-      updated_at: now,
-    })
-    .eq('id', payment_id)
-    .eq('tenant_id', staffUser.tenant_id)
-    .select('id, invoice_id')
+  // Payment status and the admin invoice status commit in one function.
+  // A sibling-read or invoice-update failure rolls the payment write back.
+  const { data, error } = await supabase.rpc('complete_tenant_cash_payment', {
+    p_actor_user_id: staffUser.id,
+    p_payment_id: payment_id,
+    p_paid_at: now,
+  })
 
-  if (paymentError) {
-    throw createError({ statusCode: 500, statusMessage: 'Fehler beim Aktualisieren der Zahlung' })
-  }
-
-  const payment = updatedPayments?.[0]
-  if (!payment) {
-    throw createError({ statusCode: 404, statusMessage: 'Zahlung nicht gefunden' })
-  }
-
-  // Nur Admin darf Rechnung automatisch auf 'paid' setzen
-  if (payment.invoice_id && staffUser.role === 'admin') {
-    const { data: tenantPayments, error: tenantPayError } = await supabase
-      .from('payments')
-      .select('id, payment_status')
-      .eq('invoice_id', payment.invoice_id)
-      .eq('tenant_id', staffUser.tenant_id)
-
-    const { data: unsetTenantPayments, error: unsetPayError } = await supabase
-      .from('payments')
-      .select('id, payment_status')
-      .eq('invoice_id', payment.invoice_id)
-      .is('tenant_id', null)
-
-    if (tenantPayError || unsetPayError || !tenantPayments || !unsetTenantPayments) {
-      throw createError({ statusCode: 500, statusMessage: 'Fehler beim Aktualisieren der Zahlung' })
-    }
-
-    const invoicePayments = [...tenantPayments, ...unsetTenantPayments]
-    const allPaid = invoicePayments.every(p => p.payment_status === 'completed')
-
-    const { data: updatedInvoices, error: invoiceError } = await supabase
-      .from('invoices')
-      .update({
-        payment_status: allPaid ? 'paid' : 'partial',
-        ...(allPaid ? { paid_at: now } : {}),
-        updated_at: now,
-      })
-      .eq('id', payment.invoice_id)
-      .eq('tenant_id', staffUser.tenant_id)
-      .select('id')
-
-    if (invoiceError) {
-      throw createError({ statusCode: 500, statusMessage: 'Fehler beim Aktualisieren der Zahlung' })
-    }
-
-    if (!updatedInvoices?.length) {
-      throw createError({ statusCode: 404, statusMessage: 'Zahlung nicht gefunden' })
-    }
-  }
+  const failure = settlementFailure(error, data)
+  if (failure) throw createError(failure)
 
   return { success: true, payment_id }
 })

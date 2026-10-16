@@ -135,13 +135,11 @@ function matches(row: Row, filters: Filter[]) {
   })
 }
 
-function createDb(seed: Record<string, Row[]>, opts?: { skipUpdates?: string[]; failSelects?: Array<{ table: string; nth: number }> }) {
+function createDb(seed: Record<string, Row[]>, opts?: { skipUpdates?: string[]; rpcError?: boolean; rpcNull?: boolean; failJournal?: boolean }) {
   const tables: Record<string, Row[]> = structuredClone(seed)
   const writes: WriteLog[] = []
   const reads: string[] = []
   const skip = new Set(opts?.skipUpdates || [])
-  const failSelects = opts?.failSelects || []
-  const selectCounts: Record<string, number> = {}
 
   function from(table: string) {
     if (!tables[table]) tables[table] = []
@@ -169,15 +167,6 @@ function createDb(seed: Record<string, Row[]>, opts?: { skipUpdates?: string[]; 
           matched: 0,
         })
         return { data: [], error: null }
-      }
-
-      if (state.op === 'select') {
-        selectCounts[table] = (selectCounts[table] || 0) + 1
-        const nth = selectCounts[table]
-        if (failSelects.some((item) => item.table === table && item.nth === nth)) {
-          reads.push(`${table}:error:${nth}`)
-          return { data: null, error: { message: 'sibling read failed', code: 'XX000' } }
-        }
       }
 
       let matched = tables[table].filter((row) => matches(row, state.filters))
@@ -221,7 +210,185 @@ function createDb(seed: Record<string, Row[]>, opts?: { skipUpdates?: string[]; 
     return chain
   }
 
-  return { tables, writes, reads, from }
+  function siblings(invoiceId: unknown, tenantId: unknown) {
+    return (tables.payments || []).filter((row) =>
+      row.invoice_id === invoiceId && (row.tenant_id === tenantId || row.tenant_id == null),
+    )
+  }
+
+  // In-memory stand-in for the SQL functions. It is not a database transaction.
+  // Disposable Postgres coverage lives in payment-settlement-atomicity.pg.test.ts.
+  async function rpc(name: string, args: Record<string, unknown>) {
+    if (opts?.rpcError) return { data: null, error: { message: 'sibling read failed', code: 'XX000' } }
+    if (opts?.rpcNull) return { data: null, error: null }
+    const snapshot = structuredClone(tables)
+    const writesBefore = writes.length
+    try {
+      return { data: applyMockSettlement(name, args), error: null }
+    } catch (error) {
+      for (const key of ['users', 'payments', 'invoices', 'invoice_payments', 'invoice_items', 'appointments', 'product_sales']) {
+        tables[key] = snapshot[key] || []
+      }
+      writes.splice(writesBefore)
+      return { data: null, error: { message: (error as Error).message, code: 'XX000' } }
+    }
+  }
+
+  function applyMockSettlement(name: string, args: Record<string, unknown>) {
+    const actor = (tables.users || []).find((row) => row.id === args.p_actor_user_id)
+    if (!actor?.tenant_id) throw new Error('forbidden')
+
+    if (name === 'complete_tenant_cash_payment') {
+      const payment = (tables.payments || []).find((row) => row.id === args.p_payment_id && row.tenant_id === actor.tenant_id)
+      if (!payment) throw new Error('payment_not_found')
+      if ((payment.metadata as { source?: string } | undefined)?.source === 'staff_product_sale') {
+        throw new Error('staff_pos_payment')
+      }
+      if (payment.invoice_id) {
+        const owned = (tables.invoices || []).find((row) => row.id === payment.invoice_id && row.tenant_id === actor.tenant_id)
+        if (!owned) throw new Error('invoice_not_found')
+      }
+      const replayed = payment.payment_status === 'completed' && payment.payment_method === 'cash'
+      if (!replayed) {
+        Object.assign(payment, {
+          payment_status: 'completed',
+          payment_method: 'cash',
+          paid_at: args.p_paid_at,
+          updated_at: args.p_paid_at,
+        })
+        writes.push({ table: 'payments', op: 'update', payload: { payment_status: 'completed', payment_method: 'cash' }, matched: 1 })
+      }
+      let invoiceStatus: string | null = null
+      if (actor.role === 'admin' && payment.invoice_id) {
+        if (skip.has('invoices')) throw new Error('invoice_not_found')
+        const rows = siblings(payment.invoice_id, actor.tenant_id)
+        const allPaid = rows.every((row) => row.payment_status === 'completed')
+        const invoice = (tables.invoices || []).find((row) => row.id === payment.invoice_id && row.tenant_id === actor.tenant_id)
+        if (!invoice) throw new Error('invoice_not_found')
+        const payload: Row = {
+          payment_status: allPaid ? 'paid' : 'partial',
+          updated_at: args.p_paid_at,
+          ...(allPaid ? { paid_at: args.p_paid_at } : {}),
+        }
+        Object.assign(invoice, payload)
+        writes.push({ table: 'invoices', op: 'update', payload, matched: 1 })
+        invoiceStatus = String(payload.payment_status)
+      }
+      return { ok: true, payment_id: payment.id, replayed, invoice_payment_status: invoiceStatus }
+    }
+
+    if (name === 'settle_marked_invoice_payment') {
+      const invoice = (tables.invoices || []).find((row) => row.id === args.p_invoice_id && row.tenant_id === actor.tenant_id)
+      if (!invoice) throw new Error('invoice_not_found')
+      if (skip.has('invoices')) throw new Error('invoice_not_found')
+      const total = Number(invoice.total_amount_rappen || 0)
+      const requested = args.p_paid_amount_rappen == null || Number(args.p_paid_amount_rappen) === 0
+        ? total
+        : Number(args.p_paid_amount_rappen)
+      const previous = Number(invoice.paid_amount_rappen || 0)
+      if (invoice.payment_status === 'paid' && previous >= total && !args.p_camt_dedupe_key) {
+        return { ok: true, replayed: true, invoice_id: invoice.id, paid_amount_rappen: previous, is_partial: false }
+      }
+      const clamped = Math.min(previous + requested, total)
+      const isPartial = clamped < total
+      Object.assign(invoice, {
+        payment_status: isPartial ? 'partial' : 'paid',
+        status: isPartial ? 'sent' : 'paid',
+        paid_at: args.p_paid_at,
+        paid_amount_rappen: clamped,
+        ...(args.p_note ? { internal_notes: args.p_note } : {}),
+        ...(!isPartial ? { dunning_level: 0, dunning_paused: false } : {}),
+      })
+      writes.push({ table: 'invoices', op: 'update', payload: { paid_amount_rappen: clamped }, matched: 1 })
+      if (opts?.failJournal) throw new Error('journal_failed')
+      const journal = {
+        invoice_id: invoice.id,
+        tenant_id: actor.tenant_id,
+        amount_rappen: requested,
+        payment_method: args.p_payment_method || args.p_note || 'manual',
+        notes: args.p_note || null,
+        status: 'completed',
+        currency: 'CHF',
+      }
+      tables.invoice_payments = tables.invoice_payments || []
+      tables.invoice_payments.push(journal)
+      writes.push({ table: 'invoice_payments', op: 'insert', payload: journal, matched: 1 })
+      if (!isPartial) {
+        for (const payment of tables.payments || []) {
+          const open = ['invoice', 'invoiced', 'pending', 'open', 'failed', 'partial'].includes(String(payment.payment_status))
+          if (!open || payment.tenant_id !== invoice.tenant_id) continue
+          if (payment.invoice_id === invoice.id) {
+            payment.payment_status = 'completed'
+          }
+        }
+        const appointmentIds = new Set(
+          (tables.invoice_items || [])
+            .filter((item) => item.invoice_id === invoice.id && item.appointment_id && (item.tenant_id === actor.tenant_id || item.tenant_id == null))
+            .map((item) => item.appointment_id),
+        )
+        for (const payment of tables.payments || []) {
+          const open = ['invoice', 'invoiced', 'pending', 'open', 'failed', 'partial'].includes(String(payment.payment_status))
+          if (!open || payment.tenant_id !== invoice.tenant_id || payment.user_id !== invoice.user_id) continue
+          if (appointmentIds.has(payment.appointment_id)) payment.payment_status = 'completed'
+        }
+      }
+      return { ok: true, replayed: false, invoice_id: invoice.id, paid_amount_rappen: clamped, is_partial: isPartial }
+    }
+
+    if (name === 'apply_cash_settlement_batch') {
+      if (actor.is_active !== true) throw new Error('forbidden')
+      const applied: Array<Record<string, unknown>> = []
+      for (const update of (args.p_payment_updates as Array<Record<string, unknown>>) || []) {
+        const payment = (tables.payments || []).find((row) => row.id === update.payment_id && row.tenant_id === actor.tenant_id)
+        if (!payment) throw new Error('payment_not_found')
+        if (payment.payment_status === 'completed') {
+          applied.push({ payment_id: payment.id, skipped: true })
+          continue
+        }
+        Object.assign(payment, {
+          payment_method: update.payment_method,
+          payment_status: update.payment_status,
+          amount_paid_rappen: update.amount_paid_rappen,
+          ...(update.payment_status === 'completed' ? { paid_at: args.p_now } : {}),
+          ...(update.metadata ? { metadata: update.metadata } : {}),
+        })
+        writes.push({
+          table: 'payments',
+          op: 'update',
+          payload: { payment_status: update.payment_status as string, amount_paid_rappen: update.amount_paid_rappen as number },
+          matched: 1,
+        })
+        applied.push({ payment_id: payment.id, skipped: false, payment_status: update.payment_status })
+      }
+      if (['admin', 'tenant_admin', 'super_admin', 'superadmin'].includes(String(actor.role))) {
+        const invoiceIds = new Set(
+          (tables.payments || [])
+            .filter((row) => row.tenant_id === actor.tenant_id && row.invoice_id && applied.some((item) => item.payment_id === row.id))
+            .map((row) => row.invoice_id),
+        )
+        for (const invoiceId of invoiceIds) {
+          const rows = siblings(invoiceId, actor.tenant_id)
+          const allPaid = rows.length > 0 && rows.every((row) => row.payment_status === 'completed')
+          const anyPaid = rows.some((row) => row.payment_status === 'completed' || row.payment_status === 'partial')
+          if (!anyPaid) continue
+          if (skip.has('invoices')) throw new Error('invoice_not_in_tenant')
+          const invoice = (tables.invoices || []).find((row) => row.id === invoiceId && row.tenant_id === actor.tenant_id)
+          if (!invoice) throw new Error('invoice_not_in_tenant')
+          const payload: Row = {
+            payment_status: allPaid ? 'paid' : 'partial',
+            ...(allPaid ? { paid_at: args.p_now } : {}),
+          }
+          Object.assign(invoice, payload)
+          writes.push({ table: 'invoices', op: 'update', payload, matched: 1 })
+        }
+      }
+      return { ok: true, applied }
+    }
+
+    throw new Error(`unknown rpc ${name}`)
+  }
+
+  return { tables, writes, reads, from, rpc }
 }
 
 type MemoryDb = ReturnType<typeof createDb>
@@ -487,7 +654,7 @@ describe('mark-paid tenant scope', () => {
     expect(db.writes.filter((write) => write.op === 'update')).toHaveLength(0)
   })
 
-  it('does not mark the invoice paid when a sibling payment read fails', async () => {
+  it('does not leave a completed payment when the settlement RPC fails or returns null (handler mock, not a database transaction)', async () => {
     db = createDb({
       users: [staffUser('admin')],
       payments: [
@@ -495,30 +662,42 @@ describe('mark-paid tenant scope', () => {
         payment({ id: PAY_A2, invoice_id: INVOICE_A, payment_status: 'pending' }),
       ],
       invoices: [invoice({ payment_status: 'pending' })],
-    }, { failSelects: [{ table: 'payments', nth: 2 }] })
+    }, { rpcError: true })
     mocks.readBody.mockResolvedValue({ payment_id: PAY_A })
 
-    const tenantRead = await rejectionOf(() => markPaid({}))
-    expect(tenantRead.statusCode).toBe(500)
-    expect(db.tables.payments.find((row) => row.id === PAY_A)?.payment_status).toBe('completed')
+    const failed = await rejectionOf(() => markPaid({}))
+    expect(failed.statusCode).toBe(500)
+    expect(db.tables.payments.find((row) => row.id === PAY_A)?.payment_status).toBe('pending')
     expect(db.tables.payments.find((row) => row.id === PAY_A2)?.payment_status).toBe('pending')
     expect(db.tables.invoices[0].payment_status).toBe('pending')
-    expect(db.tables.invoices[0].paid_at).toBeUndefined()
-    expect(db.writes.filter((write) => write.table === 'invoices')).toHaveLength(0)
-    expect(db.reads).toContain('payments:error:2')
+    expect(db.writes.filter((write) => write.op === 'update')).toHaveLength(0)
 
     db = createDb({
       users: [staffUser('admin')],
       payments: [payment({ invoice_id: INVOICE_A })],
       invoices: [invoice({ payment_status: 'pending' })],
-    }, { failSelects: [{ table: 'payments', nth: 3 }] })
+    }, { rpcNull: true })
     mocks.getSupabaseAdmin.mockImplementation(() => db)
 
-    const unsetRead = await rejectionOf(() => markPaid({}))
-    expect(unsetRead.statusCode).toBe(500)
+    const missing = await rejectionOf(() => markPaid({}))
+    expect(missing.statusCode).toBe(500)
+    expect(db.tables.payments[0].payment_status).toBe('pending')
     expect(db.tables.invoices[0].payment_status).toBe('pending')
-    expect(db.writes.filter((write) => write.table === 'invoices')).toHaveLength(0)
-    expect(db.reads).toContain('payments:error:3')
+  })
+
+  it('does not book a second cash completion when the payment is already completed', async () => {
+    db = createDb({
+      users: [staffUser('admin')],
+      payments: [payment({ invoice_id: INVOICE_A, payment_status: 'completed', payment_method: 'cash', paid_at: '2026-10-01T00:00:00.000Z', amount_paid_rappen: 5000 })],
+      invoices: [invoice({ payment_status: 'paid', paid_at: '2026-10-01T00:00:00.000Z' })],
+    })
+    mocks.readBody.mockResolvedValue({ payment_id: PAY_A })
+
+    const result = await markPaid({}) as { success: boolean }
+    expect(result.success).toBe(true)
+    expect(db.tables.payments[0].paid_at).toBe('2026-10-01T00:00:00.000Z')
+    expect(db.tables.payments[0].amount_paid_rappen).toBe(5000)
+    expect(db.writes.filter((write) => write.table === 'payments')).toHaveLength(0)
   })
 
   it('does not return success when the invoice update matches nothing', async () => {
@@ -531,7 +710,9 @@ describe('mark-paid tenant scope', () => {
 
     const error = await rejectionOf(() => markPaid({}))
     expect(error.statusCode).toBe(404)
+    expect(db.tables.payments[0].payment_status).toBe('pending')
     expect(db.tables.invoices[0].payment_status).toBe('pending')
+    expect(db.writes.filter((write) => write.op === 'update')).toHaveLength(0)
   })
 })
 
@@ -631,6 +812,23 @@ describe('mark-invoice-paid tenant scope', () => {
     expect(db.writes).toHaveLength(0)
   })
 
+  it('rolls the mocked header back when the journal write fails (handler mock, not a database transaction)', async () => {
+    db = createDb({
+      users: [staffUser('admin')],
+      invoices: [invoice({ paid_amount_rappen: 2000, payment_status: 'partial' })],
+      payments: [payment({ invoice_id: INVOICE_A, payment_status: 'pending' })],
+    }, { failJournal: true })
+    mocks.readBody.mockResolvedValue({ invoice_id: INVOICE_A, paid_amount_rappen: 3000 })
+
+    const error = await rejectionOf(() => markInvoicePaid({}))
+    expect(error.statusCode).toBe(500)
+    expect(db.tables.invoices[0].paid_amount_rappen).toBe(2000)
+    expect(db.tables.invoices[0].payment_status).toBe('partial')
+    expect(db.tables.payments[0].payment_status).toBe('pending')
+    expect(db.tables.invoice_payments || []).toHaveLength(0)
+    expect(mocks.applyInvoiceCreditOnPaid).not.toHaveBeenCalled()
+  })
+
   it('does not return success or insert a journal when the update matches zero rows', async () => {
     db = createDb({
       users: [staffUser('admin')],
@@ -698,6 +896,22 @@ describe('bulk payment tenant scope', () => {
     expect(invoiceWrite?.payload).not.toHaveProperty('paid_amount_rappen')
   })
 
+  it('does not book a completed payment again', async () => {
+    db = createDb({
+      users: [staffUser('admin')],
+      payments: [payment({ invoice_id: INVOICE_A, payment_status: 'completed', amount_paid_rappen: 5000, total_amount_rappen: 5000 })],
+      invoices: [invoice({ payment_status: 'paid', paid_amount_rappen: 0 })],
+    })
+    mocks.readBody.mockResolvedValue({ payment_ids: [PAY_A], method: 'cash' })
+
+    const result = await processBulk({}) as { success: boolean; results: Array<{ skipped?: boolean }> }
+    expect(result.success).toBe(true)
+    expect(result.results).toEqual([expect.objectContaining({ payment_id: PAY_A, skipped: true })])
+    expect(db.tables.payments[0].amount_paid_rappen).toBe(5000)
+    expect(db.tables.invoices[0].paid_amount_rappen).toBe(0)
+    expect(db.writes.filter((write) => write.op === 'update')).toHaveLength(0)
+  })
+
   it('rejects a foreign payment id before updating anyone', async () => {
     db = createDb({
       users: [staffUser('admin')],
@@ -729,12 +943,12 @@ describe('bulk payment tenant scope', () => {
     })
     mocks.readBody.mockResolvedValue({ payment_ids: [PAY_A], method: 'cash' })
 
-    const result = await processBulk({}) as { success: boolean }
-    expect(result.success).toBe(false)
-    expect(db.tables.payments[0].payment_status).toBe('completed')
+    const error = await rejectionOf(() => processBulk({}))
+    expect(error.statusCode).toBe(404)
+    expect(db.tables.payments[0].payment_status).toBe('pending')
     expect(db.tables.invoices[0].payment_status).toBe('pending')
     expect(db.tables.invoices[0].paid_amount_rappen).toBe(0)
-    expect(JSON.stringify(result)).not.toContain(SECRET)
-    expect(JSON.stringify(result)).not.toContain(FOREIGN_NUMBER)
+    expect(JSON.stringify(error)).not.toContain(SECRET)
+    expect(JSON.stringify(error)).not.toContain(FOREIGN_NUMBER)
   })
 })
