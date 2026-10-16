@@ -15,6 +15,13 @@ describe('P1 upload bucket pin', () => {
 })
 
 describe('P1 tenant HTML sanitization', () => {
+  it('does not import isomorphic-dompurify until sanitization runs', () => {
+    const src = readFileSync(resolve(process.cwd(), 'utils/sanitize-tenant-html.ts'), 'utf8')
+    expect(src).not.toMatch(/^\s*import\s+\w+\s+from\s+['"]isomorphic-dompurify['"]/m)
+    expect(src).toContain('createRequire')
+    expect(src).toContain("require('isomorphic-dompurify')")
+  })
+
   it('strips script tags from tenant HTML', () => {
     expect(sanitizeTenantHtml('<p>ok</p><script>alert(1)</script>')).toBe('<p>ok</p>')
   })
