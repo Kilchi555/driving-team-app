@@ -18,29 +18,32 @@ function statusCodeOf(err: unknown): number {
   return Number.isFinite(code) ? code : 0
 }
 
+/** Executable markup that must never be returned from a tenant reglement. */
+function stillLooksExecutable(html: string): boolean {
+  return /<\s*script\b/i.test(html)
+    || /<\s*\/\s*script/i.test(html)
+    || /<[^>]*\son[a-z]+\s*=/i.test(html)
+    || /javascript\s*:/i.test(html)
+}
+
 function generatedHtml(type: LegalType, tenantForLegal: Parameters<typeof buildImpressumHtml>[0]) {
   const built = type === 'impressum' ? buildImpressumHtml(tenantForLegal) : buildDatenschutzHtml(tenantForLegal)
   const cleaned = trySanitizeTenantHtml(built)
   // Builder output is already escapeHtml'd. Use it only when DOMPurify cannot run.
-  return cleaned.ok ? cleaned.html : built
+  if (!cleaned.ok || stillLooksExecutable(cleaned.html)) return built
+  return cleaned.html
 }
 
 async function handleLegal(event: any) {
   const subdomain = getRouterParam(event, 'subdomain')?.trim().toLowerCase()
   const query = getQuery(event) as Record<string, unknown>
-  const typeRaw = String(query.type ?? '').trim().toLowerCase()
+  const typeRaw = String(query.type || '').toLowerCase()
 
-  if (!typeRaw) {
-    throw createError({ statusCode: 400, statusMessage: 'type required' })
-  }
-  if (!LEGAL_TYPES.includes(typeRaw as LegalType)) {
-    throw createError({ statusCode: 404, statusMessage: 'Unknown legal type' })
+  // Same contract as origin/main: missing subdomain, missing type, and unknown type.
+  if (!subdomain || !LEGAL_TYPES.includes(typeRaw as LegalType)) {
+    throw createError({ statusCode: 400, statusMessage: 'subdomain and type required' })
   }
   const type = typeRaw as LegalType
-
-  if (!subdomain) {
-    throw createError({ statusCode: 404, statusMessage: 'Website not found' })
-  }
 
   const supabase = getSupabaseAdmin()
 
@@ -93,7 +96,7 @@ async function handleLegal(event: any) {
       const content = typeof reg?.content === 'string' ? reg.content : ''
       if (content.trim()) {
         const cleaned = trySanitizeTenantHtml(content)
-        if (cleaned.ok && cleaned.html.trim()) {
+        if (cleaned.ok && cleaned.html.trim() && !stillLooksExecutable(cleaned.html)) {
           setWebsitePublicCache(event, {
             preview: access.privateCache,
             sMaxAge: 600,

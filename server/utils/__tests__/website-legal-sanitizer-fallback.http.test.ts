@@ -1,9 +1,13 @@
 /**
- * Sanitizer failure must not leak reglement HTML. DOMPurify is mocked.
- * Does not touch production.
+ * Unit tests. Supabase is an in-memory double. The sanitizer loader is replaced
+ * so isomorphic-dompurify is not the thing under test. Not an integration test.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { setTenantHtmlSanitizerLoaderForTests } from '~/utils/sanitize-tenant-html'
+import {
+  sanitizeSvgMarkup,
+  sanitizeTenantHtml,
+  setTenantHtmlSanitizerLoaderForTests,
+} from '~/utils/sanitize-tenant-html'
 
 type Row = Record<string, unknown>
 type LegalBody = { html: string; title: string; type: string; tenant: { name: string } }
@@ -101,6 +105,46 @@ describe('sanitizer failure fallback', () => {
 
   it('still answers 400 when DOMPurify cannot be used', async () => {
     const { default: handler } = await handlerPromise
-    await expect(handler(makeEvent('school-a', {}))).rejects.toMatchObject({ statusCode: 400 })
+    await expect(handler(makeEvent('school-a', {}))).rejects.toMatchObject({
+      statusCode: 400,
+      statusMessage: 'subdomain and type required',
+    })
+    await expect(handler(makeEvent('school-a', { type: 'nope' }))).rejects.toMatchObject({
+      statusCode: 400,
+      statusMessage: 'subdomain and type required',
+    })
+  })
+
+  it('drops reglement HTML when sanitize() throws after a successful load', async () => {
+    setTenantHtmlSanitizerLoaderForTests(() => ({
+      sanitize() {
+        throw new Error('sanitize blew up SECRET_SANITIZE')
+      },
+    }))
+    const { default: handler } = await handlerPromise
+    const body = await handler(makeEvent('school-a', { type: 'datenschutz' }))
+    expect(body.html).not.toContain('<script')
+    expect(body.html).not.toContain('onerror')
+    expect(body.html).not.toContain('Visible policy')
+    expect(body.html).not.toContain('SECRET_SANITIZE')
+    expect(body.html).toContain('Datenschutzerklärung')
+  })
+
+  it('drops reglement HTML when the sanitizer echoes the input', async () => {
+    setTenantHtmlSanitizerLoaderForTests(() => ({
+      sanitize: (html: string) => html,
+    }))
+    const { default: handler } = await handlerPromise
+    const body = await handler(makeEvent('school-a', { type: 'datenschutz' }))
+    expect(body.html).not.toContain('<script')
+    expect(body.html).not.toContain('onerror')
+    expect(body.html).not.toContain('Visible policy')
+    expect(body.html).toContain('Datenschutzerklärung')
+    expect(body.html).toContain('School A')
+  })
+
+  it('returns an empty string to other sanitizer callers when initialization fails', () => {
+    expect(sanitizeTenantHtml('<p>Visible</p><script>alert(1)</script>')).toBe('')
+    expect(sanitizeSvgMarkup('<svg><script>alert(1)</script></svg>')).toBe('')
   })
 })

@@ -1,5 +1,7 @@
 /**
- * Public legal-page handler. Fixture tenants only. Does not touch production.
+ * Unit tests for the public legal handler.
+ * Supabase is an in-memory double. DOMPurify runs for real unless a test says otherwise.
+ * This file does not call production and is not an integration test.
  */
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -143,14 +145,21 @@ describe('legal route module', () => {
   it('returns 400 before any tenant lookup when type is missing', async () => {
     const result = await call('school-a')
     expect(result.status).toBe(400)
-    expect(result.message).toMatch(/type required/i)
+    expect(result.message).toBe('subdomain and type required')
     expect(result.message).not.toMatch(/SECRET_STACK/)
   })
 
-  it('returns 404 for an unknown type', async () => {
+  it('returns 400 for an unknown type', async () => {
     const result = await call('school-a', { type: 'nope' })
-    expect(result.status).toBe(404)
+    expect(result.status).toBe(400)
+    expect(result.message).toBe('subdomain and type required')
     expect(result.message).not.toMatch(/SECRET_STACK/)
+  })
+
+  it('returns 400 when the subdomain parameter is empty', async () => {
+    const result = await call('', { type: 'impressum' })
+    expect(result.status).toBe(400)
+    expect(result.message).toBe('subdomain and type required')
   })
 })
 
@@ -213,6 +222,14 @@ describe('legal pages for fixture tenants', () => {
     expect(result.body.html).toContain('Datenschutzerklärung')
     expect(result.body.html).not.toContain('<script')
     expect(result.body.html).not.toContain('Visible policy')
+  })
+
+  it('returns 404 when the website exists but the tenant row is missing', async () => {
+    tenants.splice(0, tenants.length)
+    const result = await call('school-a', { type: 'impressum' })
+    expect(result.status).toBe(404)
+    expect(result.message).toBe('Tenant not found')
+    expect(JSON.stringify(result)).not.toContain('SECRET_STACK')
   })
 
   it('returns 404 for an unknown subdomain', async () => {
