@@ -1,0 +1,246 @@
+import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { decideInvoiceUpdate } from '../invoice-update-allowlist'
+
+const NOW = '2026-10-15T12:00:00.000Z'
+const SENT_AT = '2026-10-15T11:00:00.000Z'
+
+describe('decideInvoiceUpdate', () => {
+  it('accepts the send payload from useInvoices', () => {
+    const decision = decideInvoiceUpdate({ status: 'sent', sent_at: SENT_AT }, NOW)
+    expect(decision.ok).toBe(true)
+    if (!decision.ok) return
+    expect(decision.payload).toEqual({
+      status: 'sent',
+      sent_at: SENT_AT,
+      updated_at: NOW,
+    })
+  })
+
+  it('accepts cancel with and without a note', () => {
+    const withNote = decideInvoiceUpdate({
+      status: 'cancelled',
+      notes: 'Grund\n\nStorniert am 15.10.2026',
+    }, NOW)
+    expect(withNote.ok).toBe(true)
+    if (withNote.ok) {
+      expect(withNote.payload.status).toBe('cancelled')
+      expect(withNote.payload.notes).toBe('Grund\n\nStorniert am 15.10.2026')
+    }
+
+    const withoutNote = decideInvoiceUpdate({ status: 'cancelled' }, NOW)
+    expect(withoutNote.ok).toBe(true)
+    if (withoutNote.ok) {
+      expect(withoutNote.payload).toEqual({ status: 'cancelled', updated_at: NOW })
+    }
+  })
+
+  it('accepts the billing payload from InvoicePreviewModal', () => {
+    const decision = decideInvoiceUpdate({
+      billing_contact_person: null,
+      billing_company_name: 'Fahrschule',
+      billing_street: 'Weg 1',
+      billing_zip: '8000',
+      billing_city: 'Zürich',
+      billing_email: 'kunde@example.ch',
+    }, NOW)
+    expect(decision.ok).toBe(true)
+    if (!decision.ok) return
+    expect(decision.payload).toMatchObject({
+      billing_contact_person: null,
+      billing_company_name: 'Fahrschule',
+      billing_email: 'kunde@example.ch',
+    })
+    expect(decision.payload).not.toHaveProperty('payment_status')
+    expect(decision.payload).not.toHaveProperty('paid_amount_rappen')
+    expect(decision.payload).not.toHaveProperty('paid_at')
+  })
+
+  it('stores the preview house number, including an explicit empty value', () => {
+    const cleared = decideInvoiceUpdate({
+      billing_contact_person: null,
+      billing_company_name: 'Fahrschule',
+      billing_street: 'Bahnhofstrasse',
+      billing_street_number: '',
+      billing_zip: '8000',
+      billing_city: 'Zürich',
+      billing_email: null,
+    }, NOW)
+    expect(cleared.ok).toBe(true)
+    if (!cleared.ok) return
+    expect(cleared.payload.billing_street).toBe('Bahnhofstrasse')
+    expect(cleared.payload.billing_street_number).toBe('')
+    expect(Object.prototype.hasOwnProperty.call(cleared.payload, 'billing_street_number')).toBe(true)
+
+    const suffix = decideInvoiceUpdate({
+      billing_street: 'Bahnhofstrasse',
+      billing_street_number: '12a',
+    }, NOW)
+    expect(suffix.ok).toBe(true)
+    if (!suffix.ok) return
+    expect(suffix.payload.billing_street_number).toBe('12a')
+  })
+
+  it('rejects a house number longer than the column limit', () => {
+    const decision = decideInvoiceUpdate({
+      billing_street_number: '123456789012345678901',
+    }, NOW)
+    expect(decision.ok).toBe(false)
+    if (decision.ok) return
+    expect(decision.statusCode).toBe(400)
+    expect(decision.rejectedFields).toEqual(['billing_street_number'])
+    expect(decision.statusMessage).toContain('too long')
+    expect(decision).not.toHaveProperty('payload')
+  })
+
+  it('rejects the whole request when a house number is sent with a payment field', () => {
+    const decision = decideInvoiceUpdate({
+      billing_street: 'Bahnhofstrasse',
+      billing_street_number: '12',
+      payment_status: 'paid',
+    }, NOW)
+    expect(decision.ok).toBe(false)
+    if (decision.ok) return
+    expect(decision.statusCode).toBe(400)
+    expect(decision.rejectedFields).toEqual(['payment_status'])
+    expect(decision).not.toHaveProperty('payload')
+  })
+
+  it('rejects payment_status pending and does not return a write payload', () => {
+    const decision = decideInvoiceUpdate({
+      status: 'sent',
+      sent_at: SENT_AT,
+      payment_status: 'pending',
+    }, NOW)
+    expect(decision.ok).toBe(false)
+    if (decision.ok) return
+    expect(decision.statusCode).toBe(400)
+    expect(decision.statusMessage).toContain('payment_status')
+    expect(decision.rejectedFields).toEqual(['payment_status'])
+    expect(decision).not.toHaveProperty('payload')
+  })
+
+  it('rejects paid_amount_rappen and paid_at', () => {
+    const decision = decideInvoiceUpdate({
+      paid_amount_rappen: 0,
+      paid_at: null,
+    }, NOW)
+    expect(decision.ok).toBe(false)
+    if (decision.ok) return
+    expect(decision.statusCode).toBe(400)
+    expect(decision.statusMessage).toContain('paid_amount_rappen')
+    expect(decision.statusMessage).toContain('paid_at')
+    expect(decision.rejectedFields).toEqual(['paid_amount_rappen', 'paid_at'])
+  })
+
+  it('rejects ownership, totals, and other accounting fields', () => {
+    const decision = decideInvoiceUpdate({
+      tenant_id: '22222222-2222-2222-2222-222222222222',
+      user_id: '33333333-3333-3333-3333-333333333333',
+      total_amount_rappen: 1,
+      subtotal_rappen: 1,
+      payment_method: 'cash',
+      credit_applied_rappen: 500,
+      dunning_level: 0,
+      document_kind: 'quote',
+    }, NOW)
+    expect(decision.ok).toBe(false)
+    if (decision.ok) return
+    expect(decision.statusCode).toBe(400)
+    expect(decision.rejectedFields).toEqual([
+      'tenant_id',
+      'user_id',
+      'total_amount_rappen',
+      'subtotal_rappen',
+      'payment_method',
+      'credit_applied_rappen',
+      'dunning_level',
+      'document_kind',
+    ])
+  })
+
+  it('rejects status paid and other invoice statuses', () => {
+    for (const status of ['paid', 'draft', 'overdue', 'pdf_created', 'pending']) {
+      const decision = decideInvoiceUpdate({ status }, NOW)
+      expect(decision.ok).toBe(false)
+      if (decision.ok) return
+      expect(decision.statusMessage).toContain('status must be sent or cancelled')
+    }
+  })
+
+  it('accepts a valid billing email and null', () => {
+    const valid = decideInvoiceUpdate({ billing_email: 'kunde@example.ch' }, NOW)
+    expect(valid.ok).toBe(true)
+    if (!valid.ok) return
+    expect(valid.payload.billing_email).toBe('kunde@example.ch')
+
+    const cleared = decideInvoiceUpdate({ billing_email: null }, NOW)
+    expect(cleared.ok).toBe(true)
+    if (!cleared.ok) return
+    expect(cleared.payload.billing_email).toBeNull()
+  })
+
+  it('keeps an exact stored placeholder and still rejects a new one', () => {
+    for (const stored of ['keine e-mail', 'Keine E-Mail', ' keine e-mail ', '   ']) {
+      const resent = decideInvoiceUpdate({
+        billing_street: 'Bahnhofstrasse',
+        billing_street_number: '12a',
+        billing_zip: '8000',
+        billing_city: 'Zürich',
+        billing_email: stored,
+      }, NOW, stored)
+      expect(resent.ok).toBe(true)
+      if (!resent.ok) return
+      expect(resent.payload.billing_street).toBe('Bahnhofstrasse')
+      expect(resent.payload.billing_street_number).toBe('12a')
+      expect(resent.payload.billing_zip).toBe('8000')
+      expect(resent.payload.billing_city).toBe('Zürich')
+      expect(resent.payload.billing_email).toBe(stored)
+    }
+
+    const introduced = decideInvoiceUpdate({
+      billing_street: 'Bahnhofstrasse',
+      billing_email: 'keine e-mail',
+    }, NOW, 'kunde@example.ch')
+    expect(introduced.ok).toBe(false)
+    if (introduced.ok) return
+    expect(introduced.rejectedFields).toEqual(['billing_email'])
+    expect(introduced).not.toHaveProperty('payload')
+
+    const empty = decideInvoiceUpdate({ billing_email: '' }, NOW, '')
+    expect(empty.ok).toBe(false)
+  })
+
+  it('rejects an invalid email without accepting the surrounding address fields', () => {
+    const decision = decideInvoiceUpdate({
+      billing_city: 'Zürich',
+      billing_street_number: '12',
+      billing_email: 'not-an-email',
+    }, NOW, 'keine e-mail')
+    expect(decision.ok).toBe(false)
+    if (decision.ok) return
+    expect(decision.statusMessage).toContain('billing_email')
+    expect(decision).not.toHaveProperty('payload')
+  })
+
+  it('rejects a placeholder email sent together with a payment field', () => {
+    const decision = decideInvoiceUpdate({
+      billing_email: 'keine e-mail',
+      billing_street_number: '12',
+      payment_status: 'paid',
+    }, NOW, 'keine e-mail')
+    expect(decision.ok).toBe(false)
+    if (decision.ok) return
+    expect(decision.rejectedFields).toEqual(['payment_status'])
+    expect(decision).not.toHaveProperty('payload')
+  })
+
+  it('does not spread caller fields in the update route', () => {
+    const src = readFileSync(resolve(process.cwd(), 'server/api/invoices/update.post.ts'), 'utf8')
+    expect(src).not.toContain('...updates')
+    expect(src).toContain('decideInvoiceUpdate')
+    expect(src).toContain(".eq('tenant_id', staffUser.tenant_id)")
+    expect(src).toContain("select('id, tenant_id, billing_email')")
+  })
+})
