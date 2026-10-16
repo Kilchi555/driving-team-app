@@ -10,7 +10,8 @@ GitHub required checks on this commit are not in this file yet. Local tests pass
 - Branch: `cursor/admin-payment-reset-59ff`
 - Base: `main` at `f1efbe6d471584ecc1da0f621dabb52727088ec4`
 - Implementation: `e64f6f4f956fc7ae37b4832003095de0a4421933`
-- Head: recorded in the commit that adds this handoff. Re-read `git rev-parse HEAD` on this branch after that commit.
+- Handoff commit: `4beaede58e47049bd270d4f49f6904bce230b0ed`
+- Branch head is the next commit, which only adds this SHA list. The pull request description repeats `git rev-parse HEAD` from that commit.
 - Draft stays a draft. Do not merge.
 
 ## Root causes
