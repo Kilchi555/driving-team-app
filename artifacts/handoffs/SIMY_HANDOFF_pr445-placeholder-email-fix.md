@@ -14,10 +14,11 @@
 - Repository: Kilchi555/driving-team-app
 - Branch: `cursor/invoice-update-field-allowlist-c155`
 - Starting HEAD, re-read live before the edit: `7802307efbe21b90ef11f1e391159feb0950a1bb`
+- Fix commit: `bed758431960457bb777e6f078de4a41614825d4`
 - Base: `main` `f1efbe6d471584ecc1da0f621dabb52727088ec4`
 - Pull request: https://github.com/Kilchi555/driving-team-app/pull/445
 - Bugbot thread left unresolved: https://github.com/Kilchi555/driving-team-app/pull/445#discussion_r4293996289
-- The commit that contains this file is the new PR head. Read `headRefOid` after push; do not treat an older SHA as the CI result.
+- The fix commit above already contains the implementation and the first copy of this handoff. A following commit only records that SHA. The live `headRefOid` after push is the CI head. Do not use `7802307e` for that result.
 
 ## 3. Changes
 
