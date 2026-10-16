@@ -136,10 +136,32 @@ beforeEach(() => {
 })
 
 describe('legal route module', () => {
-  it('imports without a top-level DOMPurify evaluation', () => {
+  it('keeps the shared sanitizer free of Node-only static imports', () => {
     const src = readFileSync(resolve(process.cwd(), 'utils/sanitize-tenant-html.ts'), 'utf8')
-    expect(src).not.toMatch(/^import\s+.+\s+from\s+['"]isomorphic-dompurify['"]/m)
-    expect(src).toContain('createRequire')
+    expect(src).not.toMatch(/from\s+['"]node:module['"]/)
+    expect(src).not.toMatch(/from\s+['"]node:/)
+    expect(src).not.toMatch(/from\s+['"]jsdom['"]/)
+    expect(src).not.toMatch(/from\s+['"]isomorphic-dompurify['"]/)
+    expect(src.split('\n').filter((line) => /^\s*import\s/.test(line)).join('\n')).not.toMatch(/isomorphic-dompurify|jsdom|node:module/)
+    expect(src).toContain('getBuiltinModule')
+    expect(src).toMatch(/getBuiltin\?\.\(\s*['"]module['"]\s*\)/)
+    expect(src).toMatch(/nodeRequire\(\s*['"]isomorphic-dompurify['"]\s*\)/)
+    const clients = [
+      'pages/onboarding/[token].vue',
+      'pages/register/[tenant].vue',
+      'pages/booking/availability/[slug].vue',
+      'pages/admin/marketing/aktion.vue',
+      'components/TenantLogo.vue',
+      'components/ConfirmationDialog.vue',
+      'components/admin/ReglementeManager.vue',
+      'server/api/public/website/[subdomain]/legal.get.ts',
+    ]
+    for (const rel of clients) {
+      const caller = readFileSync(resolve(process.cwd(), rel), 'utf8')
+      expect(caller).toMatch(/sanitize-tenant-html/)
+      expect(caller).not.toMatch(/node:module/)
+      expect(caller).not.toMatch(/isomorphic-dompurify/)
+    }
   })
 
   it('returns 400 before any tenant lookup when type is missing', async () => {

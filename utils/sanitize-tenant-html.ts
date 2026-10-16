@@ -1,4 +1,4 @@
-import { createRequire } from 'node:module'
+import DOMPurify from 'dompurify'
 
 const REGLEMENT_TAGS = [
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -14,18 +14,48 @@ type PurifyLike = {
   sanitize: (html: string, config?: Record<string, unknown>) => string
 }
 
+type NodeModuleBuiltin = {
+  createRequire: (filename: string) => (id: string) => unknown
+}
+
 /**
- * DOMPurify is loaded on first use. A top-level import evaluates jsdom while
- * the Nitro route module loads. If that evaluation throws, the handler never
- * reaches its own 400/404 branches, so the load stays inside the first call.
+ * Browser code imports this module. It must not statically import node:module,
+ * jsdom, or isomorphic-dompurify: the Node entry of that package builds a
+ * JSDOM window while the module evaluates, and Vite cannot bundle node:module
+ * for the client.
+ *
+ * On the server, isomorphic-dompurify is required only inside the first
+ * sanitize call. A missing type check on the legal route never reaches it.
  */
 let purifyState: { loaded: true; purify: PurifyLike | null } | undefined
 
-function defaultLoadPurify(): PurifyLike | null {
-  const require = createRequire(import.meta.url)
-  const mod = require('isomorphic-dompurify') as { default?: PurifyLike } & PurifyLike
+function asPurify(value: unknown, windowRef?: unknown): PurifyLike | null {
+  if (value && typeof (value as PurifyLike).sanitize === 'function') return value as PurifyLike
+  if (typeof value === 'function' && windowRef) {
+    const created = (value as (root: unknown) => unknown)(windowRef)
+    if (created && typeof (created as PurifyLike).sanitize === 'function') return created as PurifyLike
+  }
+  return null
+}
+
+function loadBrowserPurify(): PurifyLike | null {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return null
+  return asPurify(DOMPurify, window)
+}
+
+function loadNodePurify(): PurifyLike | null {
+  const getBuiltin = (process as { getBuiltinModule?: (name: string) => NodeModuleBuiltin }).getBuiltinModule
+  const builtin = getBuiltin?.('module')
+  if (!builtin?.createRequire) return null
+  const nodeRequire = builtin.createRequire(import.meta.url)
+  const mod = nodeRequire('isomorphic-dompurify') as { default?: PurifyLike } & PurifyLike
   const candidate = mod?.default && typeof mod.default.sanitize === 'function' ? mod.default : mod
   return candidate && typeof candidate.sanitize === 'function' ? candidate : null
+}
+
+function defaultLoadPurify(): PurifyLike | null {
+  if (typeof window !== 'undefined' && typeof document !== 'undefined') return loadBrowserPurify()
+  return loadNodePurify()
 }
 
 let loadPurifyImpl: () => PurifyLike | null = defaultLoadPurify
@@ -42,7 +72,7 @@ function loadPurify(): PurifyLike | null {
   }
 }
 
-/** Test-only. Production keeps the deferred isomorphic-dompurify loader. */
+/** Test-only. Production keeps the deferred loader. */
 export function setTenantHtmlSanitizerLoaderForTests(next: (() => PurifyLike | null) | null) {
   purifyState = undefined
   loadPurifyImpl = next || defaultLoadPurify
