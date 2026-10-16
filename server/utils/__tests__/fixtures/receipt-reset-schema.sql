@@ -36,6 +36,7 @@ CREATE TABLE public.invoices (
   vat_amount_rappen integer NOT NULL,
   total_amount_rappen integer NOT NULL,
   paid_amount_rappen integer NOT NULL DEFAULT 0,
+  credit_applied_rappen integer NOT NULL DEFAULT 0,
   paid_at timestamptz,
   document_kind text NOT NULL DEFAULT 'invoice',
   appointment_id uuid,
@@ -86,8 +87,24 @@ CREATE TABLE public.payments (
   refunded_amount_rappen integer NOT NULL DEFAULT 0,
   description text,
   course_registration_id uuid,
+  credit_transaction_id uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz
+);
+
+CREATE TABLE public.credit_transactions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid,
+  tenant_id uuid,
+  transaction_type varchar(50) NOT NULL,
+  amount_rappen integer NOT NULL,
+  balance_before_rappen integer NOT NULL DEFAULT 0,
+  balance_after_rappen integer NOT NULL DEFAULT 0,
+  payment_method varchar(50),
+  reference_id uuid,
+  reference_type varchar(50),
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TABLE public.accounting_categories (

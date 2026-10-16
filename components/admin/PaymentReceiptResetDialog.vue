@@ -7,7 +7,7 @@
       </p>
 
       <p v-if="loading" class="mt-4 text-sm text-gray-500">Prüfung läuft…</p>
-      <p v-else-if="loadError" class="mt-4 text-sm text-red-700">{{ loadError }}</p>
+      <p v-else-if="loadError && !preview" class="mt-4 text-sm text-red-700">{{ displayError }}</p>
 
       <div v-else-if="preview" class="mt-4 space-y-3 text-sm">
         <dl class="grid grid-cols-2 gap-2">
@@ -25,8 +25,14 @@
           <dd>{{ preview.proposed_target_status || 'noch nicht bestimmt' }}</dd>
         </dl>
 
-        <p v-if="preview.blocked" class="rounded bg-amber-50 text-amber-900 p-3">
+        <p v-if="loadError" class="rounded bg-red-50 text-red-800 p-3">
+          {{ displayError }}
+        </p>
+        <p v-else-if="preview.blocked" class="rounded bg-amber-50 text-amber-900 p-3">
           {{ reasonText }}
+        </p>
+        <p v-else-if="preview.already_applied" class="rounded bg-green-50 text-green-900 p-3">
+          Diese Korrektur ist bereits ausgeführt. Es wird keine zweite Stornierung gebucht.
         </p>
         <p v-else class="rounded bg-green-50 text-green-900 p-3">
           Die anderen Positionen bleiben unverändert. Der Termin bleibt, wie er ist, solange kein eigener Terminstatus gewählt wird.
@@ -37,12 +43,12 @@
           <textarea v-model="reason" rows="3" class="mt-1 w-full border rounded p-2" placeholder="Warum war die Zahlung nicht eingegangen?" />
         </label>
 
-        <label v-if="preview.requires.sibling_confirmation" class="flex gap-2 items-start">
+        <label v-if="preview.requires.sibling_confirmation && !preview.already_applied" class="flex gap-2 items-start">
           <input v-model="confirmSiblings" type="checkbox" class="mt-1">
           <span>Die anderen Rechnungspositionen bleiben als eingegangen bestehen.</span>
         </label>
 
-        <label v-if="preview.requires.invoice_line_disposition" class="block">
+        <label v-if="preview.requires.invoice_line_disposition && !preview.already_applied" class="block">
           <span class="text-gray-700">Rechnungsposition</span>
           <select v-model="disposition" class="mt-1 w-full border rounded p-2">
             <option value="">Bitte wählen</option>
@@ -51,7 +57,7 @@
           </select>
         </label>
 
-        <label v-if="preview.requires.appointment_disposition" class="block">
+        <label v-if="preview.requires.appointment_disposition && !preview.already_applied" class="block">
           <span class="text-gray-700">Termin</span>
           <select v-model="appointmentDisposition" class="mt-1 w-full border rounded p-2">
             <option value="">Bitte wählen</option>
@@ -117,7 +123,24 @@ const reasonMessages: Record<string, string> = {
   tenant_mismatch: 'Die Zahlung gehört nicht zu diesem Betrieb.',
   payment_not_found: 'Keine eindeutige Zahlung gefunden.',
   forbidden: 'Nur Admins dürfen diese Korrektur ausführen.',
+  wallet_credit_present: 'Die Rechnung hat Guthaben gutgeschrieben. Diese Korrektur kann das Guthaben nicht zurücknehmen.',
+  invoice_credit_transaction_present: 'Eine Guthabenbuchung verweist auf diese Rechnung. Die Korrektur wird nicht ausgeführt.',
+  staff_pos_credit_present: 'Ein Kassenverkauf hat Guthaben zu dieser Zahlung erzeugt. Die Korrektur wird nicht ausgeführt.',
+  linked_credit_transaction_present: 'Diese Zahlung ist mit einer Guthabenbuchung verknüpft. Die Korrektur kann das Guthaben nicht wiederherstellen.',
+  credit_lookup_failed: 'Guthaben konnte nicht geprüft werden. Die Korrektur wird nicht ausgeführt.',
+  idempotency_payment_mismatch: 'Dieser Vorgangsschlüssel gehört zu einer anderen Zahlung.',
 }
+
+const hardStops = [
+  'actual_receipt_channel',
+  'bank_settlement_present',
+  'wallet_credit_present',
+  'invoice_credit_transaction_present',
+  'staff_pos_credit_present',
+  'linked_credit_transaction_present',
+  'credit_lookup_failed',
+  'idempotency_payment_mismatch',
+]
 
 const siblingText = computed(() => {
   const amounts = preview.value?.discovered?.siblingLineAmountsRappen || []
@@ -131,7 +154,19 @@ const reasonText = computed(() => {
   return reasons.map((code: string) => reasonMessages[code] || code).join(' ')
 })
 
-const canSubmit = computed(() => reason.value.trim().length >= 10 && !preview.value?.reasons?.includes('actual_receipt_channel') && !preview.value?.reasons?.includes('bank_settlement_present'))
+const displayError = computed(() => {
+  const raw = loadError.value || ''
+  const known = Object.keys(reasonMessages).find(code => raw.includes(code))
+  if (known) return reasonMessages[known]
+  if (preview.value?.reasons?.length) return reasonText.value
+  return raw || 'Die Korrektur wurde nicht ausgeführt.'
+})
+
+const canSubmit = computed(() => {
+  if (reason.value.trim().length < 10) return false
+  const reasons = preview.value?.reasons || []
+  return !hardStops.some(code => reasons.includes(code) || loadError.value.includes(code))
+})
 
 watch(() => props.open, (isOpen) => {
   if (!isOpen) return
@@ -168,7 +203,8 @@ async function refreshPreview() {
   try {
     preview.value = await $fetch('/api/admin/payments/receipt-reset-preview', { method: 'POST', body: payload() })
   } catch (error: any) {
-    preview.value = error?.data?.reasons ? error.data : (error?.data?.data || null)
+    const next = error?.data?.reasons ? error.data : (error?.data?.data || null)
+    if (next) preview.value = next
     loadError.value = error?.data?.statusMessage || error?.statusMessage || 'Die Prüfung ist fehlgeschlagen.'
   } finally {
     loading.value = false
@@ -187,8 +223,9 @@ async function submit() {
     emit('applied')
     emit('close')
   } catch (error: any) {
-    preview.value = error?.data?.reasons ? error.data : (error?.data?.data || preview.value)
-    loadError.value = error?.data?.statusMessage || 'Die Korrektur wurde nicht ausgeführt.'
+    const next = error?.data?.reasons ? error.data : (error?.data?.data || null)
+    if (next) preview.value = next
+    loadError.value = error?.data?.statusMessage || error?.statusMessage || 'Die Korrektur wurde nicht ausgeführt.'
   } finally {
     submitting.value = false
   }

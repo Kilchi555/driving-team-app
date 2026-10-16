@@ -46,6 +46,7 @@ export interface ReceiptResetSnapshot {
     paidAt: string | null
     walleeTransactionId: string | null
     refundedAmountRappen: number
+    creditTransactionId?: string | null
   } | null
   appointmentStatus: string | null
   invoice: {
@@ -57,6 +58,7 @@ export interface ReceiptResetSnapshot {
     status: string | null
     paymentStatus: string | null
     dueDate: string | null
+    creditAppliedRappen?: number
   } | null
   invoiceLines: Array<{
     id: string
@@ -83,6 +85,9 @@ export interface ReceiptResetSnapshot {
   }>
   cashTransactionCount: number
   bankImportCount: number
+  invoiceCreditTransactionCount?: number
+  staffPosCreditCount?: number
+  creditLookupFailed?: boolean
   decisions: ReceiptResetDecisions
 }
 
@@ -279,6 +284,12 @@ export function evaluateReceiptReset(snapshot: ReceiptResetSnapshot): ReceiptRes
       },
     }
   }
+
+  if ((invoice?.creditAppliedRappen ?? 0) > 0) reasons.push('wallet_credit_present')
+  if ((snapshot.invoiceCreditTransactionCount ?? 0) > 0) reasons.push('invoice_credit_transaction_present')
+  if ((snapshot.staffPosCreditCount ?? 0) > 0) reasons.push('staff_pos_credit_present')
+  if (payment.creditTransactionId) reasons.push('linked_credit_transaction_present')
+  if (snapshot.creditLookupFailed) reasons.push('credit_lookup_failed')
 
   if (!isReceivedStatus(payment.paymentStatus)) reasons.push('status_not_resettable')
 

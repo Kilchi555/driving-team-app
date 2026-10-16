@@ -134,6 +134,7 @@ async function resetDatabase(): Promise<void> {
       cash_transactions,
       bank_import_records,
       payment_receipt_resets,
+      credit_transactions,
       users
     RESTART IDENTITY CASCADE
   `)
@@ -598,5 +599,137 @@ describe('admin_reset_mistaken_receipt on disposable Postgres', () => {
     expect(audit.rows[0].created_at).toBeTruthy()
     expect(result.paid_amount_before_rappen).toBe(46500)
     expect(result.paid_amount_after_rappen).toBe(27900)
+  })
+
+  async function committedLedger() {
+    const result = await client.query(`
+      SELECT
+        (SELECT coalesce(json_agg(p ORDER BY p.id), '[]'::json) FROM payments p) AS payments,
+        (SELECT coalesce(json_agg(i ORDER BY i.id), '[]'::json) FROM invoices i) AS invoices,
+        (SELECT coalesce(json_agg(ip ORDER BY ip.id), '[]'::json) FROM invoice_payments ip) AS invoice_payments,
+        (SELECT coalesce(json_agg(a ORDER BY a.id), '[]'::json) FROM accounting_entries a) AS accounting_entries,
+        (SELECT count(*)::int FROM accounting_journal_lines) AS journal_lines,
+        (SELECT coalesce(json_agg(c ORDER BY c.id), '[]'::json) FROM credit_transactions c) AS credit_transactions,
+        (SELECT count(*)::int FROM payment_receipt_resets) AS audits
+    `)
+    return result.rows[0]
+  }
+
+  async function expectRejectionLeavesLedgerUnchanged(key: string, error: RegExp) {
+    const before = await committedLedger()
+    const query = resetCall(key)
+    await expect(client.query(query.text, query.values)).rejects.toThrow(error)
+    expect(await committedLedger()).toEqual(before)
+  }
+
+  it('rejects a wallet stamp without writing payment, invoice, reversal, accounting, or credit rows', async () => {
+    await client.query(`UPDATE invoices SET credit_applied_rappen = 5000 WHERE id = $1`, [INVOICE])
+    await expectRejectionLeavesLedgerUnchanged('wallet-stamp', /wallet_credit_present/)
+    const invoice = await client.query(`SELECT credit_applied_rappen, paid_amount_rappen, status FROM invoices WHERE id = $1`, [INVOICE])
+    expect(invoice.rows[0]).toMatchObject({ credit_applied_rappen: 5000, paid_amount_rappen: 46500, status: 'paid' })
+    const payment = await client.query(`SELECT payment_status FROM payments WHERE id = $1`, [PAYMENT])
+    expect(payment.rows[0].payment_status).toBe('completed')
+  })
+
+  it('rejects an invoice credit transaction when the stamp is still zero', async () => {
+    await client.query(`
+      INSERT INTO credit_transactions (
+        id, user_id, tenant_id, transaction_type, amount_rappen,
+        balance_before_rappen, balance_after_rappen, reference_id, reference_type, notes
+      ) VALUES (
+        '10000000-0000-4000-8000-0000000000c1', $1, NULL, 'deposit', 5000,
+        0, 5000, $2, 'invoice', 'wallet credit without stamp'
+      )
+    `, [ACTOR, INVOICE])
+    await expectRejectionLeavesLedgerUnchanged('wallet-tx', /invoice_credit_transaction_present/)
+    const credit = await client.query(
+      `SELECT amount_rappen, reference_type, tenant_id FROM credit_transactions WHERE reference_id = $1`,
+      [INVOICE],
+    )
+    expect(credit.rows).toEqual([
+      { amount_rappen: 5000, reference_type: 'invoice', tenant_id: null },
+    ])
+    const invoice = await client.query(`SELECT credit_applied_rappen, paid_amount_rappen FROM invoices WHERE id = $1`, [INVOICE])
+    expect(invoice.rows[0]).toMatchObject({ credit_applied_rappen: 0, paid_amount_rappen: 46500 })
+  })
+
+  it('rejects Staff-POS credit on this payment and on a sibling payment', async () => {
+    await client.query(`
+      INSERT INTO credit_transactions (
+        id, user_id, tenant_id, transaction_type, amount_rappen,
+        balance_before_rappen, balance_after_rappen, reference_id, reference_type, notes
+      ) VALUES (
+        '10000000-0000-4000-8000-0000000000c2', $1, $2, 'credit_product_purchase', 9500,
+        0, 9500, $3, 'payment', 'staff pos credit on the mistaken payment'
+      )
+    `, [ACTOR, TENANT, PAYMENT])
+    await expectRejectionLeavesLedgerUnchanged('staff-pos-payment', /staff_pos_credit_present/)
+
+    await client.query(`DELETE FROM credit_transactions WHERE id = '10000000-0000-4000-8000-0000000000c2'`)
+    await client.query(`
+      INSERT INTO credit_transactions (
+        id, user_id, tenant_id, transaction_type, amount_rappen,
+        balance_before_rappen, balance_after_rappen, reference_id, reference_type, notes
+      ) VALUES (
+        '10000000-0000-4000-8000-0000000000c3', $1, NULL, 'credit_product_purchase', 4200,
+        0, 4200, $2, 'payment', 'staff pos credit on a sibling payment'
+      )
+    `, [ACTOR, SIB_124])
+    await expectRejectionLeavesLedgerUnchanged('staff-pos-sibling', /staff_pos_credit_present/)
+    const sibling = await client.query(`SELECT payment_status, paid_at FROM payments WHERE id = $1`, [SIB_124])
+    expect(sibling.rows[0].payment_status).toBe('completed')
+    expect(sibling.rows[0].paid_at).toBeTruthy()
+    const credit = await client.query(`SELECT amount_rappen, reference_id FROM credit_transactions`)
+    expect(credit.rows).toEqual([{ amount_rappen: 4200, reference_id: SIB_124 }])
+    const reversals = await client.query(`SELECT count(*)::int AS n FROM invoice_payments WHERE status = 'reversal'`)
+    expect(reversals.rows[0].n).toBe(0)
+  })
+
+  it('rejects a payment that spent wallet credit without restoring it', async () => {
+    await client.query(
+      `UPDATE payments SET credit_transaction_id = '10000000-0000-4000-8000-0000000000c4' WHERE id = $1`,
+      [PAYMENT],
+    )
+    await expectRejectionLeavesLedgerUnchanged('spent-credit', /linked_credit_transaction_present/)
+    const payment = await client.query(`SELECT payment_status, credit_transaction_id FROM payments WHERE id = $1`, [PAYMENT])
+    expect(payment.rows[0]).toMatchObject({
+      payment_status: 'completed',
+      credit_transaction_id: '10000000-0000-4000-8000-0000000000c4',
+    })
+  })
+
+  it('accepts a repeated reset without new dispositions and does not add a reversal or storno', async () => {
+    await applyReset('applied-once')
+    const replay = await client.query(
+      `SELECT public.admin_reset_mistaken_receipt(
+        $1::uuid, $2::uuid, $3::uuid, $4::text, 'replay-without-dispositions',
+        false, NULL::uuid, NULL::integer, NULL::text, CURRENT_DATE, NULL::text, NULL::text
+      ) AS result`,
+      [TENANT, ACTOR, PAYMENT, REASON],
+    )
+    expect(replay.rows[0].result.result).toBe('already_applied')
+    expect(replay.rows[0].result.replayed).toBe(false)
+    const counts = await client.query(`
+      SELECT
+        (SELECT count(*)::int FROM invoice_payments WHERE status = 'reversal' AND tenant_id = $1) AS reversals,
+        (SELECT count(*)::int FROM accounting_entries WHERE storno_of_id IS NOT NULL AND tenant_id = $1 AND deleted_at IS NULL) AS stornos,
+        (SELECT count(*)::int FROM payment_receipt_resets WHERE tenant_id = $1) AS audits
+    `, [TENANT])
+    expect(counts.rows[0]).toMatchObject({ reversals: 1, stornos: 1, audits: 2 })
+  })
+
+  it('refuses an idempotency key that belongs to a different payment and writes nothing new', async () => {
+    await applyReset('bound-key')
+    const before = await committedLedger()
+    await expect(client.query(
+      `SELECT public.admin_reset_mistaken_receipt(
+        $1::uuid, $2::uuid, $3::uuid, $4::text, 'bound-key',
+        true, $5::uuid, 34100, NULL::text, CURRENT_DATE, 'remain_on_invoice', 'leave_unchanged'
+      )`,
+      [TENANT, ACTOR, SIB_124, REASON, SETTLEMENT],
+    )).rejects.toThrow(/idempotency_payment_mismatch/)
+    expect(await committedLedger()).toEqual(before)
+    const sibling = await client.query(`SELECT payment_status FROM payments WHERE id = $1`, [SIB_124])
+    expect(sibling.rows[0].payment_status).toBe('completed')
   })
 })

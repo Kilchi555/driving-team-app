@@ -189,6 +189,94 @@ describe('Gemperli shared invoice receipt', () => {
     expect(after.stornoCount).toBe(1)
   })
 
+  it('recognizes an applied reset before dispositions are chosen', () => {
+    const applied = gemperli({
+      payment: {
+        id: PAYMENT,
+        tenantId: TENANT,
+        userId: CUSTOMER,
+        appointmentId: APPOINTMENT,
+        invoiceId: INVOICE,
+        paymentMethod: 'invoice',
+        paymentStatus: 'invoice',
+        totalAmountRappen: 18600,
+        paidAt: null,
+        walleeTransactionId: null,
+        refundedAmountRappen: 0,
+      },
+      invoice: {
+        id: INVOICE,
+        tenantId: TENANT,
+        invoiceNumber: 'RE-2026-0043',
+        totalAmountRappen: 46500,
+        paidAmountRappen: 27900,
+        status: 'overdue',
+        paymentStatus: 'partial',
+        dueDate: '2026-10-13',
+      },
+      settlements: [
+        {
+          id: SETTLEMENT,
+          amountRappen: 46500,
+          status: 'completed',
+          paymentMethod: 'manual',
+          paymentReference: null,
+        },
+        {
+          id: 'reversal-1',
+          amountRappen: 18600,
+          status: 'reversal',
+          paymentMethod: 'reversal',
+          paymentReference: PAYMENT,
+        },
+      ],
+      accountingEntries: [
+        { id: INCOME, amountRappen: 18600, stornoOfId: null, deletedAt: null },
+        { id: 'storno-1', amountRappen: 18600, stornoOfId: INCOME, deletedAt: null },
+      ],
+    })
+    const result = evaluateReceiptReset(applied)
+    expect(result.alreadyApplied).toBe(true)
+    expect(result.blocked).toBe(false)
+    expect(result.reasons).toEqual([])
+    const args = receiptResetRpcArgs(applied, result)
+    expect(args?.p_invoice_line_disposition).toBeNull()
+    expect(args?.p_appointment_disposition).toBeNull()
+    expect(args?.p_confirm_siblings).toBe(false)
+    expect(args?.p_reason).toBe('Bereits korrigiert')
+    const after = simulateReceiptReset(applied, result)
+    expect(after.reversalCount).toBe(1)
+    expect(after.stornoCount).toBe(1)
+  })
+
+  it('blocks wallet credit, an invoice credit transaction, and Staff-POS credit before any reversal', () => {
+    const stamped = gemperli({
+      decisions: confirmed,
+      invoice: { ...gemperli().invoice!, creditAppliedRappen: 5000 },
+    })
+    const stampedResult = evaluateReceiptReset(stamped)
+    expect(stampedResult.blocked).toBe(true)
+    expect(stampedResult.plan).toBeNull()
+    expect(stampedResult.reasons[0]).toBe('wallet_credit_present')
+    expect(receiptResetRpcArgs(stamped, stampedResult)).toBeNull()
+    expect(simulateReceiptReset(stamped, stampedResult).paidAmountRappen).toBe(46500)
+
+    const invoiced = gemperli({ decisions: confirmed, invoiceCreditTransactionCount: 1 })
+    const invoicedResult = evaluateReceiptReset(invoiced)
+    expect(invoicedResult.reasons).toContain('invoice_credit_transaction_present')
+    expect(invoicedResult.plan).toBeNull()
+
+    const staff = gemperli({ decisions: confirmed, staffPosCreditCount: 1 })
+    const staffResult = evaluateReceiptReset(staff)
+    expect(staffResult.reasons).toContain('staff_pos_credit_present')
+    expect(staffResult.plan).toBeNull()
+    expect(simulateReceiptReset(staff, staffResult)).toMatchObject({
+      paymentStatus: 'completed',
+      reversalCount: 0,
+      stornoCount: 0,
+    })
+  })
+
   it('does not create a second reversal or storno when the same correction is replayed', () => {
     const applied = gemperli({
       payment: {
@@ -307,5 +395,29 @@ describe('admin_reset_mistaken_receipt SQL', () => {
     expect(sql).toContain('p_payment_id')
     expect(sql).toContain('GRANT EXECUTE')
     expect(sql).toContain('service_role')
+    const body = sql.slice(sql.indexOf('AS $$'))
+    const updatePayment = body.indexOf('UPDATE public.payments')
+    expect(body.indexOf("RAISE EXCEPTION 'wallet_credit_present'")).toBeLessThan(updatePayment)
+    expect(body.indexOf("RAISE EXCEPTION 'invoice_credit_transaction_present'")).toBeLessThan(updatePayment)
+    expect(body.indexOf("RAISE EXCEPTION 'staff_pos_credit_present'")).toBeLessThan(updatePayment)
+    expect(body.indexOf("'result', 'already_applied'")).toBeLessThan(body.indexOf("RAISE EXCEPTION 'missing_invoice_line_disposition'"))
+    expect(body).toContain("RAISE EXCEPTION 'idempotency_payment_mismatch'")
+  })
+})
+
+describe('PaymentReceiptResetDialog', () => {
+  const source = readFileSync(
+    resolve(process.cwd(), 'components/admin/PaymentReceiptResetDialog.vue'),
+    'utf8',
+  )
+
+  it('keeps the form when a rejected submit has a preview', () => {
+    expect(source).toContain('v-else-if="loadError && !preview"')
+    expect(source).toContain('v-else-if="preview"')
+    expect(source).toContain('v-model="reason"')
+    expect(source).toContain('v-model="disposition"')
+    expect(source).toContain('wallet_credit_present')
+    expect(source).toContain('staff_pos_credit_present')
+    expect(source).toContain('idempotency_payment_mismatch')
   })
 })

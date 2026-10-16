@@ -50,7 +50,7 @@ export async function loadReceiptResetSnapshot(
   if (!request.callerTenantId || (!request.paymentId && !request.appointmentId)) return empty
 
   let paymentQuery = db.from('payments').select(
-    'id, tenant_id, user_id, appointment_id, invoice_id, payment_method, payment_status, total_amount_rappen, paid_at, wallee_transaction_id, refunded_amount_rappen',
+    'id, tenant_id, user_id, appointment_id, invoice_id, payment_method, payment_status, total_amount_rappen, paid_at, wallee_transaction_id, refunded_amount_rappen, credit_transaction_id',
   ).eq('tenant_id', request.callerTenantId)
   paymentQuery = request.paymentId
     ? paymentQuery.eq('id', request.paymentId)
@@ -66,7 +66,7 @@ export async function loadReceiptResetSnapshot(
 
   const [invoiceResult, lineResult, siblingResult, settlementResult, accountingResult, cashResult, bankResult, appointmentResult] = await Promise.all([
     invoiceId
-      ? db.from('invoices').select('id, tenant_id, invoice_number, total_amount_rappen, paid_amount_rappen, status, payment_status, due_date').eq('tenant_id', request.callerTenantId).eq('id', invoiceId)
+      ? db.from('invoices').select('id, tenant_id, invoice_number, total_amount_rappen, paid_amount_rappen, credit_applied_rappen, status, payment_status, due_date').eq('tenant_id', request.callerTenantId).eq('id', invoiceId)
       : Promise.resolve({ data: [], error: null }),
     invoiceId
       ? db.from('invoice_items').select('id, appointment_id, total_price_rappen').eq('tenant_id', request.callerTenantId).eq('invoice_id', invoiceId)
@@ -91,6 +91,23 @@ export async function loadReceiptResetSnapshot(
 
   const invoice = rows(invoiceResult)[0]
   const siblings = rows(siblingResult).filter(row => String(row.id) !== paymentId)
+  const creditPaymentIds = [paymentId, ...siblings.map(row => String(row.id))]
+  const [invoiceCreditResult, staffCreditResult] = await Promise.all([
+    invoiceId
+      ? db.from('credit_transactions')
+        .select('id, tenant_id, reference_id, reference_type, transaction_type')
+        .eq('reference_id', invoiceId)
+        .eq('reference_type', 'invoice')
+        .in('transaction_type', ['deposit', 'credit_product_purchase'])
+      : Promise.resolve({ data: [], error: null }),
+    db.from('credit_transactions')
+      .select('id, tenant_id, reference_id, reference_type, transaction_type')
+      .eq('reference_type', 'payment')
+      .eq('transaction_type', 'credit_product_purchase')
+      .in('reference_id', creditPaymentIds),
+  ])
+  const creditLookupFailed = Boolean(invoiceCreditResult.error || staffCreditResult.error)
+  const visibleCredit = (row: Record<string, unknown>) => row.tenant_id == null || String(row.tenant_id) === request.callerTenantId
   const incomeRows = rows(accountingResult).filter(row => String(row.linked_payment_id) === paymentId)
   const incomeIds = incomeRows.map(row => String(row.id))
   const stornoResult = incomeIds.length > 0
@@ -114,6 +131,7 @@ export async function loadReceiptResetSnapshot(
       paidAt: payment.paid_at ? String(payment.paid_at) : null,
       walleeTransactionId: payment.wallee_transaction_id ? String(payment.wallee_transaction_id) : null,
       refundedAmountRappen: Number(payment.refunded_amount_rappen ?? 0),
+      creditTransactionId: payment.credit_transaction_id ? String(payment.credit_transaction_id) : null,
     },
     appointmentStatus: rows(appointmentResult)[0]?.status ? String(rows(appointmentResult)[0].status) : null,
     invoice: invoice ? {
@@ -125,6 +143,7 @@ export async function loadReceiptResetSnapshot(
       status: invoice.status ? String(invoice.status) : null,
       paymentStatus: invoice.payment_status ? String(invoice.payment_status) : null,
       dueDate: invoice.due_date ? String(invoice.due_date) : null,
+      creditAppliedRappen: Number(invoice.credit_applied_rappen ?? 0),
     } : null,
     invoiceLines: rows(lineResult).map(row => ({
       id: String(row.id),
@@ -151,6 +170,9 @@ export async function loadReceiptResetSnapshot(
     })),
     cashTransactionCount: rows(cashResult).length,
     bankImportCount: rows(bankResult).length,
+    invoiceCreditTransactionCount: rows(invoiceCreditResult).filter(visibleCredit).length,
+    staffPosCreditCount: rows(staffCreditResult).filter(visibleCredit).length,
+    creditLookupFailed,
   }
 }
 
@@ -169,6 +191,9 @@ function emptySnapshot(request: ReceiptResetRequest): ReceiptResetSnapshot {
     accountingEntries: [],
     cashTransactionCount: 0,
     bankImportCount: 0,
+    invoiceCreditTransactionCount: 0,
+    staffPosCreditCount: 0,
+    creditLookupFailed: false,
     decisions: request.decisions,
   }
 }

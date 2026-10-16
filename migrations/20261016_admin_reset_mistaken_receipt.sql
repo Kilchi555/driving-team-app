@@ -45,6 +45,40 @@
 --      If journal lines were reversed, post a new reversing pair on the
 --      storno lines so the ledger matches the restored receipt. Do that
 --      as a reviewed accounting entry, not by editing locked rows.
+--
+-- Credits, fail closed. This function does not insert, update, or delete
+-- credit_transactions, student_credits, or invoices.credit_applied_rappen.
+-- It does not reverse a wallet or Staff-POS credit. Before any payment,
+-- invoice, settlement, or accounting write it rejects the reset when:
+--   invoices.credit_applied_rappen > 0
+--     -> wallet_credit_present
+--   credit_transactions.reference_type = 'invoice'
+--     and reference_id = this invoice
+--     and transaction_type in ('deposit', 'credit_product_purchase')
+--     and tenant_id is this tenant or null
+--     -> invoice_credit_transaction_present
+--   credit_transactions.reference_type = 'payment'
+--     and transaction_type = 'credit_product_purchase'
+--     and reference_id is any payment on this invoice and tenant
+--     and tenant_id is this tenant or null
+--     -> staff_pos_credit_present
+--   payments.credit_transaction_id is not null on the target payment
+--     -> linked_credit_transaction_present
+-- The repository schema has no status column on credit_transactions.
+-- Any matching row is treated as live. student_credits.balance_rappen is
+-- not scanned: a balance is not tied to one invoice. If that balance was
+-- changed without one of the facts above, this reset cannot see it and
+-- does not try a partial reversal.
+--
+-- Idempotency: a stored result is reused only when tenant_id and payment_id
+-- both match. The same key for a different payment raises
+-- idempotency_payment_mismatch and writes nothing.
+--
+-- Already applied: an existing reversal for this payment is recognized
+-- after the row locks and before sibling confirmation or disposition
+-- checks. A repeated request does not need new dispositions. It records
+-- one audit row with result already_applied and does not insert another
+-- reversal or storno.
 
 CREATE TABLE IF NOT EXISTS public.payment_receipt_resets (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -178,6 +212,9 @@ BEGIN
   WHERE tenant_id = p_tenant_id
     AND idempotency_key = btrim(p_idempotency_key);
   IF FOUND THEN
+    IF v_existing.payment_id IS DISTINCT FROM p_payment_id THEN
+      RAISE EXCEPTION 'idempotency_payment_mismatch';
+    END IF;
     RETURN COALESCE(v_existing.result_payload, jsonb_build_object('result', v_existing.result))
       || jsonb_build_object('replayed', true, 'id', v_existing.id);
   END IF;
@@ -236,45 +273,6 @@ BEGIN
     AND id <> v_payment.id
   ORDER BY id
   FOR UPDATE;
-
-  SELECT count(*) INTO v_sibling_count
-  FROM public.payments
-  WHERE invoice_id = v_invoice.id
-    AND tenant_id = p_tenant_id
-    AND id <> v_payment.id;
-  IF v_sibling_count > 0 AND NOT COALESCE(p_confirm_siblings, false) THEN
-    RAISE EXCEPTION 'missing_sibling_confirmation';
-  END IF;
-
-  IF v_payment.appointment_id IS NOT NULL THEN
-    SELECT count(*)::integer, COALESCE(min(total_price_rappen), 0)
-    INTO v_line_count, v_line_amount
-    FROM public.invoice_items
-    WHERE invoice_id = v_invoice.id
-      AND tenant_id = p_tenant_id
-      AND appointment_id = v_payment.appointment_id;
-    IF v_line_count <> 1 OR v_line_amount IS DISTINCT FROM v_payment.total_amount_rappen THEN
-      RAISE EXCEPTION 'amount_line_mismatch';
-    END IF;
-  END IF;
-
-  IF p_invoice_line_disposition IS DISTINCT FROM 'remain_on_invoice' THEN
-    IF p_invoice_line_disposition = 'detach' THEN
-      RAISE EXCEPTION 'invoice_line_detach_not_supported';
-    END IF;
-    RAISE EXCEPTION 'missing_invoice_line_disposition';
-  END IF;
-
-  IF v_payment.appointment_id IS NOT NULL THEN
-    IF p_appointment_disposition = 'set_status' THEN
-      IF p_appointment_status IS NULL
-         OR p_appointment_status NOT IN ('confirmed', 'scheduled', 'completed', 'cancelled', 'pending', 'verrechnet') THEN
-        RAISE EXCEPTION 'invalid_appointment_status';
-      END IF;
-    ELSIF p_appointment_disposition IS DISTINCT FROM 'leave_unchanged' THEN
-      RAISE EXCEPTION 'missing_appointment_disposition';
-    END IF;
-  END IF;
 
   SELECT id INTO v_reversal_id
   FROM public.invoice_payments
@@ -335,6 +333,82 @@ BEGIN
 
   IF v_payment.payment_status NOT IN ('completed', 'paid') THEN
     RAISE EXCEPTION 'status_not_resettable';
+  END IF;
+
+  -- Fail closed before any financial write. Matching credit rows have no
+  -- deleted or reversed flag in the repository schema, so any match is live.
+  IF COALESCE(v_invoice.credit_applied_rappen, 0) > 0 THEN
+    RAISE EXCEPTION 'wallet_credit_present';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.credit_transactions ct
+    WHERE ct.reference_type = 'invoice'
+      AND ct.reference_id = v_invoice.id
+      AND ct.transaction_type IN ('deposit', 'credit_product_purchase')
+      AND (ct.tenant_id = p_tenant_id OR ct.tenant_id IS NULL)
+  ) THEN
+    RAISE EXCEPTION 'invoice_credit_transaction_present';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.credit_transactions ct
+    WHERE ct.reference_type = 'payment'
+      AND ct.transaction_type = 'credit_product_purchase'
+      AND ct.reference_id IN (
+        SELECT p.id
+        FROM public.payments p
+        WHERE p.invoice_id = v_invoice.id
+          AND p.tenant_id = p_tenant_id
+      )
+      AND (ct.tenant_id = p_tenant_id OR ct.tenant_id IS NULL)
+  ) THEN
+    RAISE EXCEPTION 'staff_pos_credit_present';
+  END IF;
+
+  IF v_payment.credit_transaction_id IS NOT NULL THEN
+    RAISE EXCEPTION 'linked_credit_transaction_present';
+  END IF;
+
+  SELECT count(*) INTO v_sibling_count
+  FROM public.payments
+  WHERE invoice_id = v_invoice.id
+    AND tenant_id = p_tenant_id
+    AND id <> v_payment.id;
+  IF v_sibling_count > 0 AND NOT COALESCE(p_confirm_siblings, false) THEN
+    RAISE EXCEPTION 'missing_sibling_confirmation';
+  END IF;
+
+  IF v_payment.appointment_id IS NOT NULL THEN
+    SELECT count(*)::integer, COALESCE(min(total_price_rappen), 0)
+    INTO v_line_count, v_line_amount
+    FROM public.invoice_items
+    WHERE invoice_id = v_invoice.id
+      AND tenant_id = p_tenant_id
+      AND appointment_id = v_payment.appointment_id;
+    IF v_line_count <> 1 OR v_line_amount IS DISTINCT FROM v_payment.total_amount_rappen THEN
+      RAISE EXCEPTION 'amount_line_mismatch';
+    END IF;
+  END IF;
+
+  IF p_invoice_line_disposition IS DISTINCT FROM 'remain_on_invoice' THEN
+    IF p_invoice_line_disposition = 'detach' THEN
+      RAISE EXCEPTION 'invoice_line_detach_not_supported';
+    END IF;
+    RAISE EXCEPTION 'missing_invoice_line_disposition';
+  END IF;
+
+  IF v_payment.appointment_id IS NOT NULL THEN
+    IF p_appointment_disposition = 'set_status' THEN
+      IF p_appointment_status IS NULL
+         OR p_appointment_status NOT IN ('confirmed', 'scheduled', 'completed', 'cancelled', 'pending', 'verrechnet') THEN
+        RAISE EXCEPTION 'invalid_appointment_status';
+      END IF;
+    ELSIF p_appointment_disposition IS DISTINCT FROM 'leave_unchanged' THEN
+      RAISE EXCEPTION 'missing_appointment_disposition';
+    END IF;
   END IF;
 
   SELECT count(*) INTO v_settlement_count
