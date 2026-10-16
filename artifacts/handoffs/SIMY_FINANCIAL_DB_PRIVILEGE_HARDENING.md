@@ -10,7 +10,8 @@ Verdict: draft migration only. It was not applied to production. `FORCE ROW LEVE
 - Branch: `cursor/financial-truncate-grants-4274`
 - Base: `e1248c0b7fc5a08a439e9c3e1c15a3ce175a1a2e`
 - Migration commit: `8ce776b9061018c69c1eb74e2bc12079f0d2e1cc`
-- This handoff is committed above that migration. The draft head is the pushed branch tip. Required checks apply to that tip.
+- Handoff file introduced in: `a44ded2be8797365f9756c1b37968638f9f12270`
+- Draft head: the child of `a44ded2b` that records this line. Read `git rev-parse HEAD` on the pushed branch before review.
 
 ## Catalog re-read
 
