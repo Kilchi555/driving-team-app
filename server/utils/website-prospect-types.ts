@@ -108,6 +108,12 @@ export type ProspectArchitecture = {
 
 export type ProspectRedirect = { from: string; to: string }
 
+export type ProspectVatSelectionStored = {
+  rate_percent: 0 | 2.6 | 3.8 | 8.1
+  source: 'education_default' | 'tenant_existing' | 'explicit_selection'
+  selected_at?: string
+}
+
 export type ProspectAnalysis = {
   findings: ProspectFinding[]
   summary: string
@@ -115,6 +121,8 @@ export type ProspectAnalysis = {
   architecture?: ProspectArchitecture
   selection_reasons?: string[]
   redirects?: ProspectRedirect[]
+  /** Explicit or resolved VAT for ambiguous business types (no silent 8.1% for generic). */
+  vat_selection?: ProspectVatSelectionStored
 }
 
 export type WebsiteProspectRow = {

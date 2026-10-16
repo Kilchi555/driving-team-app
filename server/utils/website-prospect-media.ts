@@ -51,8 +51,9 @@ async function uploadNormalized(
   tenantId: string,
   slot: WebsiteMediaSlot,
   input: Buffer,
-): Promise<string | null> {
+): Promise<{ url: string; path: string } | null> {
   try {
+    // Reuses the shared website media compression pipeline (sharp → WebP under slot budgets).
     const normalized = await normalizeWebsiteMedia(input, slot)
     const hash = createHash('sha1').update(normalized.primary).digest('hex').slice(0, 10)
     const path = `${tenantId}/website/prospect-${slot}-${hash}.webp`
@@ -62,7 +63,8 @@ async function uploadNormalized(
     })
     if (error) return null
     const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path)
-    return data.publicUrl || null
+    if (!data.publicUrl) return null
+    return { url: data.publicUrl, path }
   } catch {
     return null
   }
@@ -72,6 +74,50 @@ export type ProspectMedia = {
   hero_url: string | null
   logo_url: string | null
   gallery: Array<{ url: string; alt: string }>
+  /** Storage object paths uploaded during this ingest (tenant-logos bucket). */
+  uploaded_paths: string[]
+}
+
+/** Restrict cleanup to prospect ingest paths under the tenant prefix. */
+export function isProspectIngestStoragePath(path: string, tenantId?: string): boolean {
+  const clean = String(path || '').replace(/^\/+/, '')
+  if (!clean || clean.includes('..')) return false
+  if (tenantId) {
+    return clean.startsWith(`${tenantId}/website/prospect-`) && clean.endsWith('.webp')
+  }
+  return /^[^/]+\/website\/prospect-[a-z]+-[a-f0-9]+\.webp$/i.test(clean)
+}
+
+export function storagePathFromProspectPublicUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  try {
+    const u = new URL(String(url))
+    const marker = `/object/public/${IMAGE_BUCKET}/`
+    const idx = u.pathname.indexOf(marker)
+    if (idx < 0) return null
+    return decodeURIComponent(u.pathname.slice(idx + marker.length))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Idempotent cleanup for blobs uploaded during a failed create. Never call for
+ * regenerate when the website/tenant remains, or for paths referenced by a
+ * published site.
+ */
+export async function removeProspectUploadedPaths(
+  supabase: { storage: { from: (bucket: string) => { remove: (paths: string[]) => Promise<{ error: unknown }> } } },
+  paths: string[],
+  tenantId?: string,
+): Promise<{ removed: string[]; skipped: string[] }> {
+  const unique = [...new Set(paths.map((p) => String(p || '').replace(/^\/+/, '')).filter(Boolean))]
+  const allowed = unique.filter((p) => isProspectIngestStoragePath(p, tenantId))
+  const skipped = unique.filter((p) => !isProspectIngestStoragePath(p, tenantId))
+  if (!allowed.length) return { removed: [], skipped }
+  const { error } = await supabase.storage.from(IMAGE_BUCKET).remove(allowed)
+  if (error) return { removed: [], skipped: [...skipped, ...allowed] }
+  return { removed: allowed, skipped }
 }
 
 export async function ingestProspectMedia(opts: {
@@ -95,33 +141,44 @@ export async function ingestProspectMedia(opts: {
     if (fresh) place = fresh
   }
 
+  const uploaded_paths: string[] = []
   const heroBuf =
     (scrape?.hero_image_url ? await fetchBufferFromUrl(scrape.hero_image_url) : null) ||
     (allowGooglePhotos && place?.photos?.[0]?.ref ? await fetchPlacePhotoBuffer(place.photos[0].ref) : null)
   const logoBuf = scrape?.logo_url ? await fetchBufferFromUrl(scrape.logo_url) : null
 
-  const hero_url = heroBuf ? await uploadNormalized(supabase, opts.tenantId, 'hero', heroBuf) : null
-  const logo_url = logoBuf ? await uploadNormalized(supabase, opts.tenantId, 'logo', logoBuf) : null
+  const heroUp = heroBuf ? await uploadNormalized(supabase, opts.tenantId, 'hero', heroBuf) : null
+  const logoUp = logoBuf ? await uploadNormalized(supabase, opts.tenantId, 'logo', logoBuf) : null
+  if (heroUp) uploaded_paths.push(heroUp.path)
+  if (logoUp) uploaded_paths.push(logoUp.path)
+  const hero_url = heroUp?.url || null
+  const logo_url = logoUp?.url || null
 
   const gallery: ProspectMedia['gallery'] = []
   const placePhotos = allowGooglePhotos ? (place?.photos || []).slice(heroBuf ? 1 : 0, 6) : []
   for (const photo of placePhotos) {
     const buf = await fetchPlacePhotoBuffer(photo.ref)
     if (!buf) continue
-    const url = await uploadNormalized(supabase, opts.tenantId, 'service', buf)
-    if (url) gallery.push({ url, alt: `${opts.name} — Google Foto` })
+    const up = await uploadNormalized(supabase, opts.tenantId, 'service', buf)
+    if (up) {
+      uploaded_paths.push(up.path)
+      gallery.push({ url: up.url, alt: `${opts.name} — Google Foto` })
+    }
   }
   for (const src of (scrape?.images || []).slice(0, 4)) {
     if (gallery.length >= 6) break
     if (src === scrape?.hero_image_url || src === scrape?.logo_url) continue
     const buf = await fetchBufferFromUrl(src)
     if (!buf) continue
-    const url = await uploadNormalized(supabase, opts.tenantId, 'service', buf)
-    if (url) gallery.push({ url, alt: `${opts.name}` })
+    const up = await uploadNormalized(supabase, opts.tenantId, 'service', buf)
+    if (up) {
+      uploaded_paths.push(up.path)
+      gallery.push({ url: up.url, alt: `${opts.name}` })
+    }
   }
   if (hero_url && !gallery.some((g) => g.url === hero_url) && gallery.length < 6) {
     gallery.unshift({ url: hero_url, alt: `${opts.name} — Hero` })
   }
 
-  return { hero_url, logo_url, gallery: gallery.slice(0, 8) }
+  return { hero_url, logo_url, gallery: gallery.slice(0, 8), uploaded_paths }
 }

@@ -11,6 +11,7 @@ import {
 } from '../website-prospect-landing-facts'
 import {
   authorizePublicWebsiteRead,
+  ensureWebsitePreviewToken,
   hashPreviewToken,
   issueWebsitePreviewToken,
   previewUrlForPath,
@@ -134,9 +135,10 @@ describe('prospect landing factual integrity', () => {
     expect(source).not.toContain("'Transparente Preise'")
     expect(source).not.toContain("'Persönliche Betreuung'")
     expect(source).not.toContain("|| 'driving_school'")
-    expect(source).toContain('issueWebsitePreviewToken')
+    expect(source).toContain('ensureWebsitePreviewToken')
     expect(source).toContain('previewUrlForPath')
     expect(source).toContain('prospectServicesFromScrape')
+    expect(source).toContain('removeProspectUploadedPaths')
   })
 })
 
@@ -199,7 +201,7 @@ describe('prospect preview token mint lifecycle', () => {
     expect(failed).not.toEqual(expect.objectContaining({ token: expect.any(String) }))
   })
 
-  it('re-generation rotates the token and invalidates the previous raw token', async () => {
+  it('deliberate issueWebsitePreviewToken rotation invalidates the previous raw token', async () => {
     const db = memorySupabase()
     const first = await issueWebsitePreviewToken(db, 'website-rotate')
     const second = await issueWebsitePreviewToken(db, 'website-rotate')
@@ -213,5 +215,22 @@ describe('prospect preview token mint lifecycle', () => {
     const draft = { id: 'website-rotate', is_published: false }
     expect((await authorizePublicWebsiteRead(db, draft, { preview_token: first!.token }, true)).ok).toBe(false)
     expect((await authorizePublicWebsiteRead(db, draft, { preview_token: second!.token }, true)).ok).toBe(true)
+  })
+
+  it('ensureWebsitePreviewToken reuses a still-valid token from the preview URL', async () => {
+    const db = memorySupabase()
+    const first = await issueWebsitePreviewToken(db, 'website-stable')
+    const url = previewUrlForPath('https://app.simy.ch', '/s/demo', first!.token)
+    const ensured = await ensureWebsitePreviewToken(db, 'website-stable', {
+      existingPreviewUrl: url,
+    })
+    expect(ensured?.reused).toBe(true)
+    expect(ensured?.token).toBe(first!.token)
+    const forced = await ensureWebsitePreviewToken(db, 'website-stable', {
+      existingPreviewUrl: url,
+      forceRotate: true,
+    })
+    expect(forced?.reused).toBe(false)
+    expect(forced?.token).not.toBe(first!.token)
   })
 })
