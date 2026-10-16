@@ -912,6 +912,31 @@ describe('bulk payment tenant scope', () => {
     expect(db.writes.filter((write) => write.op === 'update')).toHaveLength(0)
   })
 
+  it('confirms a pending appointment on a completed-payment replay without rewriting the payment', async () => {
+    const appointmentId = '77777777-7777-4777-8777-777777777777'
+    db = createDb({
+      users: [staffUser('admin')],
+      payments: [payment({
+        invoice_id: INVOICE_A,
+        payment_status: 'completed',
+        amount_paid_rappen: 5000,
+        total_amount_rappen: 5000,
+        appointment_id: appointmentId,
+        user_id: null,
+      })],
+      invoices: [invoice({ payment_status: 'paid', paid_amount_rappen: 0 })],
+      appointments: [{ id: appointmentId, tenant_id: TENANT_A, status: 'pending_confirmation' }],
+    })
+    mocks.readBody.mockResolvedValue({ payment_ids: [PAY_A], method: 'cash' })
+
+    const result = await processBulk({}) as { success: boolean; results: Array<{ skipped?: boolean }> }
+    expect(result.results).toEqual([expect.objectContaining({ payment_id: PAY_A, skipped: true })])
+    expect(db.tables.payments[0].amount_paid_rappen).toBe(5000)
+    expect(db.tables.appointments[0].status).toBe('confirmed')
+    expect(db.writes.filter((write) => write.table === 'payments')).toHaveLength(0)
+    expect(db.writes.filter((write) => write.table === 'student_credits')).toHaveLength(0)
+  })
+
   it('rejects a foreign payment id before updating anyone', async () => {
     db = createDb({
       users: [staffUser('admin')],

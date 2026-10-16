@@ -281,6 +281,9 @@ export default defineEventHandler(async (event) => {
         const decision = paymentDecisions.get(paymentData.id)
         if (!decision) {
           results.push({ payment_id: paymentData.id, success: true, skipped: true })
+          // Money is not rewritten. Appointment confirmation stays idempotent
+          // (only pending_confirmation) so a replay can finish that step.
+          if (paymentData.payment_status === 'completed') await confirmCashAppointment(paymentData)
           continue
         }
 
@@ -325,12 +328,13 @@ export default defineEventHandler(async (event) => {
 
         const applied = (data as { applied?: Array<{ payment_id: string; skipped?: boolean; payment_status?: string }> }).applied || []
         for (const row of applied) {
+          const paymentData = (allPayments as any[]).find((payment) => payment.id === row.payment_id)
           if (row.skipped) {
             results.push({ payment_id: row.payment_id, success: true, skipped: true })
+            if (paymentData?.payment_status === 'completed') await confirmCashAppointment(paymentData)
             continue
           }
           results.push({ payment_id: row.payment_id, success: true, status: row.payment_status })
-          const paymentData = (allPayments as any[]).find((payment) => payment.id === row.payment_id)
           if (row.payment_status === 'completed') await confirmCashAppointment(paymentData)
         }
       }

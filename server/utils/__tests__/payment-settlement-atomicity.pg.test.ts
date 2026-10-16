@@ -76,7 +76,7 @@ beforeAll(async () => {
     CREATE TABLE public.bank_import_records (
       id uuid PRIMARY KEY DEFAULT (substr(md5(random()::text || clock_timestamp()::text), 1, 8) || '-1111-4111-8111-' || substr(md5(random()::text), 1, 12))::uuid,
       tenant_id uuid,
-      dedupe_key text UNIQUE,
+      dedupe_key text,
       bank_ref text,
       entry_date date,
       amount_rappen integer,
@@ -84,7 +84,8 @@ beforeAll(async () => {
       debtor_name text,
       invoice_id uuid,
       imported_by uuid,
-      source text
+      source text,
+      UNIQUE (tenant_id, dedupe_key)
     );
     CREATE TABLE public.staff_pos_calls (payment_id uuid);
   `)
@@ -391,5 +392,76 @@ describe('payment settlement atomicity (disposable Postgres)', () => {
       [PAYMENT],
     )
     expect(rolled.rows[0]).toEqual({ payment_status: 'pending', amount_paid_rappen: 0 })
+  })
+
+  it('allocates CHF 80 of a CHF 100 receipt and keeps the journal at the receipt', async () => {
+    await reset()
+    await db.exec(`
+      INSERT INTO public.invoices (id, tenant_id, total_amount_rappen, paid_amount_rappen, payment_status, status)
+      VALUES ('${INVOICE}', '${TENANT_A}', 8000, 0, 'pending', 'sent');
+    `)
+    await db.query(
+      `SELECT public.settle_marked_invoice_payment($1, $2, 10000, now(), 'CAMT', 'bank', 'bank-100', 'ref-100', '2026-10-16', 'QRR', 'Ada', 'camt')`,
+      [ACTOR, INVOICE],
+    )
+    const row = await db.query<{ paid_amount_rappen: number; journal: number; bank: number }>(`
+      SELECT i.paid_amount_rappen, p.amount_rappen AS journal, b.amount_rappen AS bank
+      FROM public.invoices i
+      JOIN public.invoice_payments p ON p.invoice_id = i.id
+      JOIN public.bank_import_records b ON b.invoice_id = i.id
+      WHERE i.id = $1
+    `, [INVOICE])
+    expect(row.rows[0]).toEqual({ paid_amount_rappen: 8000, journal: 10000, bank: 10000 })
+  })
+
+  it('rejects a repeated bank key and still books two same-amount payments with distinct keys', async () => {
+    await reset()
+    await db.exec(`
+      INSERT INTO public.invoices (id, tenant_id, total_amount_rappen, paid_amount_rappen, payment_status, status)
+      VALUES ('${INVOICE}', '${TENANT_A}', 10000, 0, 'pending', 'sent');
+    `)
+    const settle = (amount: number, key: string | null) => db.query(
+      `SELECT public.settle_marked_invoice_payment($1, $2, $3, now(), null, 'bank', $4, null, '2026-10-16', null, null, 'camt')`,
+      [ACTOR, INVOICE, amount, key],
+    )
+    await settle(4000, 'payment-a')
+    await expect(settle(4000, 'payment-a')).rejects.toThrow(/duplicate_bank_import/)
+    const afterRetry = await db.query<{ journals: string; banks: string; paid: number }>(`
+      SELECT count(p.*)::text AS journals, count(b.*)::text AS banks, i.paid_amount_rappen AS paid
+      FROM public.invoices i
+      LEFT JOIN public.invoice_payments p ON p.invoice_id = i.id
+      LEFT JOIN public.bank_import_records b ON b.invoice_id = i.id
+      WHERE i.id = $1
+      GROUP BY i.paid_amount_rappen
+    `, [INVOICE])
+    expect(afterRetry.rows[0]).toEqual({ journals: '1', banks: '1', paid: 4000 })
+
+    await settle(4000, 'payment-b')
+    const distinct = await db.query<{ journals: string; paid: number }>(`
+      SELECT count(*)::text AS journals, max(i.paid_amount_rappen) AS paid
+      FROM public.invoice_payments p
+      JOIN public.invoices i ON i.id = p.invoice_id
+    `)
+    expect(distinct.rows[0]).toEqual({ journals: '2', paid: 8000 })
+
+    await reset()
+    await db.exec(`
+      INSERT INTO public.invoices (id, tenant_id, total_amount_rappen, paid_amount_rappen, payment_status, status)
+      VALUES ('${INVOICE}', '${TENANT_A}', 10000, 0, 'pending', 'sent');
+    `)
+    await db.query(
+      `SELECT public.settle_marked_invoice_payment($1, $2, 4000, now(), null, 'cash', null, null, null, null, null, null)`,
+      [ACTOR, INVOICE],
+    )
+    await db.query(
+      `SELECT public.settle_marked_invoice_payment($1, $2, 4000, now(), null, 'cash', null, null, null, null, null, null)`,
+      [ACTOR, INVOICE],
+    )
+    const manual = await db.query<{ journals: string; paid: number }>(`
+      SELECT count(*)::text AS journals, max(paid_amount_rappen) AS paid
+      FROM public.invoice_payments p
+      JOIN public.invoices i ON i.id = p.invoice_id
+    `)
+    expect(manual.rows[0]).toEqual({ journals: '2', paid: 8000 })
   })
 })
