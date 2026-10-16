@@ -332,7 +332,9 @@ export function evaluateReceiptReset(snapshot: ReceiptResetSnapshot): ReceiptRes
     return blockedResult(['missing_settlement'], discovered)
   }
 
-  const nextPaid = invoice.paidAmountRappen - payment.totalAmountRappen
+  const nextPaid = snapshot.siblingPayments
+    .filter(row => row.paymentStatus === 'completed' || row.paymentStatus === 'paid')
+    .reduce((sum, row) => sum + row.totalAmountRappen, 0)
   if (nextPaid < 0 || nextPaid > invoice.totalAmountRappen) {
     return blockedResult(['paid_amount_out_of_range'], discovered)
   }

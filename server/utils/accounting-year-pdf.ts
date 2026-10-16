@@ -1,11 +1,41 @@
 import PDFDocument from 'pdfkit'
-import { ACCOUNTING_PDF_DISCLAIMER, computeSimpleBookIncome } from '~/server/utils/accounting'
+import { ACCOUNTING_PDF_DISCLAIMER, computeSimpleBookIncome, recognizedExpenseRappen } from '~/server/utils/accounting'
 import type { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 type Admin = ReturnType<typeof getSupabaseAdmin>
 
 function chf(rappen: number): string {
   return `CHF ${(rappen / 100).toFixed(2)}`
+}
+
+/** Figures printed in the year PDF KPIs and the Jahresergebnis line. */
+export function accountingYearStatement(params: {
+  paymentsIncomeRappen: number
+  entries: Array<{
+    type?: string | null
+    amount_rappen?: number | null
+    linked_payment_id?: string | null
+    storno_of_id?: string | null
+    external_reference?: string | null
+    document_kind?: string | null
+  }>
+}): { incomeRappen: number; expenseRappen: number; resultRappen: number } {
+  const income = computeSimpleBookIncome({
+    paymentsIncomeRappen: params.paymentsIncomeRappen,
+    entries: params.entries.map(entry => ({
+      type: entry.type || '',
+      amount_rappen: entry.amount_rappen ?? 0,
+      linked_payment_id: entry.linked_payment_id,
+      document_kind: entry.document_kind,
+      external_reference: entry.external_reference,
+    })),
+  })
+  const expenseRappen = recognizedExpenseRappen(params.entries)
+  return {
+    incomeRappen: income.totalIncomeRappen,
+    expenseRappen,
+    resultRappen: income.totalIncomeRappen - expenseRappen,
+  }
 }
 
 function fmtDate(d: string): string {
@@ -29,12 +59,14 @@ export async function buildAccountingYearPdf(params: {
   const paymentsIncomeRappen = (rpcData ?? []).reduce((s: number, row: { total_rappen?: number }) => s + Number(row.total_rappen ?? 0), 0)
 
   const entries: Array<{
+    id: string
     type: string
     amount_rappen: number
     entry_date: string
     description: string
     linked_payment_id?: string | null
     storno_of_id?: string | null
+    external_reference?: string | null
     receipt_url?: string | null
     category?: { name?: string } | null
   }> = []
@@ -43,7 +75,7 @@ export async function buildAccountingYearPdf(params: {
   while (true) {
     const { data, error } = await supabase
       .from('accounting_entries')
-      .select('type, amount_rappen, entry_date, description, linked_payment_id, storno_of_id, receipt_url, category:accounting_categories(name)')
+      .select('id, type, amount_rappen, entry_date, description, linked_payment_id, storno_of_id, external_reference, receipt_url, category:accounting_categories(name)')
       .eq('tenant_id', tenantId)
       .eq('approval_status', 'approved')
       .is('deleted_at', null)
@@ -58,12 +90,13 @@ export async function buildAccountingYearPdf(params: {
     from += PAGE
   }
 
-  const income = computeSimpleBookIncome({ paymentsIncomeRappen, entries })
+  const income = accountingYearStatement({ paymentsIncomeRappen, entries })
   const incomeEntries = entries.filter(e => e.type === 'income')
   const expenses = entries.filter(e => e.type === 'expense')
   const missingReceipt = expenses.filter(e => !e.receipt_url && !e.storno_of_id)
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount_rappen, 0)
-  const result = income.totalIncomeRappen - totalExpenses
+  const totalExpenses = income.expenseRappen
+  const reversedIds = new Set(entries.flatMap(entry => entry.storno_of_id ? [entry.storno_of_id] : []))
+  const result = income.resultRappen
 
   const doc = new PDFDocument({ size: 'A4', margin: 50 })
   const buffers: Buffer[] = []
@@ -95,7 +128,7 @@ export async function buildAccountingYearPdf(params: {
 
   let y = 105
   const kpis = [
-    { label: 'Einnahmen', value: chf(income.totalIncomeRappen), color: GREEN },
+    { label: 'Einnahmen', value: chf(income.incomeRappen), color: GREEN },
     { label: 'Ausgaben', value: chf(totalExpenses), color: RED },
     { label: 'Ergebnis', value: chf(result), color: result >= 0 ? GREEN : RED },
   ]
@@ -131,10 +164,12 @@ export async function buildAccountingYearPdf(params: {
   doc.rect(50, y - 2, 495, 1).fill(BORDER); y += 3
   for (const e of incomeEntries) {
     const cat = e.linked_payment_id ? (e.category?.name ?? 'Zahlung') : (e.category?.name ?? '—')
-    drawRow([fmtDate(e.entry_date), e.description, cat, chf(e.amount_rappen)], { struck: !!e.storno_of_id })
+    drawRow([fmtDate(e.entry_date), e.description, cat, chf(e.amount_rappen)], {
+      struck: !!e.storno_of_id || (!!e.linked_payment_id && reversedIds.has(e.id)),
+    })
   }
   doc.rect(50, y, 495, 1).fill(BORDER); y += 4
-  drawRow(['', 'Total Einnahmen', '', chf(income.totalIncomeRappen)], { bold: true })
+  drawRow(['', 'Total Einnahmen', '', chf(income.incomeRappen)], { bold: true })
   y += 12
 
   drawSectionHeader(`Ausgaben (${expenses.length} Buchungen)`)
@@ -164,7 +199,7 @@ export async function buildAccountingYearPdf(params: {
   doc.fillColor(result >= 0 ? '#059669' : '#dc2626').fontSize(22).font('Helvetica-Bold')
     .text(chf(result), 62, y + 20)
   doc.fillColor(GRAY).fontSize(8).font('Helvetica')
-    .text(`${chf(income.totalIncomeRappen)} Einnahmen − ${chf(totalExpenses)} Ausgaben`, 300, y + 26, { align: 'right', width: 233 })
+    .text(`${chf(income.incomeRappen)} Einnahmen − ${chf(totalExpenses)} Ausgaben`, 300, y + 26, { align: 'right', width: 233 })
 
   drawFooter()
   doc.end()

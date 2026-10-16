@@ -574,25 +574,33 @@
                   class="flex items-center justify-between gap-3 rounded-xl bg-gray-50 px-3 py-2.5"
                 >
                   <div class="flex items-center gap-2.5 min-w-0">
-                    <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    <span
+                      class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0"
+                      :class="payment.status === 'reversal' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'"
+                    >
                       {{ index + 1 }}
                     </span>
                     <div class="min-w-0">
-                      <p class="text-sm font-medium text-gray-900">{{ formatCurrency(payment.amount_rappen) }}</p>
+                      <p class="text-sm font-medium" :class="payment.status === 'reversal' ? 'text-amber-800' : 'text-gray-900'">
+                        {{ payment.status === 'reversal' ? '− ' : '' }}{{ formatCurrency(payment.amount_rappen) }}
+                      </p>
                       <p class="text-xs text-gray-400">
                         {{ formatDate(payment.payment_date) }}
-                        <span v-if="payment.payment_method && payment.payment_method !== 'manual'" class="ml-1">· {{ payment.payment_method }}</span>
+                        <span v-if="payment.payment_method && payment.payment_method !== 'manual' && payment.status !== 'reversal'" class="ml-1">· {{ payment.payment_method }}</span>
                       </p>
                     </div>
                   </div>
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 flex-shrink-0">
-                    Bezahlt
+                  <span
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
+                    :class="payment.status === 'reversal' ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-700'"
+                  >
+                    {{ invoicePaymentHistoryLabel(payment.status) }}
                   </span>
                 </div>
                 <div class="flex items-center justify-between px-1 pt-2 border-t border-gray-100">
                   <span class="text-xs font-semibold text-gray-500">Total bezahlt</span>
                   <span class="text-sm font-bold text-emerald-600">
-                    {{ formatCurrency(invoicePaymentsHistory.reduce((sum, p) => sum + p.amount_rappen, 0)) }}
+                    {{ formatCurrency(netInvoicePaymentsRappen(invoicePaymentsHistory)) }}
                   </span>
                 </div>
               </div>
@@ -908,6 +916,7 @@ import type { InvoiceStatus, PaymentStatus } from '~/types/invoice'
 import { looksLikeCourseSessionsDescription, displayCourseSessionsDescription } from '~/utils/format-course-sessions'
 import { formatInvoiceStreetLine, joinStreetAndNumber } from '~/utils/billing-address-map'
 import { presentStoredInvoiceLine } from '~/server/utils/invoice-line-snapshot'
+import { invoicePaymentHistoryLabel, netInvoicePaymentsRappen } from '~/utils/invoice-payment-net'
 
 function invoiceLineView(item: {
   product_name?: string | null

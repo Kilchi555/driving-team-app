@@ -41,5 +41,7 @@ export function receiptResetRpcArgs(snapshot: ReceiptResetSnapshot, evaluation: 
     p_expected_paid_after: evaluation.plan.nextPaidAmountRappen,
     p_appointment_status: evaluation.plan.nextAppointmentStatus,
     p_as_of: snapshot.asOfDate,
+    p_invoice_line_disposition: snapshot.decisions.invoiceLineDisposition,
+    p_appointment_disposition: snapshot.decisions.appointmentDisposition,
   }
 }

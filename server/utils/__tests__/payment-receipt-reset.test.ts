@@ -8,6 +8,7 @@ import {
   type ReceiptResetSnapshot,
 } from '../payment-receipt-reset'
 import { receiptResetRpcArgs, receiptResetStatus } from '../payment-receipt-reset-http'
+import { invoicePaymentHistoryLabel, netInvoicePaymentsRappen } from '../../../utils/invoice-payment-net'
 
 const TENANT = '660b72a9-c67b-4763-85d7-b7ba6605e59e'
 const CUSTOMER = 'c841d989-c017-4e3c-9e5d-249538131464'
@@ -99,6 +100,17 @@ const confirmed = {
   appointmentStatus: null,
   idempotencyKey: 'idem-gemperli-1',
 }
+
+describe('invoice payment history net', () => {
+  it('subtracts a reversal from the completed settlement', () => {
+    expect(netInvoicePaymentsRappen([
+      { amount_rappen: 46500, status: 'completed' },
+      { amount_rappen: 18600, status: 'reversal' },
+    ])).toBe(27900)
+    expect(invoicePaymentHistoryLabel('reversal')).toBe('Korrektur')
+    expect(invoicePaymentHistoryLabel('completed')).toBe('Bezahlt')
+  })
+})
 
 describe('authorizeReceiptReset', () => {
   it('allows only admin and tenant_admin', () => {
@@ -276,6 +288,8 @@ describe('Gemperli shared invoice receipt', () => {
     expect(JSON.stringify(args)).not.toContain(SIBLING_155)
     expect(args?.p_expected_paid_after).toBe(27900)
     expect(args?.p_appointment_status).toBeNull()
+    expect(args?.p_invoice_line_disposition).toBe('remain_on_invoice')
+    expect(args?.p_appointment_disposition).toBe('leave_unchanged')
   })
 })
 
