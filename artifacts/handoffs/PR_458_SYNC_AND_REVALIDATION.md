@@ -39,7 +39,8 @@ Files brought in from `main` are the legal-page sanitizer change from #457. `ser
 
 After the push, GitHub reported `mergeable: MERGEABLE`, `mergeStateStatus: BLOCKED`, `isDraft: true`. BLOCKED here is the open draft with unfinished required checks, not a conflict.
 
-This report file is committed after `7046c130`. Required-check rows below are for `7046c130` only. They are not evidence for the later report commit.
+Report commit that first added this file: `af9fb3c66a269e65f4e5d8e2c9c000bc8e9996e3`.
+Required-check rows for `7046c130` are not evidence for `af9fb3c6` or for any commit after it.
 
 ## Tests and lint on the sync tree
 
@@ -57,11 +58,15 @@ Exit 0.
 
 Read at 2026-10-16T14:45:09Z and confirmed again immediately after. Checks on `09385560` are not used.
 
+Second read of the same SHA, 2026-10-16T14:46:24Z:
+
 | Check | head_sha | Status | Conclusion |
 | --- | --- | --- | --- |
-| Test and lint | `7046c1304d444bb2b557b84b049a8f2d65427f71` | in_progress | not finished |
+| Test and lint | `7046c1304d444bb2b557b84b049a8f2d65427f71` | completed 2026-10-16T14:46:16Z | success |
 | E2E login | `7046c1304d444bb2b557b84b049a8f2d65427f71` | in_progress | not finished |
 | Dependency review | `7046c1304d444bb2b557b84b049a8f2d65427f71` | completed 2026-10-16T14:45:09Z | success |
+
+On the report commit `af9fb3c6`, at that same read, Dependency review was `in_progress` with no conclusion. Test and lint and E2E login had not reported a completed run on `af9fb3c6`. Those `7046c130` successes do not count for `af9fb3c6`.
 
 Run for Test and lint and E2E login: `38918279076`. Dependency review run: `38918279084`.
 
