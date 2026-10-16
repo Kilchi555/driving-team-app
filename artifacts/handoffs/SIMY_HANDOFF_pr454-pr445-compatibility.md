@@ -37,7 +37,7 @@
 - E2E tests: NOT RUN locally.
 - Lint: PASS locally. `npx eslint "server/utils/__tests__/**/*.ts" --max-warnings 0`, exit 0.
 - Typecheck: NOT RUN as a project check. An isolated `tsc` of `server/utils/invoice-update-allowlist.ts` exited 2 on a pre-existing narrowing error at the existing `validated.value` read and an unrelated `@types/request` `CookieJar` error. The new key is present in the exhaustive `STRING_LIMITS` record.
-- Required CI checks for PR #456: NOT RUN to completion at handoff time. On head `5bf79f0c`, `Test and lint` and `E2E login` were pending. `Dependency review` had not appeared yet. These are CI results, separate from the local vitest and eslint runs.
+- Required CI checks for PR #456 on head `472627fc43e56f10277c33d6577b23969df68368`, read live with `gh pr checks` after that commit: `Test and lint` pass (1m17s), `E2E login` pass (1m46s). `Dependency review` did not run. `.github/workflows/dependency-review.yml` triggers only for pull requests whose base is `main`; this draft's base is the #445 branch. That absence is not a pass and not a failure. The other five observed contexts on that head also completed without a failure: Publish review state, Vercel Preview Comments, and the three Vercel project statuses. `simy-app` was canceled by the ignored-build step, so that status is not a deployment. These CI results are separate from the local vitest and eslint runs. A later docs commit is not covered by this result.
 - Required CI for PR #454, observed on head `dcd6039b`: Test and lint pass, E2E login pass, Dependency review pass. `App | Default` failed and is not a required ruleset check.
 - Required CI for PR #445, observed on head `976985ef`: Test and lint pass, E2E login pass, Dependency review pass. `App | Default` failed and is not a required ruleset check.
 - Production smoke test: NOT RUN
@@ -45,7 +45,7 @@
 ## 5. Risks and Open Issues
 
 - Known risks: merging PR #445 as it stands, while PR #454 is also merged, makes the preview save return 400. PR #456 is the remedy and is still a draft.
-- Failed or missing checks: PR #456 required CI was not terminal when this handoff was written. App Store failures on #445 and #454 are outside the merge ruleset.
+- Failed or missing checks: on #456 head `472627fc`, `Test and lint` and `E2E login` passed. `Dependency review` did not run because the workflow only targets `main`. App Store failures on #445 and #454 are outside the merge ruleset.
 - Unverified assumptions: none about the allowlist conflict. The custom-domain production SHA is outside this task.
 - Remaining limitations: #445 is three commits behind current `main`, and #454 is one commit behind. The newer main commit is the booking-timezone fix #452 and does not touch this endpoint or the preview modal. Neither PR was rebased.
 
@@ -79,7 +79,7 @@
 | --- | --- | --- | --- | --- | --- |
 | #454 | OPEN | yes, unchanged | `dcd6039b75ac137a8e408056172206bb8d3de7c2` | `a75e065eed1ed7143b0e49718976b9b0209979bd` | Test and lint, E2E login, Dependency review: pass |
 | #445 | OPEN | yes, unchanged | `976985efcae0670f00850d550352e63c5b1dfed6` | `254a2d95e770ae69153631fe406ddb74560baec3` | Test and lint, E2E login, Dependency review: pass |
-| #456 | OPEN | yes | code `5bf79f0c26e3919bf3884e6ebdeed666e0c418fd`; live head includes this handoff | #445 branch `976985ef` | pending on the code commit; re-check the live head |
+| #456 | OPEN | yes | CI observed on `472627fc43e56f10277c33d6577b23969df68368`; a later docs commit is a new head | #445 branch `976985ef` | Test and lint pass, E2E login pass; Dependency review did not run (base is not `main`) |
 
 `origin/main` is `f1efbe6d471584ecc1da0f621dabb52727088ec4`.
 
@@ -121,10 +121,10 @@ Local, not CI:
 - vitest 3.2.7, exit 0, 27 passed. New coverage: store `''` and `12a`; reject 21 characters; reject `billing_street_number` together with `payment_status: 'paid'` and write nothing.
 - eslint on `server/utils/__tests__/**/*.ts`, exit 0.
 
-CI:
+CI, read live and separate from the local runs:
 
 - #454 and #445 required checks were green on the heads above.
-- #456 required checks were not terminal at handoff time. Do not treat this handoff as a green CI result for #456.
+- #456 head `472627fc43e56f10277c33d6577b23969df68368`: `Test and lint` pass, `E2E login` pass. `Dependency review` did not run because that workflow only listens for pull requests into `main`. Do not treat the missing check as green, and do not treat this draft as ready to merge into `main`.
 
 ## Verbleibende Risiken
 
