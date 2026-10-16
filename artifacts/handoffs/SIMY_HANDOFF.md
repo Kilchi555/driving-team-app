@@ -13,10 +13,10 @@
 
 - Repository: Kilchi555/driving-team-app
 - Branch: cursor/cash-186-identification-59ff
-- HEAD SHA: recorded after the handoff commit
+- HEAD SHA: 4373427b062e7303f30b0fe735f5d37cb2f83cda (findings). The following stamp commit only writes this line.
 - Base SHA: a75e065eed1ed7143b0e49718976b9b0209979bd (origin/main)
-- Pull request: not opened at the time this section was drafted; updated after push
-- Working tree: will be CLEAN after the handoff commit
+- Pull request: draft, documentation only; URL added when the PR exists
+- Working tree: CLEAN after the stamp commit
 - Production project read: Driving Team App (`unyjaetebnaexaflpyoc`). Queries were SELECT only.
 
 ## 3. Changes
