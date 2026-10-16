@@ -25,7 +25,7 @@
 - State: **OPEN · DRAFT** (unchanged by agent)
 - Branch: `cursor/prospect-preview-token-facts-e5ac`
 - Prior HEAD (verified match before edit): `468800b2d83628add087bb6890d171a307f631fe`
-- New tip HEAD: `46b7945ac417623d2c98642138c3c6de0b539db6`
+- New tip HEAD: `0dff654c0f8e59775e8a2a1957ae0f707eda522d` (remediation `46b7945a` + docs tip SHA note)
 - Prior Base (PR base OID at start): `a75e065eed1ed7143b0e49718976b9b0209979bd`
 - `origin/main` at start of work: `57543d57dd27b9ceabd84894cc74a1123fdb45dd` (ahead of PR base; branch not rebased by this agent)
 - Unexpected branch drift: **NONE** — tip matched live PR HEAD before edits
