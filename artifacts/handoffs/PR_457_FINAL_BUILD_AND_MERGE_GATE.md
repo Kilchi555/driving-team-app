@@ -12,9 +12,11 @@ The client-build failure on `a37f0f0a` is fixed on the product tree below. A rea
 | Sanitizer boundary fix | `752a23ad79e96ee59dd9ccdbcb7adab50cbba911` |
 | `origin/main` merged into the branch | `e1248c0b7fc5a08a439e9c3e1c15a3ce175a1a2e` |
 | Product tree that was built and tested | `b8e0ae2d105910206ea8691a7db9be05352c3c61` |
-| Handoff commit (this file only) | filled after the introducing commit; parent is `b8e0ae2d` |
+| Handoff commit (this file only) | `418487caa1b1c4a6b5ff798f07afe528dab5ddbe` |
 
 Branch: `cursor/legal-pages-http-500-adc4`. PR: https://github.com/Kilchi555/driving-team-app/pull/457 (draft).
+
+`418487caa1b1c4a6b5ff798f07afe528dab5ddbe` is the commit that added this file. The commit that inserts that SHA is its child. That child is the PR head when its parent is `418487ca` and `git diff 418487ca HEAD` is only this SHA line. The built tree remains `b8e0ae2d`.
 
 `git diff b8e0ae2d HEAD` must stay limited to this markdown file. A later tip whose only change is this file does not change the sanitizer or the legal handler.
 
