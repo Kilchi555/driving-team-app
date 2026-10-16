@@ -65,7 +65,7 @@ CodeQL is not a required ruleset check. `codeql.gate` stays `not_required`. `cod
 
 GitHub Actions has no review-thread event. Resolving or reopening a thread does not by itself refresh the comment. `freshness.covers_thread_resolution` stays false and `freshness.live` stays false. `freshness.max_lag_minutes` is 15 only when `freshness.guarantee` is `scheduled`, which the observer sets only after it sees this workflow file on the default branch. Until then `freshness.guarantee` is `none` and `max_lag_minutes` is null. Do not treat a missing guarantee as a 15-minute bound.
 
-Publication is serialized by the `simy-review-state` concurrency group with `cancel-in-progress: false`. One run finishes before the next starts. The publisher appends a new comment instead of patching over an existing observation.
+Publication is serialized by the `simy-review-state` concurrency group with `cancel-in-progress: false`. One run finishes before the next starts. The publisher updates the trusted canonical marker in place when one exists, creates only when none exists, and skips when the semantic observation is unchanged. Do not reintroduce append-only creates on the schedule fan-out (2026-10-15 notification storm; see `docs/REVIEW_STATE_PUBLICATION.md`).
 
 ## Never
 
