@@ -119,25 +119,72 @@ export function hasPositiveDnsEvidence(verification: unknown): boolean {
 }
 
 /**
- * TLS readiness has no dedicated column. Only an explicit tls.ok boolean in
- * the existing JSONB counts. Nothing in this change writes that boolean.
+ * Maximum age of stored custom-domain evidence.
+ * A timestamp inside this window is not proof that DNS or TLS is still valid.
+ * No scheduled reader refreshes DNS or platform state.
  */
-export function hasPositiveTlsEvidence(verification: unknown): boolean {
-  const tls = evidenceRecord(evidenceRecord(verification)?.tls)
-  return isTrue(tls?.ok)
+export const CUSTOM_DOMAIN_EVIDENCE_MAX_AGE_MS = 60 * 60 * 1000
+
+/**
+ * Authoritative TLS evidence does not exist in this process.
+ *
+ * Missing dependency: there is no server-side reader of a certificate and no
+ * reader of a Vercel TLS or certificate API. `vercel.verified` on a project
+ * domain is ownership configuration, not a certificate. The JSON key
+ * `custom_domain_verification.tls.ok` is ignored because a tenant session can
+ * store it. Routing stays disabled until a real reader exists.
+ */
+export function hasAuthoritativeTlsEvidence(): boolean {
+  return false
 }
 
-export function isCustomDomainRoutingEnabled(row: CustomDomainEvidenceRow | null | undefined): boolean {
+/** Tenant-supplied tls.ok is not evidence. This never reads the JSON flag. */
+export function hasPositiveTlsEvidence(_verification?: unknown): boolean {
+  return hasAuthoritativeTlsEvidence()
+}
+
+export function hasFreshCheckedAt(verification: unknown, nowMs: number = Date.now()): boolean {
+  const raw = evidenceRecord(verification)?.checked_at
+  if (typeof raw !== 'string' || !raw.trim()) return false
+  const checkedMs = Date.parse(raw)
+  if (!Number.isFinite(checkedMs)) return false
+  if (checkedMs > nowMs) return false
+  if (nowMs - checkedMs > CUSTOM_DOMAIN_EVIDENCE_MAX_AGE_MS) return false
+  return true
+}
+
+/**
+ * Conjunctive routing decision.
+ * `authoritativeTls` must be the result of hasAuthoritativeTlsEvidence().
+ * Tests may pass true only as a double to show the other gates still fail.
+ * That double is not a certificate check.
+ */
+export function evaluateCustomDomainRouting(
+  row: CustomDomainEvidenceRow | null | undefined,
+  nowMs: number,
+  authoritativeTls: boolean,
+): boolean {
   if (!row?.custom_domain) return false
   if (row.is_published !== true) return false
   if (!hasPositivePlatformEvidence(row.custom_domain_verification)) return false
   if (!hasPositiveDnsEvidence(row.custom_domain_verification)) return false
-  if (!hasPositiveTlsEvidence(row.custom_domain_verification)) return false
+  if (!hasFreshCheckedAt(row.custom_domain_verification, nowMs)) return false
+  if (authoritativeTls !== true) return false
   return true
 }
 
-export function customDomainOrigin(row: CustomDomainEvidenceRow | null | undefined): string | null {
-  if (!isCustomDomainRoutingEnabled(row) || !row?.custom_domain) return null
+export function isCustomDomainRoutingEnabled(
+  row: CustomDomainEvidenceRow | null | undefined,
+  nowMs: number = Date.now(),
+): boolean {
+  return evaluateCustomDomainRouting(row, nowMs, hasAuthoritativeTlsEvidence())
+}
+
+export function customDomainOrigin(
+  row: CustomDomainEvidenceRow | null | undefined,
+  nowMs: number = Date.now(),
+): string | null {
+  if (!isCustomDomainRoutingEnabled(row, nowMs) || !row?.custom_domain) return null
   return `https://${row.custom_domain}`
 }
 
@@ -145,14 +192,54 @@ export function customDomainActivation(input: {
   domain: string
   isPublished: boolean
   verification: unknown
+  nowMs?: number
 }): { verified: false; status: 'dns_pending' } | { verified: true; status: 'active' } {
   const enabled = isCustomDomainRoutingEnabled({
     custom_domain: input.domain,
     is_published: input.isPublished,
     custom_domain_verification: input.verification,
-  })
+  }, input.nowMs)
   if (!enabled) return { verified: false, status: 'dns_pending' }
   return { verified: true, status: 'active' }
+}
+
+export const PROTECTED_CUSTOM_DOMAIN_CLIENT_KEYS = [
+  'custom_domain_verification',
+  'custom_domain_verified',
+  'custom_domain_status',
+  'custom_domain_verified_at',
+  'tls',
+  'verification',
+] as const
+
+export class ClientCustomDomainEvidenceError extends Error {
+  constructor() {
+    super('Custom-domain verification fields are server-managed')
+    this.name = 'ClientCustomDomainEvidenceError'
+  }
+}
+
+/** Reads only `domain`. Protected verification keys are rejected, not stored. */
+export function readCustomDomainClaimBody(body: unknown): { domain: string } {
+  const record = body && typeof body === 'object' && !Array.isArray(body)
+    ? body as Record<string, unknown>
+    : {}
+  for (const key of PROTECTED_CUSTOM_DOMAIN_CLIENT_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(record, key)) {
+      throw new ClientCustomDomainEvidenceError()
+    }
+  }
+  return { domain: typeof record.domain === 'string' ? record.domain : '' }
+}
+
+export function customDomainLookupFromQuery(result: {
+  data: (CustomDomainEvidenceRow & { subdomain?: string | null }) | null
+  error: unknown
+}): CustomDomainLookup {
+  if (result.error) return { ok: false, reason: 'error' }
+  const subdomain = result.data?.subdomain
+  if (!subdomain) return { ok: false, reason: 'missing' }
+  return { ok: true, row: { ...result.data, subdomain } }
 }
 
 export function presentPublicWebsiteDomain<T extends CustomDomainEvidenceRow>(website: T): T & {

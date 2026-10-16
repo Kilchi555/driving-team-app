@@ -3,9 +3,11 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import {
   checkDnsPointsToVercel,
+  ClientCustomDomainEvidenceError,
   customDomainActivation,
   dnsInstructions,
   normalizeHostname,
+  readCustomDomainClaimBody,
   vercelGetDomain,
   vercelVerifyDomain,
 } from '~/server/utils/custom-domain'
@@ -13,6 +15,17 @@ import {
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
   if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+
+  try {
+    // Domain and verification come from the stored row and server checks.
+    // A client tls or verification field is rejected and never written.
+    readCustomDomainClaimBody(await readBody(event))
+  } catch (err) {
+    if (err instanceof ClientCustomDomainEvidenceError) {
+      throw createError({ statusCode: 400, statusMessage: err.message })
+    }
+    throw err
+  }
 
   const supabase = getSupabaseAdmin()
   const { data: user } = await supabase

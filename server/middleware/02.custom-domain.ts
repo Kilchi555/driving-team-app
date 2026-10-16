@@ -6,6 +6,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import {
   type CustomDomainLookup,
+  customDomainLookupFromQuery,
   customDomainNotFoundMessage,
   decideCustomDomainRoute,
   isAppHost,
@@ -22,9 +23,7 @@ async function lookupDomain(host: string): Promise<CustomDomainLookup> {
     .eq('custom_domain', host)
     .maybeSingle()
 
-  if (error) return { ok: false, reason: 'conflict' }
-  if (!data?.subdomain) return { ok: false, reason: 'missing' }
-  return { ok: true, row: data }
+  return customDomainLookupFromQuery({ data, error })
 }
 
 export default defineEventHandler(async (event) => {

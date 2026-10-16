@@ -2,10 +2,12 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import {
+  ClientCustomDomainEvidenceError,
   customDomainActivation,
   dnsInstructions,
   isValidHostname,
   normalizeHostname,
+  readCustomDomainClaimBody,
   vercelAddDomain,
 } from '~/server/utils/custom-domain'
 
@@ -14,7 +16,16 @@ export default defineEventHandler(async (event) => {
   if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
   const body = await readBody(event)
-  const domain = normalizeHostname(String(body?.domain || ''))
+  let claimedDomain: string
+  try {
+    claimedDomain = readCustomDomainClaimBody(body).domain
+  } catch (err) {
+    if (err instanceof ClientCustomDomainEvidenceError) {
+      throw createError({ statusCode: 400, statusMessage: err.message })
+    }
+    throw err
+  }
+  const domain = normalizeHostname(claimedDomain)
 
   if (!isValidHostname(domain)) {
     throw createError({

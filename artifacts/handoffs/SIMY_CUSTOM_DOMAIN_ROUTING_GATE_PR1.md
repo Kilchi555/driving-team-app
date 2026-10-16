@@ -4,9 +4,9 @@ Draft only. No migration, production write, DNS change, Vercel change, TLS chang
 
 ## Verdict
 
-**PASS**
+Superseded for TLS authority and freshness by `artifacts/handoffs/PR_458_CUSTOM_DOMAIN_SECURITY_REMEDIATION.md`.
 
-Public custom-host routing stays off unless platform, DNS, and TLS evidence are all boolean `true`, and the site is published. This PR does not write TLS evidence, so claim and verify cannot mark a domain `verified` or `active`.
+Public custom-host routing stays off. `custom_domain_verification.tls.ok` is not accepted. No authoritative TLS reader exists in this process, so the predicate does not turn routing on. Claim and verify cannot mark a domain `verified` or `active`.
 
 ## Changed files
 
@@ -32,9 +32,9 @@ Public custom-host routing stays off unless platform, DNS, and TLS evidence are 
 | Published | `is_published === true` | A domain row alone |
 | Platform | `custom_domain_verification.vercel.configured === true` and `vercel.verified === true`, and no `vercel.error` | `custom_domain_verified`, status `active`, a DNS match, `configured: false` (missing API), or an error string |
 | DNS | `custom_domain_verification.dns.ok === true` | CNAME or A records by themselves, including `76.76.21.21` |
-| TLS | `custom_domain_verification.tls.ok === true` | Anything else. There is no TLS column. This PR never writes `tls`. Missing JSON is fail-closed, not a success. |
+| TLS | No authoritative source is implemented. The predicate ignores `tls.ok`. | A tenant JSON boolean, `vercel.verified`, or a fresh `checked_at`. |
 
-`customDomainActivation` calls the same predicate. Claim never has DNS or TLS in the object it saves. Verify can store DNS and Vercel booleans, and still cannot activate without `tls.ok === true`.
+`customDomainActivation` calls the same predicate. Claim never has DNS or TLS in the object it saves. Verify can store DNS and Vercel booleans. Neither handler can activate routing, because no authoritative TLS reader exists and `tls.ok` is ignored.
 
 ## Tests
 
@@ -65,13 +65,14 @@ This environment did not boot the Nitro server, so the compatibility result is t
 
 ## Remaining fail-closed limitations
 
-- Routing cannot turn on until a later change performs a real TLS check and stores `tls.ok` only when that check passes. This PR does not add that check and does not add a column.
+- Routing cannot turn on until a later change adds a server-side certificate or Vercel TLS reader. Do not store a tenant-writable `tls.ok` and treat it as that reader.
+- `checked_at` older than 60 minutes, missing, invalid, or in the future fails closed. A fresh timestamp does not prove DNS is still valid. Verify is the only DNS reader and it runs when a tenant calls it. There is no reconciler.
 - `x-forwarded-host` is still preferred over `host`. Whether Vercel overwrites it was not tested.
-- These builders still read `custom_domain_verified` when composing a URL: `website-billing.ts`, `website-ensure-home.ts`, `website-ensure-seo-pages.ts`, `billing-status.get.ts`, `wizard-save.post.ts`, `slots-save.post.ts`, `addon/generate.post.ts`. Claim and verify no longer set that flag. They are not the host router.
+- URL builders now use `customDomainOrigin`, which follows the same closed predicate: `website-billing.ts`, `website-ensure-home.ts`, `website-ensure-seo-pages.ts`, `billing-status.get.ts`, `wizard-save.post.ts`, `slots-save.post.ts`, `addon/generate.post.ts`.
 - Authenticated `GET /api/website/custom-domain` still returns the stored verification object to the tenant admin.
 - No role check, rate limit, or audit log was added.
 - No shared-cache purge. The in-process allow-cache is gone. Public HTML on the app host still uses the existing `s-maxage`.
 
 ## Verdict
 
-**PASS**
+See the remediation handoff. The earlier PASS does not cover TLS authority or evidence freshness.
