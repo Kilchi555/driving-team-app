@@ -111,6 +111,7 @@ Mocked handler and credit tests, not transaction proof:
 - `cash-settlement-due.test.ts`: 4 passed.
 - `staff-pos-completion.test.ts`: 41 passed.
 - `npm run lint`: passed.
+- `npm test` on this commit, with the untracked pre-merge audit file moved out of the worktree: 3200 vitest tests passed, and `scripts/ci/validate-supabase-db-url.test.mjs` passed (17). The audit file was not committed.
 
 `npx nuxi typecheck` was not run. The repo `tsconfig.json` has a trailing comma that already breaks it, and that file was not edited.
 
