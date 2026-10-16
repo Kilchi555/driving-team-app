@@ -38,14 +38,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid invoice ID format' })
   }
 
-  const decision = decideInvoiceUpdate(updates, new Date().toISOString())
-  if (!decision.ok) {
-    throw createError({ statusCode: decision.statusCode, statusMessage: decision.statusMessage })
-  }
-
   const { data: existingInvoice, error: existingError } = await supabase
     .from('invoices')
-    .select('id, tenant_id')
+    .select('id, tenant_id, billing_email')
     .eq('id', invoiceId)
     .maybeSingle()
 
@@ -59,6 +54,15 @@ export default defineEventHandler(async (event) => {
 
   if (existingInvoice.tenant_id !== staffUser.tenant_id) {
     throw createError({ statusCode: 403, statusMessage: 'Access denied' })
+  }
+
+  const decision = decideInvoiceUpdate(
+    updates,
+    new Date().toISOString(),
+    existingInvoice.billing_email,
+  )
+  if (!decision.ok) {
+    throw createError({ statusCode: decision.statusCode, statusMessage: decision.statusMessage })
   }
 
   const { data: invoice, error } = await supabase

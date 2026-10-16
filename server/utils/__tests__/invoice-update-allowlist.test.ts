@@ -169,14 +169,71 @@ describe('decideInvoiceUpdate', () => {
     }
   })
 
+  it('accepts a valid billing email and null', () => {
+    const valid = decideInvoiceUpdate({ billing_email: 'kunde@example.ch' }, NOW)
+    expect(valid.ok).toBe(true)
+    if (!valid.ok) return
+    expect(valid.payload.billing_email).toBe('kunde@example.ch')
+
+    const cleared = decideInvoiceUpdate({ billing_email: null }, NOW)
+    expect(cleared.ok).toBe(true)
+    if (!cleared.ok) return
+    expect(cleared.payload.billing_email).toBeNull()
+  })
+
+  it('keeps an exact stored placeholder and still rejects a new one', () => {
+    for (const stored of ['keine e-mail', 'Keine E-Mail', ' keine e-mail ', '   ']) {
+      const resent = decideInvoiceUpdate({
+        billing_street: 'Bahnhofstrasse',
+        billing_street_number: '12a',
+        billing_zip: '8000',
+        billing_city: 'Zürich',
+        billing_email: stored,
+      }, NOW, stored)
+      expect(resent.ok).toBe(true)
+      if (!resent.ok) return
+      expect(resent.payload.billing_street).toBe('Bahnhofstrasse')
+      expect(resent.payload.billing_street_number).toBe('12a')
+      expect(resent.payload.billing_zip).toBe('8000')
+      expect(resent.payload.billing_city).toBe('Zürich')
+      expect(resent.payload.billing_email).toBe(stored)
+    }
+
+    const introduced = decideInvoiceUpdate({
+      billing_street: 'Bahnhofstrasse',
+      billing_email: 'keine e-mail',
+    }, NOW, 'kunde@example.ch')
+    expect(introduced.ok).toBe(false)
+    if (introduced.ok) return
+    expect(introduced.rejectedFields).toEqual(['billing_email'])
+    expect(introduced).not.toHaveProperty('payload')
+
+    const empty = decideInvoiceUpdate({ billing_email: '' }, NOW, '')
+    expect(empty.ok).toBe(false)
+  })
+
   it('rejects an invalid email without accepting the surrounding address fields', () => {
     const decision = decideInvoiceUpdate({
       billing_city: 'Zürich',
+      billing_street_number: '12',
       billing_email: 'not-an-email',
-    }, NOW)
+    }, NOW, 'keine e-mail')
     expect(decision.ok).toBe(false)
     if (decision.ok) return
     expect(decision.statusMessage).toContain('billing_email')
+    expect(decision).not.toHaveProperty('payload')
+  })
+
+  it('rejects a placeholder email sent together with a payment field', () => {
+    const decision = decideInvoiceUpdate({
+      billing_email: 'keine e-mail',
+      billing_street_number: '12',
+      payment_status: 'paid',
+    }, NOW, 'keine e-mail')
+    expect(decision.ok).toBe(false)
+    if (decision.ok) return
+    expect(decision.rejectedFields).toEqual(['payment_status'])
+    expect(decision).not.toHaveProperty('payload')
   })
 
   it('does not spread caller fields in the update route', () => {
@@ -184,5 +241,6 @@ describe('decideInvoiceUpdate', () => {
     expect(src).not.toContain('...updates')
     expect(src).toContain('decideInvoiceUpdate')
     expect(src).toContain(".eq('tenant_id', staffUser.tenant_id)")
+    expect(src).toContain("select('id, tenant_id, billing_email')")
   })
 })

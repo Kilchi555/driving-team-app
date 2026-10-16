@@ -1,3 +1,5 @@
+import { isPlaceholderBillingEmail } from '~/server/utils/invoice-billing-snapshot'
+
 /**
  * Allowlist for POST /api/invoices/update.
  *
@@ -5,7 +7,8 @@
  * - composables/useInvoices.ts markInvoiceAsSent / sendInvoice: status, sent_at
  * - composables/useInvoices.ts cancelInvoice: status, notes
  * - components/InvoicePreviewModal.vue saveViewBilling: billing address fields.
- *   The preview editor also sends billing_street_number, including '' to clear it.
+ *   The preview editor also sends billing_street_number, including '' to clear it,
+ *   and resubmits the current billing_email.
  *
  * Payment state, totals, ownership, and dunning are not updated here.
  * Those mutations belong to dedicated settlement, credit, or dunning paths.
@@ -52,6 +55,7 @@ export type InvoiceUpdateDecision =
 export function decideInvoiceUpdate(
   updates: unknown,
   updatedAt: string,
+  storedBillingEmail?: string | null,
 ): InvoiceUpdateDecision {
   if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
     return reject([], 'updates must be an object')
@@ -77,7 +81,7 @@ export function decideInvoiceUpdate(
     const value = record[key]
     if (value === undefined) continue
 
-    const validated = validateAllowedField(key as InvoiceUpdateAllowedField, value)
+    const validated = validateAllowedField(key as InvoiceUpdateAllowedField, value, storedBillingEmail)
     if (!validated.ok) return validated
     payload[key] = validated.value
   }
@@ -92,6 +96,7 @@ export function decideInvoiceUpdate(
 function validateAllowedField(
   key: InvoiceUpdateAllowedField,
   value: unknown,
+  storedBillingEmail?: string | null,
 ): { ok: true; value: unknown } | InvoiceUpdateDecision {
   if (key === 'status') {
     if (typeof value !== 'string' || !ALLOWED_STATUSES.has(value)) {
@@ -115,10 +120,29 @@ function validateAllowedField(
   if (value.length > limit) {
     return reject([key], `${key} is too long`)
   }
-  if (key === 'billing_email' && value !== '' && !EMAIL_PATTERN.test(value)) {
+  if (key === 'billing_email') return validateBillingEmail(value, storedBillingEmail)
+  return { ok: true, value }
+}
+
+/**
+ * A real address must match EMAIL_PATTERN. Exact '' stays rejected; callers send null to clear.
+ * isPlaceholderBillingEmail is the only recognized legacy set (whitespace-only, or "keine e-mail"
+ * in any case). Such a value is accepted only when it is exactly the email already stored, so the
+ * preview can resubmit it. A new malformed string, including a placeholder that is not already
+ * stored, is still rejected.
+ */
+function validateBillingEmail(
+  value: string,
+  storedBillingEmail?: string | null,
+): { ok: true; value: string } | InvoiceUpdateDecision {
+  if (value === '') {
     return reject(['billing_email'], 'billing_email must be an email address or null')
   }
-  if (key === 'billing_email' && value === '') {
+  if (isPlaceholderBillingEmail(value)) {
+    if (value === storedBillingEmail) return { ok: true, value }
+    return reject(['billing_email'], 'billing_email must be an email address or null')
+  }
+  if (!EMAIL_PATTERN.test(value)) {
     return reject(['billing_email'], 'billing_email must be an email address or null')
   }
   return { ok: true, value }

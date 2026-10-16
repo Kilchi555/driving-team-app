@@ -34,7 +34,13 @@ const INVOICE = '33333333-3333-3333-3333-333333333333'
 const AUTH = 'auth-admin'
 
 type Profile = { id: string; tenant_id: string | null; role: string }
-type InvoiceRow = { id: string; tenant_id: string; status: string; payment_status: string }
+type InvoiceRow = {
+  id: string
+  tenant_id: string
+  status: string
+  payment_status: string
+  billing_email?: string | null
+}
 
 function createSupabase(opts: {
   profile: Profile | null
@@ -79,7 +85,14 @@ function createSupabase(opts: {
           if (op === 'update') {
             return { data: { ...opts.invoice, ...payload }, error: null }
           }
-          return { data: { id: opts.invoice.id, tenant_id: opts.invoice.tenant_id }, error: null }
+          return {
+            data: {
+              id: opts.invoice.id,
+              tenant_id: opts.invoice.tenant_id,
+              billing_email: opts.invoice.billing_email ?? null,
+            },
+            error: null,
+          }
         }
         if (table === 'invoices_with_details') {
           if (!opts.invoice || filters.id !== opts.invoice.id) {
@@ -290,6 +303,62 @@ describe('POST /api/invoices/update', () => {
     expect(mocks.releaseInvoicePayments).not.toHaveBeenCalled()
   })
 
+  it('saves an address while resubmitting a stored placeholder email', async () => {
+    const { updates } = await run({
+      invoice: {
+        id: INVOICE,
+        tenant_id: TENANT,
+        status: 'sent',
+        payment_status: 'pending',
+        billing_email: 'Keine E-Mail',
+      },
+      body: {
+        invoice_id: INVOICE,
+        updates: {
+          billing_street: 'Bahnhofstrasse',
+          billing_street_number: '12a',
+          billing_zip: '8000',
+          billing_city: 'Zürich',
+          billing_email: 'Keine E-Mail',
+        },
+      },
+    })
+    expect(updates).toHaveLength(1)
+    expect(updates[0].billing_street).toBe('Bahnhofstrasse')
+    expect(updates[0].billing_street_number).toBe('12a')
+    expect(updates[0].billing_email).toBe('Keine E-Mail')
+    expect(mocks.releaseInvoicePayments).not.toHaveBeenCalled()
+  })
+
+  it('does not write a malformed email that is not a stored placeholder', async () => {
+    const updates: Record<string, unknown>[] = []
+    mocks.getAuthenticatedUser.mockResolvedValue({ id: AUTH })
+    mocks.getSupabaseAdmin.mockReturnValue(createSupabase({
+      profile: { id: 'staff-1', tenant_id: TENANT, role: 'admin' },
+      invoice: {
+        id: INVOICE,
+        tenant_id: TENANT,
+        status: 'sent',
+        payment_status: 'pending',
+        billing_email: 'keine e-mail',
+      },
+      updates,
+    }))
+    mocks.readBody.mockResolvedValue({
+      invoice_id: INVOICE,
+      updates: {
+        billing_street: 'Bahnhofstrasse',
+        billing_email: 'not-an-email',
+      },
+    })
+    const { default: handler } = await handlerPromise
+    await expect(handler({})).rejects.toMatchObject({
+      statusCode: 400,
+      statusMessage: expect.stringContaining('billing_email'),
+    })
+    expect(updates).toEqual([])
+  })
+
   it('does not write when a house number is combined with payment_status', async () => {
     const updates: Record<string, unknown>[] = []
     mocks.getAuthenticatedUser.mockResolvedValue({ id: AUTH })
@@ -324,7 +393,11 @@ describe('POST /api/invoices/update', () => {
     }))
     mocks.readBody.mockResolvedValue({
       invoice_id: INVOICE,
-      updates: { status: 'sent', sent_at: '2026-10-15T11:00:00.000Z' },
+      updates: {
+        billing_street: 'Bahnhofstrasse',
+        billing_street_number: '12',
+        billing_email: 'keine e-mail',
+      },
     })
     const { default: handler } = await handlerPromise
     await expect(handler({})).rejects.toMatchObject({
