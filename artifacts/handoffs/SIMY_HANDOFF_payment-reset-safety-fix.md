@@ -1,17 +1,19 @@
 # Payment receipt reset — safety fix
 
-Verdict: **CONDITIONAL PASS**
+Verdict: **PASS**
 
-GitHub required checks on this commit are not in this file yet. Local tests passed. Production application and any live payment correction stay unauthorized.
+Required checks are green on the code head below. App Store checks failed and are not part of the main ruleset. Production application and any live payment correction stay unauthorized.
 
 ## Pull request
 
 - PR: https://github.com/Kilchi555/driving-team-app/pull/455
 - Branch: `cursor/admin-payment-reset-59ff`
-- Base: `main` at `f1efbe6d471584ecc1da0f621dabb52727088ec4`
+- Checked head: `3b44e15e9c59d8fde7d7c89ad13e35d86684f584`
 - Implementation: `e64f6f4f956fc7ae37b4832003095de0a4421933`
-- Handoff commit: `4beaede58e47049bd270d4f49f6904bce230b0ed`
-- Branch head is the next commit, which only adds this SHA list. The pull request description repeats `git rev-parse HEAD` from that commit.
+- Main at task start: `f1efbe6d471584ecc1da0f621dabb52727088ec4`
+- Live main at this review: `e1248c0b7fc5a08a439e9c3e1c15a3ce175a1a2e`
+- Merge-base: `a75e065eed1ed7143b0e49718976b9b0209979bd`
+- This verdict is a docs commit on top of the checked head. It does not change the migration or the tests.
 - Draft stays a draft. Do not merge.
 
 ## Root causes
@@ -71,7 +73,7 @@ Disposable Postgres 16. The schema includes the non-production check constraints
 
 The year PDF was built from those database rows. Its decoded text contains `CHF 279.00`, `CHF 50.00`, and `CHF 229.00`. It does not contain `CHF 236.00`, which would be the rent plus a second expense for the same 18,600. The original 18,600 income line and the storno line are present and struck through. `accountingYearStatement`, which supplies those PDF totals, returned income 27,900, expense 5,000, result 22,900.
 
-Planner and accounting unit tests passed. An earlier full `npm test` was 3125 passed and 1 failed only because that test treats any dirty git tree as a failure. That failure is gone once this handoff is committed and the tree is clean.
+GitHub run `38899258480` on the checked head: Test and lint passed, 3166 tests, including `payment-receipt-reset.db.test.ts` (11). E2E login passed. Dependency review passed. CodeQL passed and is not a required check. `App | Default` and `App | Default | Archive - iOS` failed. Those App Store checks are not in the main ruleset.
 
 The invoice modal was not clicked in a browser. The net used by the modal is the same function the database test asserts.
 
@@ -89,11 +91,13 @@ The full steps are at the top of the migration.
 ## Remaining risks
 
 - This draft is not approved for production.
+- The branch is behind `main`. Later main commits `#445` and `#446` do not touch this fix. A person synchronizes the branch before any merge.
+- Creating `accounting_entries_one_live_storno` fails closed if two live stornos already share `storno_of_id`. Check that before applying the migration.
 - The admin preview uses the Zurich date. The function uses `CURRENT_DATE`, the same clock as the invoice trigger. Near midnight those dates can disagree in the preview. The stored status follows the trigger.
 - A manual storno of this income, followed later by this correction, is retagged `payment-receipt-reset` so profit and loss does not count both the lost payment income and the expense.
 
 ## Next permitted action
 
-A person may review the draft. A person may apply the migration only on a database they control that is not production.
+A person may review the draft. A person may apply the migration only on a database they control that is not production, after checking for duplicate live stornos.
 
 Do not merge. Do not undraft. Do not apply the migration to production. Do not correct a live payment.
