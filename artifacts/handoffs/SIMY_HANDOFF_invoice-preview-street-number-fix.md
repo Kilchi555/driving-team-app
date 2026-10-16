@@ -12,9 +12,9 @@
 
 - Repository: Kilchi555/driving-team-app
 - Branch: `cursor/invoice-preview-street-number-save-4000`
-- HEAD SHA: wird nach dem Commit in der PR-Beschreibung und im Abschlussbericht genannt
+- HEAD SHA: Fix-Commit `4247ba1bf5e29f7b70d3747d94604e54fbff168e`. Der Commit, der diese PR-URL nachträgt, ist danach die Branch-Spitze; die lebendige `headRefOid` von PR #454 ist massgebend.
 - Base SHA: `a75e065eed1ed7143b0e49718976b9b0209979bd`
-- Pull request: Draft, URL nach dem Push
+- Pull request: https://github.com/Kilchi555/driving-team-app/pull/454 (Draft)
 - Working tree: diese Datei ist Teil des beabsichtigten Commits. Der ältere Audit-Handoff `artifacts/handoffs/SIMY_HANDOFF_pr442-post-merge.md` bleibt unversioniert und wird nicht mitcommitted.
 
 ## 3. Changes
@@ -46,9 +46,9 @@
 
 ## 6. External Actions and Production Safety
 
-- Commit created: YES, lokal, vor dem Push
-- Remote push: folgt im selben Auftrag, sonst NO
-- Pull request created or updated: folgt als Draft
+- Commit created: YES — `4247ba1bf5e29f7b70d3747d94604e54fbff168e`
+- Remote push: YES — `cursor/invoice-preview-street-number-save-4000`
+- Pull request created or updated: YES — Draft https://github.com/Kilchi555/driving-team-app/pull/454
 - Merge: NO
 - Deployment: NO
 - Production database changes: NO
