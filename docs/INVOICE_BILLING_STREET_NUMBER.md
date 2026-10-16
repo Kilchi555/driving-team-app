@@ -49,6 +49,7 @@ Selection in `InvoiceCreateModal` uses `Object.assign(formData, invoicePartyAddr
 3. **Search without address columns** — dropping `street_nr` from `USER_SEARCH_SELECT` (or company list payloads) recreates blank snapshots.
 4. **Duplicated street tokens** — prefer `joinStreetAndNumber` / `formatInvoiceStreetLine`; concatenating `street + ' ' + number` duplicates when the street already ends with the number.
 5. **Not company-name LF** — do not fold this into open #266; house numbers are orthogonal to multiline names.
+6. **PDF helper still uses `||`** — `invoiceHasPostalAddress` / `pdfBillingFields` in `server/utils/invoice-billing-snapshot.ts` still do `billing_street_number || billing_street_nr`, so an explicit empty canonical string can fall through to legacy on PDF. UI paths that call `resolveInvoiceStreetNumber` do not.
 
 ---
 
