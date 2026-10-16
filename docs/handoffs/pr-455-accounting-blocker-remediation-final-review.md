@@ -6,9 +6,9 @@ Observation time: 2026-10-16T15:02:57Z.
 
 ## Verdict
 
-`CONDITIONAL PASS — SPECIFIC CHECKS REMAIN`
+`PASS — SAFE FOR HUMAN MERGE REVIEW`
 
-Local integration, lint, and tests passed on a clean tree. Required GitHub checks on the final head are not recorded in this commit because they did not exist yet. A human merge review waits until those live checks are green on the branch tip. This verdict does not authorize undrafting, merging, deployment, applying the migration, or correcting the live CHF 186 receipt.
+Local tests passed on the merge, and the three required GitHub checks passed on `a236b2dedff4e13f138ea9c6d1c97324f0933c40`. This commit only records that result. It does not authorize undrafting, merging, deployment, applying the migration, or correcting the live CHF 186 receipt. A person still confirms the required checks on the branch tip before review, because this recording commit is newer than the SHA cited below.
 
 ## Heads
 
@@ -19,6 +19,7 @@ Local integration, lint, and tests passed on a clean tree. Required GitHub check
 | Remediation code | `66177ac2322ae42fca5c03036ff65523da943ac3` |
 | Prior handoff | `126f244c7afde433092094076e15473845d40912` |
 | Merge commit | `fbbbea83e5bdf6b295a06f636038b8cafa0bfb86` |
+| Review commit with required checks | `a236b2dedff4e13f138ea9c6d1c97324f0933c40` |
 | `origin/main` | `ecf9694ff5b6626539ad0230fee2ca1c3a3d6121` |
 | Previous merge base | `e1248c0b7fc5a08a439e9c3e1c15a3ce175a1a2e` |
 | PR 455 before the merge | OPEN, draft, `MERGEABLE`, `BEHIND` |
@@ -87,9 +88,19 @@ Vitest: 3211 passed, 0 failed, 282 files. Node `scripts/ci/validate-supabase-db-
 
 ## Required remote CI
 
-Not observed for this commit at authoring time. Do not read local tests as GitHub checks.
+Live ruleset `Protect main — Required CI` is `active`. Its required contexts are exactly **Test and lint**, **E2E login**, and **Dependency review**.
 
-Expected required contexts, from ruleset `Protect main — Required CI` as used by this repository: **Test and lint**, **E2E login**, **Dependency review**. App Store checks are not merge gates. Confirm the live ruleset before treating any check list as complete.
+Observed on `a236b2dedff4e13f138ea9c6d1c97324f0933c40`, which is the parent of this recording commit:
+
+| Check | Result | Run |
+| --- | --- | --- |
+| Test and lint | pass | [38920852035](https://github.com/Kilchi555/driving-team-app/actions/runs/38920852035), job 117040075777, conclusion `success` |
+| E2E login | pass | same run, job 117040075528 |
+| Dependency review | pass | [38920851962](https://github.com/Kilchi555/driving-team-app/actions/runs/38920851962) |
+
+CodeQL passed and is not required. `App | Default` and `App | Default | Archive - iOS` were still pending and are not in the ruleset. The Test and lint job showed an annotation `Process completed with exit code 1`; the job conclusion is `success`, and `gh pr checks` reported the check as pass. `mergeStateStatus` was `BLOCKED` because the pull request is a draft, while `mergeable` was `MERGEABLE`.
+
+These results are not the checks for this recording commit. Read the tip before treating the branch as current.
 
 ## Limitations
 
@@ -105,4 +116,4 @@ No production or staging Supabase write. No migration applied outside disposable
 
 ## Next human action
 
-Read the live required checks on the branch tip. If they are green, review the draft. Merging, marking ready, applying the migration, and correcting a live receipt stay separate human decisions.
+Confirm the three required checks are green on the branch tip, then review the draft. Leave it draft until that review. Merging, marking ready, applying the migration, and correcting a live receipt are separate human decisions.
