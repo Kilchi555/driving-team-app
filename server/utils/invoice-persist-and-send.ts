@@ -87,6 +87,12 @@ export type PersistAndSendOptions = {
   /** Extra admin alert (e.g. missing customer email) */
   adminAlertHtml?: string | null
   adminAlertSubject?: string | null
+  /**
+   * Return value of companyIdForInvoiceInsert for this request.
+   * When the property is present, including null, persist does not query companies again.
+   * Callers that omit it still resolve the draft here, before number allocation and insert.
+   */
+  linkedCompanyId?: string | null
 }
 
 function generateAdminInvoiceNotification(data: {
@@ -150,7 +156,9 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
     throw new Error('Tenant mismatch')
   }
 
-  const linkedCompanyId = await companyIdForInvoiceInsert(supabase, tenantId, draft)
+  const linkedCompanyId = 'linkedCompanyId' in opts
+    ? opts.linkedCompanyId ?? null
+    : await companyIdForInvoiceInsert(supabase, tenantId, draft)
 
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')

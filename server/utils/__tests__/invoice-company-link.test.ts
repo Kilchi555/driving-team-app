@@ -9,6 +9,7 @@ import {
   externalResourceInvoiceAssociation,
 } from '~/server/utils/invoice-company-link'
 import type { InvoiceDraftPayload, PersistAndSendActor } from '~/server/utils/invoice-persist-and-send'
+import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 
 vi.mock('~/server/utils/email', () => ({ sendEmail: vi.fn(async () => ({ id: 'mail-1' })) }))
 vi.mock('~/server/utils/invoice-pdf', () => ({
@@ -48,6 +49,21 @@ vi.mock('~/server/utils/auth', () => ({
 
 vi.mock('~/server/utils/supabase-admin', () => ({
   getSupabaseAdmin: () => authMocks.getSupabaseAdmin(),
+}))
+
+const creditMocks = vi.hoisted(() => ({
+  applyStudentCreditToPayments: vi.fn(async () => ({
+    credit_used_rappen: 0,
+    credit_remaining_rappen: 0,
+    allocations: [],
+    fully_covered_payment_ids: [],
+    remaining_payment_ids: [],
+    applied_by_payment_id: {},
+  })),
+}))
+
+vi.mock('~/server/utils/apply-student-credit', () => ({
+  applyStudentCreditToPayments: (...args: unknown[]) => creditMocks.applyStudentCreditToPayments(...args),
 }))
 
 const TENANT = '64259d68-195a-4c68-8875-f1b44d962830'
@@ -366,6 +382,117 @@ describe('POST /api/invoices/send-draft company id errors', () => {
       statusMessage: 'insert failed',
     })
     expect(db.tables.invoices).toHaveLength(1)
+  })
+})
+
+describe('POST /api/invoices/send-draft credit waits for the company check', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    authMocks.getAuthenticatedUser.mockResolvedValue({ id: 'auth-admin' })
+  })
+
+  function openPaymentDb(options?: { failSelect?: string[]; forbid?: string[] }) {
+    const tables = baseTables()
+    tables.payments.push({
+      id: 'pay-open',
+      tenant_id: TENANT,
+      user_id: 'user-1',
+      invoice_id: null,
+      total_amount_rappen: 10000,
+      payment_status: 'pending',
+      payment_method: 'invoice',
+    })
+    return createMemorySupabase(tables, options)
+  }
+
+  async function send(db: MemoryDb, partial: Partial<InvoiceDraftPayload>) {
+    authMocks.getSupabaseAdmin.mockReturnValue(db)
+    const handler = (await import('~/server/api/invoices/send-draft.post')).default as (
+      event: unknown,
+    ) => Promise<unknown>
+    return handler({
+      body: {
+        draft: draft({ payment_ids: ['pay-open'], ...partial }),
+        send_email: false,
+        apply_available_credit: true,
+      },
+    })
+  }
+
+  function expectNoCreditOrInvoice(db: MemoryDb) {
+    expect(creditMocks.applyStudentCreditToPayments).not.toHaveBeenCalled()
+    expect(allocateInvoiceNumber).not.toHaveBeenCalled()
+    expect(db.calls).not.toContain('payments')
+    expect(db.tables.invoices).toHaveLength(1)
+    expect(db.tables.payments.find((row) => row.id === 'pay-open')?.invoice_id).toBeNull()
+  }
+
+  it('rejects an invalid company id before credit, claims, or an invoice number', async () => {
+    const db = openPaymentDb({ forbid: ['companies'] })
+    await expect(send(db, { company_id: 'not-a-company' })).rejects.toMatchObject({
+      statusCode: 400,
+      message: 'Ungültige Firmen-ID',
+    })
+    expectNoCreditOrInvoice(db)
+  })
+
+  it('rejects a foreign-tenant company id before credit or insert', async () => {
+    const db = openPaymentDb()
+    await expect(send(db, { company_id: FOREIGN })).rejects.toMatchObject({
+      statusCode: 404,
+      message: 'Firma nicht gefunden',
+    })
+    expectNoCreditOrInvoice(db)
+  })
+
+  it('rejects an unknown company id before credit or insert', async () => {
+    const db = openPaymentDb()
+    await expect(send(db, { company_id: UNKNOWN })).rejects.toMatchObject({
+      statusCode: 404,
+      message: 'Firma nicht gefunden',
+    })
+    expectNoCreditOrInvoice(db)
+  })
+
+  it('rejects a company lookup failure before credit or insert', async () => {
+    const db = openPaymentDb({ failSelect: ['companies'] })
+    await expect(send(db, { company_id: COMPANY })).rejects.toMatchObject({
+      statusCode: 503,
+      message: 'Firma konnte nicht geprüft werden',
+    })
+    expectNoCreditOrInvoice(db)
+  })
+
+  it('stores a same-tenant company id and still applies credit on a valid request', async () => {
+    const db = openPaymentDb()
+    await send(db, { company_id: COMPANY, billing_company_name: 'Freitext GmbH' })
+    expect(creditMocks.applyStudentCreditToPayments).toHaveBeenCalledOnce()
+    expect(allocateInvoiceNumber).toHaveBeenCalledOnce()
+    expect(db.calls.filter((table) => table === 'companies')).toHaveLength(1)
+    expect(newInvoice(db)).toMatchObject({
+      company_id: COMPANY,
+      billing_company_name: 'Freitext GmbH',
+      total_amount_rappen: 10000,
+    })
+    expect(db.tables.payments.find((row) => row.id === 'pay-open')?.invoice_id).toBe(newInvoice(db)?.id)
+  })
+
+  it('keeps a company name without an id unlinked and still applies credit', async () => {
+    const db = openPaymentDb({ forbid: ['companies'] })
+    await send(db, { billing_type: 'company', billing_company_name: 'Freitext GmbH' })
+    expect(creditMocks.applyStudentCreditToPayments).toHaveBeenCalledOnce()
+    expect(newInvoice(db)).toMatchObject({
+      billing_type: 'company',
+      billing_company_name: 'Freitext GmbH',
+      company_id: null,
+    })
+  })
+
+  it('keeps a personal invoice unlinked when credit is applied', async () => {
+    const db = openPaymentDb({ forbid: ['companies'] })
+    await send(db, { billing_type: 'individual', company_id: COMPANY, billing_company_name: '' })
+    expect(creditMocks.applyStudentCreditToPayments).toHaveBeenCalledOnce()
+    expect(newInvoice(db)).toMatchObject({ billing_type: 'individual', company_id: null })
   })
 })
 
