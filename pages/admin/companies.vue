@@ -6,6 +6,9 @@
         <div>
           <h1 class="text-xl font-bold text-gray-900">Firmenkunden</h1>
           <p class="text-sm text-gray-400 mt-0.5">Firmen verwalten, Mitarbeiter zuordnen und Rechnungen erstellen.</p>
+          <NuxtLink to="/admin/company-invoice-links" class="inline-block mt-2 text-sm font-semibold hover:underline" :style="{ color: primaryColor }">
+            Historische Rechnungen zuordnen
+          </NuxtLink>
         </div>
       </div>
     </div>
