@@ -18,8 +18,9 @@ Observed on 2026-10-16, before this remediation:
 | GitHub PR base | `e1248c0b7fc5a08a439e9c3e1c15a3ce175a1a2e` |
 | PR 455 | OPEN, draft, `MERGEABLE`, `mergeStateStatus` `BEHIND` |
 | Remediation code | `66177ac2322ae42fca5c03036ff65523da943ac3` |
+| Handoff, verified clean tree | `126f244c7afde433092094076e15473845d40912` |
 
-This handoff is the commit directly after `66177ac2322ae42fca5c03036ff65523da943ac3`. That commit changes only this document. The branch was not synchronized with `main`.
+`126f244c7afde433092094076e15473845d40912` is the commit directly after the remediation code. Its parent is `66177ac2322ae42fca5c03036ff65523da943ac3`. The docs stamp after it changes only this document. The branch was not synchronized with `main`.
 
 `origin/main` is one commit ahead: `ecf9694f` (`#457`, legal pages only). This branch does not contain it. Strict required-status checks on `main` will not merge a behind branch. That is a process gate, not a defect in this fix. This task did not merge `main`.
 
@@ -88,7 +89,9 @@ eslint on `payment-receipt-reset.ts`, `payment-receipt-reset-load.ts`, and `paym
 
 `node --test scripts/ci/validate-supabase-db-url.test.mjs`: 17 passed.
 
-Full `npm test` before the commits: Vitest 3188 passed, 1 failed. The failure was `course-invoice-phase1-schema.test.ts` test 29, which requires a clean `git status`. The dirty paths were the files in this remediation. Re-run that test after the handoff commit, on a clean tree.
+Full `npm test` before the commits: Vitest 3188 passed, 1 failed. The failure was `course-invoice-phase1-schema.test.ts` test 29, which requires a clean `git status`. The dirty paths were the files in this remediation.
+
+On the clean tree at `126f244c7afde433092094076e15473845d40912`, that test passed (`npx vitest run server/utils/__tests__/course-invoice-phase1-schema.test.ts -t "29. appointment automation"`: 1 passed, 35 skipped).
 
 ## No partial writes
 
