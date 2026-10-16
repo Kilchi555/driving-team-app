@@ -1,4 +1,5 @@
 // GET /api/public/website/:subdomain/legal?type=impressum|datenschutz
+import { createError, defineEventHandler, getQuery, getRouterParam } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import {
   buildDatenschutzHtml,
@@ -6,15 +7,43 @@ import {
 } from '~/server/utils/website-premium'
 import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
 import { authorizePublicWebsiteRead } from '~/server/utils/website-preview-access'
-import { sanitizeTenantHtml } from '~/utils/sanitize-tenant-html'
+import { trySanitizeTenantHtml } from '~/utils/sanitize-tenant-html'
 
-export default defineEventHandler(async (event) => {
+const LEGAL_TYPES = ['impressum', 'datenschutz'] as const
+type LegalType = (typeof LEGAL_TYPES)[number]
+
+function statusCodeOf(err: unknown): number {
+  if (!err || typeof err !== 'object' || !('statusCode' in err)) return 0
+  const code = Number((err as { statusCode?: number }).statusCode)
+  return Number.isFinite(code) ? code : 0
+}
+
+/** Executable markup that must never be returned from a tenant reglement. */
+function stillLooksExecutable(html: string): boolean {
+  return /<\s*script\b/i.test(html)
+    || /<\s*\/\s*script/i.test(html)
+    || /<[^>]*\son[a-z]+\s*=/i.test(html)
+    || /javascript\s*:/i.test(html)
+}
+
+function generatedHtml(type: LegalType, tenantForLegal: Parameters<typeof buildImpressumHtml>[0]) {
+  const built = type === 'impressum' ? buildImpressumHtml(tenantForLegal) : buildDatenschutzHtml(tenantForLegal)
+  const cleaned = trySanitizeTenantHtml(built)
+  // Builder output is already escapeHtml'd. Use it only when DOMPurify cannot run.
+  if (!cleaned.ok || stillLooksExecutable(cleaned.html)) return built
+  return cleaned.html
+}
+
+async function handleLegal(event: any) {
   const subdomain = getRouterParam(event, 'subdomain')?.trim().toLowerCase()
   const query = getQuery(event) as Record<string, unknown>
-  const type = String(query.type || '').toLowerCase()
-  if (!subdomain || !['impressum', 'datenschutz'].includes(type)) {
+  const typeRaw = String(query.type || '').toLowerCase()
+
+  // Same contract as origin/main: missing subdomain, missing type, and unknown type.
+  if (!subdomain || !LEGAL_TYPES.includes(typeRaw as LegalType)) {
     throw createError({ statusCode: 400, statusMessage: 'subdomain and type required' })
   }
+  const type = typeRaw as LegalType
 
   const supabase = getSupabaseAdmin()
 
@@ -45,7 +74,7 @@ export default defineEventHandler(async (event) => {
   if (tenantError || !tenant) {
     throw createError({
       statusCode: 404,
-      statusMessage: tenantError?.message || 'Tenant not found',
+      statusMessage: 'Tenant not found',
     })
   }
 
@@ -55,8 +84,7 @@ export default defineEventHandler(async (event) => {
     postal_code: tenant.invoice_zip || null,
   }
 
-  // Prefer tenant_reglements datenschutz when available
-  if (type === 'datenschutz') {
+  if (type === 'datenschutz' && typeof tenant.id === 'string') {
     try {
       const { data: reg } = await supabase
         .from('tenant_reglements')
@@ -65,27 +93,28 @@ export default defineEventHandler(async (event) => {
         .eq('type', 'datenschutz')
         .eq('is_active', true)
         .maybeSingle()
-      if (reg?.content) {
-        setWebsitePublicCache(event, {
-          preview: access.privateCache,
-          sMaxAge: 600,
-          swr: 3600,
-          tag: `website-legal-${subdomain}`,
-        })
-        return {
-          type,
-          title: reg.title || 'Datenschutz',
-          html: sanitizeTenantHtml(reg.content),
-          tenant: { name: tenant.name },
+      const content = typeof reg?.content === 'string' ? reg.content : ''
+      if (content.trim()) {
+        const cleaned = trySanitizeTenantHtml(content)
+        if (cleaned.ok && cleaned.html.trim() && !stillLooksExecutable(cleaned.html)) {
+          setWebsitePublicCache(event, {
+            preview: access.privateCache,
+            sMaxAge: 600,
+            swr: 3600,
+            tag: `website-legal-${subdomain}`,
+          })
+          return {
+            type,
+            title: typeof reg?.title === 'string' && reg.title.trim() ? reg.title : 'Datenschutz',
+            html: cleaned.html,
+            tenant: { name: tenant.name },
+          }
         }
       }
     } catch {
-      // fall through to generated
+      // Stored reglement is unusable. Fall through to the escaped generator text.
     }
   }
-
-  const html =
-    type === 'impressum' ? buildImpressumHtml(tenantForLegal) : buildDatenschutzHtml(tenantForLegal)
 
   setWebsitePublicCache(event, {
     preview: access.privateCache,
@@ -97,7 +126,17 @@ export default defineEventHandler(async (event) => {
   return {
     type,
     title: type === 'impressum' ? 'Impressum' : 'Datenschutz',
-    html: sanitizeTenantHtml(html),
+    html: generatedHtml(type, tenantForLegal),
     tenant: { name: tenant.name },
+  }
+}
+
+export default defineEventHandler(async (event) => {
+  try {
+    return await handleLegal(event)
+  } catch (err) {
+    const code = statusCodeOf(err)
+    if (code >= 400 && code < 500) throw err
+    throw createError({ statusCode: 500, statusMessage: 'Server Error' })
   }
 })
