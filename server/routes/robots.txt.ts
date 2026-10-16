@@ -44,6 +44,11 @@ export default defineEventHandler(async (event) => {
 
   const ctx = await resolveWebsiteSeoContext(event)
   if (!ctx) {
+    const hostHeader = getRequestHeader(event, 'x-forwarded-host') || getRequestHeader(event, 'host') || ''
+    const host = normalizeHostname(String(hostHeader).split(',')[0] || '')
+    if (host && !isAppHost(host)) {
+      throw createError({ statusCode: 404, statusMessage: 'Not found' })
+    }
     return PLATFORM_ROBOTS
   }
 

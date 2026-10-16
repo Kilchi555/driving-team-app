@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import {
   checkDnsPointsToVercel,
+  customDomainActivation,
   dnsInstructions,
   normalizeHostname,
   vercelGetDomain,
@@ -58,30 +59,30 @@ export default defineEventHandler(async (event) => {
     vercelError = existing.error
   }
 
-  // Active when DNS points to Vercel AND (Vercel says verified OR Vercel API not configured)
-  const vercelApiMissing = !existing.configured
-  const verified = dns.ok && (vercelVerified || vercelApiMissing)
-  const status = verified ? 'active' : dns.ok ? 'dns_pending' : 'dns_pending'
-
+  const platformConfigured = !!(existing.configured && existing.data && !vercelError)
   const verification = {
-    dns,
-    vercel: existing.configured
-      ? {
-          verified: vercelVerified,
-          payload: vercelPayload,
-          error: vercelError,
-        }
-      : { configured: false },
+    dns: { ok: dns.ok === true },
+    vercel: {
+      configured: platformConfigured,
+      verified: platformConfigured && vercelVerified === true,
+      verification: vercelPayload?.verification || existing.data?.verification || null,
+      error: vercelError,
+    },
     checked_at: new Date().toISOString(),
   }
+  const activation = customDomainActivation({
+    domain,
+    isPublished: website.is_published === true,
+    verification,
+  })
 
   const now = new Date().toISOString()
   const { data: updated, error } = await supabase
     .from('website_tenants')
     .update({
-      custom_domain_status: verified ? 'active' : status,
-      custom_domain_verified: verified,
-      custom_domain_verified_at: verified ? now : website.custom_domain_verified_at,
+      custom_domain_status: activation.status,
+      custom_domain_verified: activation.verified,
+      custom_domain_verified_at: activation.verified ? now : null,
       custom_domain_verification: verification,
       updated_at: now,
     })
@@ -96,15 +97,15 @@ export default defineEventHandler(async (event) => {
   return {
     success: true,
     domain,
-    verified,
-    status: verified ? 'active' : status,
+    verified: activation.verified,
+    status: activation.status,
     dns: dnsInstructions(domain),
     check: verification,
     website: updated,
-    message: verified
+    message: activation.verified
       ? 'Domain ist aktiv und zeigt auf eure Landingpage'
       : dns.ok
-        ? 'DNS ok — Vercel-Verifikation noch ausstehend (TXT/CNAME prüfen)'
+        ? 'DNS erkannt. Die Domain wird noch nicht öffentlich zugeordnet.'
         : `DNS noch nicht korrekt: ${dns.detail}`,
   }
 })

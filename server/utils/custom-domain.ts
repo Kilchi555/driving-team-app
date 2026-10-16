@@ -61,6 +61,160 @@ export function isValidHostname(host: string): boolean {
   return /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/.test(host)
 }
 
+/**
+ * Positive custom-domain routing evidence.
+ * JSONB can store these keys, but this module never writes a TLS pass.
+ * Missing, false, or non-boolean values fail closed.
+ */
+export type CustomDomainEvidenceRow = {
+  custom_domain?: string | null
+  is_published?: boolean | null
+  custom_domain_verified?: boolean | null
+  custom_domain_status?: string | null
+  custom_domain_verification?: unknown
+}
+
+export type CustomDomainLookup =
+  | { ok: true; row: CustomDomainEvidenceRow & { subdomain: string } }
+  | { ok: false; reason: 'missing' | 'conflict' | 'error' }
+
+export type CustomDomainRouteDecision =
+  | { action: 'app' }
+  | { action: 'not_found' }
+  | { action: 'rewrite'; subdomain: string; suffix: string }
+
+const CUSTOM_HOST_NOT_FOUND = 'Diese Domain ist noch nicht mit einer Simy-Website verbunden'
+
+export function customDomainNotFoundMessage(): string {
+  return CUSTOM_HOST_NOT_FOUND
+}
+
+function evidenceRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  return value as Record<string, unknown>
+}
+
+function isTrue(value: unknown): boolean {
+  return value === true
+}
+
+/**
+ * Platform evidence is only the explicit pair configured=true and verified=true
+ * on the stored Vercel object, with no error. DNS ok and the verified/active
+ * columns are not platform proof. A missing API stores configured=false.
+ */
+export function hasPositivePlatformEvidence(verification: unknown): boolean {
+  const vercel = evidenceRecord(evidenceRecord(verification)?.vercel)
+  if (!vercel) return false
+  if (!isTrue(vercel.configured)) return false
+  if (!isTrue(vercel.verified)) return false
+  if (vercel.error != null && vercel.error !== false) return false
+  return true
+}
+
+/** DNS match is necessary and not sufficient. */
+export function hasPositiveDnsEvidence(verification: unknown): boolean {
+  const dns = evidenceRecord(evidenceRecord(verification)?.dns)
+  return isTrue(dns?.ok)
+}
+
+/**
+ * TLS readiness has no dedicated column. Only an explicit tls.ok boolean in
+ * the existing JSONB counts. Nothing in this change writes that boolean.
+ */
+export function hasPositiveTlsEvidence(verification: unknown): boolean {
+  const tls = evidenceRecord(evidenceRecord(verification)?.tls)
+  return isTrue(tls?.ok)
+}
+
+export function isCustomDomainRoutingEnabled(row: CustomDomainEvidenceRow | null | undefined): boolean {
+  if (!row?.custom_domain) return false
+  if (row.is_published !== true) return false
+  if (!hasPositivePlatformEvidence(row.custom_domain_verification)) return false
+  if (!hasPositiveDnsEvidence(row.custom_domain_verification)) return false
+  if (!hasPositiveTlsEvidence(row.custom_domain_verification)) return false
+  return true
+}
+
+export function customDomainOrigin(row: CustomDomainEvidenceRow | null | undefined): string | null {
+  if (!isCustomDomainRoutingEnabled(row) || !row?.custom_domain) return null
+  return `https://${row.custom_domain}`
+}
+
+export function customDomainActivation(input: {
+  domain: string
+  isPublished: boolean
+  verification: unknown
+}): { verified: false; status: 'dns_pending' } | { verified: true; status: 'active' } {
+  const enabled = isCustomDomainRoutingEnabled({
+    custom_domain: input.domain,
+    is_published: input.isPublished,
+    custom_domain_verification: input.verification,
+  })
+  if (!enabled) return { verified: false, status: 'dns_pending' }
+  return { verified: true, status: 'active' }
+}
+
+export function presentPublicWebsiteDomain<T extends CustomDomainEvidenceRow>(website: T): T & {
+  custom_domain_routing_enabled: boolean
+} {
+  const custom_domain_routing_enabled = isCustomDomainRoutingEnabled(website)
+  const copy = { ...website } as T & { custom_domain_routing_enabled: boolean }
+  delete (copy as { custom_domain_verification?: unknown }).custom_domain_verification
+  delete (copy as { custom_domain_status?: unknown }).custom_domain_status
+  copy.custom_domain_routing_enabled = custom_domain_routing_enabled
+  return copy
+}
+
+/**
+ * Fresh lookup only. Callers must not cache an allow: a removed or conflicting
+ * host has to 404 on the next request.
+ */
+export function decideCustomDomainRoute(input: {
+  host: string
+  path: string
+  lookup: CustomDomainLookup | null
+}): CustomDomainRouteDecision {
+  if (!input.host || isAppHost(input.host)) return { action: 'app' }
+
+  const path = input.path || '/'
+  if (!input.lookup?.ok || !input.lookup.row.subdomain) return { action: 'not_found' }
+  if (!isCustomDomainRoutingEnabled(input.lookup.row)) return { action: 'not_found' }
+
+  const subdomain = input.lookup.row.subdomain
+  if (
+    path.startsWith('/_nuxt/') ||
+    path.startsWith('/__nuxt') ||
+    path.startsWith('/_vercel') ||
+    path.startsWith('/favicon') ||
+    path.startsWith('/fonts/') ||
+    path.startsWith('/simy-') ||
+    path === '/robots.txt' ||
+    path === '/sitemap.xml' ||
+    path === '/llms.txt'
+  ) {
+    return { action: 'app' }
+  }
+
+  if (path.startsWith('/api/') || path.startsWith('/admin') || path.startsWith('/booking')) {
+    return { action: 'not_found' }
+  }
+
+  if (path.startsWith('/s/')) {
+    const own = `/s/${subdomain}`
+    if (path === own || path.startsWith(`${own}/`)) return { action: 'app' }
+    return { action: 'not_found' }
+  }
+
+  if (path === '/' || path === '') {
+    return { action: 'rewrite', subdomain, suffix: '' }
+  }
+
+  const clean = path.replace(/^\//, '').split('/')[0]
+  if (!clean) return { action: 'not_found' }
+  return { action: 'rewrite', subdomain, suffix: `/${encodeURIComponent(clean)}` }
+}
+
 export function isAppHost(host: string): boolean {
   const h = normalizeHostname(host)
   if (!h) return true
