@@ -40,6 +40,7 @@ import {
   buildSlotEventSchema,
   loadWebsiteTeaserSlots,
 } from '~/server/utils/website-next-slots'
+import { formatCourseWhenLabel } from '~/utils/slot-display-time'
 import {
   customProductsFromLanding,
   loadWebsiteCatalogProducts,
@@ -345,6 +346,7 @@ async function enrichLandingPremiumInner(
         tenantId: tenant.id,
         bookingUrl: landing.bookingUrl,
         leadTimeHours: tenant.minimum_booking_lead_time_hours,
+        timeZone: tenant.timezone,
       })
     } catch {
       slots = []
@@ -912,11 +914,13 @@ async function loadUpcomingCourses(
       const href = coursesUrl
         ? `${coursesUrl}${coursesUrl.includes('?') ? '&' : '?'}courseId=${encodeURIComponent(String(s.course_id))}`
         : null
+      const startsAt = s.start_time || null
       return {
         id: String(s.id),
         title: course.title || s.title || 'Kurs',
         category: course.category || null,
-        starts_at: s.start_time || null,
+        starts_at: startsAt,
+        when_label: startsAt ? formatCourseWhenLabel(startsAt, tenant.timezone) : null,
         ends_at: s.end_time || null,
         location: s.custom_location || null,
         spots_left: spots,

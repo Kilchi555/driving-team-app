@@ -3,6 +3,12 @@
  * Light query on availability_slots — not the full booking engine.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
+import {
+  formatSlotDayLabel,
+  formatSlotTimeLabel,
+  resolveSlotTimeZone,
+  slotLocalHour,
+} from '~/utils/slot-display-time'
 
 export type WebsiteTeaserSlot = {
   id: string
@@ -22,60 +28,29 @@ const MAX_SLOTS = 9
 const MAX_PER_CATEGORY = 6
 const LOOKAHEAD_DAYS = 14
 
-function formatDayLabel(iso: string) {
-  try {
-    return new Intl.DateTimeFormat('de-CH', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    }).format(new Date(iso))
-  } catch {
-    return iso.slice(0, 10)
-  }
-}
-
-function formatTimeLabel(iso: string) {
-  try {
-    return new Intl.DateTimeFormat('de-CH', {
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(iso))
-  } catch {
-    return iso.slice(11, 16)
-  }
-}
-
 function categoryLabel(code: string | null) {
   if (!code) return 'Termin'
   return code.replace(/_/g, ' ')
 }
 
-function hourInZurich(iso: string): number {
-  try {
-    const parts = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Europe/Zurich',
-      hour: '2-digit',
-      hourCycle: 'h23',
-    }).formatToParts(new Date(iso))
-    return Number(parts.find((p) => p.type === 'hour')?.value || 0)
-  } catch {
-    return new Date(iso).getHours()
-  }
-}
-
-/** Hide 05:00 / late-night generator leftovers — customers expect 07:00–20:00. */
-function isCustomerFacingHour(iso: string) {
-  const hour = hourInZurich(iso)
+/** Hide 05:00 / late-night generator leftovers — customers expect 07:00–20:00 school-local. */
+function isCustomerFacingHour(iso: string, timeZone: string) {
+  const hour = slotLocalHour(iso, timeZone)
   return hour >= 7 && hour < 20
 }
 
-function diversifySlots(rows: any[], bookingUrl: string): WebsiteTeaserSlot[] {
+export function buildWebsiteTeaserSlots(
+  rows: any[],
+  bookingUrl: string,
+  timeZone?: string | null,
+): WebsiteTeaserSlot[] {
+  const zone = resolveSlotTimeZone(timeZone)
   const perCat = new Map<string, number>()
   const seenStartCat = new Set<string>()
   const out: WebsiteTeaserSlot[] = []
   for (const row of rows) {
     const start = String(row.start_time)
-    if (!isCustomerFacingHour(start)) continue
+    if (!isCustomerFacingHour(start, zone)) continue
     const cat = String(row.category_code || 'general')
     const dedupeKey = `${start}|${cat}`
     if (seenStartCat.has(dedupeKey)) continue
@@ -87,7 +62,8 @@ function diversifySlots(rows: any[], bookingUrl: string): WebsiteTeaserSlot[] {
     const params = new URLSearchParams()
     if (row.category_code) params.set('category', String(row.category_code))
     params.set('prefill', 'partial')
-    // Hint for booking UI (harmless if ignored)
+    // Booking page matches this against the UTC date prefix of start_time.
+    // For Europe/Zurich lesson hours (07:00–19:59) that prefix is the school day.
     params.set('date', start.slice(0, 10))
     out.push({
       id: String(row.id),
@@ -96,8 +72,8 @@ function diversifySlots(rows: any[], bookingUrl: string): WebsiteTeaserSlot[] {
       duration_minutes: row.duration_minutes != null ? Number(row.duration_minutes) : null,
       category_code: row.category_code || null,
       label: categoryLabel(row.category_code || null),
-      day_label: formatDayLabel(start),
-      time_label: formatTimeLabel(start),
+      day_label: formatSlotDayLabel(start, zone),
+      time_label: formatSlotTimeLabel(start, zone),
       book_url: `${bookingUrl}${sep}${params.toString().replace(/\+/g, '%20')}`,
   })
     if (out.length >= MAX_SLOTS) break
@@ -111,10 +87,12 @@ export async function loadWebsiteTeaserSlots(
     tenantId: string
     bookingUrl: string
     leadTimeHours?: number | null
+    timeZone?: string | null
     bypassCache?: boolean
   },
 ): Promise<WebsiteTeaserSlot[]> {
-  const cacheKey = `${opts.tenantId}:${opts.bookingUrl}`
+  const zone = resolveSlotTimeZone(opts.timeZone)
+  const cacheKey = `${opts.tenantId}:${zone}:${opts.bookingUrl}`
   if (!opts.bypassCache) {
     const hit = memoryCache.get(cacheKey)
     if (hit && Date.now() - hit.at < CACHE_MS) return hit.slots
@@ -143,7 +121,7 @@ export async function loadWebsiteTeaserSlots(
     return []
   }
 
-  const slots = diversifySlots(data || [], opts.bookingUrl)
+  const slots = buildWebsiteTeaserSlots(data || [], opts.bookingUrl, zone)
   memoryCache.set(cacheKey, { at: Date.now(), slots })
   return slots
 }

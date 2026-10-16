@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, slug, minimum_booking_lead_time_hours')
+    .select('id, slug, minimum_booking_lead_time_hours, timezone')
     .eq('id', website.tenant_id)
     .maybeSingle()
 
@@ -55,6 +55,7 @@ export default defineEventHandler(async (event) => {
     tenantId: tenant.id,
     bookingUrl,
     leadTimeHours: tenant.minimum_booking_lead_time_hours,
+    timeZone: tenant.timezone,
   })
 
   // CDN/shared cache ~2 min; browsers should revalidate (soft-refresh teaser)

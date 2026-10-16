@@ -41,6 +41,7 @@ export const PUBLIC_WEBSITE_TENANT_SERVER_FIELDS = [
   'website_only',
   'booking_policy',
   'minimum_booking_lead_time_hours',
+  'timezone',
 ] as const
 
 export const PUBLIC_WEBSITE_TENANT_SELECT_FIELDS = [
