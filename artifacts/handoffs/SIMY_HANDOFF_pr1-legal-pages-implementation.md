@@ -13,7 +13,8 @@ The code change is ready for review. It is not merge approval, not a production 
 | Requested base | `f1efbe6d471584ecc1da0f621dabb52727088ec4` |
 | `origin/main` at implementation start | `57543d57dd27b9ceabd84894cc74a1123fdb45dd` |
 | Branch | `cursor/legal-pages-http-500-5594` |
-| Resulting commit | filled in after commit |
+| Code commit | `3f20e10604a1efe4c636fd9a3f51fc1292c5d751` |
+| Branch HEAD | child of that commit; this file only records the code SHA |
 
 `main` had moved by one commit: `security(invoices): reject payment fields on generic invoice update (#445)`. That commit does not touch the legal route, the sanitizer, or website HTML. The safe base used is current `origin/main`.
 
