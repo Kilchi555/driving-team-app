@@ -2,7 +2,7 @@
 
 Verdict: **CONDITIONAL — SPECIFIC BLOCKERS**. Do not merge, undraft, or deploy.
 
-The client-build failure on `a37f0f0a` is fixed on the product tree below. A real `NITRO_PRESET=vercel` Nuxt build completed, and the emitted legal handler was imported and called. Required GitHub checks have not been observed on this updated head. Production `app.simy.ch` was not redeployed and is not claimed fixed. The original production exception string is still unknown.
+The client-build failure on `a37f0f0a` is fixed on the product tree below. A real `NITRO_PRESET=vercel` Nuxt build completed, and the emitted legal handler was imported and called. Test and lint, E2E login, and Dependency review passed on `e3f4a80a`. The commit that records those results is a later markdown tip, so those three checks must be green on the live head before a human merge. Production `app.simy.ch` was not redeployed and is not claimed fixed. The original production exception string is still unknown.
 
 ## Heads
 
@@ -16,7 +16,7 @@ The client-build failure on `a37f0f0a` is fixed on the product tree below. A rea
 
 Branch: `cursor/legal-pages-http-500-adc4`. PR: https://github.com/Kilchi555/driving-team-app/pull/457 (draft).
 
-`418487caa1b1c4a6b5ff798f07afe528dab5ddbe` is the commit that added this file. The commit that inserts that SHA is its child. That child is the PR head when its parent is `418487ca` and `git diff 418487ca HEAD` is only this SHA line. The built tree remains `b8e0ae2d`.
+`418487caa1b1c4a6b5ff798f07afe528dab5ddbe` added this file. `e3f4a80a6c9b56592d5a547aaebdc02fb4df5947` recorded that SHA and is the head whose required checks are in the table below. The commit that adds the check table is the next child. `git diff b8e0ae2d HEAD` must stay this markdown file only. The built tree remains `b8e0ae2d`.
 
 `git diff b8e0ae2d HEAD` must stay limited to this markdown file. A later tip whose only change is this file does not change the sanitizer or the legal handler.
 
@@ -146,24 +146,27 @@ The client build can include the server loader as an uncalled function. It no lo
 
 ## Required checks
 
-Observed on the old head `a37f0f0a` only (2026-10-16, draft PR 457):
+Read from draft PR 457 after `e3f4a80a6c9b56592d5a547aaebdc02fb4df5947` was pushed. `gh pr checks 457` on 2026-10-16, about 13:10 UTC. That SHA is the parent of the commit that adds this paragraph.
 
-| Check | Result on `a37f0f0a` | Counts for this head |
+| Check | Result on `e3f4a80a` | Role |
 | --- | --- | --- |
-| Test and lint | success | no |
-| E2E login | success | no |
-| Dependency review | success | no |
-| CodeQL | success | not a required ruleset check |
-| App \| Default, App \| Default \| Archive - iOS | failure / action required | not a merge blocker |
-| Vercel – simy-app, simy-website, driving-team-website | reported success | no |
+| Test and lint | pass, 1m45s, run 38905390695 | required |
+| E2E login | pass, 1m41s, same run | required |
+| Dependency review | pass, 8s, run 38905390738 | required |
+| CodeQL / Analyze (javascript-typescript) | pass | not a required ruleset check |
+| App \| Default, App \| Default \| Archive - iOS | fail | not a merge blocker |
+| Vercel – simy-app, simy-website, driving-team-website | pass, detail `Canceled by Ignored Build Step` | not a successful app build |
 
-Those Vercel statuses were for a markdown-only tip. `scripts/vercel-should-build.mjs` exits 0 (skip) when `HEAD^..HEAD` has no app files. A skip is reported as success and is not a successful app build. Do not count `Canceled by Ignored Build Step` as a build.
+`a37f0f0a` had the same required-check names green and the same class of Vercel skip. Those results do not transfer; the table above is the re-read on `e3f4a80a`.
 
-This handoff commit is markdown under `artifacts/handoffs/`. Vercel will ignore it. The local Nitro build of `b8e0ae2d` is the app-build evidence. Required checks on the pushed tip were not yet available when this file was written. They must be read from the live PR after the push. A green result on `a37f0f0a` does not apply to `b8e0ae2d` or to the tip.
+`scripts/vercel-should-build.mjs` exits 0 (skip) when `HEAD^..HEAD` has no app files. A skip is reported as success. Do not count `Canceled by Ignored Build Step` as a build. The local Nitro build of `b8e0ae2d` is the app-build evidence.
+
+The commit that inserts this table is markdown-only, so Vercel ignores it and GitHub starts a new run of the required checks. That newer head is not the SHA in the table. Read the live PR again before a human merge.
 
 ## Remaining blockers
 
-- Required checks (Test and lint, E2E login, Dependency review) must pass on the final pushed head. They have not been recorded here as green.
+- Required checks passed on `e3f4a80a`. The commit that records that fact starts a new run. A human merge still waits for the live head's required checks, not for this paragraph.
+- Vercel on `e3f4a80a` is `Canceled by Ignored Build Step`. That is not a successful app build.
 - The PR stays draft. Merging, undrafting, deploying, production SQL, and payment changes stay human decisions.
 - `app.simy.ch` was not requested again in this pass. The last live read still showed HTTP 500 for the legal API and “Nicht gefunden” on the HTML pages. This build does not change that.
 - The original production exception is not confirmed. The client-build failure and the eager JSDOM evaluation in `isomorphic-dompurify` are the reasons for this change. They are not a captured production stack.
