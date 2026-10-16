@@ -1,5 +1,9 @@
 # PR 1 Implementation — Legal pages HTTP 500
 
+> Contract correction in `3f4f4642`: missing `type`, unknown `type`, and an empty subdomain again return HTTP 400 `subdomain and type required`, matching `origin/main`. The 404 note later in this file describes only the earlier commit `94f07a83`.
+
+
+
 Implementation only. No pull request, merge, deploy, migration, production write, DNS change, or production configuration change.
 
 ## Verdict
