@@ -225,6 +225,86 @@ export function formatInvoiceStreetLine(source: {
   return joinStreetAndNumber(source.billing_street, resolveInvoiceStreetNumber(source))
 }
 
+export type ViewBillingEditor = {
+  company_name: string
+  contact_person: string
+  street: string
+  street_nr: string
+  zip: string
+  city: string
+  email: string
+}
+
+export type ViewBillingUpdate = {
+  billing_contact_person: string | null
+  billing_company_name: string | null
+  billing_street: string | null
+  billing_street_number: string
+  billing_zip: string | null
+  billing_city: string | null
+  billing_email: string | null
+}
+
+/** Load the view-mode editor. Street and house number stay separate. */
+export function viewBillingFromInvoice(source: {
+  billing_company_name?: string | null
+  billing_contact_person?: string | null
+  billing_street?: string | null
+  billing_street_number?: string | null
+  billing_street_nr?: string | null
+  billing_zip?: string | null
+  billing_city?: string | null
+  billing_email?: string | null
+}): ViewBillingEditor {
+  return {
+    company_name: source.billing_company_name || '',
+    contact_person: collapseDuplicatePersonName(source.billing_contact_person),
+    street: source.billing_street || '',
+    street_nr: resolveInvoiceStreetNumber(source),
+    zip: source.billing_zip || '',
+    city: source.billing_city || '',
+    email: source.billing_email || '',
+  }
+}
+
+export function savedViewBillingBaseline(editor: ViewBillingEditor): ViewBillingEditor {
+  return {
+    company_name: editor.company_name,
+    contact_person: editor.contact_person,
+    street: editor.street,
+    street_nr: editor.street_nr,
+    zip: editor.zip,
+    city: editor.city,
+    email: editor.email,
+  }
+}
+
+export function restoreViewBilling(baseline: ViewBillingEditor): ViewBillingEditor {
+  return savedViewBillingBaseline(baseline)
+}
+
+/**
+ * Persist street and house number as separate columns.
+ * An explicit empty house number is sent as '' and is not dropped or nulled.
+ */
+export function viewBillingUpdatePayload(editor: ViewBillingEditor): ViewBillingUpdate {
+  return {
+    billing_contact_person: editor.contact_person || null,
+    billing_company_name: editor.company_name || null,
+    billing_street: editor.street || null,
+    billing_street_number: editor.street_nr ?? '',
+    billing_zip: editor.zip || null,
+    billing_city: editor.city || null,
+    billing_email: editor.email || null,
+  }
+}
+
+export function viewBillingSaveErrorMessage(err: unknown): string {
+  if (!err || typeof err !== 'object') return 'Fehler beim Speichern der Adresse'
+  const record = err as { data?: { statusMessage?: string }; message?: string }
+  return record.data?.statusMessage || record.message || 'Fehler beim Speichern der Adresse'
+}
+
 function normalizeCountry(country?: string | null): string {
   if (!country || country === 'CH') return 'Schweiz'
   return country

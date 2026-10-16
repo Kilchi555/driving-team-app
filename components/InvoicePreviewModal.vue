@@ -119,7 +119,10 @@
                   <div v-else class="space-y-2">
                     <input v-model="localViewBilling.company_name" placeholder="Firmenname (optional)" class="input-field w-full" />
                     <input v-model="localViewBilling.contact_person" placeholder="Kontaktperson (optional)" class="input-field w-full" />
-                    <input v-model="localViewBilling.street" placeholder="Strasse + Nr. *" required class="input-field w-full" />
+                    <div class="grid grid-cols-3 gap-2">
+                      <input v-model="localViewBilling.street" placeholder="Strasse *" required class="input-field col-span-2" />
+                      <input v-model="localViewBilling.street_nr" placeholder="Nr." class="input-field" />
+                    </div>
                     <div class="grid grid-cols-3 gap-2">
                       <input v-model="localViewBilling.zip" placeholder="PLZ *" required class="input-field" />
                       <input v-model="localViewBilling.city" placeholder="Ort *" required class="input-field col-span-2" />
@@ -475,7 +478,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { billingPersonNameParts, collapseDuplicatePersonName, formatBillingPersonLabel, formatInvoiceStreetLine, joinStreetAndNumber, resolveInvoiceStreetNumber } from '~/utils/billing-address-map'
+import { billingPersonNameParts, formatBillingPersonLabel, formatInvoiceStreetLine, joinStreetAndNumber, resolveInvoiceStreetNumber, restoreViewBilling, savedViewBillingBaseline, viewBillingFromInvoice, viewBillingSaveErrorMessage, viewBillingUpdatePayload, type ViewBillingEditor } from '~/utils/billing-address-map'
 import { useDynamicBranding } from '~/composables/useDynamicBranding'
 import { openPdf as openPdfUtil } from '~/utils/openPdf'
 import { presentStoredInvoiceLine } from '~/server/utils/invoice-line-snapshot'
@@ -642,7 +645,7 @@ const editingAddress = ref(false)
 const editingViewAddress = ref(false)
 const editingDueDate = ref(false)
 
-const localViewBilling = ref({
+const localViewBilling = ref<ViewBillingEditor>({
   company_name: '',
   contact_person: '',
   street: '',
@@ -651,6 +654,7 @@ const localViewBilling = ref({
   city: '',
   email: '',
 })
+const viewBillingBaseline = ref<ViewBillingEditor | null>(null)
 const expandedItems = ref<number[]>([])
 const qrDataUrl = ref<string | null>(null)
 const qrLoading = ref(false)
@@ -741,15 +745,9 @@ watch(() => props.draft, (d) => {
 watch(() => props.viewInvoice, (v) => {
   if (v) {
     localNote.value = v.notes || ''
-    localViewBilling.value = {
-      company_name: v.billing_company_name || '',
-      contact_person: collapseDuplicatePersonName(v.billing_contact_person),
-      street: v.billing_street || '',
-      street_nr: resolveInvoiceStreetNumber(v),
-      zip: v.billing_zip || '',
-      city: v.billing_city || '',
-      email: v.billing_email || '',
-    }
+    const loaded = viewBillingFromInvoice(v)
+    localViewBilling.value = loaded
+    viewBillingBaseline.value = savedViewBillingBaseline(loaded)
     editingViewAddress.value = false
   }
 }, { immediate: true })
@@ -907,20 +905,8 @@ function close() {
 }
 
 function toggleViewAddressEdit() {
-  if (editingViewAddress.value) {
-    // Abbrechen → zurücksetzen
-    const v = props.viewInvoice
-    if (v) {
-      localViewBilling.value = {
-        company_name: v.billing_company_name || '',
-        contact_person: v.billing_contact_person || '',
-        street: v.billing_street || '',
-        street_nr: resolveInvoiceStreetNumber(v),
-        zip: v.billing_zip || '',
-        city: v.billing_city || '',
-        email: v.billing_email || '',
-      }
-    }
+  if (editingViewAddress.value && viewBillingBaseline.value) {
+    localViewBilling.value = restoreViewBilling(viewBillingBaseline.value)
   }
   editingViewAddress.value = !editingViewAddress.value
 }
@@ -931,25 +917,25 @@ async function saveViewBilling() {
   isSavingAddress.value = true
   error.value = null
   try {
+    const updates = viewBillingUpdatePayload(localViewBilling.value)
     await $fetch('/api/invoices/update', {
       method: 'POST',
       body: {
         invoice_id: invoiceId,
-        updates: {
-          billing_contact_person: localViewBilling.value.contact_person || null,
-          billing_company_name: localViewBilling.value.company_name || null,
-          billing_street: localViewBilling.value.street || null,
-          billing_zip: localViewBilling.value.zip || null,
-          billing_city: localViewBilling.value.city || null,
-          billing_email: localViewBilling.value.email || null,
-        },
+        updates,
       },
     })
+    viewBillingBaseline.value = savedViewBillingBaseline(localViewBilling.value)
     editingViewAddress.value = false
     successMessage.value = 'Adresse gespeichert.'
     setTimeout(() => { successMessage.value = null }, 3000)
-  } catch (err: any) {
-    error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Speichern der Adresse'
+  } catch (err: unknown) {
+    const kept = localViewBilling.value
+    const keptBaseline = viewBillingBaseline.value
+    localViewBilling.value = savedViewBillingBaseline(kept)
+    if (keptBaseline) viewBillingBaseline.value = savedViewBillingBaseline(keptBaseline)
+    successMessage.value = null
+    error.value = viewBillingSaveErrorMessage(err)
   } finally {
     isSavingAddress.value = false
   }
