@@ -13,10 +13,11 @@
 
 - Repository: Kilchi555/driving-team-app
 - Branch: cursor/cash-186-identification-59ff
-- HEAD SHA: 4373427b062e7303f30b0fe735f5d37cb2f83cda (findings). The following stamp commit only writes this line.
+- Findings commit: 4373427b062e7303f30b0fe735f5d37cb2f83cda
+- Stamp commit: fdd4afec647c00a485ebb86a7490e08334f37c5c
 - Base SHA: a75e065eed1ed7143b0e49718976b9b0209979bd (origin/main)
-- Pull request: draft, documentation only; URL added when the PR exists
-- Working tree: CLEAN after the stamp commit
+- Pull request: https://github.com/Kilchi555/driving-team-app/pull/453 (draft)
+- Working tree: CLEAN after the PR-URL commit
 - Production project read: Driving Team App (`unyjaetebnaexaflpyoc`). Queries were SELECT only.
 
 ## 3. Changes
