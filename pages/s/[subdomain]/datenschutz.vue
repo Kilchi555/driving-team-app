@@ -16,6 +16,13 @@ if (import.meta.server && preview.value) {
   ev?.node?.res?.setHeader?.('Cache-Control', 'private, no-store')
 }
 
+function legalErrorStatus(err: unknown): number {
+  if (!err || typeof err !== 'object') return 0
+  const value = err as { statusCode?: number; status?: number }
+  const code = Number(value.statusCode || value.status || 0)
+  return Number.isFinite(code) ? code : 0
+}
+
 const { data, pending, error } = await useAsyncData(
   () => `datenschutz-${subdomain.value}-${previewKey.value}`,
   () =>
@@ -25,6 +32,8 @@ const { data, pending, error } = await useAsyncData(
   { watch: [subdomain, previewToken] },
 )
 
+const unavailable = computed(() => legalErrorStatus(error.value) >= 500)
+
 useHead(() => ({
   title: `Datenschutz | ${data.value?.tenant?.name || subdomain.value}`,
   meta: [{ name: 'robots', content: preview.value ? 'noindex,nofollow' : 'index,follow' }],
@@ -33,6 +42,10 @@ useHead(() => ({
 
 <template>
   <div v-if="pending" class="legal-wrap">Lädt…</div>
+  <div v-else-if="unavailable" class="legal-wrap">
+    <h1>Rechtstext vorübergehend nicht verfügbar</h1>
+    <NuxtLink :to="homeHref">Zur Startseite</NuxtLink>
+  </div>
   <div v-else-if="error || !data" class="legal-wrap">
     <h1>Nicht gefunden</h1>
     <NuxtLink :to="homeHref">Zur Startseite</NuxtLink>
