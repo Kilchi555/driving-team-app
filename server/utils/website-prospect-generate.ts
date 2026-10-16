@@ -12,6 +12,17 @@ import {
 } from '~/server/utils/website-prospect-architecture'
 import { ingestProspectMedia } from '~/server/utils/website-prospect-media'
 import { fillProspectSectionPhotos } from '~/server/utils/website-prospect-stock'
+import {
+  prospectServicesFromScrape,
+  prospectTenantBusinessType,
+  prospectTestimonialsFromPlace,
+  prospectUspsFromSources,
+  prospectVerifiedContentFlags,
+} from '~/server/utils/website-prospect-landing-facts'
+import {
+  issueWebsitePreviewToken,
+  previewUrlForPath,
+} from '~/server/utils/website-preview-access'
 import type { ProspectArchitecture, WebsiteProspectRow } from '~/server/utils/website-prospect-types'
 
 type SupabaseAdmin = ReturnType<typeof getSupabaseAdmin>
@@ -95,6 +106,7 @@ export async function generateWebsiteProspectSite(prospectId: string) {
   const slug = await uniqueSlug(supabase, prospect.name || prospect.hostname || prospect.id)
   const tenantId = randomUUID()
   const cronShell = prospect.source === 'places_cron'
+  const businessType = prospectTenantBusinessType(prospect.business_type)
   const trialEnds = new Date()
   trialEnds.setDate(trialEnds.getDate() + SAAS_TRIAL_DAYS)
 
@@ -112,8 +124,8 @@ export async function generateWebsiteProspectSite(prospectId: string) {
       address: prospect.address || null,
       invoice_city: prospect.city || null,
       invoice_zip: prospect.postal_code || null,
-      business_type: prospect.business_type || 'driving_school',
-      default_vat_rate: defaultVatRateForBusinessType(prospect.business_type),
+      business_type: businessType,
+      default_vat_rate: defaultVatRateForBusinessType(businessType),
       primary_color: primary,
       secondary_color: '#134E4A',
       accent_color: '#F59E0B',
@@ -230,24 +242,29 @@ async function finishProspectSite(opts: {
     .eq('id', website.id)
 
   const baseUrl = getAppUrl().replace(/\/$/, '')
-  const siteUrl = `${baseUrl}/s/${encodeURIComponent(website.subdomain)}`
-  const previewUrl = siteUrl
-  const cronShell = prospect.source === 'places_cron'
-  const services = (scrape.services || []).map((s: any, i: number) => ({
-    id: `svc-${i + 1}`,
-    name: String(s.name || '').trim(),
-    description: '',
-  })).filter((s: { name: string }) => s.name)
-
-  if (!cronShell && !services.length && prospect.business_type === 'driving_school') {
-    services.push(
-      { id: 'svc-b', name: 'Autofahren Kat. B', description: '' },
-      { id: 'svc-a', name: 'Motorrad', description: '' },
-    )
+  const sitePath = `/s/${encodeURIComponent(website.subdomain)}`
+  const siteUrl = `${baseUrl}${sitePath}`
+  // Re-generation rotates the token (same lifecycle as /api/website/preview-link).
+  // Mint failure must not leave a bare /s/{sub} URL that looks usable.
+  const issued = await issueWebsitePreviewToken(supabase, website.id)
+  if (!issued) {
+    if (opts.created) {
+      await supabase.from('website_tenants').delete().eq('id', website.id)
+      await supabase.from('tenants').delete().eq('id', tenant.id)
+    }
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Preview link unavailable',
+      message: 'Preview link unavailable',
+    })
   }
+  const previewUrl = previewUrlForPath(baseUrl, sitePath, issued.token)
+
+  const businessType = prospectTenantBusinessType(prospect.business_type)
+  const services = prospectServicesFromScrape(scrape)
 
   const stock = await fillProspectSectionPhotos({
-    businessType: prospect.business_type,
+    businessType,
     city: prospect.city,
     name: prospect.name,
     services,
@@ -263,25 +280,19 @@ async function finishProspectSite(opts: {
     })
     .eq('id', website.id)
 
-  const testimonials = (place.reviews || []).map((r: any, i: number) => ({
-    id: `rev-${i + 1}`,
-    author: r.author || 'Google',
-    text: r.text || '',
-    rating: r.rating || 5,
-  }))
-
-  const usps = [
-    place.rating ? `${place.rating}★ auf Google` : '',
-    prospect.city ? `Lokal in ${prospect.city}` : '',
-    ...(cronShell ? [] : ['Transparente Preise', 'Persönliche Betreuung']),
-  ].filter(Boolean)
+  const testimonials = prospectTestimonialsFromPlace(place)
+  const usps = prospectUspsFromSources({
+    rating: typeof place?.rating === 'number' ? place.rating : null,
+    city: prospect.city,
+  })
+  const verified = prospectVerifiedContentFlags()
 
   const landing = buildLandingPage({
     tenant: {
       id: tenant.id,
       name: prospect.name,
       slug: website.subdomain,
-      business_type: prospect.business_type,
+      business_type: businessType,
       description: scrape.description || scrape.title || null,
       contact_email: prospect.email,
       contact_phone: prospect.phone,
@@ -305,15 +316,15 @@ async function finishProspectSite(opts: {
     services: stock.services,
     testimonials,
     testimonials_source: testimonials.length ? 'google_or_app' : 'manual',
-    stats: place.rating
+    stats: typeof place?.rating === 'number'
       ? { avg_rating: place.rating, total_testimonials: place.user_ratings_total || testimonials.length }
       : undefined,
     bookingUrl: '#kontakt',
     siteUrl,
     hide_powered_by: true,
     booking_policy: null,
-    verified_hours_only: cronShell,
-    verified_prices_only: cronShell,
+    verified_hours_only: verified.verified_hours_only,
+    verified_prices_only: verified.verified_prices_only,
     usps,
     gallery: stock.gallery,
     contact_channels: { phone: !!prospect.phone, email: !!prospect.email, whatsapp: !!prospect.phone, form: true },
@@ -366,7 +377,7 @@ async function finishProspectSite(opts: {
   const architecture: ProspectArchitecture =
     prospect.analysis?.architecture ||
     decideProspectArchitecture({
-      businessType: prospect.business_type,
+      businessType,
       services: scrape.services,
       city: prospect.city,
       internalPaths: scrape.internal_paths,
@@ -387,7 +398,7 @@ async function finishProspectSite(opts: {
       id: tenant.id,
       name: prospect.name,
       slug: website.subdomain,
-      business_type: prospect.business_type,
+      business_type: businessType,
       contact_email: prospect.email,
       contact_phone: prospect.phone,
       address: prospect.address,
