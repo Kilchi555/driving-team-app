@@ -96,19 +96,23 @@ export default defineEventHandler(async (event) => {
 
   // Nur Admin darf Rechnung automatisch auf 'paid' setzen
   if (payment.invoice_id && staffUser.role === 'admin') {
-    const { data: tenantPayments } = await supabase
+    const { data: tenantPayments, error: tenantPayError } = await supabase
       .from('payments')
       .select('id, payment_status')
       .eq('invoice_id', payment.invoice_id)
       .eq('tenant_id', staffUser.tenant_id)
 
-    const { data: unsetTenantPayments } = await supabase
+    const { data: unsetTenantPayments, error: unsetPayError } = await supabase
       .from('payments')
       .select('id, payment_status')
       .eq('invoice_id', payment.invoice_id)
       .is('tenant_id', null)
 
-    const invoicePayments = [...(tenantPayments || []), ...(unsetTenantPayments || [])]
+    if (tenantPayError || unsetPayError || !tenantPayments || !unsetTenantPayments) {
+      throw createError({ statusCode: 500, statusMessage: 'Fehler beim Aktualisieren der Zahlung' })
+    }
+
+    const invoicePayments = [...tenantPayments, ...unsetTenantPayments]
     const allPaid = invoicePayments.every(p => p.payment_status === 'completed')
 
     const { data: updatedInvoices, error: invoiceError } = await supabase

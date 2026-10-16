@@ -135,11 +135,13 @@ function matches(row: Row, filters: Filter[]) {
   })
 }
 
-function createDb(seed: Record<string, Row[]>, opts?: { skipUpdates?: string[] }) {
+function createDb(seed: Record<string, Row[]>, opts?: { skipUpdates?: string[]; failSelects?: Array<{ table: string; nth: number }> }) {
   const tables: Record<string, Row[]> = structuredClone(seed)
   const writes: WriteLog[] = []
   const reads: string[] = []
   const skip = new Set(opts?.skipUpdates || [])
+  const failSelects = opts?.failSelects || []
+  const selectCounts: Record<string, number> = {}
 
   function from(table: string) {
     if (!tables[table]) tables[table] = []
@@ -167,6 +169,15 @@ function createDb(seed: Record<string, Row[]>, opts?: { skipUpdates?: string[] }
           matched: 0,
         })
         return { data: [], error: null }
+      }
+
+      if (state.op === 'select') {
+        selectCounts[table] = (selectCounts[table] || 0) + 1
+        const nth = selectCounts[table]
+        if (failSelects.some((item) => item.table === table && item.nth === nth)) {
+          reads.push(`${table}:error:${nth}`)
+          return { data: null, error: { message: 'sibling read failed', code: 'XX000' } }
+        }
       }
 
       let matched = tables[table].filter((row) => matches(row, state.filters))
@@ -474,6 +485,40 @@ describe('mark-paid tenant scope', () => {
     expect(db.tables.payments.find((row) => row.id === PAY_A)?.payment_status).toBe('pending')
     expect(db.tables.invoices[0].payment_status).toBe('pending')
     expect(db.writes.filter((write) => write.op === 'update')).toHaveLength(0)
+  })
+
+  it('does not mark the invoice paid when a sibling payment read fails', async () => {
+    db = createDb({
+      users: [staffUser('admin')],
+      payments: [
+        payment({ invoice_id: INVOICE_A }),
+        payment({ id: PAY_A2, invoice_id: INVOICE_A, payment_status: 'pending' }),
+      ],
+      invoices: [invoice({ payment_status: 'pending' })],
+    }, { failSelects: [{ table: 'payments', nth: 2 }] })
+    mocks.readBody.mockResolvedValue({ payment_id: PAY_A })
+
+    const tenantRead = await rejectionOf(() => markPaid({}))
+    expect(tenantRead.statusCode).toBe(500)
+    expect(db.tables.payments.find((row) => row.id === PAY_A)?.payment_status).toBe('completed')
+    expect(db.tables.payments.find((row) => row.id === PAY_A2)?.payment_status).toBe('pending')
+    expect(db.tables.invoices[0].payment_status).toBe('pending')
+    expect(db.tables.invoices[0].paid_at).toBeUndefined()
+    expect(db.writes.filter((write) => write.table === 'invoices')).toHaveLength(0)
+    expect(db.reads).toContain('payments:error:2')
+
+    db = createDb({
+      users: [staffUser('admin')],
+      payments: [payment({ invoice_id: INVOICE_A })],
+      invoices: [invoice({ payment_status: 'pending' })],
+    }, { failSelects: [{ table: 'payments', nth: 3 }] })
+    mocks.getSupabaseAdmin.mockImplementation(() => db)
+
+    const unsetRead = await rejectionOf(() => markPaid({}))
+    expect(unsetRead.statusCode).toBe(500)
+    expect(db.tables.invoices[0].payment_status).toBe('pending')
+    expect(db.writes.filter((write) => write.table === 'invoices')).toHaveLength(0)
+    expect(db.reads).toContain('payments:error:3')
   })
 
   it('does not return success when the invoice update matches nothing', async () => {
