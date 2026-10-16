@@ -12,7 +12,8 @@ Verdict: draft only. The sibling-read regression is fixed on the updated branch.
 - Previous pull request head: `5f18f108e60128e6dffe946afebc5927c043ac26`
 - Rebased tenant-scope commit: `8fd3e7668f91fb43af5516b7e194e344c7119302`
 - Fail-closed commit: `7d333349c93b083976b7972765e56328aba0b7b1`
-- This handoff is committed directly above the fail-closed commit. The draft pull request head is that later commit.
+- Handoff file introduced in: `80954d7c62383e4706352bb746530a2cd52715aa`
+- Draft head: the child of `80954d7c` that records this line. Read `git rev-parse HEAD` on the pushed branch before review. Required checks apply to that pushed head, not to `5f18f108`.
 - Pull request: https://github.com/Kilchi555/driving-team-app/pull/443 (remains draft)
 
 `origin/main` was five commits ahead of the old base `254a2d95e770ae69153631fe406ddb74560baec3`. Those commits do not touch the seven payment files. The branch was rebased onto `e1248c0b7fc5a08a439e9c3e1c15a3ce175a1a2e`, which rewrote `5f18f108` to `8fd3e766`.
