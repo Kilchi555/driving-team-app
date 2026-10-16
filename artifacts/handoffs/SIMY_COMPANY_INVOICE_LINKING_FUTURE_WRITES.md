@@ -4,8 +4,9 @@ Date: 2026-10-16
 Repository: `Kilchi555/driving-team-app`  
 Branch: `cursor/company-invoice-future-writes-ea11`  
 Base (`origin/main`): `ecf9694ff5b6626539ad0230fee2ca1c3a3d6121`  
+Implementation commit: `90fbae28474dd9f77e091465d09d7470ff93cdf8`  
 PR #459 head, not modified: `e568b2957c39bfb497d58d6172bab20107ef65fb`  
-This draft PR head: the commit that adds this file. A commit cannot store its own hash. The pull request description records `git rev-parse HEAD` after the push.
+Draft PR head: the commit that records this implementation SHA. It is the child of `90fbae28474dd9f77e091465d09d7470ff93cdf8`. The pull request description copies `git rev-parse HEAD` after the push, because a commit cannot store its own hash.
 
 No backfill ran. No migration was added or applied. No production SQL, invoice update, payment update, or deploy ran. PR #459 was not edited, undrafted, or merged.
 
