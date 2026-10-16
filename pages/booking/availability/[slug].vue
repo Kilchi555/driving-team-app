@@ -1926,6 +1926,7 @@ import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
 import { snapDuration, type BookingPrefill } from '~/utils/booking-prefill'
+import { groupSlotsByTenantLocalDate } from '~/utils/group-slots-by-local-date'
 import { formatInTenantZone, formatSlotTimeLabel, resolveSlotTimeZone } from '~/utils/slot-display-time'
 import { mergeTerminology, isDrivingSchoolBusinessType, resolveEventTypeLabel } from '~/composables/useTerminology'
 import { sanitizeSvgMarkup } from '~/utils/sanitize-tenant-html'
@@ -3009,39 +3010,16 @@ const formatBookingDayMonth = (iso: string, locale: string) => formatInTenantZon
 
 const groupedTimeSlots = computed(() => {
   if (!availableTimeSlots.value || availableTimeSlots.value.length === 0) return []
-  
-  // Group slots by day
-  const daysMap = new Map<string, any[]>()
-  
-  availableTimeSlots.value.forEach((slot: any) => {
-    const slotDate = new Date(slot.start_time)
-    const dayKey = slotDate.toISOString().split('T')[0] // YYYY-MM-DD format
-    
-    if (!daysMap.has(dayKey)) {
-      daysMap.set(dayKey, [])
-    }
-    daysMap.get(dayKey)!.push(slot)
-  })
-  
-  // Convert to array and sort by date
-  const days = Array.from(daysMap.entries()).map(([dayKey, slots]) => {
-    // Sort slots by time
-    slots.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
-    
-    // Get day info
+
+  return groupSlotsByTenantLocalDate(availableTimeSlots.value, bookingTimeZone.value).map(({ dayKey, slots }) => {
     const firstSlot = slots[0]
-    const dayName = formatBookingWeekday(firstSlot.start_time)
-    const dateFormatted = formatBookingNumericDate(firstSlot.start_time)
-    
     return {
       dayKey,
-      dayName,
-      dateFormatted,
-      slots: slots // Show both available AND reserved slots
+      dayName: formatBookingWeekday(firstSlot.start_time),
+      dateFormatted: formatBookingNumericDate(firstSlot.start_time),
+      slots,
     }
   })
-  
-  return days.sort((a, b) => a.dayKey.localeCompare(b.dayKey))
 })
 
 // Visible slots for the selected week
