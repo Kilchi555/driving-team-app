@@ -18,6 +18,7 @@
 - Audit head SHA: `d1c5a6eaab5412dbe684c5adae55f18276589184`
 - Audit base SHA: `a75e065eed1ed7143b0e49718976b9b0209979bd` (`main`, still the live `origin/main` at review time)
 - Implementation branch: `cursor/admin-payment-reset-59ff`
+- Implementation commit: `92d6039003a6d4de85ebec4f27db657d57ade5df`
 - Implementation base: `a75e065eed1ed7143b0e49718976b9b0209979bd`
 - Working tree: CLEAN after the implementation commit
 - Production project: not queried and not mutated in this step
