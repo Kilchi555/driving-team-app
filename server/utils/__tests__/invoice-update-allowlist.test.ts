@@ -57,6 +57,56 @@ describe('decideInvoiceUpdate', () => {
     expect(decision.payload).not.toHaveProperty('paid_at')
   })
 
+  it('stores the preview house number, including an explicit empty value', () => {
+    const cleared = decideInvoiceUpdate({
+      billing_contact_person: null,
+      billing_company_name: 'Fahrschule',
+      billing_street: 'Bahnhofstrasse',
+      billing_street_number: '',
+      billing_zip: '8000',
+      billing_city: 'Zürich',
+      billing_email: null,
+    }, NOW)
+    expect(cleared.ok).toBe(true)
+    if (!cleared.ok) return
+    expect(cleared.payload.billing_street).toBe('Bahnhofstrasse')
+    expect(cleared.payload.billing_street_number).toBe('')
+    expect(Object.prototype.hasOwnProperty.call(cleared.payload, 'billing_street_number')).toBe(true)
+
+    const suffix = decideInvoiceUpdate({
+      billing_street: 'Bahnhofstrasse',
+      billing_street_number: '12a',
+    }, NOW)
+    expect(suffix.ok).toBe(true)
+    if (!suffix.ok) return
+    expect(suffix.payload.billing_street_number).toBe('12a')
+  })
+
+  it('rejects a house number longer than the column limit', () => {
+    const decision = decideInvoiceUpdate({
+      billing_street_number: '123456789012345678901',
+    }, NOW)
+    expect(decision.ok).toBe(false)
+    if (decision.ok) return
+    expect(decision.statusCode).toBe(400)
+    expect(decision.rejectedFields).toEqual(['billing_street_number'])
+    expect(decision.statusMessage).toContain('too long')
+    expect(decision).not.toHaveProperty('payload')
+  })
+
+  it('rejects the whole request when a house number is sent with a payment field', () => {
+    const decision = decideInvoiceUpdate({
+      billing_street: 'Bahnhofstrasse',
+      billing_street_number: '12',
+      payment_status: 'paid',
+    }, NOW)
+    expect(decision.ok).toBe(false)
+    if (decision.ok) return
+    expect(decision.statusCode).toBe(400)
+    expect(decision.rejectedFields).toEqual(['payment_status'])
+    expect(decision).not.toHaveProperty('payload')
+  })
+
   it('rejects payment_status pending and does not return a write payload', () => {
     const decision = decideInvoiceUpdate({
       status: 'sent',

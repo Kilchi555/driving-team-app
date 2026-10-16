@@ -261,6 +261,59 @@ describe('POST /api/invoices/update', () => {
     expect(mocks.releaseInvoicePayments).not.toHaveBeenCalled()
   })
 
+  it('stores billing_street_number, including an explicit empty value', async () => {
+    const cleared = await run({
+      body: {
+        invoice_id: INVOICE,
+        updates: {
+          billing_street: 'Bahnhofstrasse',
+          billing_street_number: '',
+          billing_zip: '8000',
+          billing_city: 'Zürich',
+        },
+      },
+    })
+    expect(cleared.updates).toHaveLength(1)
+    expect(cleared.updates[0].billing_street).toBe('Bahnhofstrasse')
+    expect(cleared.updates[0].billing_street_number).toBe('')
+
+    const suffix = await run({
+      body: {
+        invoice_id: INVOICE,
+        updates: {
+          billing_street: 'Bahnhofstrasse',
+          billing_street_number: '12a',
+        },
+      },
+    })
+    expect(suffix.updates[0].billing_street_number).toBe('12a')
+    expect(mocks.releaseInvoicePayments).not.toHaveBeenCalled()
+  })
+
+  it('does not write when a house number is combined with payment_status', async () => {
+    const updates: Record<string, unknown>[] = []
+    mocks.getAuthenticatedUser.mockResolvedValue({ id: AUTH })
+    mocks.getSupabaseAdmin.mockReturnValue(createSupabase({
+      profile: { id: 'staff-1', tenant_id: TENANT, role: 'admin' },
+      invoice: { id: INVOICE, tenant_id: TENANT, status: 'sent', payment_status: 'pending' },
+      updates,
+    }))
+    mocks.readBody.mockResolvedValue({
+      invoice_id: INVOICE,
+      updates: {
+        billing_street_number: '12',
+        payment_status: 'paid',
+      },
+    })
+    const { default: handler } = await handlerPromise
+    await expect(handler({})).rejects.toMatchObject({
+      statusCode: 400,
+      statusMessage: expect.stringContaining('payment_status'),
+    })
+    expect(updates).toEqual([])
+    expect(mocks.releaseInvoicePayments).not.toHaveBeenCalled()
+  })
+
   it('denies a cross-tenant invoice without writing', async () => {
     const updates: Record<string, unknown>[] = []
     mocks.getAuthenticatedUser.mockResolvedValue({ id: AUTH })

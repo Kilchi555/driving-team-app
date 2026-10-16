@@ -4,7 +4,8 @@
  * Callers and the fields they send:
  * - composables/useInvoices.ts markInvoiceAsSent / sendInvoice: status, sent_at
  * - composables/useInvoices.ts cancelInvoice: status, notes
- * - components/InvoicePreviewModal.vue saveViewBilling: billing address fields
+ * - components/InvoicePreviewModal.vue saveViewBilling: billing address fields.
+ *   The preview editor also sends billing_street_number, including '' to clear it.
  *
  * Payment state, totals, ownership, and dunning are not updated here.
  * Those mutations belong to dedicated settlement, credit, or dunning paths.
@@ -18,6 +19,7 @@ export const INVOICE_UPDATE_ALLOWED_FIELDS = [
   'billing_company_name',
   'billing_contact_person',
   'billing_street',
+  'billing_street_number',
   'billing_zip',
   'billing_city',
   'billing_email',
@@ -35,6 +37,7 @@ const STRING_LIMITS: Record<Exclude<InvoiceUpdateAllowedField, 'status' | 'sent_
   billing_company_name: 255,
   billing_contact_person: 255,
   billing_street: 255,
+  billing_street_number: 20,
   billing_zip: 20,
   billing_city: 100,
   billing_email: 255,
