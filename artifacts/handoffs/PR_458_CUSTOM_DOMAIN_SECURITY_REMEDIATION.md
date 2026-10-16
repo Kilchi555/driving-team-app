@@ -3,12 +3,13 @@
 Observation timestamp: 2026-10-16T14:19:01Z
 
 Parent head before this change: `093855604d68e8eeebab82ce49105d025ed27eea`
+Remediation commit: `447ec0ea771e16609ec676afa95c5add433b3a10`
 PR base: `e1248c0b7fc5a08a439e9c3e1c15a3ce175a1a2e`
 `origin/main` at review time: `ecf9694ff5b6626539ad0230fee2ca1c3a3d6121`
 Branch: `cursor/custom-domain-routing-gate-5594`
 PR: https://github.com/Kilchi555/driving-team-app/pull/458 (left as draft)
 
-This report is committed with the remediation. The pull request head is the tip of that branch after the push. It was not synchronized onto `ecf9694`.
+The remediation commit above contains the code and the first copy of this report. The pull request head is the tip of the branch after push. It was not synchronized onto `ecf9694`. Required checks on `09385560` do not apply to `447ec0ea` or to any later tip.
 
 Production behavior and live TLS remain **NOT VERIFIED**.
 
