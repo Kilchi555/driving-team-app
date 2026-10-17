@@ -9,15 +9,23 @@ import {
   buildEvaluationInput,
   cell,
   clearStopForTests,
+  compareProcessingOrder,
   evaluateReviewState,
+  executeReviewPass,
   extractMachineState,
+  formatRunSummary,
   githubPaginated,
   interpretPublishedState,
+  isStoppingGitHubStatus,
   listOpenBasePullNumbers,
   listOpenPullNumbers,
+  loadRulesetCatalog,
+  loadSharedRunContext,
   observationsSemanticallyEqual,
   planPublication,
   planReconcile,
+  probeOrder,
+  processingStamp,
   publishObservation,
   readWorkflowOnDefaultBranch,
   renderReviewComment,
@@ -26,6 +34,7 @@ import {
   resolveRulesetPolicy,
   retirementBody,
   retryDelayMs,
+  RUN_BUDGET_MS,
   selectCanonicalMarker,
   shouldRetryGitHubStatus,
   workflowScheduleEnabled,
@@ -2054,5 +2063,386 @@ describe('idempotent publication and API failure policy', () => {
       '  workflow_dispatch:',
     ].join('\n'))).toBe(false)
     expect(workflowScheduleEnabled(readFileSync('.github/workflows/review-state.yml', 'utf8'))).toBe(true)
+  })
+})
+
+describe('bounded fair processing', () => {
+  it('keeps the script budget inside the eight-minute job', () => {
+    expect(RUN_BUDGET_MS).toBe(6 * 60 * 1000)
+    expect(RUN_BUDGET_MS).toBeLessThan(8 * 60 * 1000)
+  })
+
+  it('stops before the next PR and still finishes the PR already started', async () => {
+    const finished: number[] = []
+    let clock = 0
+    const pass = await executeReviewPass({
+      numbers: [1, 2, 3, 4, 5],
+      budgetMs: 10,
+      probeReserveMs: 0,
+      startedAtMs: 0,
+      now: () => clock,
+      probe: async () => ({ stamp: null, unknown: false }),
+      processOne: async (number) => {
+        clock += 4
+        finished.push(number)
+        return { ok: true, completedAt: '2026-10-15T00:00:00.000Z', creates: 1, retirements: 1 }
+      },
+    })
+    expect(finished).toEqual([1, 2, 3])
+    expect(pass.stats.processed).toBe(3)
+    expect(pass.stats.deferred).toBe(2)
+    expect(pass.stats.failed).toBe(0)
+    expect(pass.stats.complete).toBe(false)
+    expect(pass.stats.remaining).toBe(2)
+    expect(pass.deferred).toEqual([4, 5])
+    expect(formatRunSummary('schedule', pass.stats)).toContain('complete=false')
+    expect(formatRunSummary('schedule', pass.stats)).toContain('remaining=2')
+  })
+
+  it('processes past the previous cutoff on the next invocation', async () => {
+    const stamps = new Map<number, string | null>([[10, null], [20, null], [30, null], [40, null]])
+    async function run() {
+      let clock = 0
+      return executeReviewPass({
+        numbers: [40, 10, 30, 20],
+        budgetMs: 10,
+        probeReserveMs: 0,
+        startedAtMs: 0,
+        now: () => clock,
+        probe: async (number) => ({ stamp: stamps.get(number) ?? null, unknown: false }),
+        processOne: async (number) => {
+          clock += 5
+          stamps.set(number, '2026-10-15T01:00:00.000Z')
+          return { ok: true, completedAt: '2026-10-15T01:00:00.000Z' }
+        },
+      })
+    }
+    const first = await run()
+    expect(first.stats.lastCompleted).toBe(20)
+    expect(first.deferred.sort((a, b) => a - b)).toEqual([30, 40])
+    const second = await run()
+    expect(second.stats.processed).toBe(2)
+    expect([30, 40]).toContain(second.stats.lastCompleted)
+    expect(second.deferred.sort((a, b) => a - b)).toEqual([10, 20])
+  })
+
+  it('orders equal timestamps by pull number and puts a new PR first', () => {
+    const ordered = [
+      { number: 30, stamp: '2026-10-15T02:00:00.000Z', unknown: false },
+      { number: 20, stamp: '2026-10-15T01:00:00.000Z', unknown: false },
+      { number: 10, stamp: '2026-10-15T01:00:00.000Z', unknown: false },
+      { number: 50, stamp: null, unknown: false },
+      { number: 40, stamp: null, unknown: true },
+    ].sort(compareProcessingOrder)
+    expect(ordered.map((item) => item.number)).toEqual([50, 10, 20, 30, 40])
+  })
+
+  it('does not treat a truncated comment list as a never-processed PR', () => {
+    const ready = observation({})
+    expect(processingStamp([comment(1, ready)], { truncated: true })).toEqual({ stamp: null, unknown: true })
+    expect(processingStamp([comment(1, ready)], { stopped: false, truncated: false }).stamp).toBe(ready.observed_at)
+    expect(processingStamp([{ id: 2, body: 'no marker', user: { login: 'github-actions[bot]' } }])).toEqual({
+      stamp: null,
+      unknown: false,
+    })
+  })
+
+  it('keeps going after one PR fails and does not count that PR as processed', async () => {
+    const seen: number[] = []
+    const pass = await executeReviewPass({
+      numbers: [3, 1, 2],
+      budgetMs: 100,
+      probeReserveMs: 0,
+      startedAtMs: 0,
+      now: () => 0,
+      probe: async () => ({ stamp: null, unknown: false }),
+      processOne: async (number) => {
+        seen.push(number)
+        if (number === 1) throw new Error('Pull request 1 was not found')
+        return { ok: true, completedAt: '2026-10-15T03:00:00.000Z' }
+      },
+    })
+    expect(seen).toEqual([1, 2, 3])
+    expect(pass.stats.processed).toBe(2)
+    expect(pass.stats.failed).toBe(1)
+    expect(pass.stats.complete).toBe(false)
+    expect(pass.stats.lastCompleted).toBe(3)
+  })
+
+  it('reconciles a create that was not retired without creating another marker', async () => {
+    const client = memoryGitHub('abc123def456')
+    const older = observation({
+      startedAt: '2026-10-04T08:00:00.000Z',
+      observedAt: '2026-10-04T08:00:01.000Z',
+      evaluationId: 'older',
+    })
+    const created = observation({
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'created-then-killed',
+    })
+    client.comments.push(comment(1, older), comment(2, created))
+    const repeat = observation({
+      startedAt: '2026-10-04T10:00:00.000Z',
+      observedAt: '2026-10-04T10:00:01.000Z',
+      evaluationId: 'repeat',
+    })
+    expect(observationsSemanticallyEqual(created, repeat)).toBe(true)
+    expect(await publishObservation(client, 368, repeat)).toBe('unchanged')
+    expect(client.calls.filter((call) => call === 'create')).toEqual([])
+    expect(client.calls.filter((call) => call === 'update')).toEqual(['update'])
+    const live = client.comments.filter((item) => item.body.includes('<!-- simy-review-state -->'))
+    expect(live).toHaveLength(1)
+    expect(live[0]?.body).toContain('"evaluation_id": "created-then-killed"')
+  })
+
+  it('retires a malformed extra marker and does not treat it as unchanged by itself', async () => {
+    const client = memoryGitHub('abc123def456')
+    const valid = observation({
+      startedAt: '2026-10-04T09:00:00.000Z',
+      observedAt: '2026-10-04T09:00:01.000Z',
+      evaluationId: 'valid',
+    })
+    client.comments.push(
+      comment(1, valid),
+      { id: 9, body: `${MARKER}\n\n\`\`\`json\n{}\n\`\`\``, user: { login: 'github-actions[bot]' } },
+    )
+    const repeat = observation({
+      startedAt: '2026-10-04T10:00:00.000Z',
+      observedAt: '2026-10-04T10:00:01.000Z',
+      evaluationId: 'repeat',
+    })
+    expect(await publishObservation(client, 368, repeat)).toBe('unchanged')
+    expect(client.calls.filter((call) => call === 'create')).toEqual([])
+    expect(client.comments.find((item) => item.id === 9)?.body.includes(MARKER)).toBe(false)
+    const onlyMalformed = memoryGitHub('abc123def456')
+    onlyMalformed.comments.push({ id: 4, body: `${MARKER}\nnot json`, user: { login: 'github-actions[bot]' } })
+    expect(await publishObservation(onlyMalformed, 368, repeat)).toBe('published')
+    expect(onlyMalformed.calls.filter((call) => call === 'create')).toEqual(['create'])
+  })
+
+  it('reads the ruleset catalog once and still selects by base ref', async () => {
+    const paths: string[] = []
+    const request = async (_token: string, path: string) => {
+      paths.push(path)
+      if (path.endsWith('/rulesets')) {
+        return {
+          payload: [
+            { id: 7, target: 'branch', enforcement: 'active' },
+            { id: 8, target: 'branch', enforcement: 'active' },
+          ],
+        }
+      }
+      if (path.endsWith('/rulesets/7')) {
+        return {
+          payload: {
+            id: 7,
+            name: 'Protect main — Required CI',
+            conditions: { ref_name: { include: ['refs/heads/main'], exclude: [] } },
+            rules: [{
+              type: 'required_status_checks',
+              parameters: { required_status_checks: [{ context: 'Test and lint' }, { context: 'E2E login' }, { context: 'Dependency review' }] },
+            }],
+          },
+        }
+      }
+      return {
+        payload: {
+          id: 8,
+          name: 'Other',
+          conditions: { ref_name: { include: ['refs/heads/develop'], exclude: [] } },
+          rules: [],
+        },
+      }
+    }
+    const first = await loadRulesetCatalog('token', 'o', 'n', request)
+    const second = await loadRulesetCatalog('token', 'o', 'n', request)
+    expect(first.stopped).toBe(false)
+    expect(paths.filter((path) => path.includes('/rulesets'))).toHaveLength(6)
+    const catalogReads = paths.length
+    const mainPolicy = resolveRulesetPolicy(first.rulesets, 'main')
+    const otherPolicy = resolveRulesetPolicy(second.rulesets, 'develop')
+    expect(mainPolicy.verified).toBe(true)
+    expect(mainPolicy.matches_expected).toBe(true)
+    expect(otherPolicy.verified).toBe(true)
+    expect(otherPolicy.matches_expected).toBe(false)
+    expect(paths.length).toBe(catalogReads)
+  })
+
+  it('loads shared workflow and ruleset state once per invocation', async () => {
+    const originalFetch = globalThis.fetch
+    const paths: string[] = []
+    const workflowYaml = ['name: Review state', 'on:', '  schedule:', "    - cron: '*/15 * * * *'", ''].join('\n')
+    globalThis.fetch = async (input: RequestInfo | URL) => {
+      const url = String(input)
+      paths.push(url)
+      if (url.endsWith('/repos/o/n')) {
+        return new Response(JSON.stringify({ default_branch: 'main' }), { status: 200 })
+      }
+      if (url.includes('/contents/.github/workflows/review-state.yml')) {
+        return new Response(JSON.stringify({
+          content: Buffer.from(workflowYaml).toString('base64'),
+          encoding: 'base64',
+        }), { status: 200 })
+      }
+      if (url.endsWith('/rulesets')) {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+      return new Response(JSON.stringify({ message: 'unexpected' }), { status: 500 })
+    }
+    try {
+      const context = await loadSharedRunContext('token', 'o', 'n')
+      const mainRules = context.rulesetFor('main')
+      const again = context.rulesetFor('main')
+      expect(context.scheduleAvailable).toBe(true)
+      expect(mainRules.verified).toBe(false)
+      expect(again.verified).toBe(false)
+      expect(paths.filter((path) => path.includes('/rulesets'))).toHaveLength(1)
+      expect(paths.filter((path) => path.includes('/contents/.github/workflows/review-state.yml'))).toHaveLength(1)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('treats 401, 403, and 429 as stopping statuses without weakening 5xx retries', () => {
+    expect(isStoppingGitHubStatus(401)).toBe(true)
+    expect(isStoppingGitHubStatus(403)).toBe(true)
+    expect(isStoppingGitHubStatus(429)).toBe(true)
+    expect(isStoppingGitHubStatus(500)).toBe(false)
+    expect(shouldRetryGitHubStatus(429)).toBe(true)
+    expect(shouldRetryGitHubStatus(503)).toBe(true)
+    expect(shouldRetryGitHubStatus(401)).toBe(false)
+  })
+
+  it('builds a fair probe order from a newest-first GitHub list', () => {
+    expect(probeOrder([50, 10, 40, 20], { rotationKey: '0' })).toEqual([10, 20, 40, 50])
+    expect(probeOrder([50, 10, 40, 20], { rotationKey: '2' })).toEqual([40, 50, 10, 20])
+  })
+
+  it('stops probing after 401 and does not list later pull requests', async () => {
+    clearStopForTests()
+    process.exitCode = undefined
+    const probed: number[] = []
+    const unauthorized = Object.assign(new Error('unauthorized'), { status: 401 })
+    const pass = await executeReviewPass({
+      numbers: [30, 10, 20],
+      budgetMs: 100,
+      probeReserveMs: 0,
+      startedAtMs: 0,
+      now: () => 0,
+      rotationKey: '0',
+      probe: async (number) => {
+        probed.push(number)
+        if (number === 10) throw unauthorized
+        return { stamp: null, unknown: false }
+      },
+      processOne: async () => ({ ok: true, completedAt: '2026-10-15T04:00:00.000Z' }),
+    })
+    expect(probed).toEqual([10])
+    expect(pass.stats.failed).toBe(1)
+    expect(pass.stats.processed).toBe(0)
+    expect(pass.deferred.sort((a, b) => a - b)).toEqual([20, 30])
+    expect(pass.stats.complete).toBe(false)
+    expect(process.exitCode).toBe(1)
+    clearStopForTests()
+    process.exitCode = undefined
+  })
+
+  it('stops probing after 403 and after exhausted 429', async () => {
+    for (const status of [403, 429]) {
+      clearStopForTests()
+      process.exitCode = undefined
+      const probed: number[] = []
+      const err = Object.assign(new Error(`status ${status}`), { status })
+      const pass = await executeReviewPass({
+        numbers: [5, 1, 2],
+        budgetMs: 100,
+        probeReserveMs: 0,
+        startedAtMs: 0,
+        now: () => 0,
+        rotationKey: '0',
+        probe: async (number) => {
+          probed.push(number)
+          if (number === 1) throw err
+          return { stamp: null, unknown: false }
+        },
+        processOne: async () => ({ ok: true }),
+      })
+      expect(probed).toEqual([1])
+      expect(pass.stats.failed).toBe(1)
+      expect(pass.deferred.sort((a, b) => a - b)).toEqual([2, 5])
+      expect(process.exitCode).toBe(1)
+      clearStopForTests()
+      process.exitCode = undefined
+    }
+  })
+
+  it('under a probe budget prefers older numbers from a newest-first GitHub list', async () => {
+    clearStopForTests()
+    const probed: number[] = []
+    let clock = 0
+    // Reserve processing budget so probe cost alone truncates the window.
+    const pass = await executeReviewPass({
+      numbers: [50, 40, 30, 20, 10],
+      budgetMs: 20,
+      probeReserveMs: 8,
+      startedAtMs: 0,
+      now: () => clock,
+      rotationKey: '0',
+      probe: async (number) => {
+        clock += 4
+        probed.push(number)
+        return { stamp: null, unknown: false }
+      },
+      processOne: async () => ({ ok: true, completedAt: '2026-10-15T05:00:00.000Z', creates: 0 }),
+    })
+    expect(probed).toEqual([10, 20, 30])
+    expect(pass.stats.processed).toBe(3)
+    expect(pass.deferred.sort((a, b) => a - b)).toEqual([40, 50])
+    clearStopForTests()
+  })
+
+  it('rotates the probe window across runs so deferred numbers are eventually probed', async () => {
+    clearStopForTests()
+    const probedFirst: number[] = []
+    const probedSecond: number[] = []
+    let clock = 0
+    const first = await executeReviewPass({
+      numbers: [50, 40, 30, 20, 10],
+      budgetMs: 20,
+      probeReserveMs: 8,
+      startedAtMs: 0,
+      now: () => clock,
+      rotationKey: '0',
+      probe: async (number) => {
+        clock += 4
+        probedFirst.push(number)
+        return { stamp: null, unknown: false }
+      },
+      processOne: async () => ({ ok: true, completedAt: '2026-10-15T06:00:00.000Z' }),
+    })
+    expect(probedFirst).toEqual([10, 20, 30])
+    expect(first.stats.processed).toBe(3)
+    expect(first.deferred).toEqual([40, 50])
+
+    clock = 0
+    const second = await executeReviewPass({
+      numbers: [50, 40, 30, 20, 10],
+      budgetMs: 20,
+      probeReserveMs: 8,
+      startedAtMs: 0,
+      now: () => clock,
+      rotationKey: '3',
+      probe: async (number) => {
+        clock += 4
+        probedSecond.push(number)
+        return { stamp: null, unknown: false }
+      },
+      processOne: async () => ({ ok: true, completedAt: '2026-10-15T06:01:00.000Z' }),
+    })
+    expect(probedSecond).toEqual([40, 50, 10])
+    expect(second.stats.processed).toBe(3)
+    expect(second.deferred.sort((a, b) => a - b)).toEqual([20, 30])
+    clearStopForTests()
   })
 })
