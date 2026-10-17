@@ -344,6 +344,24 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Operational notes for engineers (intent → contract → pitfalls → codepaths). Only files that exist on this branch are linked.
+
+| Runbook | Covers |
+|---------|--------|
+| [COURSE_INVOICE_PUBLIC_ISSUANCE.md](./COURSE_INVOICE_PUBLIC_ISSUANCE.md) | Public course invoice timing + immediate issuance (#357/#367 + course override); complements phase-1 schema on draft #322 |
+| [PUBLIC_INQUIRY_TENANT_RESOLUTION.md](./PUBLIC_INQUIRY_TENANT_RESOLUTION.md) | Booking proposal / inquiry client + staff tenant resolution (#361/#358) |
+| [INVOICE_PAYMENT_CLAIMS_TENANT_SCOPE.md](./INVOICE_PAYMENT_CLAIMS_TENANT_SCOPE.md) | Tenant-scoped payment claims and invoice source stamps (#356) |
+| [COURSE_SESSIONS_ANON_DML_REVOKE.md](./COURSE_SESSIONS_ANON_DML_REVOKE.md) | Revoke latent anon DML on `course_sessions` (#288) |
+| [EMAIL_DISPOSABLE_ALLOWLIST.md](./EMAIL_DISPOSABLE_ALLOWLIST.md) | Disposable allowlist (`bluemail.ch`) + spam heuristic (#376) |
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Passkey recovery |
+| [ACCESS_AND_SECRETS_POLICY.md](./ACCESS_AND_SECRETS_POLICY.md) | Access and secrets policy |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Wallee payment recovery |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Session identity cache (HMR) |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
