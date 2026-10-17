@@ -45,6 +45,8 @@ import {
   paymentHasCourseId,
   runPostCommitCourseFulfillmentSideEffects,
 } from '~/server/utils/fulfill-course-wallee-payment'
+import { claimVoucherFulfillment, fixedVoucherFulfillmentKey } from '~/server/utils/voucher-fulfillment-claim'
+import { customVoucherFulfillmentKey } from '~/utils/shop-custom-voucher'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
@@ -2093,51 +2095,81 @@ async function processVouchersAndCredits(payments: any[]) {
     
     // Process vouchers
     const voucherProducts = payment.metadata.products.filter((p: any) => p.is_voucher)
-    
+    // In-memory guard against duplicate issuance within the same webhook delivery.
+    // DB UNIQUE (payment_id, fulfillment_key) is the real concurrency gate.
+    const issuedFulfillmentKeys = new Set<string>()
+
     for (const product of voucherProducts) {
       try {
         const { generateVoucherCode } = await import('~/utils/voucherGenerator')
         const voucherCode = generateVoucherCode()
-        
-        const customerEmail = payment.metadata.customer_email || product.recipient_email
-        const customerName = payment.metadata.customer_name || product.recipient_name
 
-        // Idempotency: skip if voucher already created for this payment+product
-        const { data: existingVoucher } = await supabase
-          .from('vouchers')
-          .select('id, code')
-          .eq('payment_id', payment.id)
-          .eq('name', product.product_name || product.name)
-          .maybeSingle()
+        const amountRappen = Number(product.unit_price_rappen || product.price_rappen || 0)
+        const displayName = product.display_name || product.product_name || product.name || 'Gutschein'
+        const description = product.description || ''
+        const productId = String(product.product_id || product.id || '')
+        const isCustom = product.is_custom_amount_voucher === true || product.allow_custom_amount === true
+        // Identity is payment_id + fulfillment_key — never name+amount (distinct vouchers can share those).
+        const fulfillmentKey = typeof product.fulfillment_key === 'string' && product.fulfillment_key.length > 0
+          ? product.fulfillment_key
+          : (isCustom
+            ? customVoucherFulfillmentKey(productId)
+            : fixedVoucherFulfillmentKey(productId, 0))
 
-        if (existingVoucher) {
-          logger.info('⏭️ Voucher already created for payment+product, skipping:', existingVoucher.code)
+        if (issuedFulfillmentKeys.has(fulfillmentKey)) {
+          logger.info('⏭️ Voucher already issued in this webhook pass, skipping:', fulfillmentKey)
           continue
         }
 
-        const validUntil = new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString()
-        
-        const { data: newVoucher, error: voucherInsertError } = await supabase
-          .from('vouchers')
-          .insert({
-            code: voucherCode,
-            name: product.product_name || product.name,
-            description: product.description || '',
-            amount_rappen: product.unit_price_rappen || product.price_rappen,
-            recipient_name: customerName || null,
-            recipient_email: customerEmail || null,
-            buyer_name: customerName || null,
-            buyer_email: customerEmail || null,
-            payment_id: payment.id,
-            valid_until: validUntil,
-            is_active: true,
-            tenant_id: payment.tenant_id
+        // Custom-amount shop vouchers are always one unit; never multiply issuance by qty.
+        if (isCustom && Number(product.quantity || 1) > 1) {
+          logger.error('❌ Refusing custom voucher fulfillment with quantity > 1', {
+            paymentId: payment.id,
+            quantity: product.quantity,
           })
-          .select('id, code')
-          .single()
-        
-        if (voucherInsertError || !newVoucher) {
-          logger.error('❌ Voucher insert failed:', voucherInsertError?.message)
+          continue
+        }
+
+        const customerEmail = payment.metadata.customer_email || product.recipient_email
+        const recipientName = product.recipient_name || null
+        const buyerName = payment.metadata.customer_name || null
+
+        const validUntil = new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString()
+        const descriptionWithKey = description
+          ? `${description}\n[${fulfillmentKey}]`
+          : `[${fulfillmentKey}]`
+
+        // Atomic claim: UNIQUE (payment_id, fulfillment_key) — concurrent duplicates lose the race.
+        const claim = await claimVoucherFulfillment(supabase, {
+          code: voucherCode,
+          name: displayName,
+          description: descriptionWithKey,
+          amount_rappen: amountRappen,
+          recipient_name: recipientName || buyerName || null,
+          recipient_email: customerEmail || null,
+          buyer_name: buyerName || null,
+          buyer_email: customerEmail || null,
+          payment_id: payment.id,
+          tenant_id: payment.tenant_id,
+          fulfillment_key: fulfillmentKey,
+          valid_until: validUntil,
+        })
+
+        if (claim.error && !claim.voucher) {
+          logger.error('❌ Voucher fulfillment claim failed:', claim.error)
+          continue
+        }
+
+        issuedFulfillmentKeys.add(fulfillmentKey)
+
+        if (!claim.claimed) {
+          logger.info('⏭️ Voucher already claimed for payment+fulfillment_key, skipping:', claim.voucher?.code || fulfillmentKey)
+          continue
+        }
+
+        const newVoucher = claim.voucher
+        if (!newVoucher) {
+          logger.error('❌ Voucher claim returned claimed=true without row')
           continue
         }
 
@@ -2146,6 +2178,7 @@ async function processVouchersAndCredits(payments: any[]) {
         // ── Send voucher email with PDF attachment (direct, not queued) ─────────
         // NOTE: outbound_messages_queue does not support binary attachments.
         // Voucher emails must remain direct (Puppeteer-generated PDF inline).
+        // Email only when this caller won the claim — retries must not re-send.
         if (customerEmail) {
           try {
             const { generateVoucherEmailContent, generateVoucherPDFContent } = await import('~/utils/voucherGenerator')
@@ -2153,7 +2186,8 @@ async function processVouchersAndCredits(payments: any[]) {
             const { getTenantBranding } = await import('~/server/utils/tenant-branding')
             
             const branding = payment.tenant_id ? await getTenantBranding(payment.tenant_id) : {}
-            const amountChf = (product.unit_price_rappen || product.price_rappen || 0) / 100
+            const amountChf = amountRappen / 100
+            const pdfRecipient = recipientName || buyerName || undefined
 
             // Generate PDF buffer
             let pdfAttachment: { filename: string; content: Buffer; contentType: string } | undefined
@@ -2172,11 +2206,11 @@ async function processVouchersAndCredits(payments: any[]) {
               const page = await browser.newPage()
               const htmlContent = generateVoucherPDFContent({
                 code: newVoucher.code,
-                name: product.product_name || product.name || 'Gutschein',
+                name: displayName,
                 amount_chf: amountChf,
-                recipient_name: customerName || undefined,
+                recipient_name: pdfRecipient,
                 valid_until: validUntil,
-                description: product.description || undefined
+                description: description || undefined
               }, branding)
               await page.setContent(htmlContent, { waitUntil: 'networkidle0' })
               const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' } })
@@ -2189,12 +2223,12 @@ async function processVouchersAndCredits(payments: any[]) {
 
             const emailContent = generateVoucherEmailContent({
               code: newVoucher.code,
-              name: product.product_name || product.name || 'Gutschein',
+              name: displayName,
               amount_chf: amountChf,
-              recipient_name: customerName || undefined,
+              recipient_name: pdfRecipient,
               recipient_email: customerEmail,
               valid_until: validUntil,
-              description: product.description || undefined,
+              description: description || undefined,
             }, branding)
 
             await sendEmail({

@@ -113,6 +113,15 @@ describe('shop identity source contracts', () => {
     expect(src).not.toMatch(/const userId = user_id/)
   })
 
+  it('shop products exposes voucherCreationEnabled server-side for guests', () => {
+    const src = readFileSync(resolve(process.cwd(), 'server/api/shop/products.get.ts'), 'utf8')
+    expect(src).toContain('voucher_creation')
+    expect(src).toContain('voucherCreationEnabled')
+    expect(src).toContain('parseFeatureEnabled')
+    expect(src).toContain('customVoucherProduct')
+    expect(src).toContain('getSupabaseAdmin')
+  })
+
   it('find-or-create does not update PII on contact match', () => {
     const src = readFileSync(resolve(process.cwd(), 'server/api/shop/find-or-create-guest-user.post.ts'), 'utf8')
     expect(src).toContain('getAuthenticatedUserWithDbId')

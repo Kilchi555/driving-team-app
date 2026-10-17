@@ -263,12 +263,24 @@ const hasDiscounts = computed(() => appliedDiscounts.value.size > 0)
 const canProcessPayment = computed(() => hasProducts.value && finalTotalRappen.value > 0)
 
 // Methods
+const isCustomAmountProduct = (product: Product | (Product & { quantity?: number })) =>
+  product?.is_voucher === true && product?.allow_custom_amount === true
+
 const addProduct = (product: Product) => {
   const existingProduct = selectedProducts.value.get(product.id)
   if (existingProduct) {
+    // Custom vouchers share a template UUID — never merge/increment quantity.
+    if (isCustomAmountProduct(existingProduct) || isCustomAmountProduct(product)) {
+      return
+    }
     existingProduct.quantity = (existingProduct.quantity || 1) + 1
     selectedProducts.value.set(product.id, { ...existingProduct })
   } else {
+    // Reject a second distinct custom voucher in the same checkout.
+    if (isCustomAmountProduct(product)) {
+      const hasCustom = Array.from(selectedProducts.value.values()).some(isCustomAmountProduct)
+      if (hasCustom) return
+    }
     selectedProducts.value.set(product.id, { ...product, quantity: 1 })
   }
   emitProductsSelected()
@@ -290,7 +302,12 @@ const removeProduct = (productId: string) => {
 const updateProductQuantity = (productId: string, quantity: number) => {
   const product = selectedProducts.value.get(productId)
   if (product) {
-    product.quantity = Math.max(1, quantity)
+    // Custom vouchers are always quantity 1 (payment amount must match issuance).
+    if (isCustomAmountProduct(product)) {
+      product.quantity = 1
+    } else {
+      product.quantity = Math.max(1, quantity)
+    }
     selectedProducts.value.set(productId, { ...product })
     emitProductsSelected()
     // Recalculate discounts when quantity changes

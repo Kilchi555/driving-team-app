@@ -11,6 +11,16 @@ import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { publicShopSessionPrincipalId } from '~/server/utils/shop-public-identity'
 import { logger } from '~/utils/logger'
 import { computeDiscountAmountRappen, discountKindForSource } from '~/server/utils/discount-amount'
+import {
+  customVoucherCheckoutLimitError,
+  customVoucherFulfillmentKey,
+  isCustomAmountVoucher,
+  parseExactCustomVoucherQuantity,
+  resolveCustomVoucherDescription,
+  resolveCustomVoucherDisplayName,
+  resolveCustomVoucherRecipient,
+} from '~/utils/shop-custom-voucher'
+import { fixedVoucherFulfillmentKey } from '~/server/utils/voucher-fulfillment-claim'
 
 export default defineEventHandler(async (event) => {
   // Follow same public-payment pattern as /api/payments/process-public:
@@ -152,20 +162,55 @@ export default defineEventHandler(async (event) => {
     }
 
     const productById = new Map((dbProducts || []).map((p: any) => [p.id, p]))
+
+    // Pre-validate custom-voucher unit count using DB truth (not client flags).
+    const customLimitProbe = rawProducts.map((item: any) => {
+      const productId = item?.id || item?.product_id
+      const dbProduct = productById.get(productId)
+      return {
+        id: productId,
+        is_voucher: dbProduct?.is_voucher === true,
+        allow_custom_amount: dbProduct?.allow_custom_amount === true,
+        quantity: item?.quantity,
+      }
+    })
+    const customLimitError = customVoucherCheckoutLimitError(customLimitProbe)
+    if (customLimitError) {
+      throw createError({ statusCode: 400, message: customLimitError })
+    }
+
     const sanitizedProducts: any[] = []
     let serverProductsPrice = 0
 
     for (const item of rawProducts) {
       const productId = item?.id || item?.product_id
-      const qty = Math.max(1, Math.min(100, Number(item?.quantity) || 1))
       const dbProduct = productById.get(productId)
       if (!dbProduct || dbProduct.is_active === false || dbProduct.show_in_shop === false) {
         throw createError({ statusCode: 400, message: `Ungültiges Produkt: ${productId}` })
       }
 
+      const isCustom = isCustomAmountVoucher(dbProduct)
+      let qty = 1
+      if (isCustom) {
+        // Reject floats/negatives/strings before any silent Math.max coercion.
+        const parsedQty = parseExactCustomVoucherQuantity(item?.quantity)
+        if (!parsedQty.ok) {
+          throw createError({ statusCode: 400, message: parsedQty.message })
+        }
+        qty = parsedQty.quantity
+      } else if (item?.quantity === undefined || item?.quantity === null || item?.quantity === '') {
+        qty = 1
+      } else {
+        const rawQty = Number(item?.quantity)
+        if (!Number.isInteger(rawQty) || rawQty < 1 || rawQty > 100) {
+          throw createError({ statusCode: 400, message: 'Ungültige Produktmenge' })
+        }
+        qty = rawQty
+      }
+
       let unitPrice = Number(dbProduct.price_rappen || 0)
       // Custom-amount vouchers: allow client amount only within configured bounds
-      if (dbProduct.is_voucher && dbProduct.allow_custom_amount) {
+      if (isCustom) {
         const custom = Number(item?.unit_price_rappen ?? item?.price_rappen ?? unitPrice)
         const minA = Number(dbProduct.min_amount_rappen ?? 0)
         const maxA = Number(dbProduct.max_amount_rappen ?? MAX_TOTAL_AMOUNT_RAPPEN)
@@ -177,14 +222,37 @@ export default defineEventHandler(async (event) => {
 
       const lineTotal = unitPrice * qty
       serverProductsPrice += lineTotal
+
+      const displayName = isCustom
+        ? resolveCustomVoucherDisplayName(item, dbProduct.name, sanitizeString)
+        : dbProduct.name
+      const description = isCustom
+        ? resolveCustomVoucherDescription(item, sanitizeString)
+        : (typeof item?.description === 'string' ? sanitizeString(item.description, 500) : '')
+      const recipientName = isCustom
+        ? resolveCustomVoucherRecipient(item, sanitizeString)
+        : ''
+
       sanitizedProducts.push({
         id: dbProduct.id,
         product_id: dbProduct.id,
-        name: dbProduct.name,
+        // Canonical catalog identity stays on product_id / product_template_name.
+        product_template_name: dbProduct.name,
+        // Recipient-facing text for PDF/email fulfillment.
+        name: displayName,
+        display_name: displayName,
+        description: description || undefined,
+        recipient_name: recipientName || undefined,
         quantity: qty,
         price_rappen: unitPrice,
         unit_price_rappen: unitPrice,
-        is_voucher: !!dbProduct.is_voucher
+        is_voucher: !!dbProduct.is_voucher,
+        allow_custom_amount: !!dbProduct.allow_custom_amount,
+        is_custom_amount_voucher: isCustom,
+        // Stable per-payment identity for webhook claim (custom + fixed voucher products).
+        fulfillment_key: isCustom
+          ? customVoucherFulfillmentKey(dbProduct.id)
+          : (dbProduct.is_voucher ? fixedVoucherFulfillmentKey(dbProduct.id, 0) : undefined),
       })
     }
 
