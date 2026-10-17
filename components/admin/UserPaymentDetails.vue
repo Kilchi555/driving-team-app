@@ -1105,6 +1105,13 @@ v-if="(appointment.credit_used || 0) > 0"
       </button>
     </template>
   </div>
+
+  <PaymentReceiptResetDialog
+    :open="receiptResetOpen"
+    :appointment-id="receiptResetAppointmentId"
+    @close="receiptResetOpen = false"
+    @applied="refreshData"
+  />
 </template>
 
 <script setup lang="ts">
@@ -1121,6 +1128,7 @@ import { getSupabase } from '~/utils/supabase'
 import { isInvoicedPayment } from '~/utils/payment-invoiced'
 import { isWalleeCollectedPayment, WALLEE_FEE_RATE_LABEL, walleeFeeRappen } from '~/utils/wallee-fee'
 import { splitGrossVat } from '~/utils/vat'
+import PaymentReceiptResetDialog from '~/components/admin/PaymentReceiptResetDialog.vue'
 
 const authStore = useAuthStore()
 const supabase = getSupabase()
@@ -2028,31 +2036,6 @@ const _markAsPaid = async (appointment: Appointment) => {
   }
 }
 
-const _markAsUnpaid = async (appointment: Appointment) => {
-  if (!appointment.id) return
-  
-  isUpdatingPayment.value = true
-  try {
-    // Finde die Zahlung für diesen Termin
-    const payment = await findPaymentForAppointment(appointment.id)
-    
-    if (payment) {
-      await paymentOp('mark_unpaid', { appointment_id: appointment.id })
-      logger.debug('✅ Payment marked as unpaid:', appointment.id)
-    }
-    
-    // Lade die Daten neu, um den aktuellen Status zu zeigen
-    await refreshData()
-    
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-    console.error('❌ Error marking as unpaid:', err)
-    showErrorToast('❌ Fehler aufgetreten', `Fehler beim Markieren als offen: ${errorMessage}`)
-  } finally {
-    isUpdatingPayment.value = false
-  }
-}
-
 const _editPaymentMethod = async (appointment: Appointment) => {
   if (!appointment.id) return
   
@@ -2090,57 +2073,13 @@ const _editPaymentMethod = async (appointment: Appointment) => {
   }
 }
 
+const receiptResetOpen = ref(false)
+const receiptResetAppointmentId = ref<string | null>(null)
+
 const resetPaymentStatus = async (appointment: Appointment) => {
   if (!appointment.id) return
-  
-  showConfirmation(
-    'Zahlungsstatus zurücksetzen',
-    'Möchtest du wirklich den Zahlungsstatus für diesen Termin auf "Ausstehend" zurücksetzen?',
-    () => resetPaymentStatusAction(appointment)
-  )
-}
-
-const resetPaymentStatusAction = async (appointment: Appointment) => {
-  if (!appointment.id) return
-  
-  isUpdatingPayment.value = true
-  try {
-    // Finde die Zahlung für diesen Termin
-    const payment = await findPaymentForAppointment(appointment.id)
-    
-    if (payment) {
-      await paymentOp('mark_unpaid', { appointment_id: appointment.id })
-      logger.debug('✅ Payment status reset to pending:', appointment.id)
-    } else {
-      await paymentOp('mark_unpaid', { appointment_id: appointment.id })
-      logger.debug('✅ New payment created with pending status:', appointment.id)
-    }
-    
-    // Aktualisiere den lokalen Termin-Status
-    const appointmentIndex = appointments.value.findIndex(apt => apt.id === appointment.id)
-    if (appointmentIndex !== -1) {
-      appointments.value[appointmentIndex].is_paid = false
-      logger.debug('✅ Local appointment updated to unpaid')
-    }
-    
-    // Schöne Erfolgsmeldung
-    showSuccessToast(
-      '✅ Status zurückgesetzt',
-      `Der Zahlungsstatus für "${appointment.title}" wurde erfolgreich auf "Ausstehend" zurückgesetzt.`
-    )
-    
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-    console.error('❌ Error resetting payment status:', err)
-    
-    // Schöne Fehlermeldung
-    showErrorToast(
-      '❌ Fehler aufgetreten',
-      `Fehler beim Zurücksetzen des Zahlungsstatus: ${errorMessage}`
-    )
-  } finally {
-    isUpdatingPayment.value = false
-  }
+  receiptResetAppointmentId.value = appointment.id
+  receiptResetOpen.value = true
 }
 
 // Reset Failed Payment and resend confirmation email

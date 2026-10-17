@@ -24,6 +24,7 @@ import {
   type InvoiceDraftPayload,
   type PersistAndSendActor,
 } from '~/server/utils/invoice-persist-and-send'
+import { autoInvoiceCompanyId } from '~/server/utils/invoice-company-link'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
 import {
@@ -328,6 +329,7 @@ async function buildDraftForPayments(opts: {
     user_id: student.id,
     staff_id: actor.id,
     tenant_id: tenantId,
+    company_id: autoInvoiceCompanyId(),
     items,
     payment_ids: payments.map((p) => p.id),
     student: {

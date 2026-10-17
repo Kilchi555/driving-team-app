@@ -36,7 +36,7 @@ describe('P1 tenant HTML sanitization', () => {
     ]
     for (const rel of files) {
       const src = readFileSync(resolve(process.cwd(), rel), 'utf8')
-      expect(src).toMatch(/sanitizeTenantHtml|sanitizeSvgMarkup/)
+      expect(src).toMatch(/sanitizeTenantHtml|trySanitizeTenantHtml|sanitizeSvgMarkup/)
     }
   })
 })

@@ -54,7 +54,12 @@ export default defineEventHandler(async (event) => {
     .select(`*, category:accounting_categories(id, name, type, color)`)
     .single()
 
-  if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+  if (error) {
+    if (error.code === '23505') {
+      throw createError({ statusCode: 409, statusMessage: 'Diese Buchung wurde bereits storniert.' })
+    }
+    throw createError({ statusCode: 500, statusMessage: error.message })
+  }
   if (storno?.id) await syncEntryLedger(supabase, profile.tenant_id, storno.id)
 
   // Original-Buchung sperren falls noch nicht gesperrt

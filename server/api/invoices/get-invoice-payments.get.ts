@@ -1,5 +1,6 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { netInvoicePaymentsRappen } from '~/utils/invoice-payment-net'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -30,5 +31,6 @@ export default defineEventHandler(async (event) => {
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
 
-  return { success: true, data: data || [] }
+  const rows = data || []
+  return { success: true, data: rows, net_paid_rappen: netInvoicePaymentsRappen(rows) }
 })

@@ -1,4 +1,4 @@
-import { computeSimpleBookIncome, isAccountingPlEntry, LOHN_CATEGORY_NAME } from '~/server/utils/accounting'
+import { computeSimpleBookIncome, isAccountingPlEntry, LOHN_CATEGORY_NAME, recognizedExpenseRappen } from '~/server/utils/accounting'
 
 export type ProfitEntry = {
   type: string
@@ -46,7 +46,7 @@ export function buildProfitabilityReport(input: {
       entries: monthEntries,
     }).totalIncomeRappen
     const pl = monthEntries.filter(isAccountingPlEntry)
-    const expenses = pl.filter(e => e.type === 'expense').reduce((s, e) => s + (e.amount_rappen || 0), 0)
+    const expenses = recognizedExpenseRappen(monthEntries)
     const payroll = pl.filter(isLohnExpense).reduce((s, e) => s + (e.amount_rappen || 0), 0)
     return {
       month,
@@ -63,7 +63,7 @@ export function buildProfitabilityReport(input: {
     entries: input.entries,
   })
   const plYear = input.entries.filter(isAccountingPlEntry)
-  const totalExpenseRappen = plYear.filter(e => e.type === 'expense').reduce((s, e) => s + (e.amount_rappen || 0), 0)
+  const totalExpenseRappen = recognizedExpenseRappen(input.entries)
   const payrollTotalRappen = plYear.filter(isLohnExpense).reduce((s, e) => s + (e.amount_rappen || 0), 0)
   const resultRappen = yearIncome.totalIncomeRappen - totalExpenseRappen
 

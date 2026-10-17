@@ -153,6 +153,24 @@ export function changedMaterialFields(
   ))
 }
 
+/**
+ * Marker on the single expense storno created when a mistaken receipt is reversed.
+ * Payment income already drops because get_payments_monthly_summary counts only
+ * payment_status = 'completed'. This expense must not reduce profit and loss again.
+ * A manual storno has no marker and still counts.
+ */
+export const PAYMENT_RECEIPT_RESET_REFERENCE = 'payment-receipt-reset'
+
+export function isReceiptResetStorno(entry: {
+  type?: string | null
+  storno_of_id?: string | null
+  external_reference?: string | null
+}): boolean {
+  return entry.type === 'expense'
+    && Boolean(entry.storno_of_id)
+    && entry.external_reference === PAYMENT_RECEIPT_RESET_REFERENCE
+}
+
 export function computeSimpleBookIncome(params: {
   paymentsIncomeRappen: number
   entries: Array<{
@@ -160,16 +178,29 @@ export function computeSimpleBookIncome(params: {
     amount_rappen: number
     linked_payment_id?: string | null
     document_kind?: string | null
+    external_reference?: string | null
   }>
 }): { paymentsIncomeRappen: number; manualIncomeRappen: number; totalIncomeRappen: number } {
   const manualIncomeRappen = params.entries
-    .filter(e => e.type === 'income' && !e.linked_payment_id && isAccountingPlEntry(e))
+    .filter(e => e.type === 'income' && !e.linked_payment_id && isAccountingPlEntry(e) && !isReceiptResetStorno(e))
     .reduce((sum, e) => sum + (e.amount_rappen ?? 0), 0)
   return {
     paymentsIncomeRappen: params.paymentsIncomeRappen,
     manualIncomeRappen,
     totalIncomeRappen: params.paymentsIncomeRappen + manualIncomeRappen,
   }
+}
+
+export function recognizedExpenseRappen(entries: Array<{
+  type?: string | null
+  amount_rappen?: number | null
+  document_kind?: string | null
+  external_reference?: string | null
+  storno_of_id?: string | null
+}>): number {
+  return entries
+    .filter(entry => entry.type === 'expense' && isAccountingPlEntry(entry) && !isReceiptResetStorno(entry))
+    .reduce((sum, entry) => sum + (entry.amount_rappen ?? 0), 0)
 }
 
 export function invoiceOutstandingRappen(inv: {
