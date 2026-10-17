@@ -347,3 +347,15 @@ Bei Änderungen am System:
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
+
+---
+
+## Engineering Runbooks
+
+Focused runbooks for recently changed subsystems (intent, contract, pitfalls, codepaths). Prefer these over inventing behavior from older root Markdown status docs.
+
+| Runbook | Covers |
+|---------|--------|
+| [COURSE_SESSION_RECONCILE.md](./COURSE_SESSION_RECONCILE.md) | Identity-preserving non-SARI course session upsert (#383) |
+| [GUEST_AUTH_LOGIN_BOUNDARY.md](./GUEST_AUTH_LOGIN_BOUNDARY.md) | Auth presence as guest booking / pending registration login gate (#382) |
+| [MULTI_ADMIN_LIFECYCLE.md](./MULTI_ADMIN_LIFECYCLE.md) | Tenant multi-admin primary, invite, deactivation (#352, #359) |
