@@ -102,11 +102,11 @@
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.1",
     "@types/pg": "^8.23.1",
-    "@vitest/ui": "3.2.7",
+    "@vitest/ui": "5.0.5",
     "eslint": "^10.10.0",
     "pg": "^8.23.1",
     "typescript": "5.8.3",
-    "vitest": "3.2.7",
+    "vitest": "5.0.5",
     "vue-tsc": "^3.3.11"
   },
   "version": "1.0.0",
