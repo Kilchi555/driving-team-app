@@ -15,6 +15,7 @@ import { presentStoredInvoiceLine } from '~/server/utils/invoice-line-snapshot'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { invoicePersonNames, invoiceQrDebtorName, loadUserAddressForInvoice, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
 import { isQuoteDocument, quoteDocumentLabels } from '~/server/utils/invoice-quote'
+import { invoiceCreateOutstandingRappen, invoiceCreateQrAmountRappen } from '~/server/utils/invoice-create-settlement'
 
 export default defineEventHandler(async (event) => {
   const { invoiceId } = await readBody(event)
@@ -108,9 +109,32 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Per-line settlements from invoice_payments (authoritative for prepaid lines)
+  const settledByItemId: Record<string, number> = {}
+  const itemIds = items.map((i: any) => i.id).filter(Boolean)
+  if (itemIds.length > 0) {
+    const { data: linePayments } = await supabase
+      .from('invoice_payments')
+      .select('invoice_item_id, amount_rappen, status')
+      .eq('invoice_id', invoiceId)
+      .eq('tenant_id', invoice.tenant_id)
+      .eq('status', 'completed')
+      .in('invoice_item_id', itemIds)
+    for (const row of linePayments || []) {
+      if (!row.invoice_item_id) continue
+      settledByItemId[row.invoice_item_id] =
+        (settledByItemId[row.invoice_item_id] || 0) + (row.amount_rappen || 0)
+    }
+  }
+
   const enrichedItems = items.map((item: any) => {
     const bd = item.appointment_id ? paymentBreakdown[item.appointment_id] : null
-    return bd ? { ...item, ...bd } : item
+    const settled = settledByItemId[item.id] || 0
+    const merged = bd ? { ...item, ...bd } : { ...item }
+    if (settled > 0) {
+      merged.amount_paid_rappen = Math.max(merged.amount_paid_rappen || 0, settled)
+    }
+    return merged
   })
 
   // Produkte als eigene Positionen ausweisen (nicht unter der Lektionszeile)
@@ -148,7 +172,15 @@ export default defineEventHandler(async (event) => {
   let generatedPaymentRef: string | null = null
   const asQuote = isQuoteDocument((invoice as any).document_kind)
   const labels = quoteDocumentLabels(asQuote)
-  const qrIban = asQuote ? null : ((tenant as any)?.qr_iban || null)
+  const paidAmountRappen = invoice.paid_amount_rappen || 0
+  const invoiceTotalForDoc = invoice.total_amount_rappen - (invoice.dunning_fees_rappen || 0)
+  const outstandingRappen = invoiceCreateOutstandingRappen(invoiceTotalForDoc, paidAmountRappen)
+  const qrAmountRappen = invoiceCreateQrAmountRappen(
+    invoice.total_amount_rappen,
+    paidAmountRappen,
+    invoice.dunning_fees_rappen || 0,
+  )
+  const qrIban = asQuote || qrAmountRappen <= 0 ? null : ((tenant as any)?.qr_iban || null)
   if (qrIban) {
     try {
       const { generateSwissQRBase64, generateReference } = await import('~/server/utils/swiss-qr')
@@ -166,7 +198,7 @@ export default defineEventHandler(async (event) => {
         debtor_street_nr: (invoice as any).billing_street_number || userAddress?.street_nr || '',
         debtor_zip: invoice.billing_zip || userAddress?.zip || '',
         debtor_city: invoice.billing_city || userAddress?.city || '',
-        amount_rappen: invoice.total_amount_rappen - (invoice.dunning_fees_rappen || 0),
+        amount_rappen: qrAmountRappen,
         reference: paymentRef,
         additional_info: `Rechnung ${invoice.invoice_number}`,
       })
@@ -224,7 +256,9 @@ export default defineEventHandler(async (event) => {
     discountRappen: invoice.discount_amount_rappen || 0,
     vatRate: Number(invoice.vat_rate) || 0,
     vatAmountRappen: invoice.vat_amount_rappen || 0,
-    totalRappen: invoice.total_amount_rappen - (invoice.dunning_fees_rappen || 0),
+    totalRappen: invoiceTotalForDoc,
+    paidAmountRappen,
+    outstandingRappen,
     qrCodeDataUrl,
     qrIban,
     scorRef: generatedPaymentRef || (invoice as any).payment_reference || null,

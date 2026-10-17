@@ -576,6 +576,64 @@
                 </span>
               </label>
 
+              <div
+                v-if="!asQuote && canMarkLinesPaid"
+                class="mt-2.5 rounded-lg border border-gray-200 bg-white px-3 py-2.5 space-y-2"
+              >
+                <div class="flex items-center justify-between gap-3">
+                  <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-800">
+                    <input
+                      v-model="item.already_paid"
+                      type="checkbox"
+                      class="rounded border-gray-300"
+                      :style="{ accentColor: primaryColor }"
+                      @change="onAlreadyPaidToggle(item)"
+                    />
+                    Bereits bezahlt
+                  </label>
+                  <span
+                    class="text-xs font-medium px-2 py-0.5 rounded-full"
+                    :class="item.already_paid ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'"
+                  >
+                    {{ item.already_paid ? 'Bereits bezahlt' : 'Noch offen' }}
+                  </span>
+                </div>
+                <div v-if="item.already_paid" class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div>
+                    <label class="block text-[11px] font-medium text-gray-500 mb-1">Zahlungsart *</label>
+                    <select
+                      v-model="item.settlement_payment_method"
+                      required
+                      class="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900"
+                    >
+                      <option value="cash">Bar</option>
+                      <option value="twint">TWINT</option>
+                      <option value="bank_transfer">Banküberweisung</option>
+                      <option value="card_terminal">Kartenterminal</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-medium text-gray-500 mb-1">Zahlungsdatum *</label>
+                    <input
+                      v-model="item.settlement_payment_date"
+                      type="date"
+                      required
+                      class="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900"
+                    >
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-medium text-gray-500 mb-1">Referenz (optional)</label>
+                    <input
+                      v-model="item.settlement_reference"
+                      type="text"
+                      maxlength="120"
+                      placeholder="z.B. Beleg-Nr."
+                      class="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900"
+                    >
+                  </div>
+                </div>
+              </div>
+
               <!-- Optional description (Kursteile als Liste, sonst editierbar) -->
               <div
                 v-if="looksLikeCourseSessionsDescription(item.product_description)"
@@ -659,6 +717,16 @@
               <span>Gesamtbetrag:</span>
               <span>CHF {{ formatCurrency(displayTotalAmount) }}</span>
             </div>
+            <template v-if="!asQuote && prepaidTotalRappen > 0">
+              <div class="flex justify-between text-sm text-green-700">
+                <span>Bereits bezahlt:</span>
+                <span>CHF {{ formatCurrency(prepaidTotalRappen) }}</span>
+              </div>
+              <div class="flex justify-between text-sm font-semibold text-gray-900">
+                <span>Noch offen:</span>
+                <span>CHF {{ formatCurrency(outstandingAfterPrepaidRappen) }}</span>
+              </div>
+            </template>
           </div>
         </div>
 
@@ -750,6 +818,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useAuthStore } from '~/stores/auth'
 import {
   filterInvoiceLineTemplates,
   groupInvoiceLineTemplates,
@@ -758,6 +827,7 @@ import {
 import { useTerminology } from '~/composables/useTerminology'
 import type { InvoiceFormData, InvoiceItemFormData } from '~/types/invoice'
 import { DEFAULT_INVOICE_VALUES, DEFAULT_INVOICE_ITEM_VALUES } from '~/types/invoice'
+const OFFLINE_SETTLEMENT_METHODS = ['cash', 'twint', 'bank_transfer', 'card_terminal'] as const
 import {
   formatCourseSessionsDescription,
   looksLikeCourseSessionsDescription,
@@ -780,6 +850,15 @@ import {
 } from '@heroicons/vue/24/outline'
 
 const { t } = useTerminology()
+const authStore = useAuthStore()
+const canMarkLinesPaid = computed(() => {
+  const role = authStore.userRole
+  return role === 'admin' || role === 'tenant_admin'
+})
+
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10)
+}
 
 // Props
 const props = defineProps<{
@@ -1094,6 +1173,28 @@ const creditToApplyRappen = computed(() => {
 const displayTotalAmount = computed(() => Math.max(0, totalAmount.value - creditToApplyRappen.value))
 const creditCoversInvoice = computed(() => creditToApplyRappen.value > 0 && displayTotalAmount.value <= 0)
 
+const prepaidTotalRappen = computed(() => {
+  if (asQuote.value || !canMarkLinesPaid.value) return 0
+  return invoiceItems.value.reduce((sum, item) => {
+    if (!item.already_paid) return sum
+    return sum + Math.max(0, item.total_price_rappen || 0)
+  }, 0)
+})
+const outstandingAfterPrepaidRappen = computed(() =>
+  Math.max(0, displayTotalAmount.value - prepaidTotalRappen.value)
+)
+
+function onAlreadyPaidToggle(item: InvoiceItemFormData) {
+  if (!item.already_paid) {
+    item.settlement_payment_method = 'cash'
+    item.settlement_payment_date = ''
+    item.settlement_reference = ''
+    return
+  }
+  if (!item.settlement_payment_method) item.settlement_payment_method = 'cash'
+  if (!item.settlement_payment_date) item.settlement_payment_date = todayIsoDate()
+}
+
 function itemCreditRappen(item: InvoiceItemFormData) {
   if ((item.credit_amount_rappen || 0) > 0) return item.credit_amount_rappen || 0
   return Math.max(0, item.total_price_rappen || 0)
@@ -1361,11 +1462,41 @@ const createInvoiceHandler = async () => {
 
     // Alle Item-Totale berechnen
     invoiceItems.value.forEach(calculateItemTotal)
-    
+
     // Form data aktualisieren
     formData.value.subtotal_rappen = subtotal.value
     formData.value.vat_rate = parseFloat(averageVatRate.value)
-    
+
+    const settlements = (!asQuote.value && canMarkLinesPaid.value)
+      ? invoiceItems.value
+          .map((item, item_index) => ({ item, item_index }))
+          .filter(({ item }) => item.already_paid)
+          .map(({ item, item_index }) => {
+            const method = item.settlement_payment_method || 'cash'
+            if (!(OFFLINE_SETTLEMENT_METHODS as readonly string[]).includes(method)) {
+              throw new Error('Ungültige Zahlungsmethode bei bezahlter Position')
+            }
+            if (!item.settlement_payment_date) {
+              throw new Error('Zahlungsdatum bei bezahlter Position fehlt')
+            }
+            return {
+              item_index,
+              payment_method: method,
+              payment_date: new Date(`${item.settlement_payment_date}T12:00:00`).toISOString(),
+              amount_rappen: item.total_price_rappen || 0,
+              notes: item.settlement_reference || undefined,
+              linked_payment_id: (item as any)._open_item_source_table === 'payments'
+                ? (item as any)._open_item_id
+                : undefined,
+            }
+          })
+      : []
+
+    if (settlements.length > 0 && !canMarkLinesPaid.value) {
+      alert('Nur Admins dürfen Positionen als bereits bezahlt markieren.')
+      return
+    }
+
     const result = await $fetch<{ success: boolean; paid_with_credit?: boolean; data?: any; invoice_number?: string }>(
       '/api/invoices/create',
       {
@@ -1377,6 +1508,8 @@ const createInvoiceHandler = async () => {
           },
           items: invoiceItems.value,
           apply_available_credit: !asQuote.value && applyAvailableCredit.value && creditToApplyRappen.value > 0,
+          settlements,
+          idempotency_key: settlements.length > 0 ? crypto.randomUUID() : undefined,
         },
       }
     )

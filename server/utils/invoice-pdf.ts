@@ -109,6 +109,10 @@ export interface InvoicePdfData {
   vatRate?: number
   vatAmountRappen?: number
   totalRappen: number
+  /** Already settled against the invoice (invoice_payments / paid_amount_rappen) */
+  paidAmountRappen?: number
+  /** Remaining amount due; when 0, QR should be omitted by caller */
+  outstandingRappen?: number
   qrCodeDataUrl?: string | null
   qrIban?: string | null
   scorRef?: string | null
@@ -567,6 +571,15 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     }
 
     drawSummaryRow('Gesamtbetrag', data.totalRappen, { total: true })
+
+    const paidAmount = Math.max(0, data.paidAmountRappen || 0)
+    const outstanding = data.outstandingRappen != null
+      ? Math.max(0, data.outstandingRappen)
+      : Math.max(0, data.totalRappen - paidAmount)
+    if (paidAmount > 0) {
+      drawSummaryRow('Bereits bezahlt', -paidAmount)
+      drawSummaryRow('Noch offen', outstanding, { bold: true })
+    }
 
     // ── Zahlungsbedingungen (ohne Farbfläche) ────────────────────────────────
     rowY += 14
