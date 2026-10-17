@@ -45,6 +45,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Chromium
+        run: |
+          # The navbar layout test launches Playwright's bundled Chromium.
+          # ubuntu-latest sometimes ships broken Microsoft apt mirrors (403),
+          # which makes `playwright install --with-deps` fail before browsers install.
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list \
+            /etc/apt/sources.list.d/microsoft-prod.list \
+            /etc/apt/sources.list.d/msprod.list || true
+          npx playwright install --with-deps chromium
+
       - name: Start disposable Postgres
         run: |
           sudo apt-get update
