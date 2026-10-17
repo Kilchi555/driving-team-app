@@ -12,8 +12,9 @@ Separater Draft-PR. Nicht gemergt, nicht deployed, nicht undrafted. PR #458 ist 
 | Base | `main` |
 | Base SHA | `a9a9745123e124d51ad5fa13a84523055c3a90ef` |
 | Implementation SHA | `1e311734893ad8c154b66f21e91f3858c50c5d8b` |
-| Head SHA | der Branch-Tip nach diesem Handoff-Commit; die PR-Beschreibung nennt den aufgelösten Tip |
-| PR | wird nach dem Push in der PR-Beschreibung ergänzt |
+| Handoff SHA | `7dccd6f57fa6de9bd5f5bb48e28cd374f9e7673b` |
+| Head SHA | `7dccd6f57fa6de9bd5f5bb48e28cd374f9e7673b` beim Öffnen. Der Folgecommit trägt nur diese PR-URL ein; die PR-Beschreibung nennt den Tip danach. |
+| PR | https://github.com/Kilchi555/driving-team-app/pull/468 |
 
 ## Ursachen
 
