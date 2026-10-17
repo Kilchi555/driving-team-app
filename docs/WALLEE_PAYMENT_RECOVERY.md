@@ -199,3 +199,7 @@ CRON_SECRET=your-secret-key  # Required for cron endpoint auth
 - **Storage**: ~1KB per webhook log entry
 
 Run cron job every 10 minutes to stay current.
+
+## See also
+
+- If Wallee charged ~1/100 of an expected **fixed discount**, check [`DISCOUNT_FIXED_CHF_UNITS.md`](./DISCOUNT_FIXED_CHF_UNITS.md) (#246) — unit bug at checkout, not recovery cron.
