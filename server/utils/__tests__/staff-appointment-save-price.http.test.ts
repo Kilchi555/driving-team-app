@@ -31,6 +31,11 @@ vi.mock('~/utils/supabase', () => ({
   getSupabaseAdmin: mocks.getSupabaseAdmin,
 }))
 
+vi.mock('~/server/utils/assert-tenant-subscription-writable', () => ({
+  assertTenantSubscriptionWritable: vi.fn(async () => ({ reasonCode: 'writable' })),
+  SAAS_SUBSCRIPTION_REQUIRED_CODE: 'saas_subscription_required',
+}))
+
 vi.mock('~/server/utils/auth', () => ({
   requireAdminProfile: mocks.requireAdminProfile,
 }))
@@ -188,6 +193,19 @@ function createSaveSupabase(opts: {
         return chain
       }
       chain.maybeSingle = async () => {
+        if (table === 'appointments' && opts.existingAppointment) {
+          if (state.filters.id && opts.existingAppointment.id && state.filters.id !== opts.existingAppointment.id) {
+            return { data: null, error: null }
+          }
+          if (
+            state.filters.tenant_id
+            && opts.existingAppointment.tenant_id
+            && state.filters.tenant_id !== opts.existingAppointment.tenant_id
+          ) {
+            return { data: null, error: null }
+          }
+          return { data: opts.existingAppointment, error: null }
+        }
         if (table === 'event_types') {
           const data = eventTypes.find((r) =>
             r.tenant_id === state.filters.tenant_id && r.code === state.filters.code

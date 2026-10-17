@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { SARIClient, isSariUnenrollIdempotent, isSariUnenrollBlocked, getSariUnenrollBlockedMessage } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { cancelResourceBookingsForCourse } from '~/server/utils/resource-bookings'
@@ -57,6 +58,12 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (!course) throw createError({ statusCode: 404, statusMessage: 'Course not found' })
+
+  await assertTenantSubscriptionWritable(event, {
+    tenantId: profile.tenant_id,
+    userId: profile.id,
+    route: 'POST /api/admin/courses/cancel-course',
+  })
 
   // Update course status to cancelled
   const { error: courseError } = await supabase

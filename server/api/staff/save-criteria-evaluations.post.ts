@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { triggerAutoInvoiceOnComplete } from '~/server/utils/auto-invoice-on-complete'
 import logger from '~/utils/logger'
 
@@ -86,6 +87,12 @@ export default defineEventHandler(async (event) => {
         message: 'Appointment not found or unauthorized'
       })
     }
+
+    await assertTenantSubscriptionWritable(event, {
+      tenantId,
+      userId: user.id,
+      route: 'POST /api/staff/save-criteria-evaluations',
+    })
 
     // ✅ 4. PREPARE NOTES FOR UPSERT
     const { lesson_note } = body

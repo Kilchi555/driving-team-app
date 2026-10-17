@@ -20,6 +20,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { sendTenantEmail, sendEmail } from '~/server/utils/email'
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { generateInvoicePdf, formatTenantContactPerson } from '~/server/utils/invoice-pdf'
@@ -120,6 +121,12 @@ export default defineEventHandler(async (event) => {
   if (!resource) {
     throw createError({ statusCode: 403, statusMessage: 'Ressource nicht gefunden oder gehört nicht zu deinem Tenant.' })
   }
+
+  await assertTenantSubscriptionWritable(event, {
+    tenantId: profile.tenant_id,
+    userId: profile.id,
+    route: 'POST /api/admin/resources/block',
+  })
 
   // ── Insert booking ────────────────────────────────────────────────────────────
   const isExternal = trimmedPurpose === 'external'

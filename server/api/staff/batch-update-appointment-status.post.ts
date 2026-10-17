@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { triggerAutoInvoiceOnComplete } from '~/server/utils/auto-invoice-on-complete'
 import logger from '~/utils/logger'
 
@@ -137,6 +138,12 @@ export default defineEventHandler(async (event) => {
         message: 'Some appointments not found or unauthorized'
       })
     }
+
+    await assertTenantSubscriptionWritable(event, {
+      tenantId,
+      userId: user.id,
+      route: 'POST /api/staff/batch-update-appointment-status',
+    })
 
     // ✅ 4. UPDATE APPOINTMENTS
     const { data: updated, error: updateError } = await supabase

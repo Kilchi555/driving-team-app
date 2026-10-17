@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { sendTenantEmail, sendEmail } from '~/server/utils/email'
 import { generateCategoryWaitlistNotificationEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
@@ -99,6 +100,11 @@ function buildIcs(events: Array<{
  */
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
+  await assertTenantSubscriptionWritable(event, {
+    tenantId: profile.tenant_id,
+    userId: profile.id,
+    route: 'POST /api/admin/courses/upsert',
+  })
   const body = await readBody(event)
   const { courseData, sessions, courseId, notifyStaff } = body as {
     courseData: Record<string, any>

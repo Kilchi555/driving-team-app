@@ -2,6 +2,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 
 interface ManageProductsBody {
   appointmentId: string
@@ -29,6 +30,10 @@ export default defineEventHandler(async (event) => {
     }
     
     logger.debug('👤 Current user:', { userId: user.id, email: user.email })
+
+    // Trusted tenant for SaaS write gate — only set after authorization succeeds.
+    let trustedTenantId: string | null = null
+    let trustedUserId: string | null = null
     
     // Get user profile for role/tenant validation
     const { data: userProfile, error: profileError } = await supabaseAdmin
@@ -84,6 +89,8 @@ export default defineEventHandler(async (event) => {
         isAppointmentCreator: appointment.user_id === user.id,
         isStaff: appointment.staff_id === user.id
       })
+      trustedTenantId = appointment.tenant_id
+      trustedUserId = user.id
     } else if (userProfile) {
       logger.debug('✅ User profile found:', { role: userProfile.role, tenant_id: userProfile.tenant_id })
       
@@ -119,6 +126,16 @@ export default defineEventHandler(async (event) => {
         })
         throw new Error('Unauthorized to manage products for this appointment')
       }
+      trustedTenantId = appointment.tenant_id
+      trustedUserId = userProfile.id
+    }
+
+    if ((action === 'delete' || action === 'save') && trustedTenantId) {
+      await assertTenantSubscriptionWritable(event, {
+        tenantId: trustedTenantId,
+        userId: trustedUserId,
+        route: 'POST /api/appointments/manage-products',
+      })
     }
     
     if (action === 'delete') {

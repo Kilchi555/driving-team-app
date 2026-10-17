@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -43,6 +44,23 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 403,
         statusMessage: 'Forbidden – appointment belongs to another tenant'
+      })
+    }
+
+    // Staff JWT callers: enforce target tenant subscription.
+    // Internal-secret callers: explicit system bypass (unavailable to ordinary JWTs).
+    if (auth.mode === 'internal') {
+      await assertTenantSubscriptionWritable(event, {
+        tenantId: appointment.tenant_id,
+        userId: null,
+        route: 'POST /api/appointments/adjust-duration',
+        bypass: 'system',
+      })
+    } else {
+      await assertTenantSubscriptionWritable(event, {
+        tenantId: appointment.tenant_id,
+        userId: auth.profile?.id ?? null,
+        route: 'POST /api/appointments/adjust-duration',
       })
     }
 

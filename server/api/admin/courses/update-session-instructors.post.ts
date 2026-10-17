@@ -21,6 +21,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { logger } from '~/utils/logger'
 import {
   deleteStaffCourseAppointments,
@@ -48,6 +49,12 @@ export default defineEventHandler(async (event) => {
     .eq('id', courseId || '')
     .eq('tenant_id', profile.tenant_id)
     .maybeSingle()
+
+  await assertTenantSubscriptionWritable(event, {
+    tenantId: profile.tenant_id,
+    userId: profile.id,
+    route: 'POST /api/admin/courses/update-session-instructors',
+  })
 
   // Track external sessions missing emails so we can warn the admin
   const missingEmailWarnings: string[] = []

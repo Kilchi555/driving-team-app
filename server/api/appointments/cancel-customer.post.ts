@@ -13,6 +13,7 @@ import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { calculateCancellationCharges } from '~/utils/policyCalculations'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
@@ -206,6 +207,12 @@ export default defineEventHandler(async (event) => {
         message: 'You can only cancel your own appointments'
       })
     }
+
+    await assertTenantSubscriptionWritable(event, {
+      tenantId,
+      userId: userProfile.id,
+      route: 'POST /api/appointments/cancel-customer',
+    })
 
     // 2. Get cancellation reason
     const { data: reason, error: reasonError } = await supabaseAdmin
