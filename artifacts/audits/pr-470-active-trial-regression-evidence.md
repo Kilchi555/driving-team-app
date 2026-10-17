@@ -13,11 +13,12 @@ This closes the audit gap that active-trial **allow** was only proven at the pur
 | Observed at (UTC) | `2026-10-17T12:14:55Z` (pre-commit inspection) |
 | PR | [#470](https://github.com/Kilchi555/driving-team-app/pull/470) (draft, OPEN) |
 | Parent HEAD before this change | `d9ac2f572629a04b26d7a9d37b93139be6521cd8` |
-| HEAD after this test-only commit | `ec187b7af9827cd7eab1c6ead0d65395a98e4a03` |
+| Test-evidence commit | `ec187b7af9827cd7eab1c6ead0d65395a98e4a03` |
+| Branch tip (includes this handoff note) | `7181d4c121f17609963bf01809e1bf2a99380d39` |
 | BASE (`main` / PR base) | `ef794668f909826057a713393333af2ed31b70d2` |
 | Branch | `cursor/saas-subscription-write-guard-9780` |
 
-Pre-change live `headRefOid` matched the expected pin `d9ac2f57`. This follow-up adds **tests + this handoff only** (commit `ec187b7a`).
+Pre-change live `headRefOid` matched the expected pin `d9ac2f57`. This follow-up adds **tests + this handoff only**.
 
 ---
 
