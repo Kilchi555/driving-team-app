@@ -344,6 +344,21 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused ops/dev runbooks (prefer these over historical root `*_ANALYSIS.md` reports when debugging):
+
+| Runbook | Covers |
+|---------|--------|
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Admin lockout / passkey emergency recovery |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Client session cache / HMR restore |
+| [PAYMENTS_JWT_POSTGREST_SLICE_A.md](./PAYMENTS_JWT_POSTGREST_SLICE_A.md) | Close JWT/PostgREST writes to `payments` (#232) |
+| [COURSE_PUBLIC_ENROLL_IDENTITY.md](./COURSE_PUBLIC_ENROLL_IDENTITY.md) | Public course enroll identity binding (#239) |
+| [SARI_LICENSE_EXPIRATION.md](./SARI_LICENSE_EXPIRATION.md) | SARI license null/invalid expiration fail-closed (#241) |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Pending Wallee recovery cron / webhook debug |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
