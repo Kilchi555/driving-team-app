@@ -344,6 +344,19 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused ops notes verified against source. Prefer these over stale root `*.md` reports when debugging.
+
+| Doc | Topic |
+|-----|--------|
+| [SHIP_TO_MAIN.md](./SHIP_TO_MAIN.md) | Squash auto-merge into `main`; required **Test and lint** / **E2E login** (#86) |
+| [BOOKABLE_LOCATIONS.md](./BOOKABLE_LOCATIONS.md) | Public location×staff after users RLS; FS vs event-type assignment (#75) |
+
+Also see existing runbooks in this folder (e.g. [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md), [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md), [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md)).
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
