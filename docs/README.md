@@ -344,6 +344,20 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused, source-verified runbooks (prefer these over root markdown sprawl):
+
+| Doc | Topic |
+|-----|-------|
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Admin passkey lockout recovery |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Client session cache / HMR |
+| [TENANT_WEBSITE_LANDING_BUILDER.md](./TENANT_WEBSITE_LANDING_BUILDER.md) | Tenant website / landing builder, add-ons, custom domain, SEO |
+| [BOOKING_READINESS.md](./BOOKING_READINESS.md) | Online-booking readiness probe + onboarding checklist |
+| [SMS_QUOTA.md](./SMS_QUOTA.md) | SMS segment quota, soft/hard stop, Stripe metering |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
