@@ -55,7 +55,20 @@ jobs:
             /etc/apt/sources.list.d/msprod.list || true
           npx playwright install --with-deps chromium
 
+      - name: Start disposable Postgres
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql
+          sudo service postgresql start
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'simy_receipt') THEN CREATE ROLE simy_receipt LOGIN SUPERUSER PASSWORD 'simy_receipt'; END IF; END \$\$;"
+          sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'simy_receipt_reset'" | grep -q 1 || sudo -u postgres psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE simy_receipt_reset OWNER simy_receipt;"
+          PG_HBA=$(sudo -u postgres psql -tAc "SHOW hba_file")
+          grep -q simy_receipt "$PG_HBA" || printf '%s\n' 'host all simy_receipt 127.0.0.1/32 trust' 'host all simy_receipt ::1/128 trust' | sudo tee -a "$PG_HBA" >/dev/null
+          sudo service postgresql reload
+
       - name: Unit tests
+        env:
+          RECEIPT_RESET_TEST_DATABASE_URL: postgres://simy_receipt:simy_receipt@127.0.0.1:5432/simy_receipt_reset
         run: npm test
 
       - name: Lint test suite
