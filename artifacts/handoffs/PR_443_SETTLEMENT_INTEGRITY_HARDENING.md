@@ -63,7 +63,7 @@ Related Vitest files: invoice credit, tenant-scope HTTP mock, previous settlemen
 
 `npm run lint` passed.
 
-`npm test` must be read from the commit that contains these files. A run before the commit failed only the clean-tree schema check because the files were still unstaged. That is not a product failure.
+`npm test` on `f9f2287d`, with two untracked audit notes moved out of the worktree: 282 files, 3206 tests passed, and `scripts/ci/validate-supabase-db-url.test.mjs` passed (17). Those audit notes were not committed. An earlier run failed only the clean-tree schema check while these files were still unstaged.
 
 ## Remaining risks
 
