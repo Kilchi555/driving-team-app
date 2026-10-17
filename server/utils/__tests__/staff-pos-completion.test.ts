@@ -270,12 +270,12 @@ describe('legacy completion bypass', () => {
     expect(src).not.toContain("from('payments')")
   })
 
-  it('scopes the invoice payment update and credits staff-pos only after full payment', () => {
+  it('scopes the invoice payment update and credits staff-pos via post-commit recovery', () => {
     const src = read('server/api/invoices/mark-invoice-paid.post.ts')
-    expect(src).toContain(".eq('tenant_id', invoice.tenant_id)")
-    expect(src).toContain('applyStaffPosCreditsForPaidInvoice')
-    expect(src.indexOf('if (!isPartial)')).toBeLessThan(src.indexOf('await applyStaffPosCreditsForPaidInvoice'))
-    expect(src).toContain('applyInvoiceCreditOnPaid')
+    expect(src).toContain('runMarkInvoicePaidPostCommit')
+    expect(src).toContain('resumedFromAlreadySettled: alreadySettled')
+    expect(src).toContain('staffPosRpc')
+    expect(src).not.toContain('if (!alreadySettled && !settledIsPartial)')
   })
 
   it('classifies deferred staff-pos rows separately from invoice sales', () => {

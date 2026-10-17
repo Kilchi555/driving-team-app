@@ -18,7 +18,12 @@ export interface AuditLogEntry {
   tenant_id?: string
 }
 
-export async function logAudit(entry: AuditLogEntry, event?: H3Event): Promise<void> {
+/**
+ * Persist an audit row. Returns true only when the insert succeeded.
+ * Failures are logged and never thrown — callers must not claim audit_written
+ * unless this returns true. Audit failure must not reverse committed money.
+ */
+export async function logAudit(entry: AuditLogEntry, event?: H3Event): Promise<boolean> {
   try {
     const supabase = getSupabaseAdmin()
     if (event) {
@@ -38,7 +43,7 @@ export async function logAudit(entry: AuditLogEntry, event?: H3Event): Promise<v
         has_action: !!entry.action,
         has_status: !!entry.status
       })
-      return
+      return false
     }
 
     // For anonymous actions (e.g., public tenant branding access after logout),
@@ -48,11 +53,11 @@ export async function logAudit(entry: AuditLogEntry, event?: H3Event): Promise<v
     if (isAnonymous && !entry.ip_address) {
       // Silently skip anonymous actions without IP tracking (security measure)
       // This is not an error, just a data quality filter
-      return
+      return false
     }
 
     // Insert to audit_logs table
-    const { error, data } = await supabase
+    const { error } = await supabase
       .from('audit_logs')
       .insert({
         user_id: entry.user_id || null,
@@ -91,18 +96,22 @@ export async function logAudit(entry: AuditLogEntry, event?: H3Event): Promise<v
             code: retryError.code,
             message: retryError.message
           })
+          return false
         }
-      } else {
-        console.error('Failed to log audit entry - database error:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        })
+        console.debug('Audit entry logged successfully (without user_id):', entry.action, entry.status)
+        return true
       }
-    } else {
-      console.debug('Audit entry logged successfully:', entry.action, entry.status)
+      console.error('Failed to log audit entry - database error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      })
+      return false
     }
+
+    console.debug('Audit entry logged successfully:', entry.action, entry.status)
+    return true
   } catch (err: any) {
     // Don't throw - audit logging shouldn't break the main operation
     console.error('Audit logging error:', {
@@ -110,6 +119,7 @@ export async function logAudit(entry: AuditLogEntry, event?: H3Event): Promise<v
       code: err.code,
       stack: err.stack?.split('\n')[0]
     })
+    return false
   }
 }
 
