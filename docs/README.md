@@ -344,6 +344,17 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Concise, code-verified ops/dev notes. Prefer updating these over inventing parallel pages.
+
+| Doc | Topic |
+|-----|--------|
+| [STAFF_WORKING_HOUR_EXCEPTIONS.md](./STAFF_WORKING_HOUR_EXCEPTIONS.md) | Date-specific hours that replace weekly plan + past Zurich immutability |
+| [COURSE_INVOICE_PHASE1.md](./COURSE_INVOICE_PHASE1.md) | Course invoice schema/guards only (#313); no app issuer yet |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
