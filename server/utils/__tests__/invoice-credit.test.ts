@@ -101,13 +101,11 @@ describe('applyInvoiceCreditOnPaid', () => {
           }
           if (table === 'credit_transactions' && action === 'insert') {
             state.calls.push('ledger')
-            if (state.failLedger) return { data: null, error: { message: 'ledger failed' } }
             state.existingTx = { id: 'tx-1' }
             return { data: null, error: null }
           }
           if (table === 'student_credits' && action === 'upsert') {
             state.calls.push('balance')
-            if (state.failBalance) return { data: null, error: { message: 'balance failed' } }
             return { data: null, error: null }
           }
           if (table === 'invoices' && action === 'update') {

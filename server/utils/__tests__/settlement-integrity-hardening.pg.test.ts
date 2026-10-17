@@ -183,7 +183,9 @@ async function reset() {
   `)
 }
 
-const settle = (amount: number | null, key: string | null) => db.query(
+const settle = (amount: number | null, key: string | null) => db.query<{
+  result: { ok: boolean; replayed: boolean; paid_amount_rappen: number; is_partial: boolean }
+}>(
   `SELECT public.settle_marked_invoice_payment_idempotent(
      $1, $2, $3, now(), null, 'manual', null, null, null, null, null, null, $4
    ) AS result`,
