@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 import { emitSimyTestEnvWarnings, loadSimyTestEnv } from './scripts/load-simy-test-env.mjs'
+import { resolveE2EBaseURL } from './scripts/wait-for-simy-preview.mjs'
 import { playwrightTestIgnoreForFlexibleSession } from './utils/e2e-flexible-session-safety'
 
 const simyTestEnv = loadSimyTestEnv({ profile: 'e2e' })
@@ -8,7 +9,10 @@ if (simyTestEnv.fatal) {
   throw new Error(simyTestEnv.warnings.join('\n') || 'simy-test env was rejected')
 }
 
-const baseURL = process.env.E2E_BASE_URL || 'https://app.simy.ch'
+const baseURL = resolveE2EBaseURL({
+  eventName: process.env.GITHUB_EVENT_NAME || '',
+  configured: process.env.E2E_BASE_URL || '',
+})
 const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
 const productionFlexIgnore = playwrightTestIgnoreForFlexibleSession(process.env)
 
