@@ -103,3 +103,16 @@ Keine Production-GitHub-Write-Paths ausgeführt.
 1. Schedule auf `main` sofort stoppen (Workflow disable **oder** #435 mergen), **dann**
 2. Draft #435 reviewen / Gates / Ready-for-Review nur nach Human-Entscheidung
 3. Nach Merge verifizieren: kein neuer Schedule-Fan-out, Idempotenz auf wenigen PRs per `workflow_dispatch`
+
+---
+
+## Resolution (post-merge)
+
+| Item | Status |
+|------|--------|
+| #435 merged | Yes — idempotent publish (update / skip / create-once) on `main` (`15c5a64a`) |
+| #439 merged | Yes — `*/15` schedule restored after update/skip landed (`254a2d95`) |
+| Containment on `main` | Publication no longer append-only; schedule fan-out is safe only because of update/skip |
+| Operator runbook | [`../REVIEW_STATE_PUBLICATION.md`](../REVIEW_STATE_PUBLICATION.md) |
+
+This incident file stays as the investigation record. Treat the Resolution table as the current ops outcome; sections 2 and 5 above describe the **draft-era** state before merge.

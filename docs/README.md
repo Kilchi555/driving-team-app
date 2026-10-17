@@ -347,3 +347,16 @@ Bei Änderungen am System:
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
+
+---
+
+## Engineering Runbooks
+
+Concise, code-verified runbooks for developers and ops. Prefer updating these over duplicating CSV rows for deep subsystem behavior.
+
+Neue Engineering-Runbooks → Datei unter `docs/` + Zeile in dieser Tabelle (nur Dateien, die auf dem Branch existieren).
+
+| Runbook | Summary |
+|---------|---------|
+| [INVOICE_BILLING_STREET_NUMBER.md](./INVOICE_BILLING_STREET_NUMBER.md) | Copy company/private house numbers onto invoice billing snapshots; canonical vs legacy street number (#442) |
+| [REVIEW_STATE_PUBLICATION.md](./REVIEW_STATE_PUBLICATION.md) | Idempotent review-state publish (update/skip/create); schedule restore after 2026-10-15 storm (#435/#439) |)
