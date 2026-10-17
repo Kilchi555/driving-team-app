@@ -503,6 +503,7 @@
               :available-products="formattedAvailableProducts"
               v-model:selected-payment-method="selectedPaymentMethod"
               :selected-student="selectedStudent"
+              :category-code="discountCategoryCode"
               :current-user="currentUser"
               :is-past-appointment="props.mode === 'edit' && isPastAppointment"
               :admin-fee="dynamicPricing.adminFeeChf || 0"
@@ -1030,6 +1031,7 @@ import { useTimeCalculations } from '~/composables/useTimeCalculations'
 import { useEventModalForm } from '~/composables/useEventModalForm'
 import { usePricing } from '~/composables/usePricing'
 import { getFallbackRule } from '~/utils/fallbackPricingRules'
+import { staffDiscountCategoryCode } from '~/utils/staff-discount-category-code'
 import { useFallbackLogger } from '~/composables/useFallbackLogger'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useProductSale } from '~/composables/useProductSale'
@@ -2563,7 +2565,13 @@ watch(() => formData.value.type, async (newType) => {
   }
 }, { immediate: true })
 
-
+// License category for voucher validation — never appointment_type (lesson/exam/…).
+const discountCategoryCode = computed(() =>
+  staffDiscountCategoryCode(
+    formData.value.type || selectedCategory.value?.code,
+    formData.value.appointment_type,
+  )
+)
 
 const handlers = useEventModalHandlers(
   formData,
