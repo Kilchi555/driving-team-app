@@ -13,9 +13,9 @@
               v-if="landing.brand.logo_url"
               :src="landing.brand.logo_url"
               :alt="landing.brand.name"
-              class="lp-logo"
-              width="160"
-              height="52"
+                class="lp-logo"
+              width="252"
+              height="60"
               decoding="async"
             />
             <span v-else class="lp-brand-name">{{ landing.brand.name }}</span>
@@ -644,6 +644,7 @@ import { websiteOverflowPages, websitePageCardHref, websitePageLinks, websiteSta
 import { previewDataKey, previewQuerySuffix, readRoutePreviewToken, withPreviewToken } from '~/utils/website-preview-query'
 import { websiteFontCssVars, websiteFontHeadLinks } from '~/utils/website-fonts'
 import { isWebsitePickupMeetingPoint } from '~/utils/website-wizard-content'
+import { scrollToLandingTarget } from '~/utils/website-landing-scroll'
 
 definePageMeta({
   layout: 'site',
@@ -941,7 +942,7 @@ function askPickupLead() {
   leadForm.value.message = plz
     ? `Anfrage eigener Treffpunkt: PLZ ${plz} — bitte prüfen, ob im Radius.`
     : 'Anfrage eigener Treffpunkt — bitte Radius prüfen.'
-  document.getElementById('kontakt')?.scrollIntoView({ behavior: 'smooth' })
+  scrollToLandingTarget('kontakt')
 }
 
 const contactPhone = computed(() => {
@@ -1416,19 +1417,9 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-}
-.lp-nav .lp-logo {
-  display: block;
-  height: 40px;
-  width: auto;
-  max-height: 40px;
-  max-width: min(168px, 46vw);
-  border-radius: 0;
-  object-fit: contain;
-  object-position: left center;
+  flex: 0 0 auto;
+  min-width: auto;
+  overflow: visible;
 }
 .lp-brand-name {
   font-family: var(--lp-font-display), sans-serif;
@@ -1444,7 +1435,8 @@ onMounted(() => {
   gap: 0.65rem;
   color: inherit;
   text-decoration: none;
-  min-width: 0;
+  min-width: auto;
+  overflow: visible;
 }
 .lp-nav-links {
   display: none;
@@ -2219,11 +2211,6 @@ onMounted(() => {
   .lp-nav-wa,
   .lp-nav-cta {
     display: none;
-  }
-  .lp-nav .lp-logo {
-    height: 36px;
-    max-height: 36px;
-    max-width: min(152px, 62vw);
   }
   .lp-sticky-bar {
     display: flex;

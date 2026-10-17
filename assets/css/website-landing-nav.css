@@ -1,0 +1,58 @@
+/*
+ * Public landing navbar only. Loaded by layouts/site.vue.
+ *
+ * assets/css/tenant-branding.css sets overflow-x: hidden on html and body.
+ * CSS then computes overflow-y to auto. That scrollport is the sticky
+ * containing block, so position: sticky on .lp-nav scrolls away with the
+ * document. clip keeps the horizontal guard and leaves the viewport as the
+ * scrollport. The selector is limited to pages that render .site-root.
+ */
+html:has(.site-root),
+body:has(.site-root) {
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+.lp {
+  --lp-nav-offset: calc(60px + 1.4rem + 1px);
+}
+
+.lp-brand {
+  overflow: visible;
+  flex: 0 0 auto;
+  min-width: auto;
+}
+
+.lp-nav .lp-logo {
+  display: block;
+  height: 60px;
+  width: auto;
+  max-height: 60px;
+  max-width: min(252px, 46vw);
+  object-fit: contain;
+  object-position: left center;
+}
+
+.lp-brand-name {
+  max-width: min(252px, 46vw);
+}
+
+.lp :is(#angebot, #produkte, #team, #kurse, #kontakt, #standort, #termine) {
+  scroll-margin-top: var(--lp-nav-offset);
+}
+
+@media (max-width: 859px) {
+  .lp {
+    --lp-nav-offset: calc(54px + 1.4rem + 1px);
+  }
+
+  .lp-nav .lp-logo {
+    height: 54px;
+    max-height: 54px;
+    max-width: min(228px, 62vw);
+  }
+
+  .lp-brand-name {
+    max-width: min(228px, 62vw);
+  }
+}
