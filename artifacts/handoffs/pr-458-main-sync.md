@@ -4,7 +4,7 @@
 
 Der Branch enthält den aktuellen `main`-Stand. Der Merge hatte keine Konflikte. Der Draft bleibt ein Draft. Die drei Required Checks auf dem neuen Head sind noch nicht beobachtet. Deshalb ist der PR nicht mergebereit.
 
-Beobachtet: `2026-10-17T08:52:38Z`
+Beobachtet: `2026-10-17T08:58:07Z`
 
 PR: https://github.com/Kilchi555/driving-team-app/pull/458
 
@@ -15,7 +15,7 @@ PR: https://github.com/Kilchi555/driving-team-app/pull/458
 | Draft | `true` | `true` (unverändert) |
 | Base-Branch | `main` | `main` |
 | Head-Branch | `cursor/custom-domain-routing-gate-5594` | gleich |
-| Head-SHA | `38c0444955c86b65d42a9a18979b1ce1f7cc3274` | Merge `52d65db9ef1e93d4220f098c5134b49e95332599`, danach dieser Handoff |
+| Head-SHA | `38c0444955c86b65d42a9a18979b1ce1f7cc3274` | Merge `52d65db9ef1e93d4220f098c5134b49e95332599`, Handoff `50edfad123b350927412d12f07113405faf915a7`, danach diese Ergänzung |
 | `origin/main` | `e2c1c68c645620f2e999d6f57716950a6f436f97` | gleich, und Vorfahre des Heads |
 | GitHub `baseRefOid` | `ecf9694ff5b6626539ad0230fee2ca1c3a3d6121` | das war der Merge-Base, nicht die Spitze von `main` |
 | Merge-Status | `MERGEABLE` und `BEHIND` | lokal nicht mehr hinter `main`; GitHub-Status folgt erst nach dem Push |
@@ -109,12 +109,14 @@ Summe: 94 Tests, 10 Dateien, Exit 0.
 
 `npm run lint` (ESLint auf `server/utils/__tests__/**/*.ts`, `--max-warnings 0`): Exit 0.
 
+Pre-push-Smoke-Test beim Push von `50edfad1`: lokaler Nitro-Build, `/api/health` lieferte `200` und `{"status":"ok"}`. Das ist kein Deployment.
+
 ## Nicht ausgeführt
 
 - Voller `npm test`. `payment-receipt-reset.db.test.ts` bricht ohne `RECEIPT_RESET_TEST_DATABASE_URL` ab. Die Variable war nicht gesetzt. Es gibt hier kein lokales Postgres und kein Docker. Die Variable wurde nicht auf Produktion gelegt.
 - Repository-weites `nuxi typecheck` / `vue-tsc`. Der letzte abgeschlossene Lauf auf diesem PR war rot (4723 Diagnosen). `tsconfig.json` ist seit `38c04449` unverändert. Der JSON-Parse-Test für `strict: true` ist grün. Ein grüner Typecheck wird nicht behauptet.
 - E2E-Login und Dependency Review. Die laufen in GitHub Actions, nicht lokal.
-- Required Checks auf dem neuen Head. Die grünen Checks auf `38c04449` gelten nicht für `52d65db9` und nicht für diesen Handoff.
+- Required Checks auf dem neuen Head. Die grünen Checks auf `38c04449` gelten nicht für `52d65db9`, nicht für `50edfad1` und nicht für die Ergänzung danach.
 
 ## Offene Website-PRs
 
