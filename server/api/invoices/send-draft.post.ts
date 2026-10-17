@@ -5,6 +5,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { persistAndSendInvoiceDraft } from '~/server/utils/invoice-persist-and-send'
+import { companyIdForInvoiceInsert, InvoiceCompanyLinkError } from '~/server/utils/invoice-company-link'
 import { applyStudentCreditToPayments } from '~/server/utils/apply-student-credit'
 import { computeVatAmountRappen } from '~/server/utils/invoice-vat'
 
@@ -36,6 +37,12 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    // One company check, before credit writes. Persist reuses this result and does not
+    // query companies again. The check and the later insert are not one transaction:
+    // a company removed after this point can still fail the insert, like any other
+    // insert error, and credit for that request would already be applied.
+    const linkedCompanyId = await companyIdForInvoiceInsert(supabase, staffUser.tenant_id, draft)
+
     if (apply_available_credit && draft.payment_ids?.length) {
       const { data: payments, error: payErr } = await supabase
         .from('payments')
@@ -103,6 +110,7 @@ export default defineEventHandler(async (event) => {
       actor: staffUser,
       draft,
       sendEmailFlag: !!send_email,
+      linkedCompanyId,
     })
 
     return {
@@ -113,6 +121,13 @@ export default defineEventHandler(async (event) => {
       student_email: draft.billing_email,
     }
   } catch (err: any) {
+    if (err instanceof InvoiceCompanyLinkError) {
+      throw createError({
+        statusCode: err.statusCode,
+        statusMessage: err.message,
+        message: err.message,
+      })
+    }
     throw createError({
       statusCode: 500,
       statusMessage: err?.message || 'Failed to create invoice',
