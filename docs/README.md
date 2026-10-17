@@ -344,6 +344,21 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused ops / developer runbooks (prefer these over root historical markdown):
+
+| Doc | Topic |
+|-----|--------|
+| [AUTH_MANAGE_F02.md](./AUTH_MANAGE_F02.md) | Retired `/api/auth/manage` + invite URL session soft-ok (F-02) |
+| [PAYMENT_TOKEN_AUTH.md](./PAYMENT_TOKEN_AUTH.md) | Payment-token get/save authz (F-03) |
+| [VOUCHERS_MANAGE_F04.md](./VOUCHERS_MANAGE_F04.md) | Voucher manage tenant/ownership gates (F-04) |
+| [ONLINE_BOOKING_PAYMENT_METHODS.md](./ONLINE_BOOKING_PAYMENT_METHODS.md) | Public cash / invoice / Wallee allow-list |
+| [SEC_C01_C02_C03.md](./SEC_C01_C02_C03.md) | Users privilege freeze, marketing overview, confirmation resend |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Pending payment recovery + webhook logs |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
