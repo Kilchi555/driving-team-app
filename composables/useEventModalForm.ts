@@ -13,6 +13,9 @@ import { useFallbackLogger } from '~/composables/useFallbackLogger'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { staffRequiresCategory } from '~/utils/staff-category-defaults'
 import { buildStaffC1PaymentMetadata } from '~/utils/staff-payment-c1-metadata'
+import { appointmentSaveErrorMessage } from '~/utils/appointment-save-error'
+import { categoryHasTheoryPricing } from '~/utils/theory-client-price'
+import { usePricing } from '~/composables/usePricing'
 
 // Types (können später in separates types file)
 interface AppointmentData {
@@ -908,6 +911,22 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // (consulting tenants have no 'lesson' row — FK would reject it).
       const resolvedEventTypeCode = await resolveEventTypeCodeForSave()
 
+      // Theory without a matching category theory rule: block before API (server also fail-closes).
+      if (resolvedEventTypeCode === 'theory' && requiresCategory.value) {
+        const categoryCode = (formData.value.type || '').trim()
+        if (!categoryCode) {
+          throw new Error('Bitte wähle eine Kategorie mit konfiguriertem Theoriepreis.')
+        }
+        const { loadPricingRules, theoryEnabledCategories } = usePricing()
+        await loadPricingRules(false, dbUser.tenant_id)
+        if (!categoryHasTheoryPricing(categoryCode, theoryEnabledCategories.value)) {
+          throw new Error(
+            `Für Kategorie "${categoryCode}" ist kein gültiger Theoriepreis konfiguriert. ` +
+            'Bitte hinterlege einen Theoriepreis in der Kategorien-Verwaltung oder wähle eine andere Kategorie.'
+          )
+        }
+      }
+
       // Determine if this is a chargeable lesson-type appointment
       const isChargeableLesson = isChargeableEventType(resolvedEventTypeCode)
       // Generate confirmation token for chargeable appointments
@@ -1130,8 +1149,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
         })
       } catch (fetchError: any) {
         logger.error('❌ API error saving appointment:', fetchError)
-        // Re-throw with better error message
-        throw new Error(fetchError.data?.message || fetchError.message || 'Fehler beim Speichern des Termins')
+        // Prefer statusMessage / NO_PRICE_RULE — ofetch often omits data.message
+        throw new Error(appointmentSaveErrorMessage(fetchError))
       }
       
       const result = response?.data

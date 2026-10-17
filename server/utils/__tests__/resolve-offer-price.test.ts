@@ -440,6 +440,50 @@ describe('resolveOfferPrice — offer matrix', () => {
     })
     expect(offer).toEqual({ kind: 'unpriced', error: 'NO_PRICE_RULE' })
   })
+
+  it('theory hint without theory rule is unpriced even when base_price exists', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'theory', require_payment: true }],
+      rules: [paidRule({
+        id: 'b-base',
+        rule_type: 'base_price',
+        category_code: 'B',
+        price_per_minute_rappen: 200,
+      })],
+    })
+    const offer = await resolveOfferPrice(supabase, {
+      tenantId: TENANT,
+      eventTypeCode: 'theory',
+      categoryCode: 'B',
+      durationMinutes: 45,
+      ruleTypeHint: 'theory',
+    })
+    expect(offer).toEqual({ kind: 'unpriced', error: 'NO_PRICE_RULE' })
+  })
+
+  it('theory hint with theory rule is paid', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'theory', require_payment: true }],
+      rules: [paidRule({
+        id: 'b-theory',
+        rule_type: 'theory',
+        category_code: 'B',
+        price_per_minute_rappen: 188.8889,
+      })],
+    })
+    const offer = await resolveOfferPrice(supabase, {
+      tenantId: TENANT,
+      eventTypeCode: 'theory',
+      categoryCode: 'B',
+      durationMinutes: 45,
+      ruleTypeHint: 'theory',
+    })
+    expect(offer).toMatchObject({
+      kind: 'paid',
+      priceRappen: 8500,
+      rule: { id: 'b-theory', rule_type: 'theory' },
+    })
+  })
 })
 
 describe('HTTP consistency helpers (preview / guest / authenticated)', () => {

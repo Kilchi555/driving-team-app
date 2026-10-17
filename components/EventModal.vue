@@ -175,7 +175,13 @@
               @duration-changed="handleDurationChanged"
               @duration-change-rejected="handleDurationChangeRejected"
             />
-            
+
+            <p
+              v-if="theoryPriceRuleMissing"
+              class="mt-2 text-sm text-red-600"
+            >
+              Für diese Kategorie ist kein gültiger Theoriepreis konfiguriert. Speichern ist nicht möglich — bitte Kategorie wechseln oder den Theoriepreis in der Verwaltung hinterlegen.
+            </p>
 
           </div>
 
@@ -1029,6 +1035,7 @@ import { useEventModalHandlers} from '~/composables/useEventModalHandlers'
 import { useTimeCalculations } from '~/composables/useTimeCalculations'
 import { useEventModalForm } from '~/composables/useEventModalForm'
 import { usePricing } from '~/composables/usePricing'
+import { categoryHasTheoryPricing } from '~/utils/theory-client-price'
 import { getFallbackRule } from '~/utils/fallbackPricingRules'
 import { useFallbackLogger } from '~/composables/useFallbackLogger'
 import { useCurrentUser } from '~/composables/useCurrentUser'
@@ -2466,8 +2473,24 @@ const applyAutoDuration = (minutes: any, reason: string) => {
   formData.value.duration_minutes = value
 }
 
+// Shared pricing cache (theory-enabled categories) — same module state as LessonTypeSelector
+const { theoryEnabledCategories } = usePricing()
+
+/** Theory + category without tenant theory rule must not look saveable. */
+const theoryPriceRuleMissing = computed(() => {
+  if (formData.value.appointment_type !== 'theory') return false
+  if (!requiresCategory.value) return false
+  const code = formData.value.type
+  if (!code) return true
+  return !categoryHasTheoryPricing(code, theoryEnabledCategories.value)
+})
+
 // ✅ NEW: Extended form validation that includes manual input
 const isFormValidWithManualInput = computed(() => {
+  if (theoryPriceRuleMissing.value) {
+    return false
+  }
+
   const baseFormValid = isFormValid.value
   
   // If form already valid (has location_id), no need to check manual input
@@ -3409,6 +3432,25 @@ const calculatePriceForCurrentData = async (): Promise<void> => {
 
       logger.debug('✅ Online price calculated:', priceResult)
 
+      if (priceResult.missing_price_rule && capturedAppointmentType === 'theory') {
+        dynamicPricing.value = {
+          pricePerMinute: 0,
+          adminFeeChf: 0,
+          adminFeeRappen: 0,
+          adminFeeAppliesFrom: 2,
+          appointmentNumber: priceResult.appointment_number || 1,
+          hasAdminFee: false,
+          totalPriceChf: '0.00',
+          category: capturedType,
+          duration: capturedDuration,
+          isLoading: false,
+          error: `Für Kategorie "${capturedType}" ist kein gültiger Theoriepreis konfiguriert.`,
+          isFallback: false,
+          manuallyEntered: false
+        }
+        return
+      }
+
       const durationForPricePerMinute = priceResult.original_duration_minutes || capturedDuration
       const calculatedPricePerMinute = priceResult.base_price_rappen / durationForPricePerMinute / 100
 
@@ -3447,9 +3489,32 @@ const calculatePriceForCurrentData = async (): Promise<void> => {
       })
     } else {
       logger.debug('📱 Using offline calculation')
+      if (capturedAppointmentType === 'theory') {
+        dynamicPricing.value = {
+          ...dynamicPricing.value,
+          pricePerMinute: 0,
+          totalPriceChf: '0.00',
+          isLoading: false,
+          error: 'Theoriepreis offline nicht verfügbar. Bitte erneut online speichern.',
+          isFallback: false,
+        }
+        return
+      }
       calculateOfflinePrice(capturedType, capturedDuration, appointmentNum)
     }
   } catch (error) {
+    if (capturedAppointmentType === 'theory') {
+      logger.debug('🔄 Theory price calculation failed — no offline CHF invent:', error)
+      dynamicPricing.value = {
+        ...dynamicPricing.value,
+        pricePerMinute: 0,
+        totalPriceChf: '0.00',
+        isLoading: false,
+        error: 'Theoriepreis konnte nicht ermittelt werden. Prüfe die Preisregel für diese Kategorie.',
+        isFallback: false,
+      }
+      return
+    }
     logger.debug('🔄 Price calculation failed, using offline fallback:', error)
     calculateOfflinePrice(capturedType, capturedDuration, appointmentNum)
   }
@@ -4594,6 +4659,10 @@ const fallbackPricePerMinute = computed(() => {
 /** Resolved CHF/min for DurationSelector + PriceDisplay. Treats 0 as valid (free). */
 const displayPricePerMinute = computed(() => {
   if (dynamicPricing.value.isLoading) return 0
+  // Never invent Fahrstunden-Fallback for unpriced theory
+  if (theoryPriceRuleMissing.value || (formData.value.appointment_type === 'theory' && dynamicPricing.value.error)) {
+    return 0
+  }
   const ppm = dynamicPricing.value.pricePerMinute
   if (typeof ppm === 'number' && Number.isFinite(ppm) && ppm >= 0) return ppm
   return fallbackPricePerMinute.value

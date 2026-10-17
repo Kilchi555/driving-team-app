@@ -43,8 +43,11 @@ import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import { useCategoryWithFallback } from '~/composables/useCategoryWithFallback'
 import { useTerminology } from '~/composables/useTerminology'
+import { usePricing } from '~/composables/usePricing'
+import { categoryHasTheoryPricing } from '~/utils/theory-client-price'
 
 const { t } = useTerminology()
+const { loadPricingRules, theoryEnabledCategories } = usePricing()
 
 interface Category {
   id: number
@@ -203,7 +206,14 @@ const availableCategoriesForUser = computed(() => {
     availableDurations: durationsForCategory(cat)
   }))
 
-  const sortedResult = result.sort((a, b) => a.code.localeCompare(b.code))
+  let sortedResult = result.sort((a, b) => a.code.localeCompare(b.code))
+
+  // Theory: only categories with an active tenant theory pricing rule (matches server fail-closed).
+  if (props.appointmentType === 'theory') {
+    sortedResult = sortedResult.filter((cat) =>
+      categoryHasTheoryPricing(cat.code, theoryEnabledCategories.value)
+    )
+  }
 
   logger.debug('📋 Final sorted categories:', sortedResult.map(cat => ({
     code: cat.code,
@@ -710,11 +720,28 @@ watch([() => allCategories.value.length, () => props.modelValue], ([categoriesCo
 
 // Lifecycle
 onMounted(async () => {
+  // Tenant-scoped theory/consultation gating for category list
+  loadPricingRules().catch(() => {
+    logger.debug('⚠️ CategorySelector: could not load pricing rules for theory filter')
+  })
   if (props.appointmentType === 'consultation') {
     await loadConsultationDurations()
   }
   loadCategories()
 })
+
+function syncTheoryCategorySelection() {
+  if (props.appointmentType !== 'theory' || isInitializing.value) return
+  if (props.modelValue && categoryHasTheoryPricing(props.modelValue, theoryEnabledCategories.value)) {
+    return
+  }
+  // Drop / replace selection that has no tenant theory rule (or none selected yet)
+  const first = availableCategoriesForUser.value[0]
+  if ((props.modelValue || null) === (first?.code || null)) return
+  emit('update:modelValue', first?.code || null)
+  emit('category-selected', first || null)
+  if (first) emit('durations-changed', first.availableDurations)
+}
 
 // When Terminart switches to Beratung/Theorie/Prüfung, re-emit the correct durations
 // so EventModal doesn't keep stale Fahrstunden-Dauern (45/90/135).
@@ -723,6 +750,11 @@ watch(() => props.appointmentType, async (type, prev) => {
   if (type === 'consultation') {
     await loadConsultationDurations()
   }
+  if (type === 'theory') {
+    await loadPricingRules().catch(() => null)
+    syncTheoryCategorySelection()
+    return
+  }
   if (!props.modelValue || isInitializing.value) return
   const selected = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
   if (selected) {
@@ -730,6 +762,11 @@ watch(() => props.appointmentType, async (type, prev) => {
     emit('durations-changed', selected.availableDurations)
   }
 })
+
+// Pricing rules may load after the first theory selection — re-sync then.
+watch(theoryEnabledCategories, () => {
+  if (props.appointmentType === 'theory') syncTheoryCategorySelection()
+}, { deep: true })
 </script>
 
 <style scoped>
