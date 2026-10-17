@@ -12,12 +12,12 @@ The application can route a custom hostname after a live certificate check succe
 | --- | --- |
 | PR | [#458](https://github.com/Kilchi555/driving-team-app/pull/458), OPEN, draft |
 | Branch | `cursor/custom-domain-routing-gate-5594` |
-| Head at the start of this change | `bae45277b013127fbfa201f70cd077ccf6bf0afd` |
+| Code commit | `176aa29241855a7575c85e6e73e064ae217610d0` |
+| Parent | `bae45277b013127fbfa201f70cd077ccf6bf0afd` |
 | Base and `origin/main` | `ecf9694ff5b6626539ad0230fee2ca1c3a3d6121` |
-| Main is an ancestor of that head | Yes |
-| Mergeability before this push | `MERGEABLE`, `mergeStateStatus` `UNSTABLE` |
+| Main is an ancestor of the code commit | Yes |
 
-Required checks on `bae45277` were green (Test and lint, E2E login, Dependency review). They do not cover the commit that adds the TLS reader. `App | Default` is not a ruleset check. The new head needs its own required runs. This handoff is written before that push; the PR body should be updated with the pushed SHA.
+Required checks on `bae45277` were green (Test and lint, E2E login, Dependency review). They do not cover `176aa292`. `App | Default` is not a ruleset check. The branch tip needs its own required runs. A later handoff-only commit may sit on top of `176aa292`; that tip is the PR head.
 
 The unstaged edit in `artifacts/handoffs/PR_458_SYNC_AND_REVALIDATION.md` and the other untracked handoffs were not staged.
 
