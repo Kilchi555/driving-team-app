@@ -344,6 +344,24 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Operational notes for engineers (intent → contract → pitfalls → codepaths). Only files that exist on this branch are linked.
+
+| Runbook | Covers |
+|---------|--------|
+| [STAFF_POS_PRODUCT_SALE.md](./STAFF_POS_PRODUCT_SALE.md) | Staff Direktverkauf as `payments` via `staff_pos_sale` (#336); main credit timing; DRAFT migrations |
+| [TRIAL_CACHE_AUTHORIZATION.md](./TRIAL_CACHE_AUTHORIZATION.md) | Server-authoritative trial gate; no localStorage entitlement (#337) |
+| [ASSIGNABLE_USER_ROLES.md](./ASSIGNABLE_USER_ROLES.md) | Closed `public.users.role` allowlists; no `student` (#344) |
+| [INVITATION_ROLE_REGISTRATION.md](./INVITATION_ROLE_REGISTRATION.md) | Invitation role lock at staff/admin accept (#362) |
+| [SARI_TENANT_BOUNDARY.md](./SARI_TENANT_BOUNDARY.md) | Tenant ownership before SARI side effects (#347) |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Session identity cache (HMR); trial authz → trial runbook |
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Passkey recovery |
+| [ACCESS_AND_SECRETS_POLICY.md](./ACCESS_AND_SECRETS_POLICY.md) | Access and secrets policy |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Wallee payment recovery |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
