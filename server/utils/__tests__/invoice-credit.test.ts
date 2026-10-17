@@ -61,11 +61,19 @@ describe('sumInvoiceCreditRappen', () => {
 describe('applyInvoiceCreditOnPaid', () => {
   function client(state: {
     existingTx: { id: string } | null
-    failLedger?: boolean
-    failBalance?: boolean
+    failRpc?: boolean
+    rpcOk?: { ok: boolean; already_applied?: boolean }
     calls: string[]
   }) {
     return {
+      rpc(name: string) {
+        state.calls.push('rpc')
+        if (name !== 'apply_invoice_product_credit') {
+          return Promise.resolve({ data: null, error: { message: 'unknown rpc' } })
+        }
+        if (state.failRpc) return Promise.resolve({ data: null, error: { message: 'wallet failed' } })
+        return Promise.resolve({ data: state.rpcOk || { ok: true, already_applied: false }, error: null })
+      },
       from(table: string) {
         let action = 'select'
         const run = async () => {
@@ -131,17 +139,17 @@ describe('applyInvoiceCreditOnPaid', () => {
     actorUserId: 'staff',
   }
 
-  it('writes the ledger row before the wallet balance', async () => {
-    const state = { existingTx: null, calls: [] as string[] }
+  it('asks the database function to write the ledger and balance together', async () => {
+    const state = { existingTx: null, calls: [] as string[], rpcOk: { ok: true, already_applied: false } }
     const result = await applyInvoiceCreditOnPaid({ supabase: client(state), ...args })
     expect(result).toEqual({ applied_rappen: 2500, skipped: false })
-    expect(state.calls).toEqual(['ledger', 'balance', 'stamp'])
+    expect(state.calls).toEqual(['rpc'])
   })
 
-  it('does not change the wallet when the ledger insert fails', async () => {
-    const state = { existingTx: null, failLedger: true, calls: [] as string[] }
+  it('does not change the wallet when the database function fails', async () => {
+    const state = { existingTx: null, failRpc: true, calls: [] as string[] }
     await expect(applyInvoiceCreditOnPaid({ supabase: client(state), ...args })).rejects.toThrow(/protokolliert/)
-    expect(state.calls).toEqual(['ledger'])
+    expect(state.calls).toEqual(['rpc'])
   })
 
   it('does not add the product credit again once the ledger row exists', async () => {

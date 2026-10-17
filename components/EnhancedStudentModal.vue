@@ -2895,8 +2895,11 @@ function selectedStaffPosBulkRows() {
   })
 }
 
+const cashOverpaymentActionId = ref('')
+
 const openCashPaymentDialog = (method: 'cash' | 'online') => {
   if (selectedPayments.value.length === 0) return
+  cashOverpaymentActionId.value = crypto.randomUUID()
   partialPaymentMethod.value = method
   const bookable = staffPosCashBookableRappen({
     method,
@@ -2953,6 +2956,10 @@ const handleBulkPayment = async (method: 'cash' | 'online', partialAmountRappen?
     const body: any = { payment_ids: plan.normalIds, method }
     if (typeof plan.bulkPartialRappen === 'number' && plan.bulkPartialRappen > 0) {
       body.partial_amount_rappen = plan.bulkPartialRappen
+    }
+    if (method === 'cash' && accounting.overpaymentRappen > 0 && cashOverpaymentActionId.value) {
+      body.overpayment_idempotency_key = cashOverpaymentActionId.value
+      body.overpayment_rappen = accounting.overpaymentRappen
     }
 
     const response = await $fetch('/api/staff/process-bulk-payment', {

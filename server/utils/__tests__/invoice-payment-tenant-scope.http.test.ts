@@ -277,6 +277,35 @@ function createDb(seed: Record<string, Row[]>, opts?: { skipUpdates?: string[]; 
       return { ok: true, payment_id: payment.id, replayed, invoice_payment_status: invoiceStatus }
     }
 
+    if (name === 'settle_marked_invoice_payment_idempotent') {
+      const key = typeof args.p_idempotency_key === 'string' ? args.p_idempotency_key.trim() : ''
+      const invoice = (tables.invoices || []).find((row) => row.id === args.p_invoice_id && row.tenant_id === actor.tenant_id)
+      if (!invoice) throw new Error('invoice_not_found')
+      const total = Number(invoice.total_amount_rappen || 0)
+      const requested = args.p_paid_amount_rappen == null || Number(args.p_paid_amount_rappen) === 0
+        ? total
+        : Number(args.p_paid_amount_rappen)
+      if (key) {
+        const existing = (tables.invoice_payments || []).find((row) => row.tenant_id === actor.tenant_id && row.idempotency_key === key)
+        if (existing) {
+          if (Number(existing.amount_rappen) !== requested) throw new Error('idempotency_amount_mismatch')
+          return {
+            ok: true,
+            replayed: true,
+            invoice_id: invoice.id,
+            paid_amount_rappen: Number(invoice.paid_amount_rappen || 0),
+            is_partial: invoice.payment_status !== 'paid',
+          }
+        }
+      }
+      const settled = applyMockSettlement('settle_marked_invoice_payment', args) as Row
+      if (key && settled.replayed !== true) {
+        const journal = (tables.invoice_payments || [])[(tables.invoice_payments || []).length - 1]
+        if (journal) journal.idempotency_key = key
+      }
+      return settled
+    }
+
     if (name === 'settle_marked_invoice_payment') {
       const invoice = (tables.invoices || []).find((row) => row.id === args.p_invoice_id && row.tenant_id === actor.tenant_id)
       if (!invoice) throw new Error('invoice_not_found')
