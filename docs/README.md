@@ -347,3 +347,18 @@ Bei Änderungen am System:
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
+
+---
+
+## Engineering Runbooks
+
+Focused ops/developer runbooks (prefer these over root historical markdown reports):
+
+| Runbook | Covers |
+|---------|--------|
+| [TENANT_API_AUTHZ.md](./TENANT_API_AUTHZ.md) | JWT → tenant actor gates; staff/calendar/analytics/Stripe/email/SARI/shop/whitelabel (#191) |
+| [CRON_SECRET_AND_FINANCIAL_RLS.md](./CRON_SECRET_AND_FINANCIAL_RLS.md) | Fail-closed cron bearer; `cash_balances` + `course_registrations` RLS (#191) |
+| [COURSE_PUBLIC_ENROLLMENT.md](./COURSE_PUBLIC_ENROLLMENT.md) | Invoice method, empty-email unique, non-SARI flags, staff contact guards (#186–#189) |
+| [BOOKING_ATTRIBUTION_HOP.md](./BOOKING_ATTRIBUTION_HOP.md) | Preserve gclid/gbraid/wbraid/fbclid (+ fbc/fbp) across website → app hop (#190) |
+| [SERVER_SIDE_CONVERSION_SETUP.md](./SERVER_SIDE_CONVERSION_SETUP.md) | Google Ads conversion action + Vercel env setup |
+| [WHITELABEL_APP.md](./WHITELABEL_APP.md) | White-label Capacitor builds (`create-app` is super_admin-only after #191) |
