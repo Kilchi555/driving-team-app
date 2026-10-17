@@ -72,6 +72,32 @@ describe('canReleaseUnpaidHold', () => {
       metadata: { pay_before_confirm: true },
     }])).toBe(false)
   })
+
+  it('never releases while checkout claim is creating or recovery_pending', () => {
+    expect(canReleaseUnpaidHold([{
+      payment_status: 'pending',
+      metadata: { pay_before_confirm: true },
+      checkout_status: 'creating',
+    }])).toBe(false)
+    expect(canReleaseUnpaidHold([{
+      payment_status: 'pending',
+      metadata: { pay_before_confirm: true },
+      checkout_status: 'recovery_pending',
+    }])).toBe(false)
+    expect(canReleaseUnpaidHold([{
+      payment_status: 'pending',
+      metadata: { pay_before_confirm: true },
+      wallee_transaction_id: 'tx-1',
+    }])).toBe(false)
+  })
+
+  it('still releases idle unpaid holds without a Wallee id', () => {
+    expect(canReleaseUnpaidHold([{
+      payment_status: 'pending',
+      metadata: { pay_before_confirm: true },
+      checkout_status: 'idle',
+    }])).toBe(true)
+  })
 })
 
 describe('shouldConfirmHeldAppointmentFromPayments', () => {
