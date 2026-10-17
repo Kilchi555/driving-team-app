@@ -1,10 +1,30 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 const root = path.resolve(__dirname, '../..')
-const chrome = '/usr/local/bin/google-chrome'
+
+/**
+ * Bundled Playwright Chromium is the CI browser. LANDING_NAV_BROWSER may point
+ * at a system Chrome when that path exists. A missing browser fails the suite.
+ */
+function landingBrowserExecutable(): string {
+  const configured = process.env.LANDING_NAV_BROWSER?.trim()
+  if (configured) {
+    if (!existsSync(configured)) {
+      throw new Error(`LANDING_NAV_BROWSER is set but no browser exists at ${configured}`)
+    }
+    return configured
+  }
+  const bundled = chromium.executablePath()
+  if (!existsSync(bundled)) {
+    throw new Error(
+      `Playwright Chromium is not installed at ${bundled}. Install it with \`npx playwright install chromium\`.`,
+    )
+  }
+  return bundled
+}
 const landingCss = readFileSync(path.join(root, 'assets/css/website-landing-nav.css'), 'utf8')
 const indexVue = readFileSync(path.join(root, 'pages/s/[subdomain]/index.vue'), 'utf8')
 const slugVue = readFileSync(path.join(root, 'pages/s/[subdomain]/[slug].vue'), 'utf8')
@@ -165,7 +185,7 @@ describe('landing navbar layout', () => {
 
   beforeAll(async () => {
     browser = await chromium.launch({
-      executablePath: chrome,
+      executablePath: landingBrowserExecutable(),
       args: ['--no-sandbox', '--disable-dev-shm-usage'],
     })
   })
