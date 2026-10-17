@@ -67,7 +67,7 @@ const TENANT = '11111111-1111-1111-1111-111111111111'
 const SUB = 'sub_legacy_wallee_trial'
 const LEGACY_TRIAL_END = Math.floor(Date.parse('2026-11-20T00:00:00.000Z') / 1000)
 
-function adminClient(opts: { metadata?: Record<string, string> }) {
+function adminClient(_opts?: { metadata?: Record<string, string> }) {
   let tenantsSelectCount = 0
   return {
     from(table: string) {
