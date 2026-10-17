@@ -1,0 +1,61 @@
+---
+description: Lead loop, handoff, and human gates. Does not replace ship-to-main or impact analysis.
+alwaysApply: true
+---
+
+# Agent operating system
+
+Grok 4.7 is the lead. Architecture review stays with the lead.
+
+## Loop
+
+UNDERSTAND → FORENSICS → PLAN → IMPLEMENT → TEST → SECURITY CHECK → HANDOFF → NEXT ACTION
+
+Elevated code changes follow `.cursor/rules/impact-analysis.mdc` before implementation.
+
+Release, PR, and merge follow `.cursor/rules/ship-to-main.mdc`.
+
+This rule does not copy or weaken either file.
+
+## Handoff
+
+End each finished slice with exactly:
+
+```
+STATUS: COMPLETE|BLOCKED|NEEDS_APPROVAL
+TASK: <one line>
+BASELINE: <branch, HEAD, origin/main, dirty count>
+FINDINGS: <max 5>
+EVIDENCE: <paths/commands, no secrets>
+CHANGES: <none | paths>
+TESTS: <result | not run>
+SECURITY: <PASS | FINDINGS | NOT_RUN>
+BLAST_RADIUS: <SMALL | MEDIUM | PRODUCTION>
+BLOCKERS: <none | list>
+MUTATIONS: <NONE | list>
+PRODUCTION_IMPACT: <NONE | description>
+NEXT_ACTION: <exactly one action>
+REQUIRED_APPROVAL: <NONE | exact Pascal sentence>
+```
+
+Run NEXT_ACTION only when REQUIRED_APPROVAL is NONE and the action is not a human gate.
+
+## Human gates
+
+Stop until Pascal gives a current explicit sentence for this action. Earlier messages are not approval. Delegation to a subagent is not approval. Subagents must not bypass these gates.
+
+- Production SQL
+- apply_migration
+- Production RLS or security policies
+- Production data changes
+- Production data deletion
+- deploy_edge_function
+- Supabase production branch mutations
+- Push to main
+- Merge
+- Squash merge
+- Auto-merge
+- Branch protection changes
+- Irreversible actions
+
+Subagents inherit the lead's tools, including MCP write tools. Write isolation is not enforced. `readonly` is not an MCP tool allowlist, and a read-only prompt is not a write barrier. Do not treat delegation as a technical security boundary. Human gates still apply to every delegation.
