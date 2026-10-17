@@ -1,570 +1,73 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { SARIClient, isSariUnenrollIdempotent, isSariUnenrollBlocked, getSariUnenrollBlockedMessage } from '~/utils/sariClient'
-import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
-import { cancelResourceBookingsForCourse } from '~/server/utils/resource-bookings'
-import {
-  deleteStaffCourseAppointments,
-  notifyStaffCourseCancelled,
-} from '~/server/utils/course-staff-notifications'
-import { logger } from '~/utils/logger'
-import { sendEmail } from '~/server/utils/email'
-import { emailAppointmentAppStoreBlock } from '~/server/utils/branded-email'
-import {
-  deleteConfirmedSariMembership,
-  isUnresolvedSariRegistration,
-  listRegistrationSariMemberships,
-} from '~/server/utils/registration-sari-membership'
+import { cancelCourseWithFollowUps } from '~/server/utils/course-cancel-followups'
 
 /**
  * POST /api/admin/courses/cancel-course
- * Cancels a course, all its confirmed registrations, sends cancellation emails,
- * and unenrolls all participants from SARI (if the course is SARI-managed).
+ *
+ * Canonical course-cancellation entry point. Runs DB cascade + email outbox +
+ * staff calendar cleanup + SARI unenroll via cancelCourseWithFollowUps
+ * (shared with /api/courses/update-status when status=cancelled).
  *
  * Body:
- *   courseId      – id of the course to cancel
- *   notifyByEmail – boolean (send cancellation email to participants)
- *   notifyStaff   – boolean (email assigned instructors; calendar blocks always removed)
- *   participants  – array of { user_id, email, first_name, last_name }
+ *   courseId, notifyByEmail?, notifyStaff?, reason?, participants? (optional hint only)
  */
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
   const body = await readBody(event)
-  const { courseId, notifyByEmail, notifyStaff, participants, reason } = body as {
+  const { courseId, notifyByEmail, notifyStaff, reason } = body as {
     courseId: string
     notifyByEmail?: boolean
     notifyStaff?: boolean
     reason?: string
-    participants?: Array<{ user_id: string; email?: string; first_name?: string; last_name?: string }>
+    participants?: unknown
   }
 
   if (!courseId) throw createError({ statusCode: 400, statusMessage: 'Missing courseId' })
 
   const supabase = getSupabaseAdmin()
-  const now = new Date().toISOString()
 
-  // Fetch course with sessions, SARI info and tenant for email
-  const { data: course } = await supabase
-    .from('courses')
-    .select(`
-      id, name, description, sari_managed, sari_course_id,
-      course_sessions!course_sessions_course_id_fkey(id, start_time, end_time, sari_session_id),
-      tenants!inner(id, name, slug, contact_email, from_email, resend_domain_verified, primary_color, sari_enabled, sari_environment)
-    `)
-    .eq('id', courseId)
-    .eq('tenant_id', profile.tenant_id)
-    .single()
-
-  if (!course) throw createError({ statusCode: 404, statusMessage: 'Course not found' })
-
-  // Update course status to cancelled
-  const { error: courseError } = await supabase
-    .from('courses')
-    .update({
-      status: 'cancelled',
-      is_active: false,
-      cancelled_at: now,
-      cancelled_by: profile.id,
-      status_changed_at: now,
-      status_changed_by: profile.id,
-    })
-    .eq('id', courseId)
-
-  if (courseError) {
-    logger.error('❌ Error cancelling course:', courseError)
-    throw createError({ statusCode: 500, statusMessage: courseError.message })
-  }
-
-  // Cancel all confirmed registrations
-  const { error: regError } = await supabase
-    .from('course_registrations')
-    .update({ status: 'cancelled', cancelled_at: now })
-    .eq('course_id', courseId)
-    .eq('status', 'confirmed')
-
-  if (regError) {
-    logger.error('❌ Error cancelling registrations:', regError)
-    throw createError({ statusCode: 500, statusMessage: regError.message })
-  }
-
-  logger.debug('✅ Course cancelled:', courseId)
-
-  // Release vehicle/room reservations tied to this course's sessions
-  await cancelResourceBookingsForCourse(supabase, courseId, profile.tenant_id)
-
-  // ── Staff calendar blocks: always remove; email only if admin opted in ──
-  let staffAppointmentsRemoved = 0
-  let staffNotified = 0
-  try {
-    const { data: staffSessions } = await supabase
-      .from('course_sessions')
-      .select('id, start_time, end_time, description, staff_id')
-      .eq('course_id', courseId)
-      .not('staff_id', 'is', null)
-
-    const byStaff = new Map<string, Array<{ id: string; start_time: string; end_time: string; description?: string | null }>>()
-    for (const s of staffSessions || []) {
-      if (!s.staff_id) continue
-      if (!byStaff.has(s.staff_id)) byStaff.set(s.staff_id, [])
-      byStaff.get(s.staff_id)!.push(s)
-    }
-
-    const courseForNotify = {
-      id: course.id,
-      name: course.name,
-      tenant_id: profile.tenant_id,
-    }
-
-    for (const [staffId, sessions] of byStaff) {
-      await deleteStaffCourseAppointments(supabase, staffId, courseId)
-      staffAppointmentsRemoved++
-      if (notifyStaff) {
-        await notifyStaffCourseCancelled(supabase, staffId, courseForNotify, sessions)
-        staffNotified++
-      }
-    }
-
-    // Catch orphan course appointments (staff_id cleared on sessions but notes remain)
-    const { data: leftover } = await supabase
-      .from('appointments')
-      .delete()
-      .eq('notes', `course:${courseId}`)
-      .select('id')
-
-    if (leftover?.length) {
-      staffAppointmentsRemoved += leftover.length
-      logger.debug(`🧹 Removed ${leftover.length} leftover course appointment(s) for ${courseId}`)
-    }
-  } catch (staffCleanupErr: any) {
-    logger.warn('⚠️ Staff appointment cleanup after course cancel failed:', staffCleanupErr.message)
-  }
-
-  // ── SARI: Unenroll all participants ──────────────────────────────────────
-  const tenant = (course as any).tenants
-  let sariUnenrolled = 0
-  let sariUnresolved = 0
-  let sariLocalOnly = 0
-  let sariError: string | null = null
-  let sariFailedCount = 0
-  let sariBlockedCount = 0
-  let restoredUserIds = new Set<string>()
-  const unresolvedUserIds = new Set<string>()
-  const isSariManaged = !!(course as any).sari_managed && !!tenant?.sari_enabled
-
-  if (isSariManaged) {
-    try {
-      // Load SARI credentials
-      const sariSecrets = await getTenantSecretsSecure(
-        profile.tenant_id,
-        ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
-        'CANCEL_COURSE_SARI_UNENROLL'
-      )
-
-      const sariClient = new SARIClient({
-        environment: (tenant.sari_environment || 'test') as 'test' | 'production',
-        clientId: sariSecrets.SARI_CLIENT_ID,
-        clientSecret: sariSecrets.SARI_CLIENT_SECRET,
-        username: sariSecrets.SARI_USERNAME,
-        password: sariSecrets.SARI_PASSWORD,
-      })
-
-      // Fetch confirmed registrations with user faberid. SARI ids come from
-      // membership rows, not from courses.sari_course_id.
-      const { data: regs } = await supabase
-        .from('course_registrations')
-        .select('id, user_id, status, payment_method, sari_faberid, users!course_registrations_user_id_fkey(id, faberid, first_name, last_name)')
-        .eq('course_id', courseId)
-        .eq('tenant_id', profile.tenant_id)
-        .eq('status', 'cancelled') // already cancelled above
-        .is('deleted_at', null)
-
-      let unenrolled = 0
-      const failuresForLog: Array<{ faberid: string; sessionId: number; error: string }> = []
-
-      for (const reg of regs || []) {
-        const faberid = (reg as any).sari_faberid || (reg as any).users?.faberid
-        const memberships = await listRegistrationSariMemberships(supabase, profile.tenant_id, reg.id)
-        if (!faberid || (reg as any).payment_method === 'reserved') {
-          sariLocalOnly++
-          continue
-        }
-        if (memberships.length === 0 && isUnresolvedSariRegistration({
-          sariManaged: true,
-          faberid,
-          status: 'confirmed',
-          paymentMethod: (reg as any).payment_method,
-          membershipCount: 0,
-        })) {
-          sariUnresolved++
-          if ((reg as any).user_id) unresolvedUserIds.add((reg as any).user_id)
-          const { error: restoreUnresolvedError } = await supabase
-            .from('course_registrations')
-            .update({
-              status: 'confirmed',
-              cancelled_at: null,
-              sari_synced: false,
-              sari_synced_at: null,
-            })
-            .eq('id', reg.id)
-            .eq('tenant_id', profile.tenant_id)
-          if (restoreUnresolvedError) {
-            throw createError({ statusCode: 500, statusMessage: restoreUnresolvedError.message })
-          }
-          continue
-        }
-        let regFailed = false
-        for (const membership of memberships) {
-          try {
-            await sariClient.unenrollStudent(membership.sari_session_id, faberid)
-            await deleteConfirmedSariMembership({
-              supabase,
-              tenantId: profile.tenant_id,
-              registrationId: reg.id,
-              sariSessionId: membership.sari_session_id,
-            })
-            unenrolled++
-          } catch (err: any) {
-            if (isSariUnenrollIdempotent(err.message)) {
-              await deleteConfirmedSariMembership({
-                supabase,
-                tenantId: profile.tenant_id,
-                registrationId: reg.id,
-                sariSessionId: membership.sari_session_id,
-              })
-              unenrolled++
-              continue
-            }
-            regFailed = true
-            if (isSariUnenrollBlocked(err.message)) sariBlockedCount++
-            failuresForLog.push({ faberid, sessionId: membership.sari_session_id, error: err.message })
-            logger.warn(`⚠️ SARI unenroll failed for faberid ${faberid} / session ${membership.sari_session_id}: ${err.message}`)
-          }
-        }
-        if (regFailed) sariFailedCount++
-        else {
-          // Every stored membership for this registration was removed.
-          const { error: syncError } = await supabase
-            .from('course_registrations')
-            .update({ sari_synced: true, sari_synced_at: now })
-            .eq('id', reg.id)
-            .eq('tenant_id', profile.tenant_id)
-          if (syncError) {
-            logger.error('❌ Could not mark registration SARI-synced after unenroll:', syncError)
-            throw createError({ statusCode: 500, statusMessage: syncError.message })
-          }
-        }
-      }
-
-      const restored = await restoreRegistrationsThatStillHaveMemberships(
-        supabase,
-        profile.tenant_id,
-        courseId,
-      )
-      restoredUserIds = restored.userIds
-      if (restored.count > 0) sariFailedCount = Math.max(sariFailedCount, restored.count)
-
-      if (failuresForLog.length > 0) {
-        await supabase.from('sari_sync_logs').insert({
-          tenant_id: profile.tenant_id,
-          operation: 'UNENROLL_STUDENT_CANCEL_COURSE',
-          status: sariFailedCount === (regs || []).length ? 'error' : 'partial',
-          result: { failures: failuresForLog },
-          error_message: sariBlockedCount > 0 ? getSariUnenrollBlockedMessage() : `${failuresForLog.length} SARI-Abmeldung(en) fehlgeschlagen`,
-          metadata: { courseId },
-        })
-      }
-
-      logger.info(`✅ SARI: unenrolled ${unenrolled} membership(s) for cancelled course ${courseId} (${sariFailedCount} participant(s) failed, ${sariUnresolved} unresolved)`)
-      sariUnenrolled = unenrolled
-    } catch (sariErr: any) {
-      logger.error(`⚠️ SARI unenrollment failed during course cancellation: ${sariErr.message}`)
-      sariError = sariErr.message
-      try {
-        const restored = await restoreRegistrationsThatStillHaveMemberships(
-          supabase,
-          profile.tenant_id,
-          courseId,
-        )
-        restoredUserIds = restored.userIds
-        if (restored.count > 0) sariFailedCount = Math.max(sariFailedCount, restored.count)
-      } catch (restoreErr: any) {
-        logger.error('❌ Could not restore registrations after failed SARI unenroll:', restoreErr?.message)
-        throw createError({
-          statusCode: restoreErr?.statusCode || 500,
-          statusMessage: restoreErr?.statusMessage || restoreErr?.message || 'Anmeldung konnte nach fehlgeschlagener SARI-Abmeldung nicht wiederhergestellt werden',
-        })
-      }
-    }
-  }
-
-  // Send cancellation emails if requested. Skip participants whose registration
-  // was restored because a SARI membership is still active.
-  const emailParticipants = (participants || []).filter((p) => !restoredUserIds.has(p.user_id) && !unresolvedUserIds.has(p.user_id))
-  if (notifyByEmail && emailParticipants.length > 0) {
-    const sessions: any[] = (course as any).course_sessions || []
-
-    const sortedSessions = [...sessions].sort(
-      (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-    )
-
-    const formattedSessions = formatSessionsForEmail(sortedSessions)
-
-    try {
-      const tenantFrom = {
-        fromName: tenant?.name || undefined,
-        fromEmail: tenant?.from_email ?? null,
-        domainVerified: !!tenant?.resend_domain_verified,
-      }
-
-      let sent = 0
-      for (const p of emailParticipants) {
-        if (!p.email) continue
-        const firstName = p.first_name || 'Teilnehmer'
-
-        const subject = `Kurs abgesagt: ${course.name}`
-        const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
-        const bookingUrl = tenant?.slug ? `${baseUrl}/booking/availability/${tenant.slug}` : undefined
-
-        const html = buildCancellationEmail({
-          firstName,
-          courseName: course.name,
-          courseDescription: course.description || '',
-          formattedSessions,
-          tenantName: tenant?.name || '',
-          tenantEmail: tenant?.contact_email || '',
-          primaryColor: tenant?.primary_color || '#ef4444',
-          reason: reason || '',
-          bookingUrl,
-        })
-
-        try {
-          await sendEmail({ ...tenantFrom, to: p.email, subject, html })
-          sent++
-        } catch (err: any) {
-          logger.warn(`⚠️ Failed to send cancellation email to ${p.email}:`, err.message)
-        }
-      }
-
-      logger.debug(`✅ Sent ${sent}/${emailParticipants.length} cancellation emails`)
-    } catch (err: any) {
-      // Non-fatal: log but don't fail the cancellation
-      logger.error('⚠️ Email sending failed for course cancellation:', err.message)
-    }
-  }
+  const { cancelResult, followUps, complete, warnings } = await cancelCourseWithFollowUps({
+    supabase,
+    tenantId: profile.tenant_id,
+    actorId: profile.id,
+    courseId,
+    notifyParticipants: notifyByEmail !== false,
+    notifyStaff: !!notifyStaff,
+    reason: reason || null,
+  })
 
   return {
     success: true,
+    complete,
+    courseId,
+    database: cancelResult.database,
+    emails: cancelResult.emails,
+    resources: cancelResult.resources,
+    manualReviewRequired: cancelResult.manualReviewRequired,
+    warnings,
+    auditId: cancelResult.auditId,
     staff: {
-      instructorsCleared: staffAppointmentsRemoved,
-      notified: staffNotified,
+      instructorsCleared: followUps.staff.instructorsCleared,
+      notified: followUps.staff.notified,
+      ok: followUps.staff.ok,
+      errors: followUps.staff.errors,
     },
-    sari: isSariManaged
+    sari: followUps.sari
       ? {
-          unenrolled: sariUnenrolled,
-          unresolved: sariUnresolved,
-          failed: sariFailedCount,
-          localOnly: sariLocalOnly,
-          error: sariError,
-          failedCount: sariFailedCount,
-          blockedCount: sariBlockedCount,
-          restoredCount: restoredUserIds.size,
-          blockedMessage: sariBlockedCount > 0 ? getSariUnenrollBlockedMessage() : undefined,
+          unenrolled: followUps.sari.unenrolled,
+          alreadyCompleted: followUps.sari.alreadyCompleted,
+          unresolved: followUps.sari.unresolved,
+          failed: followUps.sari.failed,
+          localOnly: followUps.sari.localOnly,
+          error: followUps.sari.error,
+          failedCount: followUps.sari.failedCount,
+          blockedCount: followUps.sari.blockedCount,
+          restoredCount: 0 as const,
+          blockedMessage: followUps.sari.blockedMessage,
+          ok: followUps.sari.ok,
         }
       : null,
   }
 })
-
-/** A remaining membership row means the SARI seat is still active. */
-async function restoreRegistrationsThatStillHaveMemberships(
-  supabase: ReturnType<typeof getSupabaseAdmin>,
-  tenantId: string,
-  courseId: string,
-): Promise<{ count: number; userIds: Set<string> }> {
-  const { data: regs, error } = await supabase
-    .from('course_registrations')
-    .select('id, user_id')
-    .eq('course_id', courseId)
-    .eq('tenant_id', tenantId)
-    .eq('status', 'cancelled')
-    .is('deleted_at', null)
-
-  if (error) {
-    logger.error('❌ Could not load registrations to restore after SARI failure:', error)
-    throw createError({ statusCode: 500, statusMessage: error.message })
-  }
-
-  const userIds = new Set<string>()
-  let count = 0
-  for (const reg of regs || []) {
-    const memberships = await listRegistrationSariMemberships(supabase, tenantId, reg.id)
-    if (memberships.length === 0) continue
-    const { error: revertError } = await supabase
-      .from('course_registrations')
-      .update({
-        status: 'confirmed',
-        cancelled_at: null,
-        sari_synced: false,
-        sari_synced_at: null,
-      })
-      .eq('id', reg.id)
-      .eq('tenant_id', tenantId)
-    if (revertError) {
-      logger.error('❌ Could not restore registration after failed SARI unenroll:', revertError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'SARI-Abmeldung fehlgeschlagen und die Anmeldung konnte nicht wiederhergestellt werden',
-      })
-    }
-    count++
-    if (reg.user_id) userIds.add(reg.user_id)
-  }
-  return { count, userIds }
-}
-
-function buildCancellationEmail({
-  firstName,
-  courseName,
-  courseDescription,
-  formattedSessions,
-  tenantName,
-  tenantEmail,
-  primaryColor,
-  reason,
-  bookingUrl,
-}: {
-  firstName: string
-  courseName: string
-  courseDescription: string
-  formattedSessions: string
-  tenantName: string
-  tenantEmail: string
-  primaryColor: string
-  reason?: string
-  bookingUrl?: string
-}): string {
-  return `
-    <!DOCTYPE html>
-    <html lang="de">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Kurs abgesagt: ${courseName}</title>
-    </head>
-    <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f3f4f6;">
-        <tr>
-          <td align="center" style="padding:20px 10px;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
-
-              <!-- Header -->
-              <tr>
-                <td style="background:#ef4444;color:white;padding:25px 20px;text-align:center;">
-                  <h1 style="margin:0;font-size:22px;font-weight:600;">Kursabsage</h1>
-                  <p style="margin:5px 0 0 0;opacity:0.9;font-size:14px;">${tenantName}</p>
-                </td>
-              </tr>
-
-              <!-- Content -->
-              <tr>
-                <td style="padding:25px 20px;">
-                  <p style="margin:0 0 15px 0;font-size:16px;">Hallo ${firstName},</p>
-                  <p style="margin:0 0 20px 0;font-size:15px;color:#374151;">
-                    leider müssen wir dir mitteilen, dass der folgende Kurs abgesagt wurde.
-                  </p>
-
-                  <!-- Course Details -->
-                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef2f2;border-radius:8px;margin-bottom:20px;border-left:4px solid #ef4444;">
-                    <tr>
-                      <td style="padding:20px;">
-                        <h3 style="margin:0 0 12px 0;color:#b91c1c;font-size:15px;font-weight:600;">Abgesagter Kurs</h3>
-                        <p style="margin:0 0 8px 0;font-size:13px;"><strong>Kurs:</strong> ${courseName}</p>
-                        ${courseDescription ? `<p style="margin:0 0 8px 0;font-size:13px;"><strong>Standort:</strong> ${courseDescription}</p>` : ''}
-                        ${formattedSessions ? `
-                        <p style="margin:8px 0 4px 0;font-size:13px;"><strong>Termine:</strong></p>
-                        <ul style="margin:0;padding-left:20px;font-size:13px;color:#374151;">
-                          ${formattedSessions}
-                        </ul>` : ''}
-                      </td>
-                    </tr>
-                  </table>
-
-                  ${reason ? `
-                  <!-- Reason -->
-                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fffbeb;border-radius:8px;margin-bottom:20px;border-left:4px solid #f59e0b;">
-                    <tr>
-                      <td style="padding:16px;">
-                        <p style="margin:0 0 6px 0;font-size:13px;font-weight:600;color:#92400e;">Grund der Absage:</p>
-                        <p style="margin:0;font-size:13px;color:#78350f;">${reason}</p>
-                      </td>
-                    </tr>
-                  </table>` : ''}
-
-                  <!-- Apology -->
-                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef3c7;border-radius:8px;margin-bottom:20px;border-left:4px solid #f59e0b;">
-                    <tr>
-                      <td style="padding:16px;">
-                        <p style="margin:0;font-size:13px;color:#92400e;">
-                          Wir entschuldigen uns für die Unannehmlichkeiten. Bei Fragen oder zur Vereinbarung eines neuen Termins kontaktiere uns bitte direkt.
-                        </p>
-                      </td>
-                    </tr>
-                  </table>
-
-                  ${bookingUrl ? `
-                  <!-- Rebooking CTA -->
-                  <table role="presentation" cellspacing="0" cellpadding="0" style="margin-bottom:24px;">
-                    <tr>
-                      <td style="border-radius:8px;background:${primaryColor || '#ef4444'};">
-                        <a href="${bookingUrl}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">
-                          Neuen Termin buchen →
-                        </a>
-                      </td>
-                    </tr>
-                  </table>` : ''}
-
-                  <p style="margin:20px 0 5px 0;font-size:15px;">Freundliche Grüsse,<br>${tenantName}</p>
-                  ${tenantEmail ? `<p style="margin:8px 0 0 0;font-size:12px;color:#6b7280;">${tenantEmail}</p>` : ''}
-                  ${emailAppointmentAppStoreBlock()}
-                </td>
-              </tr>
-
-              <!-- Footer -->
-              <tr>
-                <td style="background:#f3f4f6;padding:15px 20px;text-align:center;">
-                  <p style="margin:0;font-size:11px;color:#9ca3af;">Diese E-Mail wurde automatisch generiert.</p>
-                </td>
-              </tr>
-
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
-  `
-}
-
-function formatSessionsForEmail(sessions: any[]): string {
-  if (!sessions || sessions.length === 0) return ''
-
-  const sessionsByDate: Record<string, any[]> = {}
-  for (const s of sessions) {
-    const dateKey = new Date(s.start_time).toLocaleDateString('sv-SE', { timeZone: 'Europe/Zurich' })
-    if (!sessionsByDate[dateKey]) sessionsByDate[dateKey] = []
-    sessionsByDate[dateKey].push(s)
-  }
-
-  const extractTime = (iso: string) =>
-    new Date(iso).toLocaleTimeString('de-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' })
-
-  return Object.entries(sessionsByDate).map(([dateKey, daySessions]) => {
-    const date = new Date(`${dateKey}T12:00:00`).toLocaleDateString('de-CH', {
-      timeZone: 'Europe/Zurich', weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
-    }).replace(',', '.')
-    const start = extractTime(daySessions[0].start_time)
-    const last = daySessions[daySessions.length - 1]
-    const end = last.end_time ? ` - ${extractTime(last.end_time)}` : ''
-    return `<li>${date}, ${start}${end}</li>`
-  }).join('\n')
-}

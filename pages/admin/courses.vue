@@ -1487,6 +1487,18 @@
             />
           </div>
 
+          <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-900 space-y-1">
+            <p class="font-medium">Bei Absage wird ausgeführt:</p>
+            <ul class="list-disc pl-5 space-y-0.5">
+              <li>Anmeldungen auf storniert setzen</li>
+              <li>Unbezahlte Rechnungen stornieren (Historie bleibt erhalten)</li>
+              <li>Offene Zahlungsverpflichtungen stornieren</li>
+              <li>Raum-/Fahrzeug-Reservationen freigeben</li>
+              <li>Teilnehmer-E-Mails in die Versandwarteschlange stellen (wenn aktiviert)</li>
+            </ul>
+            <p class="text-xs text-red-800 mt-2">Bereits bezahlte Rechnungen/Zahlungen werden nicht automatisch rückerstattet — manuelle Prüfung nötig.</p>
+          </div>
+
           <!-- Notification Options -->
           <div class="space-y-4">
             <h3 class="font-semibold text-gray-900">Benachrichtigungen:</h3>
@@ -1494,8 +1506,9 @@
             <div class="space-y-3">
               <!-- Email Notification participants -->
               <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                  <span class="text-gray-700">📧 Teilnehmer per E-Mail</span>
+                <div class="flex flex-col">
+                  <span class="text-gray-700">Teilnehmer per E-Mail</span>
+                  <span class="text-xs text-gray-500">Wird in die Versandwarteschlange gestellt (idempotent)</span>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
                   <input 
@@ -1648,24 +1661,12 @@
               </div>
             </div>
 
-            <!-- Additional fields for cancelled status -->
-            <div v-if="newStatus === 'cancelled'" class="border-t border-gray-200 pt-4 space-y-4">
-              <div class="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p class="text-sm text-red-800">
-                  <strong>Hinweis:</strong> Bei Stornierung werden alle Kurstermine abgesagt und Zahlungen erstattet.
+            <!-- Cancelled status is handled by the dedicated cancel modal (cancelCourse). -->
+            <div v-if="newStatus === 'cancelled'" class="border-t border-gray-200 pt-4">
+              <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p class="text-sm text-amber-900">
+                  Kursabsagen laufen über den Absage-Dialog mit Anmeldungs-, Rechnungs- und Benachrichtigungs-Prüfung.
                 </p>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Nachricht an Teilnehmer (optional)
-                </label>
-                <textarea
-                  v-model="statusChangeOptions.customMessage"
-                  rows="4"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md tenant-focus focus:outline-none focus:ring-2"
-                  placeholder="z.B. Der Kurs muss leider aufgrund unvorhergesehener Umstände abgesagt werden..."
-                ></textarea>
               </div>
             </div>
 
@@ -6801,6 +6802,12 @@ const updateCourseStatus = (course: any, newStatusValue: string) => {
     logger.debug('🔒 Closing edit modal if open...')
     editingCourse.value = null
     // NOT: showCreateCourseModal.value = false  ← Das war der Fehler!
+
+    // Cancellation must use the canonical cancel workflow (not status-only update).
+    if (newStatusValue === 'cancelled') {
+      cancelCourse(course)
+      return
+    }
     
     // Open modal for confirmation and options
     statusChangeCourse.value = course
@@ -6857,18 +6864,34 @@ const confirmStatusChange = async () => {
     if (!newStatusForLogging) throw new Error('New status is not selected')
     if (newStatusForLogging === oldStatusForLogging) throw new Error('New status is the same as old status')
 
+    // Defense: cancelled must never go through a status-only success path.
+    if (newStatusForLogging === 'cancelled') {
+      showStatusChangeModal.value = false
+      cancelCourse(statusChangeCourse.value)
+      return
+    }
+
     const result = await $fetch('/api/courses/update-status', {
       method: 'POST',
       body: {
         courseId,
         status: newStatusForLogging,
         notifyWaitlist: statusChangeOptions.value.notifyWaitlist,
+        notifyParticipants: statusChangeOptions.value.notifyParticipants,
       },
     })
 
     const updatedCourse = (result as any).course
+    const cancellation = (result as any).cancellation
 
-    success.value = `Kurs-Status auf "${getStatusText({ status: updatedCourse.status })}" geändert!`
+    if (cancellation && cancellation.complete === false) {
+      success.value = `Kurs-Status geändert — Absage unvollständig: bitte Warnungen prüfen.`
+      if (cancellation.warnings?.length) {
+        error.value = cancellation.warnings.join(' · ')
+      }
+    } else {
+      success.value = `Kurs-Status auf "${getStatusText({ status: updatedCourse.status })}" geändert!`
+    }
     showStatusChangeModal.value = false
     statusChangeCourse.value = null
     oldStatus.value = ''
@@ -6993,35 +7016,59 @@ const executeCourseCancellation = async () => {
       },
     }) as any
 
+    const db = res?.database
+    const emails = res?.emails
     const sari = res?.sari
-    let msg = `Kurs "${cancelingCourse.value.name}" erfolgreich abgesagt.`
-    if (res?.staff?.instructorsCleared) {
-      msg += ` Staff-Kalendertermine entfernt`
-      if (res.staff.notified) msg += ` (${res.staff.notified} benachrichtigt)`
-      msg += '.'
+    const parts: string[] = []
+
+    if (res?.complete) {
+      parts.push(`Kurs "${cancelingCourse.value.name}" vollständig abgesagt.`)
+    } else {
+      parts.push(`Kurs "${cancelingCourse.value.name}" abgesagt — mit offenen Punkten.`)
+    }
+
+    if (db) {
+      const regN = db.registrationIds?.length ?? 0
+      const invN = db.invoiceIdsCancelled?.length ?? 0
+      const payN = db.paymentIdsCancelled?.length ?? 0
+      const roomN = db.roomBookingIds?.length ?? 0
+      parts.push(`${regN} Anmeldung(en), ${invN} Rechnung(en), ${payN} Zahlung(en), ${roomN} Raumreservation(en) verarbeitet.`)
+    }
+    if (emails?.requested) {
+      parts.push(`E-Mails: ${emails.queued || 0} eingereiht, ${emails.skippedDuplicate || 0} bereits vorhanden.`)
+      if (emails.errors?.length) parts.push(`⚠️ E-Mail-Warteschlange: ${emails.errors.length} Fehler.`)
+    }
+    if (res?.manualReviewRequired?.length) {
+      parts.push(`⚠️ ${res.manualReviewRequired.length} bezahlte/autorisierte Position(en) brauchen manuelle Prüfung (keine Auto-Stornierung/Rückerstattung).`)
+    }
+    if (res?.resources && res.resources.ok === false) {
+      parts.push(`⚠️ Ressourcen-Cleanup unvollständig (${(res.resources.errors || []).length} Fehler).`)
+    }
+    if (res?.staff?.ok === false) {
+      parts.push(`⚠️ Staff-Kalender-Cleanup unvollständig.`)
+    } else if (res?.staff?.instructorsCleared) {
+      let staffMsg = `Staff-Kalendertermine entfernt`
+      if (res.staff.notified) staffMsg += ` (${res.staff.notified} benachrichtigt)`
+      parts.push(staffMsg + '.')
     }
     if (sari) {
-      if (sari.error) {
-        msg += ` ⚠️ SARI-Abmeldung fehlgeschlagen: ${sari.error}`
-      }
+      if (sari.error) parts.push(`⚠️ SARI-Abmeldung fehlgeschlagen: ${sari.error}`)
       const removed = Number(sari.unenrolled) || 0
       const unresolved = Number(sari.unresolved) || 0
       const failed = Number(sari.failed ?? sari.failedCount) || 0
-      const localOnly = Number(sari.localOnly) || 0
-      if (removed > 0) msg += ` ${removed} SARI-Mitgliedschaft(en) entfernt.`
-      if (unresolved > 0) msg += ` ${unresolved} Anmeldung(en) mit unbekanntem SARI-Status bleiben aktiv.`
+      if (removed > 0) parts.push(`${removed} SARI-Mitgliedschaft(en) entfernt.`)
+      if (unresolved > 0) parts.push(`${unresolved} Anmeldung(en) mit unklarem SARI-Status — manuell prüfen.`)
       if (failed > 0) {
-        msg += ` ⚠️ ${failed} Anmeldung(en) konnten nicht vollständig aus SARI entfernt werden`
-        msg += sari.blockedMessage ? ` (${sari.blockedMessage}).` : '.'
+        parts.push(`⚠️ ${failed} SARI-Abmeldung(en) unvollständig${sari.blockedMessage ? ` (${sari.blockedMessage})` : ''}.`)
       }
-      if (sari.restoredCount > 0) {
-        msg += ` Deren Anmeldung bleibt aktiv, weil die SARI-Membership noch besteht.`
-      }
-      if (localOnly > 0) msg += ` ${localOnly} lokale Anmeldung(en) ohne SARI-Mitgliedschaft verarbeitet.`
-      msg += ` Hinweis: Den Kurs selbst musst du manuell in SARI löschen.`
+      parts.push('Hinweis: Den Kurs selbst musst du manuell in SARI löschen.')
     }
-    success.value = msg
-    
+    if (res?.warnings?.length) {
+      error.value = res.warnings.join(' · ')
+    }
+
+    success.value = parts.join(' ')
+
     // Close modal and reload courses
     showCancelCourseModal.value = false
     cancelingCourse.value = null
@@ -7033,7 +7080,7 @@ const executeCourseCancellation = async () => {
 
   } catch (err: any) {
     console.error('Error cancelling course:', err)
-    error.value = `Fehler beim Absagen: ${err.message}`
+    error.value = `Fehler beim Absagen: ${err.data?.statusMessage || err.data?.message || err.message}`
   } finally {
     isCanceling.value = false
   }

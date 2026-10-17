@@ -57,35 +57,53 @@ export default defineEventHandler(async (event) => {
 
   let instructorsCleared = 0
   let notified = 0
+  const errors: string[] = []
 
   for (const [staffId, sessions] of byStaff) {
-    await deleteStaffCourseAppointments(supabase, staffId, courseId)
-    instructorsCleared++
-    if (notifyStaff && sessions?.length) {
-      await notifyStaffCourseCancelled(
-        supabase,
-        staffId,
-        { id: course.id, name: course.name, tenant_id: course.tenant_id },
-        sessions,
-      )
-      notified++
+    const deleted = await deleteStaffCourseAppointments(
+      supabase,
+      staffId,
+      courseId,
+      profile.tenant_id,
+    )
+    if (!deleted.ok) {
+      errors.push(`staff ${staffId}: ${deleted.error || 'delete failed'}`)
+      continue
+    }
+    if (deleted.deletedIds.length > 0) {
+      instructorsCleared += deleted.deletedIds.length
+      if (notifyStaff && sessions?.length) {
+        await notifyStaffCourseCancelled(
+          supabase,
+          staffId,
+          { id: course.id, name: course.name, tenant_id: course.tenant_id },
+          sessions,
+        )
+        notified++
+      }
     }
   }
 
-  const { data: leftover } = await supabase
+  const { data: leftover, error: leftoverError } = await supabase
     .from('appointments')
     .delete()
     .eq('notes', `course:${courseId}`)
+    .eq('tenant_id', profile.tenant_id)
     .select('id')
 
-  if (leftover?.length) {
+  if (leftoverError) {
+    errors.push(`leftover: ${leftoverError.message}`)
+  } else if (leftover?.length) {
+    instructorsCleared += leftover.length
     logger.debug(`🧹 Removed ${leftover.length} leftover appointment(s) for cancelled course ${courseId}`)
   }
 
   return {
-    success: true,
+    success: errors.length === 0,
+    complete: errors.length === 0,
     instructorsCleared,
     notified,
     leftoverRemoved: leftover?.length || 0,
+    errors,
   }
 })
