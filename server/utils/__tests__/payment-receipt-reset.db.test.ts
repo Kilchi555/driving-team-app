@@ -61,10 +61,10 @@ async function seed(): Promise<void> {
   await client.query(`
     INSERT INTO invoices (
       id, tenant_id, invoice_number, invoice_date, due_date, status, payment_status,
-      subtotal_rappen, vat_amount_rappen, total_amount_rappen, paid_amount_rappen, paid_at, document_kind
+      subtotal_rappen, vat_rate, vat_amount_rappen, discount_amount_rappen, total_amount_rappen, paid_amount_rappen, paid_at, document_kind
     ) VALUES (
       $1, $2, 'SYN-2026-0001', CURRENT_DATE - 40, CURRENT_DATE - 1,
-      'paid', 'paid', 46500, 0, 46500, 46500, CURRENT_TIMESTAMP, 'invoice'
+      'paid', 'paid', 46500, 0, 0, 0, 46500, 46500, CURRENT_TIMESTAMP, 'invoice'
     )
   `, [INVOICE, TENANT])
   await client.query(`
@@ -106,9 +106,9 @@ async function seed(): Promise<void> {
   await client.query(`
     INSERT INTO invoices (
       id, tenant_id, invoice_number, invoice_date, due_date, status, payment_status,
-      subtotal_rappen, vat_amount_rappen, total_amount_rappen, paid_amount_rappen, document_kind
+      subtotal_rappen, vat_rate, vat_amount_rappen, discount_amount_rappen, total_amount_rappen, paid_amount_rappen, document_kind
     ) VALUES (
-      $1, $2, 'SYN-OTHER-1', CURRENT_DATE - 10, CURRENT_DATE, 'paid', 'paid', 9999, 0, 9999, 9999, 'invoice'
+      $1, $2, 'SYN-OTHER-1', CURRENT_DATE - 10, CURRENT_DATE, 'paid', 'paid', 9999, 0, 0, 0, 9999, 9999, 'invoice'
     )
   `, [OTHER_INVOICE, OTHER_TENANT])
   await client.query(`
@@ -131,10 +131,12 @@ async function resetDatabase(): Promise<void> {
       invoice_items,
       invoices,
       appointments,
+      payment_audit_logs,
       cash_transactions,
       bank_import_records,
       payment_receipt_resets,
       credit_transactions,
+      student_credits,
       users
     RESTART IDENTITY CASCADE
   `)
@@ -172,6 +174,7 @@ describe('admin_reset_mistaken_receipt on disposable Postgres', () => {
         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF;
       END $$;
     `)
+    await client.query(sqlFile('migrations/20261016_admin_reset_mistaken_receipt.sql'))
     await client.query(sqlFile('migrations/20261016_admin_reset_mistaken_receipt.sql'))
   }, 30000)
 
@@ -731,5 +734,82 @@ describe('admin_reset_mistaken_receipt on disposable Postgres', () => {
     expect(await committedLedger()).toEqual(before)
     const sibling = await client.query(`SELECT payment_status FROM payments WHERE id = $1`, [SIB_124])
     expect(sibling.rows[0].payment_status).toBe('completed')
+  })
+
+  it('does not report already_applied on a new key while an invoice credit remains', async () => {
+    await applyReset('applied-before-credit')
+    await client.query(`
+      INSERT INTO credit_transactions (
+        id, tenant_id, transaction_type, amount_rappen, reference_id, reference_type, status
+      ) VALUES (
+        '10000000-0000-4000-8000-0000000000c5', $1, 'deposit', 5000, $2, 'invoice', 'cancelled'
+      )
+    `, [TENANT, INVOICE])
+    const before = await committedLedger()
+    await expect(client.query(
+      `SELECT public.admin_reset_mistaken_receipt(
+        $1::uuid, $2::uuid, $3::uuid, $4::text, 'credit-after-apply',
+        false, NULL::uuid, NULL::integer, NULL::text, CURRENT_DATE, NULL::text, NULL::text
+      )`,
+      [TENANT, ACTOR, PAYMENT, REASON],
+    )).rejects.toThrow(/invoice_credit_transaction_present/)
+    expect(await committedLedger()).toEqual(before)
+    const payment = await client.query(`SELECT payment_status FROM payments WHERE id = $1`, [PAYMENT])
+    expect(payment.rows[0].payment_status).toBe('invoice')
+  })
+
+  it('rejects a cancelled credit row instead of treating that status as reversed', async () => {
+    await client.query(`
+      INSERT INTO credit_transactions (
+        id, tenant_id, transaction_type, amount_rappen, reference_id, reference_type, status
+      ) VALUES (
+        '10000000-0000-4000-8000-0000000000c6', $1, 'deposit', 5000, $2, 'invoice', 'cancelled'
+      )
+    `, [TENANT, INVOICE])
+    await expectRejectionLeavesLedgerUnchanged('cancelled-credit', /invoice_credit_transaction_present/)
+  })
+
+  it('does not adopt another tenant storno and rolls the reset back', async () => {
+    await client.query(`
+      INSERT INTO accounting_entries (
+        id, type, amount_rappen, entry_date, description, storno_of_id, tenant_id, approval_status, source
+      ) VALUES (
+        '10000000-0000-4000-8000-0000000000d1', 'expense', 18600, CURRENT_DATE, 'Foreign storno',
+        $1, $2, 'approved', 'manual'
+      )
+    `, [INCOME, OTHER_TENANT])
+    const before = await committedLedger()
+    await expect(client.query(resetCall('foreign-storno').text, resetCall('foreign-storno').values))
+      .rejects.toThrow(/storno_conflict/)
+    expect(await committedLedger()).toEqual(before)
+    const payment = await client.query(`SELECT payment_status FROM payments WHERE id = $1`, [PAYMENT])
+    expect(payment.rows[0].payment_status).toBe('completed')
+    const foreign = await client.query(
+      `SELECT tenant_id FROM accounting_entries WHERE id = '10000000-0000-4000-8000-0000000000d1'`,
+    )
+    expect(foreign.rows[0].tenant_id).toBe(OTHER_TENANT)
+  })
+
+  it('allows only service_role to execute the security-definer function', async () => {
+    const privilege = await client.query(`
+      SELECT
+        p.prosecdef AS security_definer,
+        p.proconfig AS config,
+        has_function_privilege('public', 'public.admin_reset_mistaken_receipt(uuid,uuid,uuid,text,text,boolean,uuid,integer,text,date,text,text)', 'EXECUTE') AS public_exec,
+        has_function_privilege('anon', 'public.admin_reset_mistaken_receipt(uuid,uuid,uuid,text,text,boolean,uuid,integer,text,date,text,text)', 'EXECUTE') AS anon_exec,
+        has_function_privilege('authenticated', 'public.admin_reset_mistaken_receipt(uuid,uuid,uuid,text,text,boolean,uuid,integer,text,date,text,text)', 'EXECUTE') AS auth_exec,
+        has_function_privilege('service_role', 'public.admin_reset_mistaken_receipt(uuid,uuid,uuid,text,text,boolean,uuid,integer,text,date,text,text)', 'EXECUTE') AS service_exec
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = 'admin_reset_mistaken_receipt'
+    `)
+    expect(privilege.rows[0]).toMatchObject({
+      security_definer: true,
+      public_exec: false,
+      anon_exec: false,
+      auth_exec: false,
+      service_exec: true,
+    })
+    expect(privilege.rows[0].config.join(' ')).toContain('search_path=pg_catalog, public')
   })
 })

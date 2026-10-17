@@ -249,6 +249,61 @@ describe('Gemperli shared invoice receipt', () => {
     expect(after.stornoCount).toBe(1)
   })
 
+  it('does not treat an applied reset as clean when wallet credit remains', () => {
+    const applied = gemperli({
+      payment: {
+        id: PAYMENT,
+        tenantId: TENANT,
+        userId: CUSTOMER,
+        appointmentId: APPOINTMENT,
+        invoiceId: INVOICE,
+        paymentMethod: 'invoice',
+        paymentStatus: 'invoice',
+        totalAmountRappen: 18600,
+        paidAt: null,
+        walleeTransactionId: null,
+        refundedAmountRappen: 0,
+      },
+      invoice: {
+        id: INVOICE,
+        tenantId: TENANT,
+        invoiceNumber: 'RE-2026-0043',
+        totalAmountRappen: 46500,
+        paidAmountRappen: 27900,
+        creditAppliedRappen: 5000,
+        status: 'overdue',
+        paymentStatus: 'partial',
+        dueDate: '2026-10-13',
+      },
+      settlements: [
+        {
+          id: SETTLEMENT,
+          amountRappen: 46500,
+          status: 'completed',
+          paymentMethod: 'manual',
+          paymentReference: null,
+        },
+        {
+          id: 'reversal-1',
+          amountRappen: 18600,
+          status: 'reversal',
+          paymentMethod: 'reversal',
+          paymentReference: PAYMENT,
+        },
+      ],
+      accountingEntries: [
+        { id: INCOME, amountRappen: 18600, stornoOfId: null, deletedAt: null },
+        { id: 'storno-1', amountRappen: 18600, stornoOfId: INCOME, deletedAt: null },
+      ],
+    })
+    const result = evaluateReceiptReset(applied)
+    expect(result.blocked).toBe(true)
+    expect(result.alreadyApplied).toBe(false)
+    expect(result.reasons).toContain('wallet_credit_present')
+    expect(result.plan).toBeNull()
+    expect(receiptResetRpcArgs(applied, result)).toBeNull()
+  })
+
   it('blocks wallet credit, an invoice credit transaction, and Staff-POS credit before any reversal', () => {
     const stamped = gemperli({
       decisions: confirmed,
@@ -400,7 +455,11 @@ describe('admin_reset_mistaken_receipt SQL', () => {
     expect(body.indexOf("RAISE EXCEPTION 'wallet_credit_present'")).toBeLessThan(updatePayment)
     expect(body.indexOf("RAISE EXCEPTION 'invoice_credit_transaction_present'")).toBeLessThan(updatePayment)
     expect(body.indexOf("RAISE EXCEPTION 'staff_pos_credit_present'")).toBeLessThan(updatePayment)
+    expect(body.indexOf("RAISE EXCEPTION 'wallet_credit_present'")).toBeLessThan(body.indexOf("'result', 'already_applied'"))
     expect(body.indexOf("'result', 'already_applied'")).toBeLessThan(body.indexOf("RAISE EXCEPTION 'missing_invoice_line_disposition'"))
+    expect(body).toContain('AND tenant_id = p_tenant_id')
+    expect(sql).toContain('SECURITY DEFINER')
+    expect(sql).toContain('SET search_path = pg_catalog, public')
     expect(body).toContain("RAISE EXCEPTION 'idempotency_payment_mismatch'")
   })
 })

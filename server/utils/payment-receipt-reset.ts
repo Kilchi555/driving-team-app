@@ -248,6 +248,24 @@ export function evaluateReceiptReset(snapshot: ReceiptResetSnapshot): ReceiptRes
     && (!incomeEntry || stornoExists(snapshot, incomeEntry.id))
     && (!invoice || Boolean(reversal))
 
+  if ((invoice?.creditAppliedRappen ?? 0) > 0) reasons.push('wallet_credit_present')
+  if ((snapshot.invoiceCreditTransactionCount ?? 0) > 0) reasons.push('invoice_credit_transaction_present')
+  if ((snapshot.staffPosCreditCount ?? 0) > 0) reasons.push('staff_pos_credit_present')
+  if (payment.creditTransactionId) reasons.push('linked_credit_transaction_present')
+  if (snapshot.creditLookupFailed) reasons.push('credit_lookup_failed')
+  if (reasons.some(code => [
+    'wallet_credit_present',
+    'invoice_credit_transaction_present',
+    'staff_pos_credit_present',
+    'linked_credit_transaction_present',
+    'credit_lookup_failed',
+  ].includes(code))) {
+    return {
+      ...blockedResult(reasons, discovered),
+      requires: requirementFlags(requiresSibling, requiresDisposition, requiresAppointment),
+    }
+  }
+
   if (alreadyApplied && reasons.filter(code => code !== 'actor_required' && code !== 'unauthenticated' && code !== 'forbidden').length === 0
     && auth === 'ok' && snapshot.actorUserId) {
     return {
@@ -284,12 +302,6 @@ export function evaluateReceiptReset(snapshot: ReceiptResetSnapshot): ReceiptRes
       },
     }
   }
-
-  if ((invoice?.creditAppliedRappen ?? 0) > 0) reasons.push('wallet_credit_present')
-  if ((snapshot.invoiceCreditTransactionCount ?? 0) > 0) reasons.push('invoice_credit_transaction_present')
-  if ((snapshot.staffPosCreditCount ?? 0) > 0) reasons.push('staff_pos_credit_present')
-  if (payment.creditTransactionId) reasons.push('linked_credit_transaction_present')
-  if (snapshot.creditLookupFailed) reasons.push('credit_lookup_failed')
 
   if (!isReceivedStatus(payment.paymentStatus)) reasons.push('status_not_resettable')
 

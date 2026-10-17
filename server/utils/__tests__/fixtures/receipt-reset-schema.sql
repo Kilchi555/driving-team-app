@@ -7,9 +7,18 @@
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+CREATE SCHEMA IF NOT EXISTS auth;
+
+CREATE OR REPLACE FUNCTION auth.uid()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+AS $$ SELECT NULL::uuid $$;
+
 CREATE TABLE public.users (
   id uuid PRIMARY KEY,
   tenant_id uuid,
+  auth_user_id uuid,
   role text NOT NULL,
   is_active boolean NOT NULL DEFAULT true,
   deleted_at timestamptz,
@@ -20,6 +29,8 @@ CREATE TABLE public.users (
 CREATE TABLE public.appointments (
   id uuid PRIMARY KEY,
   tenant_id uuid,
+  user_id uuid,
+  staff_id uuid,
   status text NOT NULL,
   updated_at timestamptz
 );
@@ -33,7 +44,9 @@ CREATE TABLE public.invoices (
   status varchar NOT NULL,
   payment_status varchar NOT NULL,
   subtotal_rappen integer NOT NULL,
+  vat_rate numeric DEFAULT 7.70,
   vat_amount_rappen integer NOT NULL,
+  discount_amount_rappen integer DEFAULT 0,
   total_amount_rappen integer NOT NULL,
   paid_amount_rappen integer NOT NULL DEFAULT 0,
   credit_applied_rappen integer NOT NULL DEFAULT 0,
@@ -85,6 +98,7 @@ CREATE TABLE public.payments (
   paid_at timestamptz,
   wallee_transaction_id text,
   refunded_amount_rappen integer NOT NULL DEFAULT 0,
+  discount_amount_rappen integer,
   description text,
   course_registration_id uuid,
   credit_transaction_id uuid,
@@ -103,6 +117,7 @@ CREATE TABLE public.credit_transactions (
   payment_method varchar(50),
   reference_id uuid,
   reference_type varchar(50),
+  status varchar DEFAULT 'completed',
   notes text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -160,7 +175,32 @@ CREATE TABLE public.cash_transactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   appointment_id uuid,
   tenant_id uuid,
-  amount_rappen integer
+  instructor_id uuid,
+  student_id uuid,
+  amount_rappen integer,
+  notes text,
+  status text
+);
+
+CREATE TABLE public.student_credits (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid,
+  tenant_id uuid,
+  balance_rappen integer NOT NULL DEFAULT 0
+);
+
+CREATE TABLE public.payment_audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  payment_id uuid NOT NULL,
+  operation varchar NOT NULL,
+  old_payment_status varchar,
+  new_payment_status varchar,
+  old_total_amount_rappen integer,
+  new_total_amount_rappen integer,
+  old_payment_method varchar,
+  new_payment_method varchar,
+  old_values jsonb,
+  new_values jsonb
 );
 
 CREATE TABLE public.bank_import_records (
@@ -371,3 +411,179 @@ BEGIN
   ORDER BY month;
 END;
 $function$;
+
+-- Live invoice VAT trigger. It rewrites totals on every insert and update.
+-- Synthetic rows set vat_rate to 0 so a zero VAT amount stays consistent.
+CREATE OR REPLACE FUNCTION public.calculate_invoice_vat()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$
+BEGIN
+  NEW.vat_amount_rappen := ROUND((NEW.subtotal_rappen * NEW.vat_rate / 100)::NUMERIC);
+  NEW.total_amount_rappen := NEW.subtotal_rappen + NEW.vat_amount_rappen - NEW.discount_amount_rappen;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE TRIGGER trigger_calculate_invoice_vat
+  BEFORE INSERT OR UPDATE ON public.invoices
+  FOR EACH ROW EXECUTE FUNCTION calculate_invoice_vat();
+
+CREATE OR REPLACE FUNCTION public.prevent_client_payment_mutation()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  IF TG_OP = 'UPDATE'
+     AND current_setting('role', true) IN ('authenticated', 'anon')
+     AND EXISTS (
+       SELECT 1 FROM public.users u
+       WHERE u.auth_user_id = auth.uid()
+         AND u.role = 'client'
+     )
+     AND (
+       NEW.payment_status IS DISTINCT FROM OLD.payment_status
+       OR NEW.total_amount_rappen IS DISTINCT FROM OLD.total_amount_rappen
+       OR NEW.discount_amount_rappen IS DISTINCT FROM OLD.discount_amount_rappen
+     ) THEN
+    RAISE EXCEPTION 'clients_cannot_mutate_payment_settlement';
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+CREATE TRIGGER trg_prevent_client_payment_mutation
+  BEFORE UPDATE ON public.payments
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_client_payment_mutation();
+
+CREATE OR REPLACE FUNCTION public.log_payment_changes()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$
+DECLARE
+  v_old_status varchar;
+  v_new_status varchar;
+BEGIN
+  v_old_status := CASE WHEN TG_OP = 'UPDATE' THEN OLD.payment_status ELSE NULL END;
+  v_new_status := CASE WHEN TG_OP = 'UPDATE' THEN NEW.payment_status ELSE NULL END;
+
+  IF TG_OP != 'DELETE' THEN
+    INSERT INTO payment_audit_logs (
+      payment_id, operation, old_payment_status, new_payment_status,
+      old_total_amount_rappen, new_total_amount_rappen,
+      old_payment_method, new_payment_method, old_values, new_values
+    ) VALUES (
+      CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE NEW.id END,
+      TG_OP,
+      v_old_status,
+      v_new_status,
+      CASE WHEN TG_OP = 'UPDATE' THEN OLD.total_amount_rappen ELSE NULL END,
+      CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE NEW.total_amount_rappen END,
+      CASE WHEN TG_OP = 'UPDATE' THEN OLD.payment_method ELSE NULL END,
+      CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE NEW.payment_method END,
+      CASE WHEN TG_OP = 'DELETE' THEN NULL WHEN TG_OP = 'UPDATE' THEN row_to_json(OLD) ELSE NULL END,
+      CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE row_to_json(NEW) END
+    );
+  END IF;
+
+  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END;
+$function$;
+
+CREATE TRIGGER trigger_log_payment_changes
+  AFTER INSERT OR DELETE OR UPDATE ON public.payments
+  FOR EACH ROW EXECUTE FUNCTION public.log_payment_changes();
+
+CREATE OR REPLACE FUNCTION public.create_cash_transaction_from_payment()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$
+DECLARE
+  v_appointment_data RECORD;
+  v_instructor_id UUID;
+BEGIN
+  IF NEW.appointment_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.payment_method = 'cash' AND NEW.payment_status = 'completed' THEN
+    SELECT user_id AS student_id, staff_id AS instructor_id, id AS appointment_id
+    INTO v_appointment_data
+    FROM appointments
+    WHERE id = NEW.appointment_id;
+
+    IF v_appointment_data.instructor_id IS NULL THEN
+      v_instructor_id := auth.uid();
+    ELSE
+      v_instructor_id := v_appointment_data.instructor_id;
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM cash_transactions
+      WHERE appointment_id = NEW.appointment_id
+        AND status != 'disputed'
+    ) THEN
+      INSERT INTO cash_transactions (
+        instructor_id, student_id, appointment_id, amount_rappen, notes, status
+      ) VALUES (
+        v_instructor_id,
+        v_appointment_data.student_id,
+        v_appointment_data.appointment_id,
+        NEW.total_amount_rappen,
+        CONCAT('Automatisch erstellt aus Payment ID: ', NEW.id),
+        'pending'
+      );
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+CREATE TRIGGER trigger_create_cash_transaction
+  AFTER INSERT OR UPDATE ON public.payments
+  FOR EACH ROW EXECUTE FUNCTION public.create_cash_transaction_from_payment();
+
+CREATE OR REPLACE FUNCTION public.release_gift_card_reservation(p_payment_id uuid)
+RETURNS void LANGUAGE plpgsql AS $function$ BEGIN RETURN; END $function$;
+
+CREATE OR REPLACE FUNCTION public.decrement_discount_usage(p_id uuid)
+RETURNS void LANGUAGE plpgsql AS $function$ BEGIN RETURN; END $function$;
+
+CREATE OR REPLACE FUNCTION public.decrement_voucher_code_redemption(p_id uuid)
+RETURNS void LANGUAGE plpgsql AS $function$ BEGIN RETURN; END $function$;
+
+CREATE OR REPLACE FUNCTION public.release_checkout_benefits_on_payment_close()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_code text;
+  v_disc uuid;
+  v_voucher uuid;
+BEGIN
+  IF NEW.payment_status IS NOT DISTINCT FROM OLD.payment_status THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.payment_status NOT IN ('cancelled', 'failed') THEN
+    RETURN NEW;
+  END IF;
+  IF OLD.payment_status NOT IN ('pending', 'processing') THEN
+    RETURN NEW;
+  END IF;
+  PERFORM public.release_gift_card_reservation(NEW.id);
+  RETURN NEW;
+END;
+$function$;
+
+CREATE TRIGGER trg_release_checkout_benefits
+  AFTER UPDATE ON public.payments
+  FOR EACH ROW EXECUTE FUNCTION public.release_checkout_benefits_on_payment_close();

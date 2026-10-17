@@ -48,8 +48,9 @@
 --
 -- Credits, fail closed. This function does not insert, update, or delete
 -- credit_transactions, student_credits, or invoices.credit_applied_rappen.
--- It does not reverse a wallet or Staff-POS credit. Before any payment,
--- invoice, settlement, or accounting write it rejects the reset when:
+-- It does not reverse a wallet or Staff-POS credit. Before the
+-- already_applied audit insert and before any payment, invoice, settlement,
+-- or accounting write it rejects the reset when:
 --   invoices.credit_applied_rappen > 0
 --     -> wallet_credit_present
 --   credit_transactions.reference_type = 'invoice'
@@ -64,11 +65,16 @@
 --     -> staff_pos_credit_present
 --   payments.credit_transaction_id is not null on the target payment
 --     -> linked_credit_transaction_present
--- The repository schema has no status column on credit_transactions.
--- Any matching row is treated as live. student_credits.balance_rappen is
--- not scanned: a balance is not tied to one invoice. If that balance was
--- changed without one of the facts above, this reset cannot see it and
--- does not try a partial reversal.
+-- credit_transactions.status is an unconstrained varchar. Comments on the
+-- shared test project name pending, completed, failed, cancelled,
+-- withdrawal_pending, and withdrawal_completed. None of those values is a
+-- reversed flag in the database, so any matching row still blocks.
+-- student_credits.balance_rappen is not scanned: a balance is not tied to
+-- one invoice. If that balance was changed without one of the facts above,
+-- this reset cannot see it and does not try a partial reversal.
+-- A same-key replay returns the stored payload and does not re-check credit.
+-- A new key does not report already_applied while one of the facts above
+-- is still present.
 --
 -- Idempotency: a stored result is reused only when tenant_id and payment_id
 -- both match. The same key for a different payment raises
@@ -282,61 +288,8 @@ BEGIN
     AND payment_reference = v_payment.id::text
   FOR UPDATE;
 
-  IF v_reversal_id IS NOT NULL THEN
-    IF v_payment.payment_status IN ('completed', 'paid') OR v_payment.paid_at IS NOT NULL THEN
-      RAISE EXCEPTION 'reversal_conflict'
-        USING DETAIL = v_reversal_id::text;
-    END IF;
-
-    SELECT e.id INTO v_income_id
-    FROM public.accounting_entries e
-    WHERE e.linked_payment_id = v_payment.id
-      AND e.tenant_id = p_tenant_id
-      AND e.deleted_at IS NULL
-      AND e.storno_of_id IS NULL
-    ORDER BY e.id
-    LIMIT 1;
-    SELECT s.id INTO v_storno_id
-    FROM public.accounting_entries s
-    WHERE s.storno_of_id = v_income_id
-      AND s.deleted_at IS NULL
-    ORDER BY s.id
-    LIMIT 1;
-
-    v_payload := jsonb_build_object(
-      'result', 'already_applied',
-      'replayed', false,
-      'payment_id', v_payment.id,
-      'invoice_id', v_invoice.id,
-      'paid_amount_before_rappen', v_paid_before,
-      'paid_amount_after_rappen', v_paid_before,
-      'reversal_id', v_reversal_id,
-      'accounting_entry_id', v_income_id,
-      'storno_entry_id', v_storno_id
-    );
-    INSERT INTO public.payment_receipt_resets (
-      tenant_id, payment_id, actor_user_id, reason, previous_status, new_status,
-      invoice_id, settlement_id, reversal_id, accounting_entry_id, storno_entry_id,
-      appointment_id, idempotency_key, result,
-      paid_amount_before, paid_amount_after, confirm_siblings,
-      invoice_line_disposition, appointment_disposition, result_payload
-    ) VALUES (
-      p_tenant_id, v_payment.id, p_actor_user_id, btrim(p_reason),
-      v_payment.payment_status, v_payment.payment_status,
-      v_invoice.id, p_settlement_id, v_reversal_id, v_income_id, v_storno_id,
-      v_payment.appointment_id, btrim(p_idempotency_key), 'already_applied',
-      v_paid_before, v_paid_before, COALESCE(p_confirm_siblings, false),
-      p_invoice_line_disposition, p_appointment_disposition, v_payload
-    );
-    RETURN v_payload;
-  END IF;
-
-  IF v_payment.payment_status NOT IN ('completed', 'paid') THEN
-    RAISE EXCEPTION 'status_not_resettable';
-  END IF;
-
-  -- Fail closed before any financial write. Matching credit rows have no
-  -- deleted or reversed flag in the repository schema, so any match is live.
+  -- Fail closed before already_applied and before any financial write.
+  -- status is not a liveness flag, so a cancelled or failed row still matches.
   IF COALESCE(v_invoice.credit_applied_rappen, 0) > 0 THEN
     RAISE EXCEPTION 'wallet_credit_present';
   END IF;
@@ -370,6 +323,69 @@ BEGIN
 
   IF v_payment.credit_transaction_id IS NOT NULL THEN
     RAISE EXCEPTION 'linked_credit_transaction_present';
+  END IF;
+
+  IF v_reversal_id IS NOT NULL THEN
+    IF v_payment.payment_status IN ('completed', 'paid') OR v_payment.paid_at IS NOT NULL THEN
+      RAISE EXCEPTION 'reversal_conflict'
+        USING DETAIL = v_reversal_id::text;
+    END IF;
+
+    SELECT e.id INTO v_income_id
+    FROM public.accounting_entries e
+    WHERE e.linked_payment_id = v_payment.id
+      AND e.tenant_id = p_tenant_id
+      AND e.deleted_at IS NULL
+      AND e.storno_of_id IS NULL
+    ORDER BY e.id
+    LIMIT 1;
+    SELECT s.id INTO v_storno_id
+    FROM public.accounting_entries s
+    WHERE s.storno_of_id = v_income_id
+      AND s.tenant_id = p_tenant_id
+      AND s.deleted_at IS NULL
+    ORDER BY s.id
+    LIMIT 1;
+    IF v_storno_id IS NULL AND EXISTS (
+      SELECT 1
+      FROM public.accounting_entries s
+      WHERE s.storno_of_id = v_income_id
+        AND s.deleted_at IS NULL
+        AND s.tenant_id IS DISTINCT FROM p_tenant_id
+    ) THEN
+      RAISE EXCEPTION 'storno_conflict';
+    END IF;
+
+    v_payload := jsonb_build_object(
+      'result', 'already_applied',
+      'replayed', false,
+      'payment_id', v_payment.id,
+      'invoice_id', v_invoice.id,
+      'paid_amount_before_rappen', v_paid_before,
+      'paid_amount_after_rappen', v_paid_before,
+      'reversal_id', v_reversal_id,
+      'accounting_entry_id', v_income_id,
+      'storno_entry_id', v_storno_id
+    );
+    INSERT INTO public.payment_receipt_resets (
+      tenant_id, payment_id, actor_user_id, reason, previous_status, new_status,
+      invoice_id, settlement_id, reversal_id, accounting_entry_id, storno_entry_id,
+      appointment_id, idempotency_key, result,
+      paid_amount_before, paid_amount_after, confirm_siblings,
+      invoice_line_disposition, appointment_disposition, result_payload
+    ) VALUES (
+      p_tenant_id, v_payment.id, p_actor_user_id, btrim(p_reason),
+      v_payment.payment_status, v_payment.payment_status,
+      v_invoice.id, p_settlement_id, v_reversal_id, v_income_id, v_storno_id,
+      v_payment.appointment_id, btrim(p_idempotency_key), 'already_applied',
+      v_paid_before, v_paid_before, COALESCE(p_confirm_siblings, false),
+      p_invoice_line_disposition, p_appointment_disposition, v_payload
+    );
+    RETURN v_payload;
+  END IF;
+
+  IF v_payment.payment_status NOT IN ('completed', 'paid') THEN
+    RAISE EXCEPTION 'status_not_resettable';
   END IF;
 
   SELECT count(*) INTO v_sibling_count
@@ -542,6 +558,7 @@ BEGIN
           SELECT id INTO v_storno_id
           FROM public.accounting_entries
           WHERE storno_of_id = v_income_id
+            AND tenant_id = p_tenant_id
             AND deleted_at IS NULL
           ORDER BY id
           LIMIT 1;
