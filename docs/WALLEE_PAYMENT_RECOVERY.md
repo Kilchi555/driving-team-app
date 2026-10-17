@@ -1,5 +1,7 @@
 # Wallee Payment Recovery System
 
+For **refunds / partial refunds / ledger**, see [PAYMENT_REFUNDS.md](./PAYMENT_REFUNDS.md). This runbook covers **stuck pending captures** only.
+
 ## Problem
 Payments were stuck in `pending` status even though Wallee had processed them as `FULFILL` (completed). This happened because:
 
