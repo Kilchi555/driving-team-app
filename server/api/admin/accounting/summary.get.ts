@@ -1,7 +1,7 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { requireAccountingAccess } from '~/server/utils/accountant-access'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { computeSimpleBookIncome, isAccountingPlEntry } from '~/server/utils/accounting'
+import { computeSimpleBookIncome, isAccountingPlEntry, isReceiptResetStorno, recognizedExpenseRappen } from '~/server/utils/accounting'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAccountingAccess(event)
@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: entriesData, error: entriesError } = await supabase
     .from('accounting_entries')
-    .select('type, amount_rappen, vat_amount_rappen, entry_date, category_id, linked_payment_id, document_kind, external_reference')
+    .select('type, amount_rappen, vat_amount_rappen, entry_date, category_id, linked_payment_id, document_kind, external_reference, storno_of_id')
     .eq('tenant_id', profile.tenant_id)
     .eq('approval_status', 'approved')
     .is('deleted_at', null)
@@ -44,11 +44,9 @@ export default defineEventHandler(async (event) => {
     entries: entriesData ?? [],
   })
 
-  const plEntries = (entriesData ?? []).filter(isAccountingPlEntry)
+  const plEntries = (entriesData ?? []).filter(entry => isAccountingPlEntry(entry) && !isReceiptResetStorno(entry))
 
-  const totalExpenseRappen = plEntries
-    .filter(e => e.type === 'expense')
-    .reduce((sum, e) => sum + e.amount_rappen, 0)
+  const totalExpenseRappen = recognizedExpenseRappen(entriesData ?? [])
 
   const totalVatRappen = plEntries
     .reduce((sum, e) => sum + (e.vat_amount_rappen ?? 0), 0)
@@ -63,9 +61,7 @@ export default defineEventHandler(async (event) => {
       paymentsIncomeRappen: paymentsByMonth.get(m) ?? 0,
       entries: monthEntries,
     }).totalIncomeRappen
-    const monthExpense = monthEntries
-      .filter(e => e.type === 'expense' && isAccountingPlEntry(e))
-      .reduce((sum, e) => sum + e.amount_rappen, 0)
+    const monthExpense = recognizedExpenseRappen(monthEntries)
 
     return {
       month: m,

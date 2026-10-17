@@ -6,6 +6,8 @@ import {
   canSoftDeleteAccountingEntry,
   changedMaterialFields,
   computeSimpleBookIncome,
+  PAYMENT_RECEIPT_RESET_REFERENCE,
+  recognizedExpenseRappen,
   computeNetAssets,
   invoiceOutstandingRappen,
   cashDifferenceRappen,
@@ -76,6 +78,19 @@ describe('accounting P0 helpers', () => {
     })
     expect(result.manualIncomeRappen).toBe(2_000)
     expect(result.totalIncomeRappen).toBe(52_000)
+  })
+
+  it('excludes a mistaken-receipt storno from profit and loss expenses', () => {
+    expect(recognizedExpenseRappen([
+      { type: 'expense', amount_rappen: 5000 },
+      {
+        type: 'expense',
+        amount_rappen: 18600,
+        storno_of_id: 'income-1',
+        external_reference: PAYMENT_RECEIPT_RESET_REFERENCE,
+      },
+      { type: 'expense', amount_rappen: 900, storno_of_id: 'manual-income' },
+    ])).toBe(5900)
   })
 
   it('computes Vermögenslage and invoice outstanding', () => {
