@@ -26,6 +26,7 @@ import { generateInvoicePdf, formatTenantContactPerson } from '~/server/utils/in
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 import { computeInvoiceDueDate, getTenantInvoiceDueDays } from '~/server/utils/invoice-due-date'
 import { computeVatAmountRappen, getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
+import { externalResourceInvoiceAssociation } from '~/server/utils/invoice-company-link'
 
 const INTERNAL_PURPOSES = ['internal', 'maintenance', 'meeting', 'event']
 const ALL_PURPOSES = [...INTERNAL_PURPOSES, 'external']
@@ -334,6 +335,10 @@ export default defineEventHandler(async (event) => {
         const introText = tenantData?.invoice_intro_text || null
         const paymentTerms = tenantData?.invoice_payment_terms || null
         const footerText = tenantData?.invoice_footer_text || null
+        const resourceInvoiceLink = externalResourceInvoiceAssociation({
+          externalCompanyName: external_company_name,
+          suppliedCompanyId: body?.company_id,
+        })
 
         const { data: invoiceRes } = await supabase
           .from('invoices')
@@ -344,7 +349,8 @@ export default defineEventHandler(async (event) => {
             invoice_number: invoiceNumber,
             invoice_date: invoiceDateStr,
             due_date: dueDateStr,
-            billing_type: external_company_name ? 'company' : 'individual',
+            billing_type: resourceInvoiceLink.billing_type,
+            company_id: resourceInvoiceLink.company_id,
             billing_company_name: external_company_name?.trim() || null,
             billing_contact_person: external_contact_name.trim(),
             billing_email: external_contact_email.trim().toLowerCase(),
