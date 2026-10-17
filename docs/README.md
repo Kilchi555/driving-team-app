@@ -2,6 +2,22 @@
 
 Diese Dokumentation bietet einen umfassenden Überblick über die gesamte Driving Team App mit allen Funktionen, Zusammenhängen, Datenbanktabellen und Policies.
 
+## Engineering Runbooks
+
+Focused ops/dev guides (verified against source). Prefer these over root historical markdown reports.
+
+| Doc | Covers |
+|-----|--------|
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Admin lockout recovery when passkeys/backup codes are gone |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Client session cache / HMR restore |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Stuck Wallee payments, webhook logs, recovery cron |
+| [SERVER_SIDE_CONVERSION_SETUP.md](./SERVER_SIDE_CONVERSION_SETUP.md) | Google Ads server conversions, inquiry dedupe, course attribution |
+| [WEBSITE_NEXT_SLOTS.md](./WEBSITE_NEXT_SLOTS.md) | Marketing teaser slots (tenant `/s/**` + DT `apps/website`) |
+| [GBP_PHOTO_AND_REVIEW_AUTOMATION.md](./GBP_PHOTO_AND_REVIEW_AUTOMATION.md) | GBP photo weekly drip, queue priority, review suggest/publish |
+| [E2E_TENANT_ISOLATION.md](./E2E_TENANT_ISOLATION.md) | Playwright second-tenant seed + CI isolation assertions |
+| [ANDROID_PLAY_SUBMISSION.md](./ANDROID_PLAY_SUBMISSION.md) | Play Store packaging / FCM client notes |
+| [PAYMENT_PROVIDERS.md](./PAYMENT_PROVIDERS.md) | Wallee / Stripe provider overview |
+
 ## 📋 CSV-Dateien
 
 ### 1. **APP_DOCUMENTATION.csv**
