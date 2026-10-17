@@ -344,6 +344,16 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused developer/ops notes verified against current source. Prefer these over stale root Markdown that claims `COMPLETE` / `FINAL`.
+
+| Doc | Topic |
+|-----|--------|
+| [DEV_DEPENDENCY_PEERS.md](./DEV_DEPENDENCY_PEERS.md) | `npm ci` peers + Nuxt UI 2 / Tailwind 3 pins after #277 / #285 (supersedes draft #274) |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
