@@ -48,14 +48,17 @@ export function autoInvoiceCompanyId(): null {
   return null
 }
 
-export async function companyIdForInvoiceInsert(
+/**
+ * Load one explicit company id inside the invoice tenant.
+ * Null and '' stay unlinked. An invalid id, a foreign tenant, an unknown id,
+ * or a lookup error fails closed and returns no id.
+ */
+export async function companyIdInTenant(
   supabase: SupabaseClient,
   tenantId: string,
-  draft: { billing_type?: string | null; company_id?: unknown },
+  companyId: unknown,
 ): Promise<string | null> {
-  if ((draft.billing_type || 'individual') !== 'company') return null
-
-  const explicit = readExplicitCompanyId(draft.company_id)
+  const explicit = readExplicitCompanyId(companyId)
   if (!explicit) return null
 
   const { data, error } = await supabase
@@ -70,4 +73,13 @@ export async function companyIdForInvoiceInsert(
     throw new InvoiceCompanyLinkError(404, 'Firma nicht gefunden')
   }
   return data.id
+}
+
+export async function companyIdForInvoiceInsert(
+  supabase: SupabaseClient,
+  tenantId: string,
+  draft: { billing_type?: string | null; company_id?: unknown },
+): Promise<string | null> {
+  if ((draft.billing_type || 'individual') !== 'company') return null
+  return companyIdInTenant(supabase, tenantId, draft.company_id)
 }
