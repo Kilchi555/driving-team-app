@@ -97,7 +97,7 @@
     "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "0.3.14",
+    "@electric-sql/pglite": "^0.5.10",
     "@nuxt/eslint": "^1.17.0",
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.1",

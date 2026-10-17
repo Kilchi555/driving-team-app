@@ -240,13 +240,14 @@ describe('legacy completion bypass', () => {
     expect(src).toContain('Staff-POS-Zahlungen können nicht über die Sammelzahlung abgeschlossen werden.')
   })
 
-  it('rejects staff product sales in mark-paid before the cash update', () => {
+  it('rejects staff product sales in mark-paid before the cash settlement RPC', () => {
     const src = read('server/api/invoices/mark-paid.post.ts')
     const guard = src.indexOf('isStaffProductSalePayment')
-    const update = src.indexOf(".update(")
+    const settle = src.indexOf('complete_tenant_cash_payment')
     expect(guard).toBeGreaterThan(0)
-    expect(update).toBeGreaterThan(guard)
-    expect(src).not.toContain(".eq('tenant_id'")
+    expect(settle).toBeGreaterThan(guard)
+    expect(src).toContain(".eq('tenant_id', staffUser.tenant_id)")
+    expect(src).not.toContain(".update(")
   })
 
   it('keeps manage mark-completed closed for deferred', () => {
@@ -272,10 +273,15 @@ describe('legacy completion bypass', () => {
 
   it('scopes the invoice payment update and credits staff-pos only after full payment', () => {
     const src = read('server/api/invoices/mark-invoice-paid.post.ts')
-    expect(src).toContain(".eq('tenant_id', invoice.tenant_id)")
-    expect(src).toContain('applyStaffPosCreditsForPaidInvoice')
-    expect(src.indexOf('if (!isPartial)')).toBeLessThan(src.indexOf('await applyStaffPosCreditsForPaidInvoice'))
-    expect(src).toContain('applyInvoiceCreditOnPaid')
+    const sql = read('migrations/20261016_payment_settlement_atomicity.sql')
+    expect(src).toContain('settle_marked_invoice_payment')
+    expect(src).not.toContain('applyStaffPosCreditsForPaidInvoice')
+    expect(src.indexOf('if (!isPartial)')).toBeLessThan(src.indexOf('applyInvoiceCreditOnPaid'))
+    const partialGate = sql.indexOf('IF NOT v_partial THEN')
+    const staffPos = sql.indexOf("'apply_credit'", partialGate)
+    expect(partialGate).toBeGreaterThan(0)
+    expect(staffPos).toBeGreaterThan(partialGate)
+    expect(sql).toContain('tenant_id = v_invoice.tenant_id')
   })
 
   it('classifies deferred staff-pos rows separately from invoice sales', () => {

@@ -1,10 +1,16 @@
 // server/api/invoices/mark-invoice-paid.post.ts
-// Markiert eine Rechnung als bezahlt — NUR für Admins
+// Markiert eine Rechnung als bezahlt — NUR für Admins.
+// Die Header-, Journal- und offenen Payment-Zeilen schreibt
+// settle_marked_invoice_payment in einer Transaktion. Wallet-Guthaben bleibt
+// danach und ist weiterhin nicht fatal, wenn es fehlschlägt.
 
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { applyInvoiceCreditOnPaid } from '~/server/utils/invoice-credit'
-import { applyStaffPosCreditsForPaidInvoice } from '~/server/utils/staff-pos-completion'
+import { settlementFailure } from '~/server/utils/payment-settlement'
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -18,7 +24,7 @@ export default defineEventHandler(async (event) => {
     .eq('auth_user_id', authUser.id)
     .single()
 
-  if (!staffUser || !['admin', 'tenant_admin'].includes(staffUser.role)) {
+  if (!staffUser || !['admin', 'tenant_admin'].includes(staffUser.role) || !UUID_RE.test(String(staffUser.tenant_id || ''))) {
     throw createError({ statusCode: 403, statusMessage: 'Nur Admins dürfen Rechnungen als bezahlt markieren' })
   }
 
@@ -41,137 +47,28 @@ export default defineEventHandler(async (event) => {
 
   if (!invoice) throw createError({ statusCode: 404, statusMessage: 'Rechnung nicht gefunden' })
 
-  // Herkunft aus einem CAMT- oder CSV-Import? Dann diese Bank-Transaktion
-  // registrieren, damit ein erneuter/überlappender Import derselben Buchung
-  // nicht nochmal eine Zahlung verbucht (siehe bank_import_records).
-  if (camt_dedupe_key) {
-    const { error: dedupeError } = await supabase
-      .from('bank_import_records')
-      .insert({
-        tenant_id: staffUser.tenant_id,
-        dedupe_key: camt_dedupe_key,
-        bank_ref: camt_bank_ref || null,
-        entry_date: paid_at ? paidAt.substring(0, 10) : null,
-        amount_rappen: paid_amount_rappen || invoice.total_amount_rappen,
-        reference: camt_reference || null,
-        debtor_name: camt_debtor_name || null,
-        invoice_id,
-        imported_by: staffUser.id,
-        source: import_source === 'csv' ? 'csv' : 'camt',
-      })
-    // Unique-Violation (Code 23505) bedeutet: diese Transaktion wurde bereits
-    // verbucht — dann NICHT ein zweites Mal als Zahlung anrechnen.
-    if (dedupeError) {
-      if (dedupeError.code === '23505') {
-        throw createError({
-          statusCode: 409,
-          statusMessage: 'Diese Bank-Transaktion wurde bereits importiert und verbucht.',
-        })
-      }
-      console.warn('⚠️ bank_import_records insert warning:', dedupeError.message)
-    }
-  }
+  // Header, bank dedupe, journal, and open payment rows commit together.
+  const { data: settled, error: settleError } = await supabase.rpc('settle_marked_invoice_payment', {
+    p_actor_user_id: staffUser.id,
+    p_invoice_id: invoice_id,
+    p_paid_amount_rappen: paid_amount_rappen ?? null,
+    p_paid_at: paidAt,
+    p_note: note ?? null,
+    p_payment_method: payment_method ?? null,
+    p_camt_dedupe_key: camt_dedupe_key ?? null,
+    p_camt_bank_ref: camt_bank_ref ?? null,
+    p_camt_entry_date: paid_at ? paidAt.substring(0, 10) : null,
+    p_camt_reference: camt_reference ?? null,
+    p_camt_debtor_name: camt_debtor_name ?? null,
+    p_import_source: import_source ?? null,
+  })
 
-  // Neuen Betrag zum bereits bezahlten addieren (kumulativ)
-  const newPayment = paid_amount_rappen || invoice.total_amount_rappen
-  const previouslyPaid = invoice.paid_amount_rappen || 0
-  const totalPaid = previouslyPaid + newPayment
-  // Kumulativen Betrag auf Rechnungsbetrag deckeln
-  const clampedTotal = Math.min(totalPaid, invoice.total_amount_rappen)
+  const failure = settlementFailure(settleError, settled, 'Rechnung nicht gefunden')
+  if (failure) throw createError(failure)
 
-  const isPartial = clampedTotal < invoice.total_amount_rappen
-  const paymentStatus = isPartial ? 'partial' : 'paid'
-  const invoiceStatus = isPartial ? 'sent' : 'paid'   // partial keeps invoice open
-
-  // Rechnung als bezahlt (oder Teilzahlung) markieren
-  const { error } = await supabase
-    .from('invoices')
-    .update({
-      payment_status: paymentStatus,
-      status: invoiceStatus,
-      paid_at: paidAt,
-      paid_amount_rappen: clampedTotal,
-      ...(note ? { internal_notes: note } : {}),
-      // Ist die Rechnung vollständig bezahlt, macht eine weiterhin angezeigte
-      // Mahnstufe keinen Sinn mehr — zurücksetzen, damit z.B. die Mahnstufen-
-      // Badge in der Rechnungsliste wieder verschwindet.
-      ...(!isPartial ? { dunning_level: 0, dunning_paused: false } : {}),
-      updated_at: now,
-    })
-    .eq('id', invoice_id)
-
-  if (error) throw createError({ statusCode: 500, statusMessage: error.message })
-
-  // Jede Zahlung als eigene Zeile in invoice_payments protokollieren
-  await supabase
-    .from('invoice_payments')
-    .insert({
-      invoice_id,
-      tenant_id: staffUser.tenant_id,
-      amount_rappen: newPayment,
-      payment_date: paidAt,
-      payment_method: payment_method || note || 'manual',
-      notes: note || null,
-      status: 'completed',
-      currency: 'CHF',
-    })
-
-  // Payments nur als 'completed' markieren wenn Rechnung vollständig bezahlt
-  if (!isPartial) {
-    await supabase
-      .from('payments')
-      .update({ payment_status: 'completed', paid_at: paidAt, updated_at: now })
-      .eq('invoice_id', invoice_id)
-      .eq('tenant_id', invoice.tenant_id)
-      .in('payment_status', ['invoice', 'invoiced', 'pending', 'open', 'failed', 'partial'])
-
-    // Fallback: Payments über Invoice-Items → appointment_ids aktualisieren
-    const { data: invoiceItems } = await supabase
-      .from('invoice_items')
-      .select('appointment_id')
-      .eq('invoice_id', invoice_id)
-      .not('appointment_id', 'is', null)
-
-    if (invoiceItems && invoiceItems.length > 0) {
-      const appointmentIds = invoiceItems.map(item => item.appointment_id)
-      await supabase
-        .from('payments')
-        .update({ payment_status: 'completed', invoice_id, paid_at: paidAt, updated_at: now })
-        .eq('user_id', invoice.user_id ?? '')
-        .eq('tenant_id', invoice.tenant_id)
-        .in('appointment_id', appointmentIds)
-        .in('payment_status', ['invoice', 'invoiced', 'pending', 'open', 'failed', 'partial'])
-    }
-
-    const { data: invoicePayments, error: staffPosLoadError } = await supabase
-      .from('payments')
-      .select('id, tenant_id, metadata')
-      .eq('invoice_id', invoice_id)
-      .eq('tenant_id', invoice.tenant_id)
-
-    if (staffPosLoadError) {
-      throw createError({ statusCode: 500, statusMessage: 'Staff-POS-Zahlungen konnten nicht geladen werden' })
-    }
-
-    try {
-      await applyStaffPosCreditsForPaidInvoice({
-        payments: invoicePayments || [],
-        tenantId: invoice.tenant_id,
-        actorUserId: staffUser.id,
-        isPartial: false,
-        rpc: async (args) => {
-          const { data, error: rpcError } = await supabase.rpc('staff_pos_sale', args)
-          if (rpcError) throw rpcError
-          return data
-        },
-      })
-    } catch (staffPosErr: any) {
-      throw createError({
-        statusCode: staffPosErr?.statusCode || 500,
-        statusMessage: staffPosErr?.message || 'Staff-POS-Guthaben konnte nicht gebucht werden',
-      })
-    }
-  }
+  const settledRow = settled as { paid_amount_rappen: number; is_partial: boolean }
+  const isPartial = settledRow.is_partial === true
+  const clampedTotal = settledRow.paid_amount_rappen
 
   let creditAppliedRappen = 0
   if (!isPartial && invoice.user_id) {

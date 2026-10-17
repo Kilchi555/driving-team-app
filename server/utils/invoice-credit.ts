@@ -131,21 +131,9 @@ export async function applyInvoiceCreditOnPaid(opts: {
   const now = new Date().toISOString()
   const invoiceNumber = invoice.invoice_number || invoiceId
 
-  const { error: creditError } = await supabase
-    .from('student_credits')
-    .upsert({
-      user_id: userId,
-      tenant_id: tenantId,
-      balance_rappen: newBalance,
-      notes: `Guthaben aus Rechnung ${invoiceNumber}`,
-      updated_at: now,
-    }, { onConflict: 'user_id,tenant_id' })
-
-  if (creditError) {
-    logger.error('applyInvoiceCreditOnPaid: wallet update failed', creditError)
-    throw new Error('Guthaben konnte nicht gutgeschrieben werden')
-  }
-
+  // The ledger row is the idempotency marker. Write it before the balance so a
+  // failed insert leaves the wallet unchanged, and a later call sees the row
+  // and does not add the same product credit again.
   const { error: txError } = await supabase
     .from('credit_transactions')
     .insert({
@@ -167,6 +155,21 @@ export async function applyInvoiceCreditOnPaid(opts: {
   if (txError) {
     logger.error('applyInvoiceCreditOnPaid: transaction log failed', txError)
     throw new Error('Guthaben-Buchung konnte nicht protokolliert werden')
+  }
+
+  const { error: creditError } = await supabase
+    .from('student_credits')
+    .upsert({
+      user_id: userId,
+      tenant_id: tenantId,
+      balance_rappen: newBalance,
+      notes: `Guthaben aus Rechnung ${invoiceNumber}`,
+      updated_at: now,
+    }, { onConflict: 'user_id,tenant_id' })
+
+  if (creditError) {
+    logger.error('applyInvoiceCreditOnPaid: wallet update failed', creditError)
+    throw new Error('Guthaben konnte nicht gutgeschrieben werden')
   }
 
   const { error: stampError } = await supabase

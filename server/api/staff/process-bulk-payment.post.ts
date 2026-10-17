@@ -3,6 +3,8 @@ import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { createClient } from '@supabase/supabase-js'
 import logger from '~/utils/logger'
 import { applyStudentCreditToPayments } from '~/server/utils/apply-student-credit'
+import { cashSettlementDueRappen } from '~/server/utils/cash-settlement-due'
+import { settlementFailure } from '~/server/utils/payment-settlement'
 import { isStaffProductSalePayment } from '~/utils/staff-product-sale-display'
 
 /**
@@ -69,6 +71,9 @@ export default defineEventHandler(async (event) => {
     }
 
     const tenantId = userProfile.tenant_id
+    if (!tenantId) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
 
     // ✅ LAYER 3: INPUT VALIDATION
     const body = await readBody(event)
@@ -122,17 +127,21 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const loadedPaymentIds = new Set((allPayments as any[]).map((payment) => String(payment.id)))
+    if (payment_ids.some((id: unknown) => !loadedPaymentIds.has(String(id)))) {
+      throw createError({ statusCode: 404, statusMessage: 'Zahlung nicht gefunden' })
+    }
+
     // Calculate remaining due per payment (total - credit - already paid via earlier partial payments)
     const paymentDues = allPayments.map((p: any) => {
-      let fullDue = (p.total_amount_rappen || 0) - (p.credit_used_rappen || 0)
-      if (p.appointments?.status === 'cancelled') {
-        const chargePercentage = p.appointments.cancellation_charge_percentage ?? 100
-        const appointmentCost = (p.total_amount_rappen || 0) - (p.admin_fee_rappen || 0)
-        fullDue = Math.round(appointmentCost * chargePercentage / 100)
+      const due = cashSettlementDueRappen(p)
+      return {
+        ...p,
+        due_rappen: due.remaining,
+        already_paid_rappen: due.alreadyPaid,
+        full_due_rappen: due.fullDue,
+        metadata: p.metadata || {},
       }
-      const alreadyPaid = p.payment_status === 'partial' ? (p.amount_paid_rappen || 0) : 0
-      const remaining = Math.max(0, fullDue - alreadyPaid)
-      return { ...p, due_rappen: remaining, already_paid_rappen: alreadyPaid, full_due_rappen: fullDue, metadata: p.metadata || {} }
     })
 
     const totalDueRappen = paymentDues.reduce((sum: number, p: any) => sum + p.due_rappen, 0)
@@ -235,139 +244,133 @@ export default defineEventHandler(async (event) => {
     const results = []
     const now = new Date().toISOString()
 
-    // Process each payment
-    for (const paymentData of allPayments as any[]) {
-      const paymentId = paymentData.id
-      const decision = paymentDecisions.get(paymentId)
+    const confirmCashAppointment = async (paymentData: any) => {
+      if (!paymentData?.appointment_id) return
+      const { error: appointmentError } = await supabaseAdmin
+        .from('appointments')
+        .update({ status: 'confirmed' })
+        .eq('id', paymentData.appointment_id)
+        .eq('status', 'pending_confirmation')
+        .eq('tenant_id', tenantId)
 
-      if (!decision) {
-        // Not covered by partial payment – skip
-        results.push({ payment_id: paymentId, success: true, skipped: true })
-        continue
+      if (appointmentError) {
+        logger.warn(`⚠️ Could not confirm appointment ${paymentData.appointment_id}:`, appointmentError)
+      } else {
+        logger.debug(`✅ Appointment ${paymentData.appointment_id} confirmed`)
       }
 
-      try {
-        const paymentDueData = paymentDues.find((p: any) => p.id === paymentId) as any
-        const totalAmountPaid = (paymentDueData?.already_paid_rappen || 0) + decision.new_amount
-
-        const updateData: any = {
-          payment_method: method === 'cash' ? 'cash' : 'wallee',
-          payment_status: method === 'cash' ? decision.status : 'pending'
-        }
-
-        if (method === 'cash') {
-          updateData.amount_paid_rappen = totalAmountPaid
-          if (decision.status === 'completed') {
-            updateData.paid_at = now
+      if (paymentData.user_id) {
+        $fetch('/api/affiliate/process-reward', {
+          method: 'POST',
+          headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
+          body: {
+            appointment_id: paymentData.appointment_id,
+            user_id: paymentData.user_id,
+            tenant_id: tenantId,
+            driving_category: (paymentData.appointments as any)?.type ?? null
           }
-
-          // Nur echte Teilzahlungs-Historie speichern — nicht bei einer einmaligen Vollzahlung.
-          const existingMeta = (paymentDueData as any)?.metadata || {}
-          const existingHistory: any[] = existingMeta.partial_payments || []
-          const alreadyPaidRappen = paymentDueData?.already_paid_rappen || 0
-          const isPartialFlow = decision.status === 'partial'
-            || existingHistory.length > 0
-            || alreadyPaidRappen > 0
-
-          if (isPartialFlow) {
-            // Falls bereits vorher etwas bezahlt wurde, aber noch nie in der Historie erfasst
-            // wurde, zuerst rückwirkend einen Eintrag anlegen.
-            if (existingHistory.length === 0 && alreadyPaidRappen > 0) {
-              existingHistory.push({
-                amount_rappen: alreadyPaidRappen,
-                paid_at: paymentDueData?.created_at || now
-              })
-            }
-
-            existingHistory.push({ amount_rappen: decision.new_amount, paid_at: now })
-            updateData.metadata = { ...existingMeta, partial_payments: existingHistory }
-          }
-        }
-
-        const { error: updateError } = await supabaseAdmin
-          .from('payments')
-          .update(updateData)
-          .eq('id', paymentId)
-          .eq('tenant_id', tenantId)
-
-        if (updateError) {
-          logger.error(`❌ Error updating payment ${paymentId}:`, updateError)
-          results.push({ payment_id: paymentId, success: false, error: updateError.message })
-          continue
-        }
-
-        // Confirm pending appointments for fully paid cash payments
-        if (method === 'cash' && decision.status === 'completed' && paymentData?.appointment_id) {
-          const { error: appointmentError } = await supabaseAdmin
-            .from('appointments')
-            .update({ status: 'confirmed' })
-            .eq('id', paymentData.appointment_id)
-            .eq('status', 'pending_confirmation')
-            .eq('tenant_id', tenantId)
-
-          if (appointmentError) {
-            logger.warn(`⚠️ Could not confirm appointment ${paymentData.appointment_id}:`, appointmentError)
-          } else {
-            logger.debug(`✅ Appointment ${paymentData.appointment_id} confirmed`)
-          }
-
-          // ✅ AFFILIATE REWARD HOOK
-          if (paymentData.user_id) {
-            $fetch('/api/affiliate/process-reward', {
-              method: 'POST',
-              headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
-              body: {
-                appointment_id: paymentData.appointment_id,
-                user_id: paymentData.user_id,
-                tenant_id: tenantId,
-                driving_category: (paymentData.appointments as any)?.type ?? null
-              }
-            }).catch((err: any) =>
-              logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
-            )
-          }
-        }
-
-        logger.debug(`✅ Payment ${paymentId} → ${decision.status} (total paid: ${totalAmountPaid} rp)`)
-        results.push({ payment_id: paymentId, success: true, status: decision.status })
-
-      } catch (paymentError: any) {
-        logger.error(`❌ Error processing payment ${paymentId}:`, paymentError)
-        results.push({ payment_id: paymentId, success: false, error: paymentError.message })
+        }).catch((err: any) =>
+          logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
+        )
       }
     }
 
-    // ✅ Sync linked invoices after cash settlement (same rules as /api/invoices/mark-paid)
     if (method === 'cash') {
-      const invoiceIds = [...new Set(
-        (allPayments as any[])
-          .filter((p: any) => p.invoice_id && results.some(r => r.payment_id === p.id && r.success && !r.skipped))
-          .map((p: any) => p.invoice_id as string)
-      )]
+      const updates: Array<Record<string, unknown>> = []
+      for (const paymentData of allPayments as any[]) {
+        const decision = paymentDecisions.get(paymentData.id)
+        if (!decision) {
+          results.push({ payment_id: paymentData.id, success: true, skipped: true })
+          // Money is not rewritten. Appointment confirmation stays idempotent
+          // (only pending_confirmation) so a replay can finish that step.
+          if (paymentData.payment_status === 'completed') await confirmCashAppointment(paymentData)
+          continue
+        }
 
-      for (const invoiceId of invoiceIds) {
-        try {
-          const { data: invoicePayments } = await supabaseAdmin
-            .from('payments')
-            .select('id, payment_status')
-            .eq('invoice_id', invoiceId)
+        const paymentDueData = paymentDues.find((p: any) => p.id === paymentData.id) as any
+        const totalAmountPaid = (paymentDueData?.already_paid_rappen || 0) + decision.new_amount
+        const update: Record<string, unknown> = {
+          payment_id: paymentData.id,
+          payment_method: 'cash',
+          payment_status: decision.status,
+          amount_paid_rappen: totalAmountPaid,
+        }
 
-          const allPaid = !!invoicePayments?.length && invoicePayments.every(p => p.payment_status === 'completed')
-          const anyPaid = !!invoicePayments?.some(p => p.payment_status === 'completed' || p.payment_status === 'partial')
+        const existingMeta = paymentDueData?.metadata || {}
+        const existingHistory: any[] = [...(existingMeta.partial_payments || [])]
+        const alreadyPaidRappen = paymentDueData?.already_paid_rappen || 0
+        const isPartialFlow = decision.status === 'partial'
+          || existingHistory.length > 0
+          || alreadyPaidRappen > 0
 
-          // Staff may settle payment rows; only admin/tenant_admin flip the invoice header to paid/partial
-          if (['admin', 'tenant_admin', 'super_admin', 'superadmin'].includes(userProfile.role) && anyPaid) {
-            await supabaseAdmin
-              .from('invoices')
-              .update({
-                payment_status: allPaid ? 'paid' : 'partial',
-                ...(allPaid ? { paid_at: now } : {}),
-                updated_at: now,
-              })
-              .eq('id', invoiceId)
+        if (isPartialFlow) {
+          if (existingHistory.length === 0 && alreadyPaidRappen > 0) {
+            existingHistory.push({
+              amount_rappen: alreadyPaidRappen,
+              paid_at: paymentDueData?.created_at || now,
+            })
           }
-        } catch (invErr: any) {
-          logger.warn(`⚠️ Invoice sync failed for ${invoiceId}:`, invErr?.message)
+          existingHistory.push({ amount_rappen: decision.new_amount, paid_at: now })
+          update.metadata = { ...existingMeta, partial_payments: existingHistory }
+        }
+
+        updates.push(update)
+      }
+
+      if (updates.length > 0) {
+        const { data, error } = await supabaseAdmin.rpc('apply_cash_settlement_batch', {
+          p_actor_user_id: userProfile.id,
+          p_payment_updates: updates,
+          p_now: now,
+        })
+        const failure = settlementFailure(error, data)
+        if (failure) throw createError(failure)
+
+        const applied = (data as { applied?: Array<{ payment_id: string; skipped?: boolean; payment_status?: string }> }).applied || []
+        for (const row of applied) {
+          const paymentData = (allPayments as any[]).find((payment) => payment.id === row.payment_id)
+          if (row.skipped) {
+            results.push({ payment_id: row.payment_id, success: true, skipped: true })
+            if (paymentData?.payment_status === 'completed') await confirmCashAppointment(paymentData)
+            continue
+          }
+          results.push({ payment_id: row.payment_id, success: true, status: row.payment_status })
+          if (row.payment_status === 'completed') await confirmCashAppointment(paymentData)
+        }
+      }
+    } else {
+      for (const paymentData of allPayments as any[]) {
+        const paymentId = paymentData.id
+        const decision = paymentDecisions.get(paymentId)
+        if (!decision) {
+          results.push({ payment_id: paymentId, success: true, skipped: true })
+          continue
+        }
+
+        try {
+          const { data: updatedPayment, error: updateError } = await supabaseAdmin
+            .from('payments')
+            .update({
+              payment_method: 'wallee',
+              payment_status: 'pending',
+            })
+            .eq('id', paymentId)
+            .eq('tenant_id', tenantId)
+            .select('id')
+
+          if (updateError || !updatedPayment?.length) {
+            results.push({
+              payment_id: paymentId,
+              success: false,
+              error: updateError?.message || 'Zahlung nicht gefunden',
+            })
+            continue
+          }
+
+          results.push({ payment_id: paymentId, success: true, status: 'pending' })
+        } catch (paymentError: any) {
+          logger.error(`❌ Error processing payment ${paymentId}:`, paymentError)
+          results.push({ payment_id: paymentId, success: false, error: paymentError.message })
         }
       }
     }
@@ -434,14 +437,16 @@ export default defineEventHandler(async (event) => {
       failureCount: payment_ids.length - successCount
     })
 
+    const failedCount = results.filter(r => !r.success).length
+
     return {
-      success: true,
+      success: failedCount === 0,
       results,
       credit_added_rappen: creditAdded,
       summary: {
         total: payment_ids.length,
         successful: successCount,
-        failed: payment_ids.length - successCount
+        failed: failedCount
       }
     }
 
