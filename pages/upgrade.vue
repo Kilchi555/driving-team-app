@@ -328,14 +328,19 @@
           <div class="flex items-center justify-between">
             <p class="text-xs text-gray-500 max-w-sm">
               <span v-if="withWallee">
-                ✅ <strong>Mit Online-Zahlungen:</strong> Wir richten dein Wallee-Konto ein (ca. 5 Werktage).
-                Die Abrechnung startet erst wenn alles aktiv ist — du hast 30 Tage Zeit.
-                Es fällt eine Transaktionsgebühr von <strong>{{ walleeFeeLabel }}</strong> pro Zahlung deiner {{ t.clientsPlural }} an.
+                ✅ <strong>Mit Online-Zahlungen:</strong>
+                Online-Zahlungen mit Wallee sind optional. Nach dem Upgrade richten wir sie ein.
+                Dein SIMY-Abo wird gemäss deinem gewählten Plan und deiner Vertragsperiode abgerechnet.
+                Die Wallee-Einrichtung verlängert deine Testphase nicht.
+                Bar- und Rechnungszahlungen bleiben möglich.
+                Es fällt eine Transaktionsgebühr von <strong>{{ walleeFeeLabel }}</strong> pro Online-Zahlung deiner {{ t.clientsPlural }} an.
                 {{ walleeFeePriceTip }}
               </span>
               <span v-else>
-                ℹ️ <strong>Ohne Online-Zahlungen:</strong> Nur Bar- und Rechnungszahlung.
-                Die Abrechnung startet sofort. Online-Zahlungen können später aktiviert werden.
+                ℹ️ <strong>Ohne Online-Zahlungen:</strong>
+                Du kannst später Online-Zahlungen mit Wallee beantragen.
+                Bar- und Rechnungszahlungen bleiben möglich.
+                Dein SIMY-Abo wird gemäss deinem gewählten Plan und deiner Vertragsperiode abgerechnet.
               </span>
             </p>
             <div class="flex items-center gap-2 ml-4 flex-shrink-0">
@@ -464,8 +469,8 @@
 
           <!-- Wallee info banner -->
           <div v-if="withWallee" class="px-6 py-3 text-xs text-blue-700 bg-blue-50 border-t border-blue-100">
-            💳 Die Abrechnung startet erst wenn deine Online-Zahlungen aktiv sind — du hast <strong>30 Tage Zeit</strong>:
-            ca. 20 Tage für die HR-Eintragung (falls nötig) + ca. 5 Tage für das Wallee-Onboarding.
+            💳 Online-Zahlungen mit Wallee sind optional und verlängern deine Testphase nicht.
+            Dein SIMY-Abo wird gemäss Plan und Vertragsperiode abgerechnet — unabhängig von der Wallee-Einrichtung.
           </div>
 
           <!-- Total -->

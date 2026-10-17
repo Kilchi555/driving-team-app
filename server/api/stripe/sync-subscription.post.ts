@@ -7,8 +7,11 @@ import { resolveSubscriptionPeriodEnd } from '~/server/utils/stripe-subscription
 
 /**
  * Called from the success page after a Stripe checkout.
- * Syncs the subscription state directly to the tenant — acts as a reliable
- * fallback in case the webhook hasn't fired yet or failed silently.
+ * Syncs subscription plan fields to the tenant as a webhook fallback.
+ *
+ * IMPORTANT: session.status === 'complete' is NOT proof of a successful charge.
+ * Do not treat this endpoint as payment verification. Payment success is
+ * confirmed via invoice.paid (amount_paid > 0) in the Stripe webhook.
  */
 export default defineEventHandler(async (event) => {
   const stripeSecret = process.env.STRIPE_SECRET_KEY

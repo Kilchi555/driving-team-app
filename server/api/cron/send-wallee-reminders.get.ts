@@ -1,13 +1,19 @@
 // server/api/cron/send-wallee-reminders.get.ts
 // ─────────────────────────────────────────────────────────────────────────────
-// Daily cron that sends reminder emails to tenants with an active Wallee trial
-// (stripe subscription in trialing mode, with_wallee = true) who haven't
-// completed onboarding yet.
+// Daily cron that nudges tenants who started Wallee onboarding (have
+// wallee_trial_started_at) but have not reached wallee_onboarding_status
+// active/skipped.
+//
+// Stamp source: webhook sets wallee_trial_started_at once when with_wallee=true
+// on Checkout complete (trialing OR active) — not only legacy Stripe trials.
+// Reminder copy must NOT promise an extra free SaaS period. For tenants still
+// within the historical 30-day window after the stamp, we may mention that any
+// remaining Stripe probezeitraum ends independently of Wallee setup.
 //
 // Reminder schedule (based on wallee_trial_started_at):
 //   Day 10: application not submitted yet → nudge to submit HR registration
-//   Day 20: still not started OR still pending → urgent reminder, 10 days left
-//   Day 27: last warning, 3 days left
+//   Day 20: still not started OR still pending
+//   Day 27: last nudge
 //
 // Schedule: daily at 09:00 UTC (vercel.json)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,44 +53,47 @@ export default defineEventHandler(async (event) => {
       if (daysSinceStart < day - 0.5 || daysSinceStart >= day + 0.5) continue
 
       const daysLeft = 30 - day
+      const legacyStripeNote = daysLeft > 0
+        ? ` Falls bei dir noch ein älterer Stripe-Probezeitraum läuft, endet dieser unabhängig von der Wallee-Einrichtung (noch ca. <strong>${daysLeft} Tage</strong>).`
+        : ''
       let subject = ''
       let bodyHtml = ''
 
       if (day === 10 && status === 'not_started') {
-        subject = `Erinnerung: Online-Zahlungen noch nicht beantragt (${daysLeft} Tage verbleibend)`
+        subject = 'Erinnerung: Online-Zahlungen (Wallee) noch nicht beantragt'
         bodyHtml = reminderBody({
           tenantName: tenant.name,
           daysLeft,
           headline: 'Wallee-Antrag noch ausstehend',
-          intro: `Du hast dich für Online-Zahlungen entschieden, aber wir haben noch keinen Antrag von dir erhalten. Du hast noch <strong>${daysLeft} Tage</strong> bis die Abrechnung startet.`,
+          intro: `Du hast dich für Online-Zahlungen entschieden, aber wir haben noch keinen Antrag von dir erhalten. Online-Kundenzahlungen sind erst nach erfolgreicher Aktivierung möglich. Dein SIMY-Abo läuft unabhängig davon.${legacyStripeNote}`,
           showChecklist: true,
           ctaText: 'Wallee-Antrag jetzt einreichen →',
           ctaUrl: `${baseUrl}/admin/profile`,
           baseUrl,
         })
       } else if (day === 20 && (status === 'not_started' || status === 'pending')) {
-        subject = `Wichtig: Noch ${daysLeft} Tage bis zur Abrechnung – Online-Zahlungen`
+        subject = 'Wichtig: Online-Zahlungen (Wallee) einrichten'
         bodyHtml = reminderBody({
           tenantName: tenant.name,
           daysLeft,
-          headline: `Noch ${daysLeft} Tage verbleibend`,
+          headline: 'Wallee-Einrichtung fortsetzen',
           intro: status === 'pending'
-            ? `Dein Wallee-Antrag ist eingegangen und wird bearbeitet. Wir sind dran! Die Abrechnung startet sobald alles aktiv ist — noch <strong>${daysLeft} Tage</strong> Puffer.`
-            : `Du hast noch keinen Wallee-Antrag eingereicht. Bitte reiche den Antrag so bald wie möglich ein, damit wir dein Konto rechtzeitig einrichten können. Noch <strong>${daysLeft} Tage</strong>.`,
+            ? `Dein Wallee-Antrag ist eingegangen und wird bearbeitet. Online-Kundenzahlungen sind erst nach Aktivierung möglich. Dein SIMY-Abo läuft unabhängig davon.${legacyStripeNote}`
+            : `Du hast noch keinen Wallee-Antrag eingereicht. Bitte reiche den Antrag ein, damit Kunden online bezahlen können. Dein SIMY-Abo läuft unabhängig davon.${legacyStripeNote}`,
           showChecklist: status === 'not_started',
           ctaText: status === 'pending' ? 'Status prüfen →' : 'Jetzt Antrag einreichen →',
           ctaUrl: `${baseUrl}/admin/profile`,
           baseUrl,
         })
       } else if (day === 27 && (status === 'not_started' || status === 'pending')) {
-        subject = `⚠️ Letzte Erinnerung: Noch ${daysLeft} Tage bis zur Abrechnung`
+        subject = '⚠️ Erinnerung: Wallee-Antrag noch offen'
         bodyHtml = reminderBody({
           tenantName: tenant.name,
           daysLeft,
-          headline: `Noch ${daysLeft} Tage`,
+          headline: 'Wallee-Antrag noch offen',
           intro: status === 'pending'
-            ? `Dein Wallee-Antrag ist bei uns in Bearbeitung. Wir tun alles um rechtzeitig fertig zu sein. Bei Fragen melde dich direkt unter info@simy.ch.`
-            : `Dein Wallee-Antrag ist noch nicht eingegangen. Bitte reiche ihn jetzt sofort ein — in ${daysLeft} Tagen startet die Abrechnung unabhängig davon ob Online-Zahlungen aktiv sind.`,
+            ? `Dein Wallee-Antrag ist bei uns in Bearbeitung. Bei Fragen melde dich unter info@simy.ch. Dein SIMY-Abo läuft unabhängig von der Wallee-Einrichtung.${legacyStripeNote}`
+            : `Dein Wallee-Antrag ist noch nicht eingegangen. Bitte reiche ihn ein, damit Online-Kundenzahlungen möglich werden. Dein SIMY-Abo läuft unabhängig davon.${legacyStripeNote}`,
           showChecklist: false,
           ctaText: status === 'pending' ? 'Zum Admin-Bereich →' : 'Antrag jetzt einreichen →',
           ctaUrl: `${baseUrl}/admin/profile`,

@@ -16,15 +16,23 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
             </svg>
           </div>
-          <h1 class="text-2xl font-bold mb-1">Abonnement aktiviert!</h1>
+          <h1 class="text-2xl font-bold mb-1">Checkout abgeschlossen</h1>
           <p v-if="isWalleeSetup" class="text-white/80 text-sm">
-            Du wirst erst abgerechnet, wenn dein Wallee-Konto aktiv ist — du hast <strong>30 Tage</strong> Zeit.
+            Dein Upgrade ist bei Stripe angekommen. Die Einrichtung von Wallee für Online-Kundenzahlungen kannst du jetzt starten.
           </p>
-          <p v-else class="text-white/80 text-sm">Dein neues Abo ist jetzt aktiv. Viel Erfolg mit Simy!</p>
+          <p v-else class="text-white/80 text-sm">
+            Dein Upgrade ist bei Stripe angekommen. Die Verifizierung der Zahlung läuft im Hintergrund — das ist noch kein bestätigter Zahlungserfolg.
+          </p>
+        </div>
+        <div class="px-8 py-4 bg-slate-50 border-b border-slate-100 text-xs text-slate-600">
+          Checkout-Abschluss ist nicht dasselbe wie eine verifizierte Zahlung. Bei Problemen prüfe die E-Mail-Quittung oder den Bereich Abrechnung.
         </div>
         <div v-if="isWalleeSetup" class="px-8 py-5 bg-amber-50 border-b border-amber-100 text-sm text-amber-800">
-          <p class="font-semibold mb-1">💳 Nächster Schritt: Wallee-Konto einrichten</p>
-          <p class="text-xs text-amber-700">Bitte fülle das Formular aus, damit wir dein Wallee-Konto aktivieren können. Die Abrechnung startet erst nach der Aktivierung.</p>
+          <p class="font-semibold mb-1">💳 Nächster Schritt: Wallee einrichten</p>
+          <p class="text-xs text-amber-700">
+            Die Wallee-Aktivierung und die Abrechnung deines SIMY-Abos sind voneinander unabhängig.
+            Bitte fülle das Formular aus, damit Kunden online bezahlen können.
+          </p>
         </div>
         <div class="px-8 py-6 text-center">
           <p class="text-sm text-gray-400 mb-5">Weiterleitung in {{ stripeCountdown }} Sekunden…</p>
