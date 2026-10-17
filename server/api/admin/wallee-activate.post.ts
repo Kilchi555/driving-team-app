@@ -102,12 +102,17 @@ export default defineEventHandler(async (event) => {
   } catch (webhookErr: any) {
     console.error(`⚠️ Webhook-Registrierung fehlgeschlagen (non-fatal): ${webhookErr?.message}`)
   }
+  // Soft-drain / carry-through preservation (Phase 1 binding):
+  // Do NOT call Stripe trial_end: 'now' on Wallee activation.
+  // - Legacy Wallee Checkout trials keep their scheduled Stripe trial_end.
+  // - New registration_carry trials keep tenants.trial_ends_at / Stripe trial_end.
+  // Historical code ended trialing subs early; that violated preservation.
   try {
     const stripeSecret = process.env.STRIPE_SECRET_KEY
     if (stripeSecret) {
       const { data: tenantForStripe } = await supabase
         .from('tenants')
-        .select('stripe_customer_id, stripe_subscription_id')
+        .select('stripe_subscription_id')
         .eq('id', tenant_id)
         .single()
 
@@ -116,14 +121,25 @@ export default defineEventHandler(async (event) => {
         const Stripe = (await import('stripe')).default
         const stripe = new Stripe(stripeSecret, { apiVersion: '2025-08-27.basil' as any })
         const sub = await stripe.subscriptions.retrieve(subId)
-        if (sub.status === 'trialing') {
+        const { shouldEndStripeTrialOnWalleeActivate } = await import(
+          '~/server/utils/registration-trial-checkout'
+        )
+        if (
+          sub.status === 'trialing' &&
+          shouldEndStripeTrialOnWalleeActivate(sub.metadata as Record<string, string>)
+        ) {
+          // Intentionally unreachable under current binding (helper returns false).
           await stripe.subscriptions.update(subId, { trial_end: 'now' })
           console.log(`✅ Stripe trial ended for tenant ${tenant_id} (sub ${subId})`)
+        } else if (sub.status === 'trialing') {
+          console.log(
+            `ℹ️ Preserving Stripe trial_end for tenant ${tenant_id} (sub ${subId}, trial_source=${sub.metadata?.trial_source || 'legacy/absent'})`,
+          )
         }
       }
     }
   } catch (stripeErr: any) {
-    console.error('⚠️ Could not end Stripe trial (non-fatal):', stripeErr.message)
+    console.error('⚠️ Could not inspect Stripe trial on Wallee activate (non-fatal):', stripeErr.message)
   }
 
   // Notify tenant by email

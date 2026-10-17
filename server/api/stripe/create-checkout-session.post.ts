@@ -3,6 +3,10 @@ import { createError, defineEventHandler, getHeader, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { PLANS, ADDONS, type SubscriptionPlan, type AddonKey } from '~/utils/planFeatures'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import {
+  decideRegistrationTrialForCheckout,
+  TRIAL_SOURCE_META_KEY,
+} from '~/server/utils/registration-trial-checkout'
 
 interface CheckoutBody {
   plan: SubscriptionPlan
@@ -101,16 +105,42 @@ export default defineEventHandler(async (event) => {
   // Failures here are tolerated: we fall back to a transient customer below.
   let stripeCustomerId: string | undefined
   let referredByCode: string | null = null
+  // Registration-trial carry-through (server-authoritative; never from body).
+  let registrationTrialDecision = decideRegistrationTrialForCheckout({
+    is_trial: false,
+    trial_ends_at: null,
+  })
+  let tenantTrialFieldsLoaded = false
 
   try {
     const supabase = getSupabaseAdmin()
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('stripe_customer_id, name, contact_email, wallee_onboarding_status, stripe_subscription_id, referred_by_code')
+      .select('stripe_customer_id, name, contact_email, wallee_onboarding_status, stripe_subscription_id, referred_by_code, is_trial, trial_ends_at')
       .eq('id', tenantId)
       .single()
 
-    referredByCode = tenant?.referred_by_code || null
+    if (!tenant) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Tenant nicht gefunden.',
+        data: { code: 'tenant_not_found' },
+      })
+    }
+
+    referredByCode = tenant.referred_by_code || null
+    tenantTrialFieldsLoaded = true
+    registrationTrialDecision = decideRegistrationTrialForCheckout({
+      is_trial: tenant.is_trial,
+      trial_ends_at: tenant.trial_ends_at,
+    })
+    if (registrationTrialDecision.kind === 'reject') {
+      throw createError({
+        statusCode: 400,
+        statusMessage: registrationTrialDecision.statusMessage,
+        data: { code: registrationTrialDecision.code },
+      })
+    }
 
     // Prevent a second full subscription when the tenant already pays via Stripe.
     // Mid-cycle plan/seat changes go through /api/stripe/update-subscription (proration).
@@ -170,8 +200,17 @@ export default defineEventHandler(async (event) => {
         .eq('id', tenantId)
     }
   } catch (err: any) {
-    if (err?.statusCode === 409) throw err
+    if (err?.statusCode === 409 || err?.statusCode === 400 || err?.statusCode === 404) throw err
     console.error('⚠️ Could not resolve tenant customer:', err?.message)
+  }
+
+  if (!tenantTrialFieldsLoaded) {
+    throw createError({
+      statusCode: 503,
+      statusMessage:
+        'Probezeitraum konnte nicht geladen werden. Bitte später erneut versuchen (Code: trial_lookup_failed).',
+      data: { code: 'trial_lookup_failed' },
+    })
   }
 
   // Accounts V2: always requires a customer — create a transient one if none resolved.
@@ -240,14 +279,18 @@ export default defineEventHandler(async (event) => {
   if (smsLine) lineItems.push(smsLine)
 
   // ── Create Checkout Session ───────────────────────────────────────────────
-  // Wallee onboarding is independent of SaaS billing. Do NOT attach
-  // subscription_data.trial_period_days for Wallee — registration free trial
-  // (SAAS_TRIAL_DAYS) is the only complimentary SaaS period. Legacy Stripe
-  // trials created under the old policy may still exist; wallee-activate ends
-  // those early when credentials go live.
+  // Registration-trial carry-through: absolute trial_end from tenants.trial_ends_at
+  // (same with/without Wallee). Never use fixed trial_period_days for Wallee.
+  // Legacy Stripe trials (pre-carry-through) keep their scheduled ends (soft-drain).
   const successUrl = withWallee
     ? `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}&wallee_setup=1`
     : `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`
+
+  const trialSource = registrationTrialDecision.trialSource
+  const carryTrialEndUnix =
+    registrationTrialDecision.kind === 'carry'
+      ? registrationTrialDecision.trialEndUnix
+      : undefined
 
   try {
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
@@ -255,6 +298,7 @@ export default defineEventHandler(async (event) => {
       customer: stripeCustomerId,
       line_items: lineItems,
       subscription_data: {
+        ...(carryTrialEndUnix != null ? { trial_end: carryTrialEndUnix } : {}),
         metadata: {
           plan,
           addon_seats: String(addons.seats || 0),
@@ -262,6 +306,10 @@ export default defineEventHandler(async (event) => {
           addon_affiliate: String(!!addons.affiliate),
           addon_gbp: String(!!addons.gbp),
           with_wallee: String(withWallee),
+          [TRIAL_SOURCE_META_KEY]: trialSource,
+          ...(registrationTrialDecision.kind === 'carry'
+            ? { registration_trial_ends_at: registrationTrialDecision.trialEndsAtIso }
+            : {}),
           ...(staffToDeactivate.length > 0 ? { staff_to_deactivate: staffToDeactivate.join(',') } : {}),
           ...(tenantId ? { tenant_id: tenantId } : {}),
           ...(referredByCode ? { referred_by_code: referredByCode } : {}),
@@ -286,6 +334,26 @@ export default defineEventHandler(async (event) => {
       throw firstErr
     }
   } catch (stripeErr: any) {
+    const stripeMsg = String(stripeErr?.message || '')
+    // Stripe rejects trial_end that is too soon / invalid — never silently extend.
+    if (/trial_end/i.test(stripeMsg) || /trial period/i.test(stripeMsg)) {
+      console.error('❌ Stripe rejected trial_end (no silent extension)', {
+        message: stripeMsg,
+        code: stripeErr?.code,
+        trialEndUnix: carryTrialEndUnix ?? null,
+      })
+      throw createError({
+        statusCode: 400,
+        statusMessage:
+          'Stripe hat das Probezeitraum-Ende abgelehnt. Bitte Support kontaktieren (Code: stripe_trial_end_rejected). Es wurde kein längerer Probezeitraum erzeugt.',
+        data: {
+          code: 'stripe_trial_end_rejected',
+          stripe: true,
+          type: stripeErr?.type,
+          stripeCode: stripeErr?.code,
+        },
+      })
+    }
     console.error('❌ Stripe checkout.sessions.create failed', {
       type: stripeErr?.type,
       code: stripeErr?.code,

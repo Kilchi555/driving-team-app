@@ -66,9 +66,13 @@ export default defineEventHandler(async (event) => {
         if (session.mode === 'subscription' && session.subscription) {
           const sub = await stripe.subscriptions.retrieve(session.subscription as string)
           await handleSubscriptionUpsert(supabase, stripe, sub)
-          // If Wallee was selected and subscription is trialing, send welcome + checklist email
-          if (sub.metadata?.with_wallee === 'true' && sub.status === 'trialing') {
+          // Wallee selected at upgrade: tenant welcome + internal ops (not payment success).
+          // Welcome must work for trialing (registration carry / legacy) and active (paid Checkout).
+          if (sub.metadata?.with_wallee === 'true' && (sub.status === 'trialing' || sub.status === 'active')) {
             await handleWalleeWelcomeEmail(supabase, sub)
+            await handleWalleeUpgradeOpsEmail(supabase, sub).catch((e: any) =>
+              console.error('⚠️ Wallee upgrade ops email failed (non-fatal):', e?.message),
+            )
           }
         }
         break
@@ -320,7 +324,20 @@ async function handleSubscriptionUpsert(
     : null
 
   // ── Update tenant ───────────────────────────────────────────────────────
-  const isWalleeTrialing = sub.metadata?.with_wallee === 'true' && sub.status === 'trialing'
+  // Stamp wallee_trial_started_at once when Wallee was selected (reminders cron),
+  // including active (non-trialing) Checkouts — does NOT imply free SaaS time.
+  // Never rewrite Stripe trial_end here (legacy soft-drain + registration carry).
+  const withWalleeSelected = sub.metadata?.with_wallee === 'true'
+  let stampWalleeOnboardingStart = false
+  if (withWalleeSelected) {
+    const { data: existingStamp } = await supabase
+      .from('tenants')
+      .select('wallee_trial_started_at')
+      .eq('id', tenantId)
+      .maybeSingle()
+    stampWalleeOnboardingStart = !existingStamp?.wallee_trial_started_at
+  }
+
   const updatePayload: Record<string, unknown> = {
     stripe_subscription_id: sub.id,
     subscription_plan: plan,
@@ -330,7 +347,7 @@ async function handleSubscriptionUpsert(
     addon_affiliate_enabled: addonAffiliate,
     addon_gbp_enabled: addonGbp,
     subscription_cancel_at: cancelAt,
-    ...(isWalleeTrialing ? { wallee_trial_started_at: new Date().toISOString() } : {}),
+    ...(stampWalleeOnboardingStart ? { wallee_trial_started_at: new Date().toISOString() } : {}),
   }
   if (currentPeriodEnd) updatePayload.current_period_end = currentPeriodEnd
 
@@ -811,5 +828,84 @@ async function handleWalleeWelcomeEmail(
   } catch (e: any) {
     console.error('⚠️ Wallee welcome email failed (non-fatal):', e.message)
   }
+}
+
+/**
+ * Internal ops notify when an existing tenant selects Wallee during paid upgrade.
+ * Distinct from registration notify and formal wallee-onboarding-request.
+ * Does NOT claim payment success — only Checkout/subscription setup with with_wallee.
+ * Idempotent on Stripe subscription id via tenant_settings (no schema migration).
+ */
+async function handleWalleeUpgradeOpsEmail(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  sub: Stripe.Subscription,
+) {
+  const tenantId = sub.metadata?.tenant_id
+  if (!tenantId) return
+
+  const { shouldSendWalleeUpgradeOpsEmail, WALLEE_UPGRADE_OPS_EMAIL_SETTING_KEY } = await import(
+    '~/server/utils/registration-trial-checkout',
+  )
+  const settingKey = WALLEE_UPGRADE_OPS_EMAIL_SETTING_KEY
+  const { data: already } = await supabase
+    .from('tenant_settings')
+    .select('setting_value')
+    .eq('tenant_id', tenantId)
+    .eq('setting_key', settingKey)
+    .maybeSingle()
+
+  if (!shouldSendWalleeUpgradeOpsEmail(already?.setting_value, sub.id)) {
+    console.log(`📧 Wallee upgrade ops email already sent for sub ${sub.id} — skipping`)
+    return
+  }
+
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name, slug, contact_email, contact_phone, subscription_plan')
+    .eq('id', tenantId)
+    .single()
+
+  const tenantName = tenant?.name || tenantId
+  const trialSource = sub.metadata?.trial_source || 'legacy/absent'
+  const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+
+  await sendEmail({
+    to: 'info@simy.ch',
+    fromName: 'Simy',
+    subject: `Wallee bei Upgrade gewählt – ${tenantName}`,
+    html: `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111827">
+  <h2 style="margin:0 0 12px">Wallee bei Upgrade gewählt</h2>
+  <p style="color:#4b5563;font-size:14px;line-height:1.5">
+    Ein bestehender Tenant hat beim Paid-Plan-Upgrade Online-Zahlungen (Wallee) ausgewählt.
+    Dies ist <strong>kein</strong> formeller Wallee-Antrag und <strong>kein</strong> verifizierter Zahlungserfolg.
+  </p>
+  <table cellpadding="6" style="border-collapse:collapse;font-size:14px;margin:16px 0">
+    <tr><td><strong>Tenant</strong></td><td>${tenantName}</td></tr>
+    <tr><td><strong>Slug</strong></td><td>${tenant?.slug || '–'}</td></tr>
+    <tr><td><strong>Kontakt</strong></td><td>${tenant?.contact_email || '–'}</td></tr>
+    <tr><td><strong>Telefon</strong></td><td>${tenant?.contact_phone || '–'}</td></tr>
+    <tr><td><strong>Plan (metadata)</strong></td><td>${sub.metadata?.plan || tenant?.subscription_plan || '–'}</td></tr>
+    <tr><td><strong>Stripe Sub</strong></td><td>${sub.id}</td></tr>
+    <tr><td><strong>Stripe Status</strong></td><td>${sub.status}</td></tr>
+    <tr><td><strong>trial_source</strong></td><td>${trialSource}</td></tr>
+    <tr><td><strong>Tenant ID</strong></td><td><code>${tenantId}</code></td></tr>
+  </table>
+  <p style="font-size:13px">
+    <a href="${baseUrl}/tenant-admin/tenants">Tenant-Admin öffnen</a>
+  </p>
+</body></html>`,
+  })
+
+  await supabase
+    .from('tenant_settings')
+    .upsert({
+      tenant_id: tenantId,
+      category: 'billing',
+      setting_key: settingKey,
+      setting_value: sub.id,
+    }, { onConflict: 'tenant_id,setting_key' })
+
+  console.log(`📧 Wallee upgrade ops email sent for tenant ${tenantId} sub ${sub.id}`)
 }
 

@@ -1,13 +1,14 @@
 // server/api/cron/send-wallee-reminders.get.ts
 // ─────────────────────────────────────────────────────────────────────────────
 // Daily cron that nudges tenants who started Wallee onboarding (have
-// wallee_trial_started_at from a legacy Checkout Stripe trial or older flow)
-// but have not reached wallee_onboarding_status active/skipped.
+// wallee_trial_started_at) but have not reached wallee_onboarding_status
+// active/skipped.
 //
-// New Checkouts no longer create a Stripe trial for Wallee. Reminder copy must
-// NOT promise an extra free SaaS period. For legacy tenants still within the
-// historical 30-day window after wallee_trial_started_at, we may mention that
-// any remaining Stripe probezeitraum ends independently of Wallee setup.
+// Stamp source: webhook sets wallee_trial_started_at once when with_wallee=true
+// on Checkout complete (trialing OR active) — not only legacy Stripe trials.
+// Reminder copy must NOT promise an extra free SaaS period. For tenants still
+// within the historical 30-day window after the stamp, we may mention that any
+// remaining Stripe probezeitraum ends independently of Wallee setup.
 //
 // Reminder schedule (based on wallee_trial_started_at):
 //   Day 10: application not submitted yet → nudge to submit HR registration

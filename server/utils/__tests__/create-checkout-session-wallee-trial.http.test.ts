@@ -1,6 +1,5 @@
 /**
- * Checkout must not attach Stripe trial_period_days for Wallee onboarding.
- * Registration free trial (SAAS_TRIAL_DAYS) remains separate.
+ * Phase 1: registration-trial carry-through + no fixed Wallee Stripe trial.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
@@ -73,13 +72,17 @@ vi.mock('stripe', () => {
 
 const TENANT = '11111111-1111-1111-1111-111111111111'
 const CUS = 'cus_test_checkout'
+const FUTURE_END = '2026-11-06T12:00:00.000Z' // ~20d from mid-Oct 2026 fixtures in other tests; absolute
+const FUTURE_UNIX = Math.floor(Date.parse(FUTURE_END) / 1000)
 
 type Handler = (event: object) => Promise<{ id?: string; url?: string }>
 
 function tenantClient(opts: {
-  walleeStatus: string | null
+  walleeStatus?: string | null
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
+  is_trial?: boolean
+  trial_ends_at?: string | null
 }) {
   return {
     from(table: string) {
@@ -96,9 +99,11 @@ function tenantClient(opts: {
                 stripe_customer_id: opts.stripeCustomerId ?? CUS,
                 name: 'Test Fahrschule',
                 contact_email: 'billing@example.com',
-                wallee_onboarding_status: opts.walleeStatus,
+                wallee_onboarding_status: opts.walleeStatus ?? 'not_started',
                 stripe_subscription_id: opts.stripeSubscriptionId ?? null,
                 referred_by_code: null,
+                is_trial: opts.is_trial ?? false,
+                trial_ends_at: opts.trial_ends_at ?? null,
               },
               error: null,
             }),
@@ -112,7 +117,7 @@ function tenantClient(opts: {
   }
 }
 
-describe('POST /api/stripe/create-checkout-session Wallee trial removed', () => {
+describe('POST /api/stripe/create-checkout-session registration-trial carry-through', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
@@ -137,41 +142,35 @@ describe('POST /api/stripe/create-checkout-session Wallee trial removed', () => 
     return (await import('../../api/stripe/create-checkout-session.post')).default as Handler
   }
 
-  it('withWallee=true and Wallee inactive: no trial_period_days; keeps with_wallee metadata', async () => {
+  it('future trial + Wallee on: absolute trial_end, no trial_period_days, trial_source=registration_carry', async () => {
     mocks.getSupabaseAdmin.mockReturnValue(
-      tenantClient({ walleeStatus: 'not_started', stripeCustomerId: CUS }),
+      tenantClient({ is_trial: true, trial_ends_at: FUTURE_END, walleeStatus: 'not_started' }),
     )
-    mocks.readBody.mockResolvedValue({ plan: 'starter', withWallee: true, addons: {} })
-
-    const handler = await loadHandler()
-    const result = await handler({})
-    expect(result).toMatchObject({ id: 'cs_test_1' })
-
-    const subData = mocks.lastSessionParams?.subscription_data as Record<string, unknown>
-    expect(subData).toBeTruthy()
-    expect(subData.trial_period_days).toBeUndefined()
-    expect((subData.metadata as Record<string, string>).with_wallee).toBe('true')
-    expect(mocks.lastSessionParams?.custom_text).toBeUndefined()
-    expect(String(mocks.lastSessionParams?.success_url)).toContain('wallee_setup=1')
-  })
-
-  it('Wallee already active: no Stripe trial', async () => {
-    mocks.getSupabaseAdmin.mockReturnValue(
-      tenantClient({ walleeStatus: 'active', stripeCustomerId: CUS }),
-    )
-    mocks.readBody.mockResolvedValue({ plan: 'starter', withWallee: true, addons: {} })
+    mocks.readBody.mockResolvedValue({
+      plan: 'starter',
+      withWallee: true,
+      addons: {},
+      // Client-supplied trial must be ignored
+      trial_ends_at: '2099-01-01T00:00:00.000Z',
+      trialEndsAt: '2099-01-01T00:00:00.000Z',
+    })
 
     const handler = await loadHandler()
     await handler({})
 
     const subData = mocks.lastSessionParams?.subscription_data as Record<string, unknown>
     expect(subData.trial_period_days).toBeUndefined()
-    expect((subData.metadata as Record<string, string>).with_wallee).toBe('true')
+    expect(subData.trial_end).toBe(FUTURE_UNIX)
+    const meta = subData.metadata as Record<string, string>
+    expect(meta.with_wallee).toBe('true')
+    expect(meta.trial_source).toBe('registration_carry')
+    expect(meta.registration_trial_ends_at).toBe(new Date(FUTURE_END).toISOString())
+    expect(String(mocks.lastSessionParams?.success_url)).toContain('wallee_setup=1')
   })
 
-  it('withWallee=false: no Stripe trial', async () => {
+  it('future trial + Wallee off: same absolute trial_end (parity)', async () => {
     mocks.getSupabaseAdmin.mockReturnValue(
-      tenantClient({ walleeStatus: 'not_started', stripeCustomerId: CUS }),
+      tenantClient({ is_trial: true, trial_ends_at: FUTURE_END }),
     )
     mocks.readBody.mockResolvedValue({ plan: 'starter', withWallee: false, addons: {} })
 
@@ -179,60 +178,127 @@ describe('POST /api/stripe/create-checkout-session Wallee trial removed', () => 
     await handler({})
 
     const subData = mocks.lastSessionParams?.subscription_data as Record<string, unknown>
+    expect(subData.trial_end).toBe(FUTURE_UNIX)
     expect(subData.trial_period_days).toBeUndefined()
-    expect((subData.metadata as Record<string, string>).with_wallee).toBe('false')
+    const meta = subData.metadata as Record<string, string>
+    expect(meta.with_wallee).toBe('false')
+    expect(meta.trial_source).toBe('registration_carry')
     expect(String(mocks.lastSessionParams?.success_url)).not.toContain('wallee_setup=1')
   })
 
-  it('registration SaaS trial length remains SAAS_TRIAL_DAYS (30)', () => {
+  it('does not reset remaining duration to 30 days', async () => {
+    mocks.getSupabaseAdmin.mockReturnValue(
+      tenantClient({ is_trial: true, trial_ends_at: FUTURE_END, walleeStatus: 'not_started' }),
+    )
+    mocks.readBody.mockResolvedValue({ plan: 'starter', withWallee: true, addons: {} })
+    await (await loadHandler())({})
+    const subData = mocks.lastSessionParams?.subscription_data as Record<string, unknown>
+    expect(subData.trial_period_days).toBeUndefined()
+    expect(subData.trial_end).toBe(FUTURE_UNIX)
+    expect(subData.trial_end).not.toBe(
+      Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+    )
+  })
+
+  it('expired registration trial: no Stripe trial', async () => {
+    mocks.getSupabaseAdmin.mockReturnValue(
+      tenantClient({ is_trial: true, trial_ends_at: '2020-01-01T00:00:00.000Z' }),
+    )
+    mocks.readBody.mockResolvedValue({ plan: 'starter', withWallee: true, addons: {} })
+    await (await loadHandler())({})
+    const subData = mocks.lastSessionParams?.subscription_data as Record<string, unknown>
+    expect(subData.trial_end).toBeUndefined()
+    expect(subData.trial_period_days).toBeUndefined()
+    expect((subData.metadata as Record<string, string>).trial_source).toBe('none')
+  })
+
+  it('missing trial_ends_at on registration trial blocks Checkout', async () => {
+    mocks.getSupabaseAdmin.mockReturnValue(
+      tenantClient({ is_trial: true, trial_ends_at: null }),
+    )
+    mocks.readBody.mockResolvedValue({ plan: 'starter', withWallee: false, addons: {} })
+    const handler = await loadHandler()
+    await expect(handler({})).rejects.toMatchObject({
+      statusCode: 400,
+      data: { code: 'trial_end_missing' },
+    })
+    expect(mocks.checkoutCreate).not.toHaveBeenCalled()
+  })
+
+  it('malformed trial_ends_at blocks Checkout', async () => {
+    mocks.getSupabaseAdmin.mockReturnValue(
+      tenantClient({ is_trial: true, trial_ends_at: 'garbage' }),
+    )
+    mocks.readBody.mockResolvedValue({ plan: 'starter', withWallee: true, addons: {} })
+    await expect((await loadHandler())({})).rejects.toMatchObject({
+      statusCode: 400,
+      data: { code: 'trial_end_invalid' },
+    })
+    expect(mocks.checkoutCreate).not.toHaveBeenCalled()
+  })
+
+  it('non-trial paid-style tenant: no registration trial_end invented', async () => {
+    mocks.getSupabaseAdmin.mockReturnValue(
+      tenantClient({ is_trial: false, trial_ends_at: FUTURE_END }),
+    )
+    mocks.readBody.mockResolvedValue({ plan: 'starter', withWallee: false, addons: {} })
+    await (await loadHandler())({})
+    const subData = mocks.lastSessionParams?.subscription_data as Record<string, unknown>
+    expect(subData.trial_end).toBeUndefined()
+    expect((subData.metadata as Record<string, string>).trial_source).toBe('none')
+  })
+
+  it('existing subscription still returns 409 (unrelated upgrade path)', async () => {
+    mocks.getSupabaseAdmin.mockReturnValue(
+      tenantClient({
+        is_trial: true,
+        trial_ends_at: FUTURE_END,
+        stripeSubscriptionId: 'sub_existing',
+      }),
+    )
+    mocks.subscriptionsRetrieve.mockResolvedValue({ id: 'sub_existing', status: 'active' })
+    mocks.readBody.mockResolvedValue({ plan: 'starter', withWallee: true, addons: {} })
+    await expect((await loadHandler())({})).rejects.toMatchObject({
+      statusCode: 409,
+      data: { code: 'existing_subscription' },
+    })
+    expect(mocks.checkoutCreate).not.toHaveBeenCalled()
+  })
+
+  it('registration SaaS_TRIAL_DAYS remains 30 for register.post', () => {
     expect(SAAS_TRIAL_DAYS).toBe(30)
     const registerSrc = readFileSync(resolve(process.cwd(), 'server/api/tenants/register.post.ts'), 'utf8')
     expect(registerSrc).toContain('SAAS_TRIAL_DAYS')
-    expect(registerSrc).toContain('trialEndsAt.setDate(trialEndsAt.getDate() + SAAS_TRIAL_DAYS)')
   })
 
-  it('source contract: create-checkout-session never sets trial_period_days', () => {
-    const src = readFileSync(
+  it('source: never uses trial_period_days; activate preserves trials', () => {
+    const checkout = readFileSync(
       resolve(process.cwd(), 'server/api/stripe/create-checkout-session.post.ts'),
       'utf8',
     )
-    expect(src).not.toMatch(/trial_period_days\s*:/)
-    expect(src).toContain("with_wallee: String(withWallee)")
-    expect(src).not.toContain('Bis dahin läuft dein Abonnement kostenlos')
-  })
+    expect(checkout).not.toMatch(/trial_period_days\s*:/)
+    expect(checkout).toContain('decideRegistrationTrialForCheckout')
+    expect(checkout).not.toContain('Bis dahin läuft dein Abonnement kostenlos')
 
-  it('wallee-activate still ends legacy Stripe trialing subscriptions', () => {
-    const src = readFileSync(resolve(process.cwd(), 'server/api/admin/wallee-activate.post.ts'), 'utf8')
-    expect(src).toContain("sub.status === 'trialing'")
-    expect(src).toContain("trial_end: 'now'")
-  })
+    const activate = readFileSync(
+      resolve(process.cwd(), 'server/api/admin/wallee-activate.post.ts'),
+      'utf8',
+    )
+    expect(activate).toContain('shouldEndStripeTrialOnWalleeActivate')
+    expect(activate).toContain('Preserving Stripe trial_end')
 
-  it('webhook still upserts legacy trialing Wallee subscriptions', () => {
-    const src = readFileSync(resolve(process.cwd(), 'server/api/stripe/webhook.post.ts'), 'utf8')
-    expect(src).toContain("sub.metadata?.with_wallee === 'true' && sub.status === 'trialing'")
-    expect(src).toContain('wallee_trial_started_at')
-    expect(src).not.toContain('Du hast 30 Tage — hier ist dein Plan')
-    expect(src).toContain('verlängert deine Testphase nicht')
-  })
+    const webhook = readFileSync(resolve(process.cwd(), 'server/api/stripe/webhook.post.ts'), 'utf8')
+    expect(webhook).toContain("sub.status === 'trialing' || sub.status === 'active'")
+    expect(webhook).toContain('handleWalleeUpgradeOpsEmail')
+    expect(webhook).toContain('WALLEE_UPGRADE_OPS_EMAIL_SETTING_KEY')
+    expect(webhook).toContain('shouldSendWalleeUpgradeOpsEmail')
 
-  it('frontend/email copy no longer promises free SaaS until Wallee active', () => {
-    const upgrade = readFileSync(resolve(process.cwd(), 'pages/upgrade.vue'), 'utf8')
     const success = readFileSync(resolve(process.cwd(), 'pages/payment/success.vue'), 'utf8')
-    const widget = readFileSync(
-      resolve(process.cwd(), 'components/admin/WalleeOnboardingWidget.vue'),
-      'utf8',
-    )
-    const reminders = readFileSync(
-      resolve(process.cwd(), 'server/api/cron/send-wallee-reminders.get.ts'),
-      'utf8',
-    )
-    for (const src of [upgrade, success, widget, reminders]) {
-      expect(src).not.toMatch(/Abrechnung startet erst wenn/)
-      expect(src).not.toMatch(/Bis dahin läuft dein Abonnement kostenlos/)
-      expect(src).not.toMatch(/du hast <strong>30 Tage<\/strong> Zeit/)
-    }
-    expect(upgrade).toContain('verlängert deine Testphase nicht')
-    expect(success).toContain('voneinander unabhängig')
-    expect(widget).toContain('Online-Zahlungen sind aktiviert')
+    expect(success).toContain('Checkout abgeschlossen')
+    expect(success).not.toContain('Abonnement aktiviert!')
+    expect(success).toContain('kein bestätigter Zahlungserfolg')
+
+    const sync = readFileSync(resolve(process.cwd(), 'server/api/stripe/sync-subscription.post.ts'), 'utf8')
+    expect(sync).toContain('NOT proof of a successful charge')
   })
 })
