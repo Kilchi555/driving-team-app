@@ -31,6 +31,7 @@ export default defineEventHandler(async (event) => {
   const {
     invoice_id, paid_at, paid_amount_rappen, note, payment_method,
     camt_dedupe_key, camt_bank_ref, camt_reference, camt_debtor_name, import_source,
+    idempotency_key,
   } = await readBody(event)
   if (!invoice_id) throw createError({ statusCode: 400, statusMessage: 'invoice_id required' })
 
@@ -48,7 +49,7 @@ export default defineEventHandler(async (event) => {
   if (!invoice) throw createError({ statusCode: 404, statusMessage: 'Rechnung nicht gefunden' })
 
   // Header, bank dedupe, journal, and open payment rows commit together.
-  const { data: settled, error: settleError } = await supabase.rpc('settle_marked_invoice_payment', {
+  const { data: settled, error: settleError } = await supabase.rpc('settle_marked_invoice_payment_idempotent', {
     p_actor_user_id: staffUser.id,
     p_invoice_id: invoice_id,
     p_paid_amount_rappen: paid_amount_rappen ?? null,
@@ -61,6 +62,7 @@ export default defineEventHandler(async (event) => {
     p_camt_reference: camt_reference ?? null,
     p_camt_debtor_name: camt_debtor_name ?? null,
     p_import_source: import_source ?? null,
+    p_idempotency_key: idempotency_key ?? null,
   })
 
   const failure = settlementFailure(settleError, settled, 'Rechnung nicht gefunden')

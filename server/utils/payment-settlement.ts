@@ -13,6 +13,15 @@ export function settlementFailure(
   }
 
   const message = String(error?.message || '')
+  if (message.includes('invalid_idempotency_key')) {
+    return { statusCode: 400, statusMessage: 'Zahlungsaktion ist ungültig' }
+  }
+  if (message.includes('idempotency_amount_mismatch')) {
+    return {
+      statusCode: 409,
+      statusMessage: 'Diese Zahlungsaktion wurde bereits mit einem anderen Betrag verarbeitet.',
+    }
+  }
   if (message.includes('duplicate_bank_import') || error?.code === '23505') {
     return {
       statusCode: 409,

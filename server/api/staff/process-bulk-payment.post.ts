@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
 
     // ✅ LAYER 3: INPUT VALIDATION
     const body = await readBody(event)
-    const { payment_ids, method, partial_amount_rappen } = body
+    const { payment_ids, method, partial_amount_rappen, overpayment_idempotency_key, overpayment_rappen } = body
 
     if (!Array.isArray(payment_ids) || payment_ids.length === 0) {
       throw createError({
@@ -378,7 +378,30 @@ export default defineEventHandler(async (event) => {
     // ✅ OVERPAYMENT → add directly to student credit using admin client
     logger.debug(`💳 Overpayment check: partial_amount=${partial_amount_rappen}, totalDue=${totalDueRappen}, overpayment=${overpaymentRappen}`)
     let creditAdded = 0
-    if (overpaymentRappen > 0 && method === 'cash') {
+    const surplusKey = typeof overpayment_idempotency_key === 'string' ? overpayment_idempotency_key.trim() : ''
+    const statedSurplus = Number.isInteger(overpayment_rappen) ? overpayment_rappen : null
+    if (surplusKey && statedSurplus && statedSurplus > 0 && method === 'cash') {
+      const studentUserId = (allPayments as any[])[0]?.user_id
+      const appliedNow = results.some((row) => row.success && !row.skipped)
+      if (appliedNow && overpaymentRappen > 0 && statedSurplus !== overpaymentRappen) {
+        throw createError({ statusCode: 409, statusMessage: 'Überzahlung stimmt nicht mit dem offenen Betrag überein' })
+      }
+      if (typeof partial_amount_rappen === 'number' && statedSurplus > partial_amount_rappen) {
+        throw createError({ statusCode: 400, statusMessage: 'Überzahlung ist ungültig' })
+      }
+      if (studentUserId) {
+        const { data, error } = await supabaseAdmin.rpc('apply_identified_cash_overpayment', {
+          p_actor_user_id: userProfile.id,
+          p_student_user_id: studentUserId,
+          p_idempotency_key: surplusKey,
+          p_amount: statedSurplus,
+        })
+        const failure = settlementFailure(error, data)
+        if (failure) throw createError(failure)
+        const credited = data as { already_applied?: boolean; amount_rappen?: number }
+        creditAdded = credited.already_applied ? 0 : Number(credited.amount_rappen || 0)
+      }
+    } else if (overpaymentRappen > 0 && method === 'cash') {
       const studentUserId = (allPayments as any[])[0]?.user_id
       if (studentUserId) {
         try {

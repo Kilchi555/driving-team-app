@@ -1197,6 +1197,7 @@ const partialAmountChf = ref(0)
 const paidAtDate = ref(new Date().toISOString().slice(0, 10))
 const paidNote = ref('')
 const isMarkingPaid = ref(false)
+const markPaidActionId = ref('')
 
 // Zahlungshistorie
 const invoicePaymentsHistory = ref<any[]>([])
@@ -1223,6 +1224,7 @@ const openMarkPaidDialog = () => {
   }
   paidAtDate.value = new Date().toISOString().slice(0, 10)
   paidNote.value = ''
+  markPaidActionId.value = crypto.randomUUID()
   showMarkPaidDialog.value = true
 }
 
@@ -1239,6 +1241,7 @@ const confirmMarkAsPaid = async () => {
         paid_at: new Date(paidAtDate.value).toISOString(),
         note: paidNote.value || undefined,
         payment_method: paidNote.value || 'manual',
+        idempotency_key: markPaidActionId.value,
       },
     })
     showMarkPaidDialog.value = false
