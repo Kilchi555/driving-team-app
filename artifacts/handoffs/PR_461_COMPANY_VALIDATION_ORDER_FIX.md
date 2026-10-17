@@ -4,6 +4,8 @@ Date: 2026-10-17
 Repository: `Kilchi555/driving-team-app`
 Baseline (`origin/main` at branch creation): `a9a9745123e124d51ad5fa13a84523055c3a90ef`
 Branch: `cursor/invoice-company-before-side-effects-7efe`
+Draft PR: https://github.com/Kilchi555/driving-team-app/pull/466
+Implementation commit: `91fe9d62a172e77a2dad63754443b2686b06a3d8`
 PR #461 was not modified, reverted, or reopened.
 
 No migration was added or applied. No production or shared-staging SQL ran. No existing invoice, payment, credit, wallet balance, or ledger row was read or written. No deploy, undraft, merge, or workflow dispatch ran.
