@@ -276,17 +276,21 @@ describe('authorization order: subscription after tenant ownership', () => {
     expect(deleteIdx).toBeGreaterThan(guardIdx)
   })
 
-  it('save.post validates tenant isolation before subscription assert', async () => {
+  it('save.post authorizes entity/profile tenant before subscription assert', async () => {
     const { readFileSync } = await import('node:fs')
     const { resolve } = await import('node:path')
     const src = readFileSync(
       resolve(process.cwd(), 'server/api/appointments/save.post.ts'),
       'utf8',
     )
-    const isolationIdx = src.indexOf('SaaS write gate')
+    const authzIdx = src.indexOf('TENANT AUTHORIZATION + SaaS WRITE GATE (C1)')
     const guardIdx = src.indexOf('await assertTenantSubscriptionWritable')
-    expect(isolationIdx).toBeGreaterThan(-1)
-    expect(guardIdx).toBeGreaterThan(isolationIdx)
+    const editLoadIdx = src.indexOf("eq('id', eventId)")
+    expect(authzIdx).toBeGreaterThan(-1)
+    expect(editLoadIdx).toBeGreaterThan(authzIdx)
+    expect(guardIdx).toBeGreaterThan(editLoadIdx)
+    // Body tenant must not be the sole trusted source.
+    expect(src).toContain('Never derive the authoritative subscription tenant solely from body.tenant_id')
     void OTHER
   })
 })

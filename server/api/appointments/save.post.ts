@@ -112,40 +112,147 @@ export default defineEventHandler(async (event) => {
       isManualDiscount: Boolean(isManualDiscount && discountAmountRappen > 0)
     })
 
-    // ============ TENANT ISOLATION ============
-    // Ensure the appointment belongs to the caller's own tenant.
-    // super_admin is exempt (can act cross-tenant for support tasks).
-    if (!['super_admin', 'superadmin'].includes(callerProfile.role)) {
-      const appointmentTenantId = appointmentData.tenant_id
-      if (appointmentTenantId && appointmentTenantId !== callerProfile.tenant_id) {
-        logger.warn('⚠️ [save] Tenant mismatch — caller tried to write to foreign tenant', {
-          callerTenant: callerProfile.tenant_id,
-          appointmentTenant: appointmentTenantId
+    const isSuperAdmin = ['super_admin', 'superadmin'].includes(callerProfile.role)
+    const supabase = getSupabaseAdmin()
+
+    // ============ TENANT AUTHORIZATION + SaaS WRITE GATE (C1) ============
+    // Never derive the authoritative subscription tenant solely from body.tenant_id.
+    // Create: caller profile tenant (superadmin may target another tenant only after
+    // an independent tenants-row existence check). Edit: loaded entity tenant after
+    // ownership; reject tenant transfer via payload.
+    type ExistingAppointmentRow = {
+      start_time: string
+      end_time: string
+      staff_id: string
+      tenant_id: string
+      duration_minutes: number | null
+      status: string | null
+      user_id: string | null
+      event_type_code: string | null
+      type: string | null
+      gclid: string | null
+      gbraid: string | null
+      wbraid: string | null
+      fbclid: string | null
+      fbc: string | null
+      fbp: string | null
+    }
+    let authorizedTenantId: string
+    let oldAppointmentForEdit: ExistingAppointmentRow | null = null
+
+    if (mode === 'edit') {
+      if (!eventId) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Event ID is required for edit mode'
         })
+      }
+      if (!validateUUID(eventId)) {
+        throwValidationError({ eventId: 'Ungültiges Event ID Format' })
+      }
+
+      let editQuery = supabase
+        .from('appointments')
+        .select('start_time, end_time, staff_id, tenant_id, duration_minutes, status, user_id, event_type_code, type, gclid, gbraid, wbraid, fbclid, fbc, fbp')
+        .eq('id', eventId)
+
+      if (!isSuperAdmin) {
+        editQuery = editQuery.eq('tenant_id', callerProfile.tenant_id)
+      }
+
+      const { data: existingAppointment, error: existingError } = await editQuery.maybeSingle()
+
+      if (existingError || !existingAppointment) {
+        logger.warn('⚠️ [save] Edit target missing or unauthorized', {
+          eventId,
+          callerTenant: callerProfile.tenant_id,
+          role: callerProfile.role,
+        })
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Appointment not found or access denied'
+        })
+      }
+
+      const entityTenantId = existingAppointment.tenant_id
+      if (!entityTenantId) {
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Appointment is missing tenant ownership'
+        })
+      }
+
+      if (!isSuperAdmin && entityTenantId !== callerProfile.tenant_id) {
         throw createError({ statusCode: 403, statusMessage: 'Access denied: tenant mismatch' })
       }
+
+      const bodyTenantId =
+        typeof appointmentData.tenant_id === 'string' ? appointmentData.tenant_id.trim() : ''
+      if (bodyTenantId && bodyTenantId !== entityTenantId) {
+        logger.warn('⚠️ [save] Rejected tenant transfer via edit payload', {
+          eventId,
+          entityTenant: entityTenantId,
+          bodyTenant: bodyTenantId,
+        })
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Access denied: tenant transfer not allowed'
+        })
+      }
+
+      // Force payload tenant to the authorized entity tenant (ignore body redirect).
+      appointmentData.tenant_id = entityTenantId
+      authorizedTenantId = entityTenantId
+      oldAppointmentForEdit = existingAppointment as ExistingAppointmentRow
+    } else {
+      // Create mode — subscription tenant comes from the authenticated caller, not the body.
+      if (!isSuperAdmin) {
+        const bodyTenantId =
+          typeof appointmentData.tenant_id === 'string' ? appointmentData.tenant_id.trim() : ''
+        if (bodyTenantId && bodyTenantId !== callerProfile.tenant_id) {
+          logger.warn('⚠️ [save] Tenant mismatch — caller tried to write to foreign tenant', {
+            callerTenant: callerProfile.tenant_id,
+            appointmentTenant: bodyTenantId,
+          })
+          throw createError({ statusCode: 403, statusMessage: 'Access denied: tenant mismatch' })
+        }
+        authorizedTenantId = callerProfile.tenant_id
+      } else {
+        const proposed =
+          typeof appointmentData.tenant_id === 'string' ? appointmentData.tenant_id.trim() : ''
+        if (proposed && proposed !== callerProfile.tenant_id) {
+          // Independent authorization: proposed target must exist as a real tenant row.
+          // Body alone is never sufficient trust for cross-tenant create.
+          if (!validateUUID(proposed)) {
+            throw createError({ statusCode: 400, statusMessage: 'Invalid target tenant ID' })
+          }
+          const { data: targetTenant, error: targetError } = await supabase
+            .from('tenants')
+            .select('id')
+            .eq('id', proposed)
+            .maybeSingle()
+          if (targetError || !targetTenant?.id) {
+            throw createError({
+              statusCode: 403,
+              statusMessage: 'Access denied: target tenant not authorized'
+            })
+          }
+          authorizedTenantId = targetTenant.id
+        } else {
+          authorizedTenantId = callerProfile.tenant_id
+        }
+      }
+      appointmentData.tenant_id = authorizedTenantId
     }
 
-    // SaaS write gate: enforce on the target tenant (including when superadmin acts for them).
-    const trustedTenantId =
-      typeof appointmentData.tenant_id === 'string' && appointmentData.tenant_id
-        ? appointmentData.tenant_id
-        : callerProfile.tenant_id
     await assertTenantSubscriptionWritable(event, {
-      tenantId: trustedTenantId,
+      tenantId: authorizedTenantId,
       userId: callerProfile.id || callerProfile.auth_user_id || null,
       route: 'POST /api/appointments/save',
     })
 
-    if (mode === 'edit' && !eventId) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Event ID is required for edit mode'
-      })
-    }
-
-    // Validate event ID format
-    if (eventId && !validateUUID(eventId)) {
+    // Validate event ID format for any non-edit path that still carries eventId
+    if (mode !== 'edit' && eventId && !validateUUID(eventId)) {
       throwValidationError({ eventId: 'Ungültiges Event ID Format' })
     }
 
@@ -233,11 +340,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const supabase = getSupabaseAdmin()
-
-    const quoteTenantId = ['super_admin', 'superadmin'].includes(callerProfile.role)
-      ? (appointmentData.tenant_id || callerProfile.tenant_id)
-      : callerProfile.tenant_id
+    const quoteTenantId = authorizedTenantId
 
     const staffQuote = await quoteStaffAppointmentOffer(
       supabase,
@@ -281,15 +384,9 @@ export default defineEventHandler(async (event) => {
     let paymentStatusOut: string | null = null
 
     if (mode === 'edit' && eventId) {
-      // Update existing appointment
-      const { data: oldAppointment, error: fetchError } = await supabase
-        .from('appointments')
-        .select('start_time, end_time, staff_id, tenant_id, duration_minutes, status, user_id, event_type_code, type, gclid, gbraid, wbraid, fbclid, fbc, fbp')
-        .eq('id', eventId)
-        .single()
-
-      if (fetchError || !oldAppointment) {
-        logger.error('❌ Error fetching old appointment for edit:', fetchError)
+      // Entity already loaded and authorized before the SaaS write gate.
+      const oldAppointment = oldAppointmentForEdit
+      if (!oldAppointment) {
         throw createError({
           statusCode: 500,
           statusMessage: 'Could not fetch appointment for editing'
@@ -308,6 +405,7 @@ export default defineEventHandler(async (event) => {
         .from('appointments')
         .update(appointmentData)
         .eq('id', eventId)
+        .eq('tenant_id', authorizedTenantId)
         .select()
         .single()
 
