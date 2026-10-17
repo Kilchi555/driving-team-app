@@ -8,6 +8,7 @@
 |------|-------|
 | Branch | `cursor/saas-subscription-write-guard-9780` |
 | Base | `origin/main` @ `ef794668f909826057a713393333af2ed31b70d2` |
+| Head | `6e6f2b621bf7874f561dfd2937963c9ad87d7a6b` |
 | Mode | Draft PR only — no merge / deploy / migrations |
 | Scope | Staff/admin (+ in-tenant customer confirm/cancel) appointment & course calendar mutations |
 
