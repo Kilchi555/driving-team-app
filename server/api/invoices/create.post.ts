@@ -11,6 +11,7 @@ import { applyStudentCreditToPayments } from '~/server/utils/apply-student-credi
 import { resolveInvoiceLineCreditRappen } from '~/server/utils/invoice-credit'
 import { snapshotBillingCompanyName } from '~/utils/billing-address-map'
 import { isInvoiceSourceTable, stampInvoiceSourceRow } from '~/server/utils/invoice-tenant-guards'
+import { companyIdInTenant, InvoiceCompanyLinkError } from '~/server/utils/invoice-company-link'
 import {
   buildServiceLineSnapshot,
   loadTenantEventTypeNames,
@@ -40,6 +41,26 @@ export default defineEventHandler(async (event) => {
 
   if (!invoiceData || !items) {
     throw createError({ statusCode: 400, statusMessage: 'Missing invoiceData or items' })
+  }
+
+  // Before any number, credit, or invoice write. A supplied id must belong to
+  // this tenant even when billing_type is individual. Empty stays unlinked.
+  let linkedCompanyId: string | null
+  try {
+    linkedCompanyId = await companyIdInTenant(
+      supabaseAdmin,
+      userProfile.tenant_id,
+      invoiceData.company_id,
+    )
+  } catch (err) {
+    if (err instanceof InvoiceCompanyLinkError) {
+      throw createError({
+        statusCode: err.statusCode,
+        statusMessage: err.message,
+        message: err.message,
+      })
+    }
+    throw err
   }
 
   try {
@@ -166,16 +187,6 @@ export default defineEventHandler(async (event) => {
       if (!billedUser) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
     }
 
-    if (invoiceData.company_id) {
-      const { data: company } = await supabaseAdmin
-        .from('companies')
-        .select('id')
-        .eq('id', invoiceData.company_id)
-        .eq('tenant_id', tenantId)
-        .maybeSingle()
-      if (!company) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-    }
-
     const appointmentIdsForSnapshot = Array.from(new Set(
       [
         invoiceData.appointment_id,
@@ -282,7 +293,7 @@ export default defineEventHandler(async (event) => {
       footer_text: invoiceData.footer_text || null,
       // company invoices have no user_id — coerce empty strings to null (uuid columns)
       user_id: invoiceData.user_id || null,
-      company_id: invoiceData.company_id || null,
+      company_id: linkedCompanyId,
       staff_id: invoiceData.staff_id || null,
       product_sale_id: invoiceData.product_sale_id || null,
       appointment_id: invoiceData.appointment_id || null,
