@@ -86,7 +86,13 @@
       <!-- Login Form -->
       <div class="p-6">
         <!-- Login Form (session check runs silently in background) -->
-        <form @submit.prevent="handleLogin" class="space-y-4" novalidate>
+        <form
+          v-if="!mfaFlow.state.value.requiresMFA"
+          autocomplete="on"
+          @submit.prevent="handleLogin"
+          class="space-y-4"
+          novalidate
+        >
           <!-- Email Input -->
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
@@ -337,7 +343,7 @@
           <!-- Zurück Button -->
           <button
             type="button"
-            @click="mfaFlow.resetMFAState()"
+            @click="pendingCredentialSave = null; mfaFlow.resetMFAState()"
             class="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
           >
             Zurück
@@ -525,6 +531,7 @@ import { useUIStore } from '~/stores/ui'
 import { useMFAFlow } from '~/composables/useMFAFlow'
 import { getSupabase } from '~/utils/supabase'
 import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
+import { saveCredentials } from '~/utils/save-credentials'
 import { adminHomePath, withWebsiteOnlyFlag } from '~/utils/website-only'
 
 logger.debug('📄 [slug].vue imports completed')
@@ -662,6 +669,9 @@ const loginForm = ref({
   rememberMe: false
 })
 
+/** Credentials from the password step — used after MFA (form is unmounted). */
+const pendingCredentialSave = ref<{ email: string; password: string } | null>(null)
+
 // Inline validation errors
 const emailError = ref<string | null>(null)
 const passwordError = ref<string | null>(null)
@@ -696,6 +706,8 @@ const handleLogin = async () => {
 
   isLoading.value = true
   loginError.value = null
+  // Password managers key off type="password" at submit time; undo show-toggle.
+  showPassword.value = false
 
   try {
     logger.debug('🔑 Starting login attempt for:', loginForm.value.email)
@@ -717,6 +729,12 @@ const handleLogin = async () => {
     // Check if MFA is required
     if (response?.requiresMFA) {
       logger.debug('🔐 MFA required for:', response.email)
+      // Freeze credentials used for this auth attempt — the login form unmounts
+      // during MFA, and we must not re-read a possibly edited email later.
+      pendingCredentialSave.value = {
+        email: (response.email || loginForm.value.email).toLowerCase().trim(),
+        password: loginForm.value.password,
+      }
       await mfaFlow.handleMFARequired(response.email)
       return // MFA-Screen wird jetzt angezeigt
     }
@@ -736,6 +754,10 @@ const handleLogin = async () => {
     }
 
     logger.debug('✅ Login successful')
+
+    // Capture before any later form mutation / strength-upgrade flow.
+    const savedEmail = loginForm.value.email.toLowerCase().trim()
+    const savedPassword = loginForm.value.password
 
     // Session tokens are in HTTP-Only cookies (server) AND returned in the body
     // so we can hydrate supabase-js without a refresh-token rotation race.
@@ -785,6 +807,7 @@ const handleLogin = async () => {
 
       if (strengthResponse?.requiresUpdate) {
         logger.debug('⚠️ Password strength update required')
+        // Do NOT offer to save yet — user may replace this password in the modal.
         showPasswordStrengthModal.value = true
         // Don't redirect yet - user needs to update password or skip
         return
@@ -793,6 +816,11 @@ const handleLogin = async () => {
       logger.warn('⚠️ Could not check password strength:', err)
       // Continue with redirect even if check fails
     }
+
+    // Browser password managers ignore AJAX logins (@submit.prevent + $fetch +
+    // SPA router.push). Explicitly offer to save — same helper as register/onboarding.
+    // Only after we know this password will remain in use (strength gate passed).
+    void saveCredentials(savedEmail, savedPassword, undefined, 'current-password')
     
     // Show success message and redirect
     showSuccess('Erfolgreich angemeldet', `Willkommen bei ${brandName.value}!`)
@@ -913,10 +941,19 @@ const handleLogin = async () => {
 }
 
 const handleMFAVerify = async () => {
-  const result = await mfaFlow.verifyMFACode(loginForm.value.password, loginForm.value.rememberMe)
+  const result = await mfaFlow.verifyMFACode(
+    pendingCredentialSave.value?.password || loginForm.value.password,
+    loginForm.value.rememberMe
+  )
   
   if (result && result.success) {
     logger.debug('✅ MFA verification successful, logging in...')
+
+    const creds = pendingCredentialSave.value
+    if (creds?.email && creds?.password) {
+      void saveCredentials(creds.email, creds.password, undefined, 'current-password')
+      pendingCredentialSave.value = null
+    }
     
     // ✅ SAVE: Remember this tenant for next session
     try {
