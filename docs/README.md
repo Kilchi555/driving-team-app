@@ -344,6 +344,18 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused operational docs for recently evolved subsystems (verify against source before changing behavior):
+
+| Doc | Covers |
+|-----|--------|
+| [EXTERNAL_CALENDAR_SYNC.md](./EXTERNAL_CALENDAR_SYNC.md) | ICS busy-time sync, lookback/horizon, failure backoff, empty feeds |
+| [AUTO_INVOICE.md](./AUTO_INVOICE.md) | `auto_invoice_*` booking policy, on-complete + scheduled Sammelrechnung |
+| [PLATFORM_REFERRALS.md](./PLATFORM_REFERRALS.md) | Tenant→tenant Simy referrals, 2nd invoice reward, Stripe balance credit |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
