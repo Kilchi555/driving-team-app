@@ -344,6 +344,19 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused operational docs (intent, surfaces, pitfalls, codepaths). Prefer updating these over adding root-level markdown reports.
+
+| Runbook | Covers |
+|---------|--------|
+| [GIFT_CARD_CHECKOUT_RESERVE.md](./GIFT_CARD_CHECKOUT_RESERVE.md) | Gift-card reserve-at-checkout, fail-closed abort, client settlement lock |
+| [WALLET_ATOMIC_OPS.md](./WALLET_ATOMIC_OPS.md) | Student credit / discount usage SECURITY DEFINER RPCs |
+
+Also see existing ops docs in this folder: [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md), [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md), [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md), [ACCESS_AND_SECRETS_POLICY.md](./ACCESS_AND_SECRETS_POLICY.md).
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
