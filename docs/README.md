@@ -341,6 +341,18 @@ Bei Änderungen am System:
 - Policy-Änderungen → Aktualisieren Sie RLS_POLICIES.csv
 - Feature-Änderungen → Aktualisieren Sie APP_DOCUMENTATION.csv
 - Prozess-Änderungen → Aktualisieren Sie DATA_FLOWS.csv
+- Neue Engineering-Runbooks → Datei unter `docs/` + Zeile in **Engineering Runbooks** unten
+
+---
+
+## Engineering Runbooks
+
+Concise, code-verified runbooks for developers and ops. Prefer updating these over duplicating CSV rows for deep subsystem behavior.
+
+| File | Topic |
+|------|-------|
+| [STAFF_CASH_DRAWER_DISPLAY.md](./STAFF_CASH_DRAWER_DISPLAY.md) | Staff «Aktueller Kassenstand» subtracts `cash_handover`; distinct from persisted balance sheet (#423) |
+| [PR421_F1_CONCURRENCY_WORKFLOW.md](./PR421_F1_CONCURRENCY_WORKFLOW.md) | Dispatch-only disposable PG17 F1 concurrency workflow registration; Gate B/C ops sequence (#424) |
 
 ---
 
