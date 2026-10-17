@@ -6,9 +6,10 @@
 |-------|-------|
 | Observed at (UTC) | `2026-10-17T14:33:08Z` |
 | Branch | `cursor/remove-wallee-stripe-trial-9780` |
-| Head SHA | `44210dbe3ff2621e4ec3773bd2e395bcd0c81d55` |
+| Implementation commit | `44210dbe3ff2621e4ec3773bd2e395bcd0c81d55` |
+| Tip (includes this handoff) | `33b649d9d714fe271e8ab29aadc19a92748af10e` (advances with docs-only commits) |
 | Base | `main` (`0ec08fab…` at branch creation) |
-| PR | See ManagePullRequest result / GitHub `#` after create |
+| Draft PR | [#472](https://github.com/Kilchi555/driving-team-app/pull/472) |
 
 ---
 
