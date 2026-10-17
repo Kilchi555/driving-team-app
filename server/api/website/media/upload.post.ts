@@ -146,7 +146,7 @@ export default defineEventHandler(async (event) => {
     data: { publicUrl: avifUrl },
   } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(avifPath)
 
-  // Keep website_tenants columns in sync for convenience
+  // Website logo stays on website_tenants. Tenant logo columns are not written here.
   const { data: website } = await supabase
     .from('website_tenants')
     .select('id')
@@ -159,17 +159,6 @@ export default defineEventHandler(async (event) => {
         ? { logo_url: webpUrl, updated_at: new Date().toISOString() }
         : { hero_image_url: webpUrl, updated_at: new Date().toISOString() }
     await supabase.from('website_tenants').update(patch).eq('id', website.id)
-  }
-
-  if (slot === 'logo') {
-    await supabase
-      .from('tenants')
-      .update({
-        logo_url: webpUrl,
-        logo_square_url: webpUrl,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.tenant_id)
   }
 
   return {

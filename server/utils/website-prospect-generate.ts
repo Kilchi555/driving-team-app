@@ -16,6 +16,19 @@ import type { ProspectArchitecture, WebsiteProspectRow } from '~/server/utils/we
 
 type SupabaseAdmin = ReturnType<typeof getSupabaseAdmin>
 
+/**
+ * A repeat generation must not replace a website logo that already exists.
+ * The first generation may store one. Tenant logo columns are never written here.
+ */
+export function resolveProspectWebsiteLogo(input: {
+  created: boolean
+  existingLogo: string | null | undefined
+}): { logo: string | null; write: boolean } {
+  const existing = String(input.existingLogo || '').trim()
+  if (!input.created && existing) return { logo: existing, write: false }
+  return { logo: null, write: true }
+}
+
 async function uniqueSlug(supabase: SupabaseAdmin, raw: string) {
   const base = slugifySubdomain(raw) || `betrieb-${Date.now().toString(36)}`
   let slug = base
@@ -117,7 +130,6 @@ export async function generateWebsiteProspectSite(prospectId: string) {
       primary_color: primary,
       secondary_color: '#134E4A',
       accent_color: '#F59E0B',
-      logo_url: scrape.logo_url || null,
       website_url: prospect.existing_url || null,
       website_only: true,
       website_status: 'pending_review',
@@ -157,7 +169,6 @@ export async function generateWebsiteProspectSite(prospectId: string) {
       primary_color: primary,
       secondary_color: '#134E4A',
       accent_color: '#F59E0B',
-      logo_url: scrape.logo_url || null,
       hero_image_url: scrape.hero_image_url || null,
     })
       .select('id, subdomain, primary_color, secondary_color, accent_color, logo_url, hero_image_url')
@@ -204,6 +215,10 @@ async function finishProspectSite(opts: {
   created: boolean
 }) {
   const { supabase, prospect, tenant, website, scrape, place, primary, now } = opts
+  const logoDecision = resolveProspectWebsiteLogo({
+    created: opts.created,
+    existingLogo: website.logo_url,
+  })
   const media = await ingestProspectMedia({
     tenantId: tenant.id,
     name: prospect.name,
@@ -211,23 +226,18 @@ async function finishProspectSite(opts: {
     place,
     placeId: prospect.place_id,
     refetchPlacePhotos: prospect.source !== 'places_cron',
+    skipLogo: !logoDecision.write,
   })
+  const websiteLogo = logoDecision.write
+    ? (media.logo_url || scrape.logo_url || null)
+    : logoDecision.logo
 
-  await supabase
-    .from('tenants')
-    .update({
-      logo_url: media.logo_url || scrape.logo_url || null,
-      updated_at: now,
-    })
-    .eq('id', tenant.id)
-  await supabase
-    .from('website_tenants')
-    .update({
-      logo_url: media.logo_url || scrape.logo_url || null,
-      hero_image_url: media.hero_url || scrape.hero_image_url || null,
-      updated_at: now,
-    })
-    .eq('id', website.id)
+  const websitePatch: Record<string, unknown> = {
+    hero_image_url: media.hero_url || scrape.hero_image_url || null,
+    updated_at: now,
+  }
+  if (logoDecision.write) websitePatch.logo_url = websiteLogo
+  await supabase.from('website_tenants').update(websitePatch).eq('id', website.id)
 
   const baseUrl = getAppUrl().replace(/\/$/, '')
   const siteUrl = `${baseUrl}/s/${encodeURIComponent(website.subdomain)}`
@@ -292,7 +302,7 @@ async function finishProspectSite(opts: {
       postal_code: prospect.postal_code,
       invoice_zip: prospect.postal_code,
       primary_color: primary,
-      logo_url: media.logo_url || scrape.logo_url || null,
+      logo_url: websiteLogo,
       hero_image_url: stock.hero_url,
       google_review_places: prospect.place_id
         ? [{ name: prospect.name, place_id: prospect.place_id }]
@@ -380,7 +390,7 @@ async function finishProspectSite(opts: {
       primary_color: website.primary_color || primary,
       secondary_color: website.secondary_color || '#134E4A',
       accent_color: website.accent_color || '#F59E0B',
-      logo_url: media.logo_url || scrape.logo_url || website.logo_url || null,
+      logo_url: websiteLogo,
       hero_image_url: stock.hero_url || website.hero_image_url || null,
     },
     tenant: {
