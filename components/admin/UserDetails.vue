@@ -106,8 +106,9 @@
             <button
               v-if="userDetails && canManageUser(userDetails as any)"
               @click="toggleUserStatus"
+              :disabled="isTogglingStatus"
               :class="[
-                'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors',
+                'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
                 userDetails?.is_active
                   ? 'border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100'
                   : 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100'
@@ -116,7 +117,7 @@
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636"/>
               </svg>
-              {{ userDetails?.is_active ? 'Deaktivieren' : 'Aktivieren' }}
+              {{ isTogglingStatus ? 'Wird gespeichert…' : (userDetails?.is_active ? 'Deaktivieren' : 'Aktivieren') }}
             </button>
 
             <!-- Password Reset -->
@@ -931,31 +932,10 @@
                 </div>
               </div>
               
-              <!-- Rolle -->
               <div>
-                <label for="modalRole" class="block text-sm font-medium text-gray-700">Rolle</label>
-                <select
-                  id="modalRole"
-                  v-model="editForm.role"
-                  class="mt-1 block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                >
-                  <option value="client">Kunde</option>
-                  <option value="staff">{{ t.staff }}</option>
-                  <option value="admin">Administrator</option>
-                </select>
-              </div>
-              
-              <!-- Status -->
-              <div>
-                <label for="modalIsActive" class="block text-sm font-medium text-gray-700">Status</label>
-                <select
-                  id="modalIsActive"
-                  v-model="editForm.is_active"
-                  class="mt-1 block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                >
-                  <option :value="true">Aktiv</option>
-                  <option :value="false">Inaktiv</option>
-                </select>
+                <p class="block text-sm font-medium text-gray-700">Rolle</p>
+                <p class="mt-1 text-sm text-gray-800">{{ roleLabel }}</p>
+                <p class="mt-1 text-xs text-gray-500">Rolle und Aktiv-Status werden in diesem Formular nicht gespeichert. Der Status wird über Deaktivieren oder Aktivieren geändert.</p>
               </div>
               
             </div>
@@ -1168,6 +1148,7 @@ const { t } = useTerminology()
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'
+import { confirmedActiveFlag, userFacingStatusMessage } from '~/utils/user-status-feedback'
 // import { getSupabase } from '~/utils/supabase'
 import { useAdminHierarchy } from '~/composables/useAdminHierarchy'
 import StaffTab from '~/components/users/StaffTab.vue'
@@ -1339,6 +1320,7 @@ const apptEditError = ref<string | null>(null)
 const showDeleteConfirm = ref(false)
 const deleteReason = ref('')
 const isSaving = ref(false)
+const isTogglingStatus = ref(false)
 const isDeleting = ref(false)
 const isResettingPassword = ref(false)
 const successMessage = ref<string | null>(null)
@@ -1720,8 +1702,6 @@ const saveChanges = async () => {
       city: editForm.value.city || null,
       profession: editForm.value.profession || null,
       faberid: editForm.value.faberid || null,
-      role: editForm.value.role,
-      is_active: editForm.value.is_active
     }
     
     // Add categories for staff and clients
@@ -1739,7 +1719,7 @@ const saveChanges = async () => {
     }) as any
 
     if (!response?.success) {
-      throw new Error(response?.error || 'Failed to update user')
+      throw new Error('Profil konnte nicht gespeichert werden')
     }
     
     successMessage.value = 'Benutzer erfolgreich aktualisiert!'
@@ -1758,7 +1738,8 @@ const saveChanges = async () => {
     
   } catch (err: unknown) {
     console.error('❌ Error updating user:', err)
-    alert('Fehler beim Aktualisieren des Benutzers')
+    successMessage.value = null
+    alert(userFacingStatusMessage(err, 'Fehler beim Aktualisieren des Benutzers'))
   } finally {
     isSaving.value = false
   }
@@ -1790,35 +1771,39 @@ const sendPasswordReset = async () => {
 }
 
 const toggleUserStatus = async () => {
-  if (!userDetails.value) return
+  if (!userDetails.value || isTogglingStatus.value) return
   
-  const newStatus = !userDetails.value.is_active
-  const action = newStatus ? 'aktivieren' : 'deaktivieren'
+  const nextActive = !userDetails.value.is_active
+  const action = nextActive ? 'aktivieren' : 'deaktivieren'
   
   if (!confirm(`Möchten Sie diesen Benutzer wirklich ${action}?`)) {
     return
   }
-  
+
+  isTogglingStatus.value = true
   try {
     const response = await $fetch('/api/admin/users', {
       method: 'POST',
       body: {
-        action: 'update-user',
+        action: 'set-user-active',
         user_id: userId,
-        user_data: { is_active: newStatus }
+        is_active: nextActive
       }
-    }) as any
+    })
 
-    if (!response?.success) {
-      throw new Error(response?.error || 'Failed to update user')
+    const confirmed = confirmedActiveFlag(response)
+    if (confirmed === null) {
+      throw new Error('Status konnte nicht geändert werden')
     }
-    
-    userDetails.value.is_active = newStatus
+
+    userDetails.value.is_active = confirmed
     logger.debug(`✅ User ${action} successful`)
     
   } catch (err: unknown) {
     console.error(`❌ Error ${action} user:`, err)
-    alert(`Fehler beim ${action} des Benutzers`)
+    alert(userFacingStatusMessage(err, `Fehler beim ${action} des Benutzers`))
+  } finally {
+    isTogglingStatus.value = false
   }
 }
 

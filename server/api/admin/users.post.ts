@@ -5,7 +5,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { sanitizeRoleChange, staffCreatePayload } from '~/server/utils/assignable-user-roles'
-import { deactivateTenantUser, resolveScopedTenantId, type LifecycleUser } from '~/server/utils/admin-lifecycle'
+import { deactivateTenantUser, resolveScopedTenantId, setUserActiveStatus, type LifecycleUser } from '~/server/utils/admin-lifecycle'
 import { getClientIP } from '~/server/utils/ip-utils'
 
 // Privileged columns are not client-writable. Status changes go through deactivation.
@@ -29,6 +29,15 @@ function pickFields<T extends object>(data: T, allowed: readonly string[]): Part
   ) as Partial<T>
 }
 
+function assertProfileUpdate(safeData: Record<string, unknown>) {
+  if (Object.keys(safeData).length === 0) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Keine änderbaren Profilfelder übergeben',
+    })
+  }
+}
+
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
   if (!authUser) {
@@ -39,12 +48,13 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const {
+    const {
     action,
     tenant_id,
     user_id,
     user_data,
-    search_term
+    search_term,
+    is_active
   } = body || {}
 
   const supabase = createClient(
@@ -115,6 +125,7 @@ export default defineEventHandler(async (event) => {
         const nextRole = sanitizeRoleChange(authUser.role || '', user_data.role)
         if (nextRole) safeData.role = nextRole
       }
+      assertProfileUpdate(safeData)
 
       let query = supabase
         .from('users')
@@ -182,6 +193,7 @@ export default defineEventHandler(async (event) => {
     if (action === 'update-staff') {
       await assertTargetInScope(user_id)
       const safeData = pickFields(user_data || {}, STAFF_UPDATE_WHITELIST)
+      assertProfileUpdate(safeData)
       let query = supabase
         .from('users')
         .update(safeData)
@@ -248,20 +260,30 @@ export default defineEventHandler(async (event) => {
       return { success: true, data }
     }
 
+    if (action === 'set-user-active') {
+      const caller = await loadCaller()
+      return await setUserActiveStatus({
+        supabase,
+        caller,
+        targetUserId: user_id,
+        nextActive: is_active,
+        authUserId: authUser.id,
+        ipAddress: getClientIP(event),
+      })
+    }
+
     if (action === 'update-user') {
       const existing = await assertTargetInScope(user_id)
 
       const safeData: Record<string, any> = pickFields(user_data || {}, USER_UPDATE_WHITELIST)
-      if (authUser.role === 'super_admin' && user_data?.role !== undefined) {
-        const nextRole = sanitizeRoleChange(authUser.role || '', user_data.role)
-        if (nextRole) safeData.role = nextRole
-      }
 
       for (const key of ['birthdate', 'street', 'street_nr', 'zip', 'city', 'profession', 'faberid', 'phone', 'email'] as const) {
         if (key in safeData && (safeData as any)[key] === '') {
           ;(safeData as any)[key] = null
         }
       }
+
+      assertProfileUpdate(safeData)
 
       const { data, error } = await supabase
         .from('users')
