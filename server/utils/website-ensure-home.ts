@@ -34,7 +34,7 @@ export async function ensureWebsiteHomeLanding(
   const slug = tenant.slug || website.subdomain
   const bookingUrl = `${baseUrl.replace(/\/$/, '')}/booking/availability/${encodeURIComponent(slug)}`
   const siteUrl =
-    customDomainOrigin(website) ||
+    (await customDomainOrigin(website)) ||
     `${baseUrl.replace(/\/$/, '')}/s/${encodeURIComponent(website.subdomain)}`
 
   const pricing = await loadWebsiteServices(supabase as any, tenant.id)

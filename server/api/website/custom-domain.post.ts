@@ -121,7 +121,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Claim does not check DNS or TLS. Routing stays off until all three exist.
-  const activation = customDomainActivation({
+  const activation = await customDomainActivation({
     domain,
     isPublished: website.is_published === true,
     verification,

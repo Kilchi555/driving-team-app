@@ -206,7 +206,7 @@ export default defineEventHandler(async (event) => {
     slug = `${suggestAddonSlug(pageType, inputs)}-${i + 2}`
   }
 
-  const customOrigin = customDomainOrigin(website)
+  const customOrigin = await customDomainOrigin(website)
   const siteUrl = customOrigin
     ? `${customOrigin}/${encodeURIComponent(slug)}`
     : `${base}/s/${encodeURIComponent(website.subdomain)}/${encodeURIComponent(slug)}`

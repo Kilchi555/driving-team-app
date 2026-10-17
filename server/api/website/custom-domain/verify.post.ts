@@ -83,7 +83,7 @@ export default defineEventHandler(async (event) => {
     },
     checked_at: new Date().toISOString(),
   }
-  const activation = customDomainActivation({
+  const activation = await customDomainActivation({
     domain,
     isPublished: website.is_published === true,
     verification,

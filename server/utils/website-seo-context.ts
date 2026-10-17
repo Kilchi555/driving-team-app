@@ -47,7 +47,7 @@ export async function resolveWebsiteSeoContext(event: any): Promise<WebsiteSeoCo
       )
       .eq('custom_domain', host)
       .maybeSingle()
-    if (error || !data?.subdomain || !isCustomDomainRoutingEnabled(data)) return null
+    if (error || !data?.subdomain || !(await isCustomDomainRoutingEnabled(data))) return null
     if (querySub && querySub !== data.subdomain) return null
     const pathSub = path.match(/^\/s\/([^/]+)/i)
     if (pathSub && decodeURIComponent(pathSub[1]).toLowerCase() !== data.subdomain) return null
@@ -85,7 +85,7 @@ export async function resolveWebsiteSeoContext(event: any): Promise<WebsiteSeoCo
     .eq('is_published', true)
 
   const proto = getRequestHeader(event, 'x-forwarded-proto') || 'https'
-  const origin = customDomainOrigin(website)
+  const origin = await customDomainOrigin(website)
   const verified = !!origin
   const baseUrl = origin
     ? origin

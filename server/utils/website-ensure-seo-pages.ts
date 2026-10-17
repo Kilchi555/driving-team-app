@@ -49,7 +49,7 @@ async function insertAddonPage(opts: {
   const { supabase, website, tenant, baseUrl, pageType, inputs, formal, publish } = opts
   const slug = await uniqueSlug(supabase, website.id, pageType, inputs)
   const bookingUrl = `${baseUrl}/booking/availability/${encodeURIComponent(tenant.slug || website.subdomain)}`
-  const customOrigin = customDomainOrigin(website)
+  const customOrigin = await customDomainOrigin(website)
   const siteUrl = customOrigin
     ? `${customOrigin}/${encodeURIComponent(slug)}`
     : `${baseUrl}/s/${encodeURIComponent(website.subdomain)}/${encodeURIComponent(slug)}`

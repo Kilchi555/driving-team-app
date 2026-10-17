@@ -2,6 +2,7 @@
  * Custom domain helpers for tenant landing pages (Vercel + DNS).
  */
 import { resolveCname, resolve4 } from 'node:dns/promises'
+import { liveTlsDeps, readAuthoritativeTlsEvidence, type TlsProbeDeps } from './custom-domain-tls'
 
 export const APP_HOSTS = new Set([
   'app.simy.ch',
@@ -24,10 +25,16 @@ const DEV_PREVIEW_SUFFIXES = [
 
 const IPV4_RE = /^(?:\d{1,3}\.){3}\d{1,3}$/
 
-/** Vercel CNAME target shown to customers */
+/**
+ * Generic example kept for the existing DNS helper.
+ * Not confirmed as the simy-app project target. Do not copy it onto a customer domain.
+ */
 export const VERCEL_CNAME_TARGET = 'cname.vercel-dns.com'
 
-/** Common Vercel A record for apex domains */
+/**
+ * Generic example kept for the existing DNS helper.
+ * Not confirmed as the simy-app apex address. Do not copy it onto a customer domain.
+ */
 export const VERCEL_A_IPS = new Set(['76.76.21.21'])
 
 export type DomainVerificationChallenge = {
@@ -126,13 +133,12 @@ export function hasPositiveDnsEvidence(verification: unknown): boolean {
 export const CUSTOM_DOMAIN_EVIDENCE_MAX_AGE_MS = 60 * 60 * 1000
 
 /**
- * Authoritative TLS evidence does not exist in this process.
- *
- * Missing dependency: there is no server-side reader of a certificate and no
- * reader of a Vercel TLS or certificate API. `vercel.verified` on a project
- * domain is ownership configuration, not a certificate. The JSON key
- * `custom_domain_verification.tls.ok` is ignored because a tenant session can
- * store it. Routing stays disabled until a real reader exists.
+ * Stored JSON is not a certificate. This zero-argument function stays false
+ * so a caller cannot treat a missing reader as proof.
+ * The live check is readAuthoritativeTlsEvidence(), and only the async gate
+ * calls it, after the non-TLS gates have already passed.
+ * `vercel.verified` is ownership configuration, not a certificate.
+ * `custom_domain_verification.tls.ok` is ignored because a tenant session can store it.
  */
 export function hasAuthoritativeTlsEvidence(): boolean {
   return false
@@ -154,10 +160,11 @@ export function hasFreshCheckedAt(verification: unknown, nowMs: number = Date.no
 }
 
 /**
- * Conjunctive routing decision.
- * `authoritativeTls` must be the result of hasAuthoritativeTlsEvidence().
- * Tests may pass true only as a double to show the other gates still fail.
- * That double is not a certificate check.
+ * Conjunctive routing decision for the non-certificate gates plus one TLS bit.
+ * `authoritativeTls: true` is only the stand-in used immediately before the
+ * live handshake. It is not itself a certificate. Production routing goes
+ * through isCustomDomainRoutingEnabled(), which replaces that bit with the
+ * handshake result.
  */
 export function evaluateCustomDomainRouting(
   row: CustomDomainEvidenceRow | null | undefined,
@@ -173,32 +180,61 @@ export function evaluateCustomDomainRouting(
   return true
 }
 
-export function isCustomDomainRoutingEnabled(
-  row: CustomDomainEvidenceRow | null | undefined,
-  nowMs: number = Date.now(),
-): boolean {
-  return evaluateCustomDomainRouting(row, nowMs, hasAuthoritativeTlsEvidence())
+function tlsDepsAt(nowMs: number, tls?: TlsProbeDeps): TlsProbeDeps {
+  const base = tls ?? liveTlsDeps
+  return { ...base, now: base.now ?? new Date(nowMs) }
 }
 
-export function customDomainOrigin(
+/**
+ * Handshake runs only when DNS, publication, platform configuration, and
+ * freshness already passed. A thrown reader is a failed check.
+ */
+async function liveTlsAllowsRouting(
+  row: CustomDomainEvidenceRow | null | undefined,
+  nowMs: number,
+  tls?: TlsProbeDeps,
+): Promise<boolean> {
+  if (!evaluateCustomDomainRouting(row, nowMs, true)) return false
+  const host = row?.custom_domain
+  if (!host) return false
+  try {
+    const proof = await readAuthoritativeTlsEvidence(host, host, tlsDepsAt(nowMs, tls))
+    return proof.ok === true
+  } catch {
+    return false
+  }
+}
+
+export async function isCustomDomainRoutingEnabled(
   row: CustomDomainEvidenceRow | null | undefined,
   nowMs: number = Date.now(),
-): string | null {
-  if (!isCustomDomainRoutingEnabled(row, nowMs) || !row?.custom_domain) return null
+  tls?: TlsProbeDeps,
+): Promise<boolean> {
+  return liveTlsAllowsRouting(row, nowMs, tls)
+}
+
+export async function customDomainOrigin(
+  row: CustomDomainEvidenceRow | null | undefined,
+  nowMs: number = Date.now(),
+  tls?: TlsProbeDeps,
+): Promise<string | null> {
+  if (!(await isCustomDomainRoutingEnabled(row, nowMs, tls)) || !row?.custom_domain) return null
   return `https://${row.custom_domain}`
 }
 
-export function customDomainActivation(input: {
+export async function customDomainActivation(input: {
   domain: string
   isPublished: boolean
   verification: unknown
   nowMs?: number
-}): { verified: false; status: 'dns_pending' } | { verified: true; status: 'active' } {
-  const enabled = isCustomDomainRoutingEnabled({
+  tls?: TlsProbeDeps
+}): Promise<{ verified: false; status: 'dns_pending' } | { verified: true; status: 'active' }> {
+  const nowMs = input.nowMs ?? Date.now()
+  const enabled = await isCustomDomainRoutingEnabled({
     custom_domain: input.domain,
     is_published: input.isPublished,
     custom_domain_verification: input.verification,
-  }, input.nowMs)
+  }, nowMs, input.tls)
   if (!enabled) return { verified: false, status: 'dns_pending' }
   return { verified: true, status: 'active' }
 }
@@ -242,10 +278,12 @@ export function customDomainLookupFromQuery(result: {
   return { ok: true, row: { ...result.data, subdomain } }
 }
 
-export function presentPublicWebsiteDomain<T extends CustomDomainEvidenceRow>(website: T): T & {
-  custom_domain_routing_enabled: boolean
-} {
-  const custom_domain_routing_enabled = isCustomDomainRoutingEnabled(website)
+export async function presentPublicWebsiteDomain<T extends CustomDomainEvidenceRow>(
+  website: T,
+  nowMs: number = Date.now(),
+  tls?: TlsProbeDeps,
+): Promise<T & { custom_domain_routing_enabled: boolean }> {
+  const custom_domain_routing_enabled = await isCustomDomainRoutingEnabled(website, nowMs, tls)
   const copy = { ...website } as T & { custom_domain_routing_enabled: boolean }
   delete (copy as { custom_domain_verification?: unknown }).custom_domain_verification
   delete (copy as { custom_domain_status?: unknown }).custom_domain_status
@@ -257,16 +295,24 @@ export function presentPublicWebsiteDomain<T extends CustomDomainEvidenceRow>(we
  * Fresh lookup only. Callers must not cache an allow: a removed or conflicting
  * host has to 404 on the next request.
  */
-export function decideCustomDomainRoute(input: {
+export async function decideCustomDomainRoute(input: {
   host: string
   path: string
   lookup: CustomDomainLookup | null
-}): CustomDomainRouteDecision {
+  nowMs?: number
+  tls?: TlsProbeDeps
+}): Promise<CustomDomainRouteDecision> {
   if (!input.host || isAppHost(input.host)) return { action: 'app' }
 
   const path = input.path || '/'
   if (!input.lookup?.ok || !input.lookup.row.subdomain) return { action: 'not_found' }
-  if (!isCustomDomainRoutingEnabled(input.lookup.row)) return { action: 'not_found' }
+  const requested = normalizeHostname(input.host)
+  const stored = normalizeHostname(input.lookup.row.custom_domain || '')
+  if (!requested || requested !== stored) return { action: 'not_found' }
+  const nowMs = input.nowMs ?? Date.now()
+  if (!(await isCustomDomainRoutingEnabled(input.lookup.row, nowMs, input.tls))) {
+    return { action: 'not_found' }
+  }
 
   const subdomain = input.lookup.row.subdomain
   if (

@@ -207,7 +207,7 @@ export default defineEventHandler(async (event) => {
   const bookingUrl = `${base}/booking/availability/${encodeURIComponent(slug)}`
   // Canonical site URL: verified custom domain wins (schema + OG + absolute links)
   const siteUrl =
-    customDomainOrigin(website) || `${base}/s/${encodeURIComponent(website.subdomain)}`
+    (await customDomainOrigin(website)) || `${base}/s/${encodeURIComponent(website.subdomain)}`
 
   const landing = buildLandingPage({
     tenant: {
@@ -357,7 +357,7 @@ export default defineEventHandler(async (event) => {
   const previewUrl = issued
     ? previewUrlForPath(appBaseUrl(event), previewPath, issued.token)
     : `${appBaseUrl(event)}${previewPath}`
-  const liveUrl = customDomainOrigin(website) || siteUrl
+  const liveUrl = siteUrl
 
   if (publish) {
     await supabase

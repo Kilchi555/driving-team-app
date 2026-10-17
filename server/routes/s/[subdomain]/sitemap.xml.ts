@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
     .split(',')[0]
   const { customDomainOrigin } = await import('~/server/utils/custom-domain')
   const base =
-    customDomainOrigin(website) ||
+    (await customDomainOrigin(website)) ||
     `${proto}://${host}/s/${encodeURIComponent(website.subdomain)}`
 
   const entries: Array<{ loc: string; lastmod?: string; priority: string }> = []

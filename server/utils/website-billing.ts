@@ -109,7 +109,7 @@ export async function publishWebsiteForTenant(
     .eq('id', tenantId)
 
   const liveUrl =
-    customDomainOrigin(website) || `${baseUrl}/s/${encodeURIComponent(website.subdomain)}`
+    (await customDomainOrigin(updatedWebsite)) || `${baseUrl}/s/${encodeURIComponent(website.subdomain)}`
   const previewUrl = liveUrl
 
   try {

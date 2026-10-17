@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
   const path = getRequestURL(event).pathname || '/'
   if (!host || isAppHost(host)) return
 
-  const decision = decideCustomDomainRoute({
+  const decision = await decideCustomDomainRoute({
     host,
     path,
     lookup: await lookupDomain(host),

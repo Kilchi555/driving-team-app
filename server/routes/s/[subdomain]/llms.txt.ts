@@ -3,14 +3,6 @@ export default defineEventHandler(async (event) => {
   setHeader(event, 'Cache-Control', 'public, max-age=300')
 
   const subdomain = String(getRouterParam(event, 'subdomain') || '').toLowerCase()
-  const ctx = await (await import('~/server/utils/website-seo-context')).resolveWebsiteSeoContext({
-    ...event,
-    // ensure query subdomain
-    node: event.node,
-    context: event.context,
-  })
-
-  // Force via query by temporarily setting
   const { getSupabaseAdmin } = await import('~/server/utils/supabase-admin')
   const supabase = getSupabaseAdmin()
   const { data: website } = await supabase
@@ -37,7 +29,7 @@ export default defineEventHandler(async (event) => {
   const host = (getRequestHeader(event, 'x-forwarded-host') || getRequestHeader(event, 'host') || 'app.simy.ch').split(',')[0]
   const { customDomainOrigin } = await import('~/server/utils/custom-domain')
   const baseUrl =
-    customDomainOrigin(website) ||
+    (await customDomainOrigin(website)) ||
     `${proto}://${host}/s/${encodeURIComponent(website.subdomain)}`
 
   const name = tenant?.name || website.subdomain

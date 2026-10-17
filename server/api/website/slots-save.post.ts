@@ -190,7 +190,7 @@ export default defineEventHandler(async (event) => {
       : `/s/${encodeURIComponent(website.subdomain)}/${encodeURIComponent(page.slug)}`
   const issued = await issueWebsitePreviewToken(supabase, website.id)
   const previewUrl = issued ? previewUrlForPath(base, path, issued.token) : `${base}${path}`
-  const customOrigin = customDomainOrigin(website)
+  const customOrigin = await customDomainOrigin(website)
   const liveUrl = customOrigin
     ? isHome || page.slug === 'index'
       ? customOrigin

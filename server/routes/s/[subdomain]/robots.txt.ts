@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
   const host = getRequestHeader(event, 'x-forwarded-host') || getRequestHeader(event, 'host') || 'app.simy.ch'
   const { customDomainOrigin } = await import('~/server/utils/custom-domain')
   const base =
-    customDomainOrigin(website) ||
+    (await customDomainOrigin(website)) ||
     `${proto}://${String(host).split(',')[0]}/s/${encodeURIComponent(website.subdomain)}`
 
   return `User-agent: *\nAllow: /\nDisallow: /*?preview=1\nDisallow: /*?preview_token=\nDisallow: /*?*preview_token=\nSitemap: ${base.replace(/\/$/, '')}/sitemap.xml\n`
