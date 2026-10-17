@@ -932,6 +932,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
+import { createSecureCashEnrollIdempotencyKey } from '~/utils/cash-course-enroll-idempotency'
 import { getCoursePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
 import {
   areConfigurableEnrollmentFieldsValid,
@@ -1032,6 +1033,25 @@ const enrollmentError = ref<string | null>(null)
 const sariData = ref<any>(null)
 const isFaberIdFocused = ref(false)
 const isPhoneFocused = ref(false)
+
+/**
+ * F1 cash_on_site idempotency (canonical body field: idempotencyKey).
+ * One secure UUID v4 per submit attempt; reused on uncertain retry and
+ * idempotency_conflict; retired only on confirmed success or modal close.
+ * In-memory only — never persisted to storage.
+ */
+const cashIdempotencyKey = ref<string | null>(null)
+
+function ensureCashIdempotencyKey(): string {
+  if (!cashIdempotencyKey.value) {
+    cashIdempotencyKey.value = createSecureCashEnrollIdempotencyKey()
+  }
+  return cashIdempotencyKey.value
+}
+
+function clearCashIdempotencyKey() {
+  cashIdempotencyKey.value = null
+}
 
 // ── Vehicle selection ─────────────────────────────────────────────────────
 const availableVehicles = ref<any[]>([])
@@ -1808,6 +1828,7 @@ const submitEnrollment = async () => {
       ? '/api/courses/enroll-wallee'
       : '/api/courses/enroll-cash'
     const nonWalleePaymentMethod = paymentMethod.value === 'INVOICE' ? 'invoice' : 'cash_on_site'
+    const isCashOnSite = paymentMethod.value !== 'WALLEE' && nonWalleePaymentMethod === 'cash_on_site'
     
     // Build custom sessions object if any sessions were swapped
     const hasCustomSessions = Object.keys(customSessions.value).length > 0
@@ -1832,6 +1853,16 @@ const submitEnrollment = async () => {
       }
       if (isEnrollmentFieldVisible('birthdate')) {
         nonSariFields.birthdate = formData.value.birthdateNonSari
+      }
+    }
+
+    let cashKey: string | undefined
+    if (isCashOnSite) {
+      try {
+        cashKey = ensureCashIdempotencyKey()
+      } catch {
+        enrollmentError.value = 'Anmeldung nicht möglich (sichere Schlüsselgenerierung fehlt). Bitte aktuellen Browser verwenden.'
+        return
       }
     }
 
@@ -1861,10 +1892,14 @@ const submitEnrollment = async () => {
         marketingAttribution,
         vehicleId: selectedVehicleId.value || undefined,
         ...(paymentMethod.value !== 'WALLEE' ? { paymentMethod: nonWalleePaymentMethod } : {}),
+        // Cash only: reuse same UUID across uncertain retries for this attempt.
+        ...(cashKey ? { idempotencyKey: cashKey } : {}),
       }
     }) as any
     
     if (response.success) {
+      // Confirmed success (including idempotentReplay) — retire key.
+      if (isCashOnSite) clearCashIdempotencyKey()
       if (response.paymentUrl) {
         // Keep loading state active during navigation — do NOT reset isLoading.
         // Small delay gives Wallee time to activate the transaction before the
@@ -1879,10 +1914,13 @@ const submitEnrollment = async () => {
       }
     } else {
       enrollmentError.value = getGermanErrorMessage(response)
+      // Keep key — only success or modal close retires it.
     }
   } catch (error: any) {
     logger.error('Enrollment error:', error)
     enrollmentError.value = getGermanErrorMessage(error)
+    // Preserve key on network/5xx/idempotency_conflict and other uncertain outcomes.
+    // Do not rotate the key here — close modal for a genuinely new attempt.
   } finally {
     // Don't reset loading state when navigating to Wallee — button stays
     // disabled with spinner until the browser actually leaves the page.
@@ -1921,6 +1959,8 @@ watch(() => props.isOpen, (isOpen) => {
     isIndividualSessionMode.value = false
     partialConfirmed.value = false
     sessionHasAlternatives.value = {}
+    // Closing the modal ends the submit attempt — next open is a new key.
+    clearCashIdempotencyKey()
   }
 })
 
