@@ -347,3 +347,17 @@ Bei Änderungen am System:
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
+
+---
+
+## Engineering Runbooks
+
+Concise, code-verified runbooks for developers and ops. Prefer updating these over duplicating CSV rows for deep subsystem behavior.
+
+Neue Engineering-Runbooks → Datei unter `docs/` + Zeile in dieser Tabelle (nur Dateien, die auf dem Branch existieren).
+
+| Runbook | Summary |
+|---------|---------|
+| [INVOICE_UPDATE_ALLOWLIST.md](./INVOICE_UPDATE_ALLOWLIST.md) | Generic invoice update allowlist; reject payment/ownership fields whole-request (#445) |
+| [COMPANY_INVOICES_TENANT_ROUTE.md](./COMPANY_INVOICES_TENANT_ROUTE.md) | Tenant-scoped Firmenkartei invoice list; direct `company_id` only (#446) |
+| [WEBSITE_LEGAL_SANITIZER_FALLBACK.md](./WEBSITE_LEGAL_SANITIZER_FALLBACK.md) | Public Impressum/Datenschutz stay available when DOMPurify fails; never raw reglement (#457) |
