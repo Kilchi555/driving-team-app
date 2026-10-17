@@ -347,3 +347,15 @@ Bei Änderungen am System:
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
+
+---
+
+## Engineering Runbooks
+
+Focused ops/dev runbooks (prefer these over historical root `*_ANALYSIS.md` reports when debugging):
+
+| Runbook | Covers |
+|---------|--------|
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Admin lockout / passkey emergency recovery |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Client session cache / HMR restore |
+| [PUBLIC_SLOT_OFFER_PRICING.md](./PUBLIC_SLOT_OFFER_PRICING.md) | Slot-bound public offer identity + `resolveOfferPrice` (#213) |
