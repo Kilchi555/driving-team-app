@@ -6,8 +6,8 @@ import {
   resolveExternalEventTitle,
   shouldAnonymizeExternalEventTitles,
 } from '~/server/utils/external-calendar-privacy'
+import { classifyIcsFeed, type IcsFeedKind } from '~/server/utils/ics-feed-classification'
 import { probeIcsUrl } from '~/server/utils/probe-ics-url'
-import { humanizeIcsFetchError } from '~/utils/ics-url'
 import { SYNC_LOOKBACK_DAYS } from '~/server/utils/sync-external-calendars-job'
 import { logger } from '~/utils/logger'
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
@@ -91,15 +91,22 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
 
     // Obtain ICS data either from content or by fetching URL
     let icsData: string
+    let feedKind: IcsFeedKind
     if (ics_content && ics_content.trim().length > 0) {
-      icsData = ics_content
-      if (!icsData.includes('BEGIN:VCALENDAR')) {
-        const human = humanizeIcsFetchError('Response is not a VCALENDAR (HTML or wrong URL?)')
+      const classified = classifyIcsFeed(ics_content)
+      if (!classified.ok) {
+        await supabase.from('external_calendars').update({
+          consecutive_failures: (calendar.consecutive_failures ?? 0) + 1,
+          last_fetch_error: classified.message,
+          last_failure_at: new Date().toISOString(),
+        }).eq('id', calendar_id)
         throw createError({
           statusCode: 400,
-          statusMessage: human.tip ? `${human.message} ${human.tip}` : human.message,
+          statusMessage: classified.tip ? `${classified.message} ${classified.tip}` : classified.message,
         })
       }
+      icsData = ics_content
+      feedKind = classified.kind
     } else {
       const probe = await probeIcsUrl(ics_url as string)
       if (!probe.ok) {
@@ -116,6 +123,7 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
       }
 
       icsData = probe.body
+      feedKind = probe.feedKind
 
       if (probe.url !== calendar.ics_url) {
         await supabase
@@ -149,7 +157,39 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
     })
 
     if (windowEvents.length === 0) {
-      logger.warn(`⚠️ Empty ICS feed (0 events) for calendar ${calendar_id}`)
+      if (feedKind === 'success_empty') {
+        const { error: clearError } = await supabase
+          .from('external_busy_times')
+          .delete()
+          .eq('external_calendar_id', calendar_id)
+        if (clearError) {
+          throw createError({ statusCode: 500, statusMessage: `Failed to clear busy times: ${clearError.message}` })
+        }
+        await enqueueStaffAvailabilityRecalc({
+          staff_id: calendar.staff_id,
+          tenant_id: calendar.tenant_id,
+          trigger: 'external_event',
+        }).catch((queueError: any) => {
+          logger.warn('⚠️ Failed to queue staff for recalc:', queueError?.message)
+        })
+        await supabase
+          .from('external_calendars')
+          .update({
+            last_sync_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            consecutive_failures: 0,
+            last_fetch_error: null,
+          })
+          .eq('id', calendar_id)
+        return {
+          success: true,
+          message: 'Kalender synchronisiert (keine Termine im Feed).',
+          imported_events: 0,
+          code: 'success_empty',
+        }
+      }
+
+      logger.warn(`⚠️ No in-window ICS events for calendar ${calendar_id}; keeping last snapshot`)
       await supabase
         .from('external_calendars')
         .update({
@@ -157,16 +197,15 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
           updated_at: new Date().toISOString(),
           consecutive_failures: 0,
           last_fetch_error:
-            'EMPTY_CALENDAR: Kalender-Feed enthält keine Termine. Vermutlich wurde ein leerer Kalender geteilt — bitte den Kalender mit den echten Terminen öffentlich teilen und den neuen Link verbinden.',
+            'EMPTY_WINDOW: Der Feed enthält Termine, aber keine im Sync-Fenster. Der bisherige Stand bleibt erhalten.',
         })
         .eq('id', calendar_id)
 
       return {
-        success: false,
-        message: 'Kalender-Feed enthält keine Termine',
-        tip: 'Du hast vermutlich einen leeren Kalender geteilt. Teile in iCloud den Kalender mit deinen echten Terminen und verbinde den neuen Link.',
+        success: true,
+        message: 'Keine Termine im Sync-Fenster. Der bisherige Stand bleibt erhalten.',
         imported_events: 0,
-        code: 'empty_calendar',
+        code: 'empty_window',
       }
     }
 

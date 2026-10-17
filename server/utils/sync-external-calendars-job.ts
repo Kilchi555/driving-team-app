@@ -13,6 +13,8 @@ import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 
 export const FAILURE_NOTIFY_THRESHOLD = 3
+/** Platform inbox for repeated external-calendar sync failures. Not a tenant admin. */
+export const CALENDAR_SYNC_FAILURE_EMAIL = 'info@simy.ch'
 /** After this many consecutive failures, only retry on backoff cadence (not every 15 min). */
 export const FAILURE_BACKOFF_THRESHOLD = 5
 const FAILURE_BACKOFF_MS = 6 * 60 * 60 * 1000 // 6h
@@ -70,17 +72,6 @@ export async function notifyAdminBrokenCalendar(
     .eq('id', calendar.tenant_id)
     .single()
 
-  const { data: admins } = await supabase
-    .from('users')
-    .select('email')
-    .eq('tenant_id', calendar.tenant_id)
-    .eq('role', 'admin')
-    .not('email', 'is', null)
-    .limit(3)
-
-  const adminEmails = (admins || []).map((a: any) => a.email).filter(Boolean)
-  if (adminEmails.length === 0) return
-
   const tenantName = tenant?.name || 'Simy'
   const primaryColor = tenant?.primary_color || '#1e293b'
   const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
@@ -107,7 +98,7 @@ ${logoHtml}
 
   try {
     await sendEmail({
-      to: adminEmails,
+      to: CALENDAR_SYNC_FAILURE_EMAIL,
       subject: `Kalender-Sync fehlgeschlagen: ${calendar.calendar_name || 'Unbekannt'}`,
       html,
       fromName: tenantName,
@@ -118,7 +109,7 @@ ${logoHtml}
       .from('external_calendars')
       .update({ failure_notified_at: now.toISOString() })
       .eq('id', calendar.id)
-    logger.debug(`✅ Admin notified about broken calendar: ${calendar.calendar_name}`)
+    logger.debug(`✅ Calendar sync failure notification sent: ${calendar.calendar_name}`)
   } catch (e: any) {
     logger.warn('⚠️ Could not send broken calendar notification:', e.message)
   }
@@ -225,9 +216,34 @@ export async function syncOneExternalCalendar(
   })
 
   if (windowEvents.length === 0) {
-    logger.warn(`⚠️ Empty ICS feed (0 events) for ${calendar.calendar_name || calendar.id}`)
-    // Soft warning — feed is reachable but has no appointments. Do not bump
-    // consecutive_failures (URL itself is fine), but surface it in the UI.
+    // A real feed with zero VEVENTs is an authoritative empty snapshot.
+    // Events that exist but fall outside the window or the 14-day cap are not:
+    // replacing would drop the last good in-window snapshot. The Simy error
+    // stub never reaches this branch — probeIcsUrl rejects it first.
+    if (probe.feedKind === 'success_empty') {
+      const { error: clearError } = await supabase
+        .from('external_busy_times')
+        .delete()
+        .eq('external_calendar_id', calendar.id)
+      if (clearError) {
+        await recordFailure(supabase, calendar, clearError.message, notify)
+        return { status: 'failed', error: clearError.message }
+      }
+      await queueStaffRecalc(supabase, calendar.staff_id, calendar.tenant_id)
+      await supabase
+        .from('external_calendars')
+        .update({
+          last_sync_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          consecutive_failures: 0,
+          last_fetch_error: null,
+        })
+        .eq('id', calendar.id)
+      logger.info(`✅ Synced empty calendar: ${calendar.calendar_name || calendar.id}`)
+      return { status: 'synced', events: 0 }
+    }
+
+    logger.warn(`⚠️ No in-window ICS events for ${calendar.calendar_name || calendar.id}; keeping last snapshot`)
     await supabase
       .from('external_calendars')
       .update({
@@ -235,7 +251,7 @@ export async function syncOneExternalCalendar(
         updated_at: new Date().toISOString(),
         consecutive_failures: 0,
         last_fetch_error:
-          'EMPTY_CALENDAR: Kalender-Feed enthält keine Termine. Vermutlich wurde ein leerer Kalender geteilt — bitte den Kalender mit den echten Terminen öffentlich teilen und den neuen Link verbinden.',
+          'EMPTY_WINDOW: Der Feed enthält Termine, aber keine im Sync-Fenster. Der bisherige Stand bleibt erhalten.',
       })
       .eq('id', calendar.id)
     return { status: 'synced', events: 0 }
