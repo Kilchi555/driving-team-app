@@ -333,6 +333,17 @@ Dokumentation wichtiger Datenflüsse und Geschäftsprozesse der Anwendung.
 
 ---
 
+## Engineering Runbooks
+
+Concise, code-verified runbooks for recent subsystems. Prefer these over inventing parallel guides.
+
+| File | Topic |
+|------|-------|
+| [DATABASE_BACKUP_PGDUMP_AUTH.md](./DATABASE_BACKUP_PGDUMP_AUTH.md) | Daily backup `SUPABASE_DB_URL` structure preflight + safe pg_dump auth/connection diagnosis (#394) |
+| [NULL_TENANT_APPOINTMENT_CHILDREN.md](./NULL_TENANT_APPOINTMENT_CHILDREN.md) | JOIN-only NULL-tenant cash/discount backfill + hard-delete RPC adoption (#393) |
+
+---
+
 ## 📝 Wartung dieser Dokumentation
 
 Bei Änderungen am System:
@@ -341,6 +352,7 @@ Bei Änderungen am System:
 - Policy-Änderungen → Aktualisieren Sie RLS_POLICIES.csv
 - Feature-Änderungen → Aktualisieren Sie APP_DOCUMENTATION.csv
 - Prozess-Änderungen → Aktualisieren Sie DATA_FLOWS.csv
+- Neue Engineering-Runbooks → Datei unter `docs/` + Zeile in **Engineering Runbooks** oben
 
 ---
 
