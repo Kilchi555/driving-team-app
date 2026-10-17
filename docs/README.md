@@ -344,6 +344,24 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Operational notes for engineers (intent → contract → pitfalls → codepaths). Only files that exist on this branch are linked.
+
+| Runbook | Covers |
+|---------|--------|
+| [CASH_LEDGER_ATTRIBUTION.md](./CASH_LEDGER_ATTRIBUTION.md) | Cash cashier vs service-staff attribution foundation (#369); classify/apply RPCs; undeployed migration |
+| [STAFF_POS_CREDIT_AFTER_PAYMENT.md](./STAFF_POS_CREDIT_AFTER_PAYMENT.md) | Staff POS wallet credit only after payment completes (#360); supersedes pre-#360 credit timing |
+| [INTERNAL_EMAIL_EDGE_SECRET.md](./INTERNAL_EMAIL_EDGE_SECRET.md) | `SIMY_INTERNAL_EMAIL_SECRET` lockdown for email edge functions (#371) |
+| [INVITED_USER_EDIT_RESEND.md](./INVITED_USER_EDIT_RESEND.md) | Admin edit/resend pending client, staff, and admin invitations (#370) |
+| [SHOP_PUBLIC_IDENTITY.md](./SHOP_PUBLIC_IDENTITY.md) | Public shop checkout ignores browser identity (#240) |
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Passkey recovery |
+| [ACCESS_AND_SECRETS_POLICY.md](./ACCESS_AND_SECRETS_POLICY.md) | Access and secrets policy |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Wallee payment recovery |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Session identity cache (HMR) |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
