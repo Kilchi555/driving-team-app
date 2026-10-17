@@ -13,7 +13,7 @@ Separater Draft-PR. Nicht gemergt, nicht deployed, nicht undrafted. PR #458 ist 
 | Base SHA | `a9a9745123e124d51ad5fa13a84523055c3a90ef` |
 | Implementation SHA | `1e311734893ad8c154b66f21e91f3858c50c5d8b` |
 | Handoff SHA | `7dccd6f57fa6de9bd5f5bb48e28cd374f9e7673b` |
-| Head SHA | `7dccd6f57fa6de9bd5f5bb48e28cd374f9e7673b` beim Öffnen. Der Folgecommit trägt nur diese PR-URL ein; die PR-Beschreibung nennt den Tip danach. |
+| Head SHA | `5723d59142f5b39b363981cbfb4ba28815cb2055` (PR-URL). Der Tip-Commit danach ergänzt die Pre-push-Zeile; die PR-Beschreibung nennt diesen Tip. |
 | PR | https://github.com/Kilchi555/driving-team-app/pull/468 |
 
 ## Ursachen
@@ -75,6 +75,7 @@ Vitest: 11 Tests, 2 Dateien, alle grün.
 | Vitest, gezielt die neuen Dateien | bestanden |
 | Repo-weiter `vue-tsc` | nicht erneut ausgeführt. Bekannte Baseline bleibt rot und ist kein Required-Check. Dieses PR lockert TypeScript nicht. |
 | `NITRO_PRESET=vercel NODE_OPTIONS=--max-old-space-size=4096 npx nuxt build` | bestanden. Client 49332 ms, Server 30422 ms, Nitro-Server gebaut. Exit 0. Nicht deployed. |
+| Pre-push Hook | gebaut und `/api/health` antwortete 200. Kein Deploy. |
 | Required Ruleset: Test and lint, E2E login, Dependency review | auf diesem Head noch nicht gelaufen |
 
 ## Nicht verifiziert
