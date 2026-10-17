@@ -8,6 +8,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
@@ -93,6 +94,12 @@ export default defineEventHandler(async (event) => {
         })
       }
 
+      await assertTenantSubscriptionWritable(event, {
+        tenantId: userProfile.tenant_id,
+        userId: userProfile.id,
+        route: 'POST /api/calendar/manage:create-appointment',
+      })
+
       // Create a new appointment
       const { data: appointment, error } = await supabase
         .from('appointments')
@@ -133,6 +140,12 @@ export default defineEventHandler(async (event) => {
           statusMessage: 'Access denied to this appointment'
         })
       }
+
+      await assertTenantSubscriptionWritable(event, {
+        tenantId: apt.tenant_id,
+        userId: userProfile.id,
+        route: 'POST /api/calendar/manage:update-appointment-status',
+      })
 
       // Check if time changed
       const timeChanged = apt.start_time !== appointment_data.start_time ||

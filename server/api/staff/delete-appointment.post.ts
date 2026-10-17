@@ -1,6 +1,7 @@
 import { defineEventHandler, createError, readBody } from 'h3'
 import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { createClient } from '@supabase/supabase-js'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import logger from '~/utils/logger'
 
 /**
@@ -110,6 +111,12 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Appointment is already deleted'
       })
     }
+
+    await assertTenantSubscriptionWritable(event, {
+      tenantId,
+      userId: userProfile.id,
+      route: 'POST /api/staff/delete-appointment',
+    })
 
     // ✅ LAYER 5: Soft delete
     const updateData: any = {

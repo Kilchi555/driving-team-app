@@ -1,6 +1,7 @@
 import { defineEventHandler, createError, readBody } from 'h3'
 import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { createClient } from '@supabase/supabase-js'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import logger from '~/utils/logger'
 
 /**
@@ -112,6 +113,12 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Appointment not found or access denied'
       })
     }
+
+    await assertTenantSubscriptionWritable(event, {
+      tenantId: originalAppointment.tenant_id || tenantId,
+      userId: userProfile.id,
+      route: 'POST /api/staff/update-appointment',
+    })
 
     // ✅ LAYER 5: Check for duration reduction and handle credit
     let creditAdjustment = null

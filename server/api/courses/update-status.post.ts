@@ -1,6 +1,7 @@
 import { defineEventHandler, createError, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { generateWaitlistAvailableEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
@@ -78,6 +79,12 @@ export default defineEventHandler(async (event) => {
   if (body.status === 'active' || body.status === 'scheduled') {
     updateData.is_active = true
   }
+
+  await assertTenantSubscriptionWritable(event, {
+    tenantId: profile.tenant_id,
+    userId: profile.id,
+    route: 'POST /api/courses/update-status',
+  })
 
   const { data: updated, error } = await supabase
     .from('courses')

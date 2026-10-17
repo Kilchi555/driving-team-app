@@ -2,6 +2,7 @@
 // SECURED: Staff appointment cancellation with full auth + authorization
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
@@ -166,6 +167,12 @@ export default defineEventHandler(async (event) => {
         message: 'Appointment not found'
       })
     }
+
+    await assertTenantSubscriptionWritable(event, {
+      tenantId,
+      userId: userData.id,
+      route: 'POST /api/appointments/cancel-staff',
+    })
 
     // ============ LAYER 7: FETCH PAYMENT DATA ============
     const { data: payment, error: paymentError } = await supabaseAdmin

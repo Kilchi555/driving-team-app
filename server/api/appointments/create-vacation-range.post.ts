@@ -11,6 +11,7 @@ import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { zurichWallTimeToUtc } from '~/server/utils/zurich-wall-time'
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 
 /** 07:00–19:00 Europe/Zurich as UTC ISO, DST-safe. */
 function vacationBoundsUtc(day: string): { startISO: string; endISO: string; durationMinutes: number } {
@@ -62,6 +63,12 @@ export default defineEventHandler(async (event) => {
     }
 
     const tenantId = authUser.tenant_id
+
+    await assertTenantSubscriptionWritable(event, {
+      tenantId,
+      userId: authUser.id || null,
+      route: 'POST /api/appointments/create-vacation-range',
+    })
 
     // Load staff's weekly_contracted_hours to derive daily hours
     const { data: staffUser } = await getSupabaseAdmin()

@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, readBody } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { obligationRepairBasisId, planCancellationObligationChange, stampableObligationMemory, type ObligationPlan } from '~/server/utils/cancellation-payment-obligation'
 import { applyCancellationObligationRepair } from '~/server/utils/apply-cancellation-obligation-repair'
 import { logAudit } from '~/server/utils/audit'
@@ -103,6 +104,12 @@ export default defineEventHandler(async (event) => {
   if (note.length > 500) {
     throw createError({ statusCode: 400, statusMessage: 'Vermerk darf höchstens 500 Zeichen haben.' })
   }
+
+  await assertTenantSubscriptionWritable(event, {
+    tenantId: profile.tenant_id,
+    userId: profile.id,
+    route: 'POST /api/admin/appointments/cancellation-obligation',
+  })
 
   const previousCharge = appointment.cancellation_charge_percentage
   // A real percentage change is claimed by compare-and-swap below. When the

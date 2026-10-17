@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { createError, defineEventHandler, getHeader, readBody } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
 import {
   validateAppointmentData,
@@ -124,6 +125,17 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 403, statusMessage: 'Access denied: tenant mismatch' })
       }
     }
+
+    // SaaS write gate: enforce on the target tenant (including when superadmin acts for them).
+    const trustedTenantId =
+      typeof appointmentData.tenant_id === 'string' && appointmentData.tenant_id
+        ? appointmentData.tenant_id
+        : callerProfile.tenant_id
+    await assertTenantSubscriptionWritable(event, {
+      tenantId: trustedTenantId,
+      userId: callerProfile.id || callerProfile.auth_user_id || null,
+      route: 'POST /api/appointments/save',
+    })
 
     if (mode === 'edit' && !eventId) {
       throw createError({

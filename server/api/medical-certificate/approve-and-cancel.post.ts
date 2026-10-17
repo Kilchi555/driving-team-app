@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { sendTenantSMS } from '~/server/utils/sms'
 import { sendTenantEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
@@ -29,6 +30,12 @@ export default defineEventHandler(async (event) => {
 
   if (apptErr || !appt) throw createError({ statusCode: 404, statusMessage: 'Appointment not found' })
   if (!appt.medical_certificate_url) throw createError({ statusCode: 400, statusMessage: 'Kein Arztzeugnis hochgeladen' })
+
+  await assertTenantSubscriptionWritable(event, {
+    tenantId: profile.tenant_id,
+    userId: profile.id,
+    route: 'POST /api/medical-certificate/approve-and-cancel',
+  })
 
   const [{ data: user }, { data: tenant }, { data: payments }] = await Promise.all([
     supabase.from('users').select('first_name, last_name, email, phone').eq('id', appt.user_id).single(),

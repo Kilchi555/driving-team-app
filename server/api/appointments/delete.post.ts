@@ -2,6 +2,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 export default defineEventHandler(async (event) => {
@@ -48,6 +49,12 @@ export default defineEventHandler(async (event) => {
     if ((!isOwner && !isAdmin) || !sameTenant) {
       throw new Error('Unauthorized to delete this appointment')
     }
+
+    await assertTenantSubscriptionWritable(event, {
+      tenantId: appointment.tenant_id,
+      userId: currentUser.id,
+      route: 'POST /api/appointments/delete',
+    })
     
     // Delete appointment
     const { error: deleteError } = await supabaseAdmin

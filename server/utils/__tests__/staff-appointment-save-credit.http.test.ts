@@ -30,6 +30,11 @@ vi.mock('~/utils/supabase', () => ({
   getSupabaseAdmin: mocks.getSupabaseAdmin,
 }))
 
+vi.mock('~/server/utils/assert-tenant-subscription-writable', () => ({
+  assertTenantSubscriptionWritable: vi.fn(async () => ({ reasonCode: 'writable' })),
+  SAAS_SUBSCRIPTION_REQUIRED_CODE: 'saas_subscription_required',
+}))
+
 vi.mock('~/server/utils/auth', () => ({
   requireAdminProfile: mocks.requireAdminProfile,
 }))

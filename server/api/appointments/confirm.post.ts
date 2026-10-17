@@ -3,6 +3,7 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 
 interface ConfirmAppointmentRequest {
   appointmentId: string
@@ -69,6 +70,12 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Not authorized to confirm this appointment'
       })
     }
+
+    await assertTenantSubscriptionWritable(event, {
+      tenantId: appointment.tenant_id || requestingUser.tenant_id,
+      userId: requestingUser.id,
+      route: 'POST /api/appointments/confirm',
+    })
     
     console.log('📝 Confirming appointment:', body.appointmentId)
     

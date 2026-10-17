@@ -7,6 +7,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { assertTenantSubscriptionWritable } from '~/server/utils/assert-tenant-subscription-writable'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
@@ -40,6 +41,12 @@ export default defineEventHandler(async (event) => {
     const appointmentLabel = terms.appointment || 'Termin'
     throw createError({ statusCode: 400, statusMessage: `${appointmentLabel}- und Kursbuchungen können nur über den Termin/Kurs storniert werden.` })
   }
+
+  await assertTenantSubscriptionWritable(event, {
+    tenantId: profile.tenant_id,
+    userId: profile.id,
+    route: 'POST /api/admin/resources/block/cancel',
+  })
 
   const { error } = await supabase
     .from(table)
