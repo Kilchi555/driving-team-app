@@ -341,6 +341,17 @@ Bei Änderungen am System:
 - Policy-Änderungen → Aktualisieren Sie RLS_POLICIES.csv
 - Feature-Änderungen → Aktualisieren Sie APP_DOCUMENTATION.csv
 - Prozess-Änderungen → Aktualisieren Sie DATA_FLOWS.csv
+- Neue Engineering-Runbooks → Datei unter `docs/` + Zeile in **Engineering Runbooks** unten
+
+---
+
+## Engineering Runbooks
+
+Concise, code-verified runbooks for developers and ops. Prefer updating these over duplicating CSV rows for deep subsystem behavior.
+
+| File | Topic |
+|------|-------|
+| [REVIEW_STATE_OBSERVER.md](./REVIEW_STATE_OBSERVER.md) | Read-only `<!-- simy-review-state -->` PR comment; observation cache only — not merge authority (#368) |
 
 ---
 
