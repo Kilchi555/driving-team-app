@@ -24,7 +24,7 @@ payments,payments_update_service_role,UPDATE,"service_role","true","WRITE","Serv
 payments,payments_select_service_role,SELECT,"service_role","true","READ","Service role read"
 availability_slots,availability_slots_select_public,SELECT,"anon","available = true","READ","Available slots"
 availability_slots,availability_slots_select_tenant,SELECT,"staff, admin","tenant_id IN (SELECT tenant_id FROM users WHERE auth_user_id = auth.uid())","READ","All slots"
-availability_slots,availability_slots_update_anon,UPDATE,"anon","appointment_id IS NULL","WRITE","Reserve slot"
+availability_slots,availability_slots_update_anon,UPDATE,"anon","REMOVED by #231 (migrations/20260917_f3_anon_data_api_containment.sql) — reserve via Nitro + service_role","NONE","Do not reintroduce anon UPDATE"
 availability_slots,availability_slots_update_staff,UPDATE,"staff, admin","tenant_id IN (SELECT tenant_id FROM users WHERE auth_user_id = auth.uid())","WRITE","Staff update"
 availability_slots,availability_slots_insert_service_role,INSERT,"service_role","true","CREATE","Service role (backend)"
 categories,categories_select_public,SELECT,"anon","active = true","READ","Active categories"
