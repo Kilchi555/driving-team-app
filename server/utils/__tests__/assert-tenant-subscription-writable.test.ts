@@ -67,6 +67,27 @@ describe('assertTenantSubscriptionWritable', () => {
     expect(mocks.from).toHaveBeenCalledWith('tenants')
   })
 
+  it('allows active trial tenant (writable) with active_trial reason', async () => {
+    mockTenantRow({
+      is_trial: true,
+      trial_ends_at: FUTURE,
+      subscription_plan: 'trial',
+      current_period_end: null,
+      website_only: false,
+    })
+    const { assertTenantSubscriptionWritable } = await loadAssert()
+
+    const result = await assertTenantSubscriptionWritable(null, {
+      tenantId: TENANT,
+      userId: USER,
+      now: NOW,
+      route: 'test/active-trial',
+    })
+
+    expect(result.reasonCode).toBe('active_trial')
+    expect(mocks.from).toHaveBeenCalledWith('tenants')
+  })
+
   it('denies expired trial with 402 saas_subscription_required before any caller write', async () => {
     mockTenantRow({
       is_trial: true,

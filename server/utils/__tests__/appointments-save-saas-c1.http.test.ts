@@ -4,6 +4,7 @@
  * Does NOT mock away assertTenantSubscriptionWritable.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { evaluateTenantSubscriptionWriteAccess } from '~/utils/tenant-subscription-write-access'
 
 const mocks = vi.hoisted(() => ({
   readBody: vi.fn(),
@@ -19,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   dispatchAppointmentConfirmation: vi.fn(async () => undefined),
   appointmentUpdates: [] as unknown[],
   appointmentInserts: [] as unknown[],
+  appointmentUpdateFilters: [] as Record<string, unknown>[],
 }))
 
 vi.mock('h3', async (importOriginal) => {
@@ -123,6 +125,17 @@ function expiredTrialSnap(id: string): TenantSnap {
   }
 }
 
+function activeTrialSnap(id: string): TenantSnap {
+  return {
+    id,
+    is_trial: true,
+    trial_ends_at: FUTURE,
+    subscription_plan: 'trial',
+    current_period_end: null,
+    website_only: false,
+  }
+}
+
 function existingAppt(tenantId: string) {
   return {
     id: APPT,
@@ -216,6 +229,7 @@ function createClient(opts: {
       }
       chain.single = async () => {
         if (table === 'appointments' && state.op === 'update') {
+          mocks.appointmentUpdateFilters.push({ ...state.filters })
           return {
             data: {
               ...(opts.appointment || {}),
@@ -251,6 +265,7 @@ describe('POST /api/appointments/save C1 SaaS tenant binding', () => {
     vi.clearAllMocks()
     mocks.appointmentUpdates.length = 0
     mocks.appointmentInserts.length = 0
+    mocks.appointmentUpdateFilters.length = 0
     vi.useFakeTimers()
     vi.setSystemTime(NOW)
     mocks.assertStaffCanApplyManualDiscount.mockResolvedValue(undefined)
@@ -473,6 +488,73 @@ describe('POST /api/appointments/save C1 SaaS tenant binding', () => {
     expect(result).toMatchObject({ success: true })
     expect(mocks.appointmentInserts.length).toBeGreaterThan(0)
     expect((mocks.appointmentInserts[0] as { tenant_id: string }).tenant_id).toBe(CALLER_TENANT)
+  })
+
+  it('active-trial create succeeds and persists trusted caller tenant', async () => {
+    const trialSnap = activeTrialSnap(CALLER_TENANT)
+    expect(evaluateTenantSubscriptionWriteAccess(trialSnap, NOW)).toEqual({
+      writable: true,
+      reasonCode: 'active_trial',
+    })
+
+    mocks.requireAdminProfile.mockResolvedValue({
+      id: STAFF,
+      tenant_id: CALLER_TENANT,
+      role: 'staff',
+      email: 'staff@example.com',
+      auth_user_id: 'auth-staff',
+    })
+    mocks.getSupabaseAdmin.mockReturnValue(
+      createClient({
+        tenants: [trialSnap, writableSnap(OTHER_TENANT)],
+        appointment: null,
+      }),
+    )
+    // Foreign body tenant must not control authorization; create rejects mismatch.
+    // Success path uses matching caller tenant — assert insert tenant is trusted.
+    mocks.readBody.mockResolvedValue(createBody(CALLER_TENANT))
+
+    const handler = await loadHandler()
+    const result = await handler({})
+    expect(result).toMatchObject({ success: true })
+    expect(mocks.appointmentInserts).toHaveLength(1)
+    expect((mocks.appointmentInserts[0] as { tenant_id: string }).tenant_id).toBe(CALLER_TENANT)
+    expect(mocks.appointmentUpdates).toEqual([])
+  })
+
+  it('active-trial edit succeeds using entity tenant and id+tenant update filters', async () => {
+    const trialSnap = activeTrialSnap(CALLER_TENANT)
+    expect(evaluateTenantSubscriptionWriteAccess(trialSnap, NOW)).toEqual({
+      writable: true,
+      reasonCode: 'active_trial',
+    })
+
+    mocks.requireAdminProfile.mockResolvedValue({
+      id: STAFF,
+      tenant_id: CALLER_TENANT,
+      role: 'staff',
+      email: 'staff@example.com',
+      auth_user_id: 'auth-staff',
+    })
+    mocks.getSupabaseAdmin.mockReturnValue(
+      createClient({
+        tenants: [trialSnap, writableSnap(OTHER_TENANT)],
+        appointment: existingAppt(CALLER_TENANT),
+      }),
+    )
+    mocks.readBody.mockResolvedValue(editBody(CALLER_TENANT))
+
+    const handler = await loadHandler()
+    const result = await handler({})
+    expect(result).toMatchObject({ success: true })
+    expect(mocks.appointmentUpdates).toHaveLength(1)
+    expect((mocks.appointmentUpdates[0] as { tenant_id: string }).tenant_id).toBe(CALLER_TENANT)
+    expect(mocks.appointmentUpdateFilters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: APPT, tenant_id: CALLER_TENANT }),
+      ]),
+    )
+    expect(mocks.appointmentInserts).toEqual([])
   })
 
   it('edit denial for expired entity happens before business mutation even when body tenant is writable', async () => {
