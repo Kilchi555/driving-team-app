@@ -56,7 +56,8 @@ export default defineEventHandler(async (event) => {
       logger.debug('ℹ️ Target user not found or not in same tenant, returning tenant default')
       return {
         success: true,
-        preferred_payment_method: tenantDefault
+        preferred_payment_method: tenantDefault,
+        preference_set: false
       }
     }
 
@@ -87,7 +88,8 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      preferred_payment_method: method
+      preferred_payment_method: method,
+      preference_set: !!targetUser.preferred_payment_method
     }
   } catch (error: any) {
     logger.error('❌ Error loading payment method for user:', error)

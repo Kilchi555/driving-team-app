@@ -45,6 +45,7 @@ import {
   onlineBookingPaymentProvider,
   resolveOnlineBookingPaymentMethod,
 } from '~/server/utils/resolve-online-booking-payment-method'
+import { loadEventTypePaymentMethod } from '~/server/utils/resolve-appointment-payment-method'
 import { checkoutAppUrl, createWalleeCheckoutForPayment, releaseUnpaidPendingAppointment } from '~/server/utils/wallee-appointment-checkout'
 import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit'
 import { netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
@@ -555,9 +556,15 @@ export default defineEventHandler(async (event) => {
   const netAmountRappen = netAfterAppointmentDiscount(grossAmountRappen, validatedDiscountAmount)
 
   const paymentPolicy = await loadOnlineBookingPaymentPolicy(supabase, tenantId, tenant.wallee_enabled)
+  const eventTypePaymentMethod = await loadEventTypePaymentMethod(
+    supabase,
+    tenantId,
+    identity.eventTypeCode
+  )
   const paymentResolve = resolveOnlineBookingPaymentMethod({
     requested: body.payment_method,
     policy: paymentPolicy,
+    eventTypePaymentMethod,
   })
   if (paymentResolve.invoiceRequestRejected) {
     logger.warn('🚫 Guest requested invoice but appointment invoices are disabled', {

@@ -995,6 +995,7 @@
 
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { logger } from '~/utils/logger'
+import { resolveAdminPaymentPrefill } from '~/server/utils/resolve-appointment-payment-method'
 import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { useTerminology } from '~/composables/useTerminology'
 import { useSmsService } from '~/composables/useSmsService'
@@ -2399,6 +2400,8 @@ const handleSaveAppointment = async () => {
 // ✅ Payment Method State für späteres Speichern
 const selectedPaymentMethod = ref<string>('wallee')
 const tenantDefaultPaymentMethod = ref<string>('wallee')
+const eventTypePaymentByCode = ref<Record<string, string | null>>({})
+const paymentSnapshotLocked = ref(false)
 const selectedPaymentData = ref<any>(null)
 const selectedInvoiceAddress = ref<any>(null)
 const cashAlreadyPaid = ref<boolean>(false)
@@ -4875,7 +4878,8 @@ const resetForm = () => {
   error.value = ''
   isLoading.value = false
   
-  selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
+  selectedPaymentMethod.value = prefillPaymentMethod(null)
+  paymentSnapshotLocked.value = false
   cashAlreadyPaid.value = false
   savedCompanyBillingAddressId.value = undefined
   resetDurationManuallyChosen()
@@ -6340,8 +6344,11 @@ const handleEditModeLessonType = async () => {
   
   // ✅ SCHRITT 3: Zahlungsmethode aus dem Termin laden (falls vorhanden)
   try {
-    if (props.eventData.payment_method) {
+    if (paymentSnapshotLocked.value) {
+      logger.debug('💳 Keeping payment snapshot:', selectedPaymentMethod.value)
+    } else if (props.eventData.payment_method) {
       selectedPaymentMethod.value = props.eventData.payment_method
+      paymentSnapshotLocked.value = true
       logger.debug('💳 Payment method loaded from appointment:', props.eventData.payment_method)
     } else {
       // Fallback: Lade aus der users Tabelle
@@ -6350,31 +6357,33 @@ const handleEditModeLessonType = async () => {
         try {
           const paymentMethodResponse = await $fetch('/api/customer/get-payment-method-for-user', {
             query: { userId: props.eventData.user_id }
-          }) as { success?: boolean, preferred_payment_method?: string }
+          }) as { success?: boolean, preferred_payment_method?: string, preference_set?: boolean }
           
           if (paymentMethodResponse.success) {
-            selectedPaymentMethod.value = paymentMethodResponse.preferred_payment_method || tenantDefaultPaymentMethod.value
+            selectedPaymentMethod.value = prefillPaymentMethod(
+              paymentMethodResponse.preference_set ? paymentMethodResponse.preferred_payment_method : null
+            )
             logger.debug('💳 Payment method loaded from secure API:', paymentMethodResponse.preferred_payment_method)
           } else {
-            selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
+            selectedPaymentMethod.value = prefillPaymentMethod(null)
           }
         } catch (error: any) {
           logger.debug('ℹ️ Could not load payment preferences via API, using tenant default', error.message)
-          selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
+          selectedPaymentMethod.value = prefillPaymentMethod(null)
         }
       }
     }
   } catch (paymentErr) {
     logger.debug('⚠️ Could not load payment method, using default: wallee')
-    selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
+    if (!paymentSnapshotLocked.value) selectedPaymentMethod.value = prefillPaymentMethod(null)
   }
   
   if (!selectedPaymentMethod.value) {
-    selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
+    selectedPaymentMethod.value = prefillPaymentMethod(null)
   }
   
-  // ✅ NEU: Wenn ein Student geladen wurde, lade auch dessen Zahlungspräferenzen
-  if (selectedStudent.value?.id) {
+  // Existing payment snapshot stays. Preferences only fill a new booking.
+  if (selectedStudent.value?.id && !paymentSnapshotLocked.value) {
     await loadUserPaymentPreferences(selectedStudent.value.id)
   }
 }
@@ -6389,7 +6398,7 @@ const handleCreateMode = async () => {
     }
     logger.debug('🎯 CREATE MODE: Applied tenant default event type:', defaults)
 
-    selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
+    selectedPaymentMethod.value = prefillPaymentMethod(null)
 
     // ✅ NEU: Standard-Kategorie für Create-Mode setzen (driving_school only)
     if (!requiresCategory.value) {
@@ -6961,7 +6970,8 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
         
         // ✅ SCHRITT 2: Payment-Daten laden
         if (props.eventData.id) {
-          await loadExistingPayment(props.eventData.id)
+          const existingPayment = await loadExistingPayment(props.eventData.id)
+          paymentSnapshotLocked.value = !!existingPayment?.payment_method
         }
         
         // ✅ SCHRITT 3: Edit-Mode LessonType handling
@@ -7086,7 +7096,7 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
           eventType: formData.value.eventType
         })
         
-        selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
+        selectedPaymentMethod.value = prefillPaymentMethod(null)
         
         // ✅ WICHTIG: Nicht initializeFormData aufrufen - wir haben die Zeit schon oben extrahiert!
         // initializeFormData würde die Zeit NOCHMAL auslesen und dabei die falsche Zeit einsetzen
@@ -7232,21 +7242,34 @@ const loadUserPaymentPreferences = async (userId: string) => {
     // ✅ Use secure API instead of direct Supabase query
     const paymentMethodResponse = await $fetch('/api/customer/get-payment-method-for-user', {
       query: { userId }
-    }) as { success?: boolean, preferred_payment_method?: string }
+    }) as { success?: boolean, preferred_payment_method?: string, preference_set?: boolean }
     
+    if (paymentSnapshotLocked.value) return
     if (paymentMethodResponse.success) {
-      let paymentMethod = paymentMethodResponse.preferred_payment_method || tenantDefaultPaymentMethod.value
-      if (paymentMethod === 'twint' || paymentMethod === 'online') {
-        paymentMethod = 'wallee'
-      }
-      selectedPaymentMethod.value = paymentMethod
+      selectedPaymentMethod.value = prefillPaymentMethod(
+        paymentMethodResponse.preference_set ? paymentMethodResponse.preferred_payment_method : null
+      )
     } else {
-      selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
+      selectedPaymentMethod.value = prefillPaymentMethod(null)
     }
   } catch (error: any) {
     logger.debug('ℹ️ Could not load payment preferences via API, using tenant default', error.message)
-    selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
+    if (!paymentSnapshotLocked.value) selectedPaymentMethod.value = prefillPaymentMethod(null)
   }
+}
+
+function currentEventTypePaymentMethod(): string | null {
+  const code = formData.value.appointment_type || formData.value.eventType || ''
+  if (!code) return null
+  return eventTypePaymentByCode.value[code] ?? null
+}
+
+function prefillPaymentMethod(preferred: string | null | undefined): string {
+  return resolveAdminPaymentPrefill({
+    preferredPaymentMethod: preferred,
+    eventTypePaymentMethod: currentEventTypePaymentMethod(),
+    tenantDefaultPaymentMethod: tenantDefaultPaymentMethod.value,
+  })
 }
 
 const loadTenantDefaultPaymentMethod = async () => {
@@ -7255,6 +7278,16 @@ const loadTenantDefaultPaymentMethod = async () => {
     tenantDefaultPaymentMethod.value = res.default_payment_method || 'wallee'
   } catch (error: any) {
     logger.debug('ℹ️ Could not load tenant default payment method:', error?.message)
+  }
+  try {
+    const types = await $fetch<{ data?: Array<{ code: string; payment_method?: string | null }> }>('/api/staff/get-event-types')
+    const map: Record<string, string | null> = {}
+    for (const row of types?.data || []) {
+      if (row.code) map[row.code] = row.payment_method ?? null
+    }
+    eventTypePaymentByCode.value = map
+  } catch (error: any) {
+    logger.debug('ℹ️ Could not load event type payment methods:', error?.message)
   }
 }
 

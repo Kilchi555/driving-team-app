@@ -3,6 +3,7 @@ import {
   parsePaymentSettings,
   resolveIndividualAppointmentInvoicePaymentsEnabled,
 } from '~/server/utils/tenant-default-payment-method'
+import { resolveAppointmentPaymentMethod } from '~/server/utils/resolve-appointment-payment-method'
 
 /**
  * Public online booking payment methods, driven by tenant settings:
@@ -64,9 +65,33 @@ export function onlineBookingFallbackMethod(
   return allowed.includes(policy.defaultMethod) ? policy.defaultMethod : allowed[0]
 }
 
+/**
+ * Default shown when the customer has not chosen a method.
+ * Event-type override applies only when that method is already allowed
+ * by the tenant public-booking policy. It never unlocks a disabled method.
+ */
+export function onlineBookingDefaultFromEventType(
+  policy: OnlineBookingPaymentPolicy,
+  eventTypePaymentMethod?: string | null
+): OnlineBookingCheckoutMethod {
+  const allowed = onlineBookingAllowedMethods(policy)
+  const tenantFallback = onlineBookingFallbackMethod(policy)
+  if (eventTypePaymentMethod == null || eventTypePaymentMethod === '') return tenantFallback
+  try {
+    const resolved = resolveAppointmentPaymentMethod({
+      tenantDefaultPaymentMethod: policy.defaultMethod,
+      eventTypePaymentMethod,
+    })
+    return allowed.includes(resolved) ? resolved : tenantFallback
+  } catch {
+    return tenantFallback
+  }
+}
+
 export function resolveOnlineBookingPaymentMethod(opts: {
   requested?: string | null
   policy: OnlineBookingPaymentPolicy
+  eventTypePaymentMethod?: string | null
 }): {
   method: OnlineBookingCheckoutMethod
   rejectedRequest: boolean
@@ -75,7 +100,7 @@ export function resolveOnlineBookingPaymentMethod(opts: {
   allowed: OnlineBookingCheckoutMethod[]
 } {
   const allowed = onlineBookingAllowedMethods(opts.policy)
-  const fallback = onlineBookingFallbackMethod(opts.policy)
+  const fallback = onlineBookingDefaultFromEventType(opts.policy, opts.eventTypePaymentMethod)
   const requested = opts.requested
   if (
     requested === 'wallee'

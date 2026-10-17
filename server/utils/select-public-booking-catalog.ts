@@ -36,6 +36,7 @@ export type BookingCatalogEventTypeRow = {
   public_bookable?: boolean | null
   require_payment?: boolean | null
   display_order?: number | null
+  payment_method?: string | null
 }
 
 export type PublicCatalogPickerItem = {
@@ -53,6 +54,7 @@ export type PublicCatalogPickerItem = {
   category_code: string | null
   event_type_code: string | null
   require_payment?: boolean
+  payment_method?: string | null
   emoji?: string | null
   vehicle_settings?: unknown
   room_settings?: unknown
@@ -137,6 +139,7 @@ export function mapPublicEventTypesToCatalogPicker(
     category_code: null,
     event_type_code: et.code,
     require_payment: et.require_payment !== false,
+    payment_method: et.payment_method ?? null,
   }))
 }
 
