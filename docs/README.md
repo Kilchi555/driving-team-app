@@ -344,6 +344,25 @@ Bei Änderungen am System:
 
 ---
 
+---
+
+## Engineering Runbooks
+
+Focused ops / security notes (prefer these over historical root `*_COMPLETE.md` reports):
+
+| Runbook | Covers |
+|---------|--------|
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Admin passkey / backup-code lockout recovery |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Auth session persistence across clients |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Stuck / partial Wallee payments |
+| [DISCOUNT_SECURITY_FREEZE.md](./DISCOUNT_SECURITY_FREEZE.md) | PR-A C1–C3: counter freeze, apply-by-id 410, customer pending-apply 403 (#248) |
+
+### Architecture / Impact Analysis
+
+Agent and ship gates (not product runbooks): `.cursor/docs/system-map.md`, `dependency-map.md`, `architecture-hotspots.md`, `impact-matrix.md`, `change-risk-guide.md`, plus `.cursor/rules/impact-analysis.mdc` and `ship-to-main.mdc`.
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee

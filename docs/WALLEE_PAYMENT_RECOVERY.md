@@ -199,3 +199,7 @@ CRON_SECRET=your-secret-key  # Required for cron endpoint auth
 - **Storage**: ~1KB per webhook log entry
 
 Run cron job every 10 minutes to stay current.
+
+## Related: discount counter increments
+
+After paid fulfillment, the Wallee webhook (service-role) may increment `discounts.usage_count` or `voucher_codes.current_redemptions`. Client JWT updates to those columns are frozen (PR-A C1, #248). See [DISCOUNT_SECURITY_FREEZE.md](./DISCOUNT_SECURITY_FREEZE.md).
