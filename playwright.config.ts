@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 import { emitSimyTestEnvWarnings, loadSimyTestEnv } from './scripts/load-simy-test-env.mjs'
+import { playwrightTestIgnoreForEnrollmentFields } from './utils/e2e-enrollment-fields-safety'
 import { playwrightTestIgnoreForFlexibleSession } from './utils/e2e-flexible-session-safety'
 
 const simyTestEnv = loadSimyTestEnv({ profile: 'e2e' })
@@ -11,12 +12,15 @@ if (simyTestEnv.fatal) {
 const baseURL = process.env.E2E_BASE_URL || 'https://app.simy.ch'
 const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
 const productionFlexIgnore = playwrightTestIgnoreForFlexibleSession(process.env)
+const enrollmentFieldsIgnore = playwrightTestIgnoreForEnrollmentFields(process.env)
 
 export default defineConfig({
   testDir: 'e2e',
   // Production flexible-session UI E2E is opt-in via SIMY_E2E_PRODUCTION_FLEX=1
   // (dedicated workflow only). General `npm run test:e2e` / CI must not discover it.
-  testIgnore: productionFlexIgnore,
+  // Enrollment-fields E2E is opt-in via SIMY_E2E_ENROLLMENT_FIELDS=1 and must never
+  // target Production app.simy.ch (see utils/e2e-enrollment-fields-safety.ts).
+  testIgnore: [...productionFlexIgnore, ...enrollmentFieldsIgnore],
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
