@@ -8,7 +8,7 @@
 | Branch | `cursor/saas-subscription-write-guard-9780` |
 | Base (unchanged) | `ef794668f909826057a713393333af2ed31b70d2` |
 | Head before fix | `69c151bb38d530ae44a2fb6264236b4937c46ac6` |
-| Head after fix | *(see git rev-parse after push)* |
+| Head after fix | `426ad25906f64e40b9c1b49c5472dbdd3f643507` |
 
 ## Diff summary
 
