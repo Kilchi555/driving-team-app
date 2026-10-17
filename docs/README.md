@@ -344,6 +344,23 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Operational notes for engineers (intent → contract → pitfalls → codepaths). Only files that exist on this branch are linked.
+
+| Runbook | Covers |
+|---------|--------|
+| [PUBLIC_COURSE_USER_AND_WALLEE_IDENTITY.md](./PUBLIC_COURSE_USER_AND_WALLEE_IDENTITY.md) | Public course user linking + captured Wallee `identity_blocked` (#308) |
+| [HISTORICAL_USER_FK_CASCADES.md](./HISTORICAL_USER_FK_CASCADES.md) | Protect appointment/audit/credit history from user-delete CASCADE (#379) |
+| [INVOICE_LINE_NAME_SNAPSHOT.md](./INVOICE_LINE_NAME_SNAPSHOT.md) | Freeze staff/customer names on invoice service lines (#378) |
+| [CUSTOMER_IMPORT_PARTIAL_SUCCESS.md](./CUSTOMER_IMPORT_PARTIAL_SUCCESS.md) | Customer import keeps valid rows when one fails (#343) |
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Passkey recovery |
+| [ACCESS_AND_SECRETS_POLICY.md](./ACCESS_AND_SECRETS_POLICY.md) | Access and secrets policy |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Wallee payment recovery |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Session identity cache (HMR) |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
