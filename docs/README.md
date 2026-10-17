@@ -344,6 +344,22 @@ Bei Änderungen am System:
 
 ---
 
+---
+
+## Engineering Runbooks
+
+Focused ops / developer runbooks (prefer these over root historical markdown):
+
+| Doc | Topic |
+|-----|--------|
+| [WALLEE_WEBHOOK_REPLAY.md](./WALLEE_WEBHOOK_REPLAY.md) | Duplicate / future Wallee webhook short-circuit |
+| [BOOKING_EXTERNAL_BUSY_OVERLAP.md](./BOOKING_EXTERNAL_BUSY_OVERLAP.md) | Multi-day Ferien / `external_busy_times` overlap |
+| [VERCEL_PREVIEW_BUILDS.md](./VERCEL_PREVIEW_BUILDS.md) | Ignored Build Step, help articles, E2E preview fallback |
+| [RATE_LIMITING.md](./RATE_LIMITING.md) | `checkRateLimit` windows in milliseconds |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Pending payment recovery + webhook logs |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
