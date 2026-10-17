@@ -18,13 +18,16 @@
           </div>
           <h1 class="text-2xl font-bold mb-1">Abonnement aktiviert!</h1>
           <p v-if="isWalleeSetup" class="text-white/80 text-sm">
-            Du wirst erst abgerechnet, wenn dein Wallee-Konto aktiv ist — du hast <strong>30 Tage</strong> Zeit.
+            Abo eingerichtet. Du kannst jetzt die Einrichtung von Wallee für Online-Kundenzahlungen abschliessen.
           </p>
           <p v-else class="text-white/80 text-sm">Dein neues Abo ist jetzt aktiv. Viel Erfolg mit Simy!</p>
         </div>
         <div v-if="isWalleeSetup" class="px-8 py-5 bg-amber-50 border-b border-amber-100 text-sm text-amber-800">
-          <p class="font-semibold mb-1">💳 Nächster Schritt: Wallee-Konto einrichten</p>
-          <p class="text-xs text-amber-700">Bitte fülle das Formular aus, damit wir dein Wallee-Konto aktivieren können. Die Abrechnung startet erst nach der Aktivierung.</p>
+          <p class="font-semibold mb-1">💳 Nächster Schritt: Wallee einrichten</p>
+          <p class="text-xs text-amber-700">
+            Die Wallee-Aktivierung und die Abrechnung deines SIMY-Abos sind voneinander unabhängig.
+            Bitte fülle das Formular aus, damit Kunden online bezahlen können.
+          </p>
         </div>
         <div class="px-8 py-6 text-center">
           <p class="text-sm text-gray-400 mb-5">Weiterleitung in {{ stripeCountdown }} Sekunden…</p>

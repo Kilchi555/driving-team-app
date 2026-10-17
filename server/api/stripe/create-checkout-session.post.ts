@@ -1,4 +1,5 @@
 import Stripe from 'stripe'
+import { createError, defineEventHandler, getHeader, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { PLANS, ADDONS, type SubscriptionPlan, type AddonKey } from '~/utils/planFeatures'
 import { getAuthenticatedUser } from '~/server/utils/auth'
@@ -99,7 +100,6 @@ export default defineEventHandler(async (event) => {
   // Accounts V2 requires a customer for Checkout. We always ensure one exists.
   // Failures here are tolerated: we fall back to a transient customer below.
   let stripeCustomerId: string | undefined
-  let wallleeAlreadyActive = false
   let referredByCode: string | null = null
 
   try {
@@ -110,7 +110,6 @@ export default defineEventHandler(async (event) => {
       .eq('id', tenantId)
       .single()
 
-    wallleeAlreadyActive = tenant?.wallee_onboarding_status === 'active'
     referredByCode = tenant?.referred_by_code || null
 
     // Prevent a second full subscription when the tenant already pays via Stripe.
@@ -241,10 +240,11 @@ export default defineEventHandler(async (event) => {
   if (smsLine) lineItems.push(smsLine)
 
   // ── Create Checkout Session ───────────────────────────────────────────────
-  // If tenant wants Wallee AND it's not yet active → 30-day billing pause:
-  // ~20 days for Handelsregister (HR) registration + ~5 days for Wallee onboarding + buffer.
-  // Trial ends automatically when Wallee is activated (wallee-activate.post.ts sets trial_end: 'now').
-  const needsWalleeTrial = withWallee && !wallleeAlreadyActive
+  // Wallee onboarding is independent of SaaS billing. Do NOT attach
+  // subscription_data.trial_period_days for Wallee — registration free trial
+  // (SAAS_TRIAL_DAYS) is the only complimentary SaaS period. Legacy Stripe
+  // trials created under the old policy may still exist; wallee-activate ends
+  // those early when credentials go live.
   const successUrl = withWallee
     ? `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}&wallee_setup=1`
     : `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`
@@ -255,7 +255,6 @@ export default defineEventHandler(async (event) => {
       customer: stripeCustomerId,
       line_items: lineItems,
       subscription_data: {
-        ...(needsWalleeTrial ? { trial_period_days: 30 } : {}),
         metadata: {
           plan,
           addon_seats: String(addons.seats || 0),
@@ -268,13 +267,6 @@ export default defineEventHandler(async (event) => {
           ...(referredByCode ? { referred_by_code: referredByCode } : {}),
         },
       },
-      ...(needsWalleeTrial ? {
-        custom_text: {
-          submit: {
-            message: 'Du wirst erst belastet, sobald dein Wallee-Konto aktiviert ist. Bis dahin läuft dein Abonnement kostenlos.',
-          },
-        },
-      } : {}),
       success_url: successUrl,
       cancel_url: `${baseUrl}/upgrade`,
     }

@@ -35,7 +35,7 @@
     <!-- ACTIVE -->
     <div v-else-if="status === 'active'" class="space-y-4">
       <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-800">
-        ✅ Online-Zahlungen sind aktiv. Deine Kunden können jetzt per Kreditkarte, TWINT und weiteren Methoden bezahlen. Ab heute wird die Abrechnung gestartet.
+        ✅ Online-Zahlungen sind aktiviert. Deine Kunden können jetzt per Kreditkarte, TWINT und weiteren Methoden bezahlen.
       </div>
       <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
         <div>
@@ -87,7 +87,7 @@
     <div v-else-if="status === 'pending'" class="space-y-3">
       <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
         <p class="text-sm font-semibold text-amber-800 mb-1">⏳ Antrag eingereicht</p>
-        <p class="text-sm text-amber-700">Wir richten dein Wallee-Konto ein. Das dauert in der Regel <strong>ca. 5 Werktage</strong>. Du erhältst eine E-Mail sobald alles bereit ist. Die Abrechnung startet erst ab diesem Zeitpunkt.</p>
+        <p class="text-sm text-amber-700">Die Wallee-Einrichtung ist noch ausstehend. Online-Kundenzahlungen sind erst nach erfolgreicher Aktivierung möglich. Dein SIMY-Abo läuft unabhängig davon. Du erhältst eine E-Mail, sobald alles bereit ist.</p>
         <p v-if="appliedAt" class="text-xs text-amber-600 mt-2">Eingereicht am {{ formatDate(appliedAt) }}</p>
       </div>
       <p class="text-xs text-gray-400 text-center">Bei Fragen: <a href="mailto:info@simy.ch" class="underline">info@simy.ch</a></p>
