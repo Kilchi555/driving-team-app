@@ -282,7 +282,7 @@ Manual resolution writes `created_by`, the reason, the previous disposition id, 
 
 Each phase is a draft PR. No migration is applied except by a later human approval. Nothing in these phases reads production from this environment.
 
-1. **Preflight only.** Read-only SQL for `user_id` nullability, `company_id` presence, and counts of null `user_id`. The script prepared for a human to run is `artifacts/handoffs/PR_467_COMPANY_CREDIT_PREFLIGHT.sql`. It has not been executed. No writes.
+1. **Preflight only.** Read-only SQL for `user_id` nullability, `company_id` presence, and counts of null `user_id`. The script prepared for a human to run is `artifacts/handoffs/PR_467_COMPANY_CREDIT_PREFLIGHT.sql`. It is twelve separate statements. Run one at a time, catalog first. It has not been executed. No writes.
 2. **Additive schema.** New company credit tables, receipts, allocations, dispositions, bill-to columns with default `user` where `company_id` is null. No backfill of credit. Existing `student_credits` rows stay.
 3. **Posting function and PGlite tests.** Not wired to HTTP.
 4. **Switch `mark-invoice-paid`.** Require a key. Header stays capped. Surplus goes to a disposition. Stop inserting the surplus as `invoice_payments.amount_rappen`.
