@@ -1,4 +1,5 @@
 import type Stripe from 'stripe'
+import { customDomainOrigin } from '~/server/utils/custom-domain'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { notifySuperadminsWebsitePublished } from '~/server/utils/website-publish-notify'
 import {
@@ -108,9 +109,7 @@ export async function publishWebsiteForTenant(
     .eq('id', tenantId)
 
   const liveUrl =
-    website.custom_domain_verified && website.custom_domain
-      ? `https://${website.custom_domain}`
-      : `${baseUrl}/s/${encodeURIComponent(website.subdomain)}`
+    (await customDomainOrigin(updatedWebsite)) || `${baseUrl}/s/${encodeURIComponent(website.subdomain)}`
   const previewUrl = liveUrl
 
   try {

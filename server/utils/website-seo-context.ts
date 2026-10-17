@@ -2,7 +2,12 @@
  * Resolve tenant website for SEO surfaces (robots/sitemap/llms) from host or path.
  */
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { isAppHost, normalizeHostname } from '~/server/utils/custom-domain'
+import {
+  customDomainOrigin,
+  isAppHost,
+  isCustomDomainRoutingEnabled,
+  normalizeHostname,
+} from '~/server/utils/custom-domain'
 
 export type WebsiteSeoContext = {
   subdomain: string
@@ -32,18 +37,25 @@ export async function resolveWebsiteSeoContext(event: any): Promise<WebsiteSeoCo
   const querySub = String(getQuery(event).subdomain || '').trim().toLowerCase()
 
   let subdomain = ''
+  const customHost = !!host && !isAppHost(host)
 
-  if (querySub) {
-    subdomain = querySub
-  } else if (host && !isAppHost(host)) {
-    const { data } = await supabase
+  if (customHost) {
+    const { data, error } = await supabase
       .from('website_tenants')
-      .select('subdomain')
+      .select(
+        'subdomain, custom_domain, custom_domain_verified, custom_domain_status, custom_domain_verification, is_published',
+      )
       .eq('custom_domain', host)
       .maybeSingle()
-    subdomain = data?.subdomain || ''
+    if (error || !data?.subdomain || !(await isCustomDomainRoutingEnabled(data))) return null
+    if (querySub && querySub !== data.subdomain) return null
+    const pathSub = path.match(/^\/s\/([^/]+)/i)
+    if (pathSub && decodeURIComponent(pathSub[1]).toLowerCase() !== data.subdomain) return null
+    subdomain = data.subdomain
+  } else if (querySub) {
+    subdomain = querySub
   } else {
-    // /s/{sub}/robots.txt style or Referer — also support /s/{sub}/sitemap.xml via path
+    // /s/{sub}/robots.txt style — also support /s/{sub}/sitemap.xml via path
     const m = path.match(/^\/s\/([^/]+)/i)
     if (m) subdomain = decodeURIComponent(m[1]).toLowerCase()
   }
@@ -53,7 +65,7 @@ export async function resolveWebsiteSeoContext(event: any): Promise<WebsiteSeoCo
   const { data: website } = await supabase
     .from('website_tenants')
     .select(
-      'id, tenant_id, subdomain, custom_domain, custom_domain_verified, is_published, seo_title, seo_description',
+      'id, tenant_id, subdomain, custom_domain, custom_domain_verified, custom_domain_status, custom_domain_verification, is_published, seo_title, seo_description',
     )
     .eq('subdomain', subdomain)
     .maybeSingle()
@@ -73,9 +85,10 @@ export async function resolveWebsiteSeoContext(event: any): Promise<WebsiteSeoCo
     .eq('is_published', true)
 
   const proto = getRequestHeader(event, 'x-forwarded-proto') || 'https'
-  const verified = !!website.custom_domain_verified && !!website.custom_domain
-  const baseUrl = verified
-    ? `https://${website.custom_domain}`
+  const origin = await customDomainOrigin(website)
+  const verified = !!origin
+  const baseUrl = origin
+    ? origin
     : `${proto}://${host || 'app.simy.ch'}/s/${encodeURIComponent(website.subdomain)}`
 
   return {

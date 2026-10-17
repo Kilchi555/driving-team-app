@@ -3,19 +3,13 @@ export default defineEventHandler(async (event) => {
   setHeader(event, 'Cache-Control', 'public, max-age=300')
 
   const subdomain = String(getRouterParam(event, 'subdomain') || '').toLowerCase()
-  const ctx = await (await import('~/server/utils/website-seo-context')).resolveWebsiteSeoContext({
-    ...event,
-    // ensure query subdomain
-    node: event.node,
-    context: event.context,
-  })
-
-  // Force via query by temporarily setting
   const { getSupabaseAdmin } = await import('~/server/utils/supabase-admin')
   const supabase = getSupabaseAdmin()
   const { data: website } = await supabase
     .from('website_tenants')
-    .select('id, tenant_id, subdomain, custom_domain, custom_domain_verified, is_published, seo_title, seo_description')
+    .select(
+      'id, tenant_id, subdomain, custom_domain, custom_domain_verified, custom_domain_status, custom_domain_verification, is_published, seo_title, seo_description',
+    )
     .eq('subdomain', subdomain)
     .maybeSingle()
   if (!website?.is_published) throw createError({ statusCode: 404, statusMessage: 'Not found' })
@@ -33,10 +27,10 @@ export default defineEventHandler(async (event) => {
 
   const proto = getRequestHeader(event, 'x-forwarded-proto') || 'https'
   const host = (getRequestHeader(event, 'x-forwarded-host') || getRequestHeader(event, 'host') || 'app.simy.ch').split(',')[0]
-  const verified = !!website.custom_domain_verified && !!website.custom_domain
-  const baseUrl = verified
-    ? `https://${website.custom_domain}`
-    : `${proto}://${host}/s/${encodeURIComponent(website.subdomain)}`
+  const { customDomainOrigin } = await import('~/server/utils/custom-domain')
+  const baseUrl =
+    (await customDomainOrigin(website)) ||
+    `${proto}://${host}/s/${encodeURIComponent(website.subdomain)}`
 
   const name = tenant?.name || website.subdomain
   const { buildLocalSeoDefaults, resolveWebsiteCity } = await import('~/server/utils/website-local-seo')

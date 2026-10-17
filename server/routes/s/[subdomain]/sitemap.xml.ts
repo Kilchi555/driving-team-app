@@ -8,7 +8,9 @@ export default defineEventHandler(async (event) => {
 
   const { data: website } = await supabase
     .from('website_tenants')
-    .select('id, subdomain, custom_domain, custom_domain_verified, is_published')
+    .select(
+      'id, subdomain, custom_domain, custom_domain_verified, custom_domain_status, custom_domain_verification, is_published',
+    )
     .eq('subdomain', subdomain)
     .maybeSingle()
 
@@ -25,10 +27,10 @@ export default defineEventHandler(async (event) => {
   const proto = getRequestHeader(event, 'x-forwarded-proto') || 'https'
   const host = (getRequestHeader(event, 'x-forwarded-host') || getRequestHeader(event, 'host') || 'app.simy.ch')
     .split(',')[0]
-  const verified = !!website.custom_domain_verified && !!website.custom_domain
-  const base = verified
-    ? `https://${website.custom_domain}`
-    : `${proto}://${host}/s/${encodeURIComponent(website.subdomain)}`
+  const { customDomainOrigin } = await import('~/server/utils/custom-domain')
+  const base =
+    (await customDomainOrigin(website)) ||
+    `${proto}://${host}/s/${encodeURIComponent(website.subdomain)}`
 
   const entries: Array<{ loc: string; lastmod?: string; priority: string }> = []
   for (const p of pages || []) {

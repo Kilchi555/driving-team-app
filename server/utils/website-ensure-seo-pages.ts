@@ -2,6 +2,7 @@
  * On publish: create location / category / prices pages from tenant data
  * if they do not exist yet. Uses fallback copy (fast) — editor can refine.
  */
+import { customDomainOrigin } from '~/server/utils/custom-domain'
 import { getTerminologyDefaults } from '~/composables/useTerminology'
 import { resolveLocationCity, resolveWebsiteCity } from '~/server/utils/website-local-seo'
 import { loadWebsiteServices } from '~/server/utils/website-services'
@@ -48,10 +49,10 @@ async function insertAddonPage(opts: {
   const { supabase, website, tenant, baseUrl, pageType, inputs, formal, publish } = opts
   const slug = await uniqueSlug(supabase, website.id, pageType, inputs)
   const bookingUrl = `${baseUrl}/booking/availability/${encodeURIComponent(tenant.slug || website.subdomain)}`
-  const siteUrl =
-    website.custom_domain_verified && website.custom_domain
-      ? `https://${String(website.custom_domain).replace(/\/$/, '')}/${encodeURIComponent(slug)}`
-      : `${baseUrl}/s/${encodeURIComponent(website.subdomain)}/${encodeURIComponent(slug)}`
+  const customOrigin = await customDomainOrigin(website)
+  const siteUrl = customOrigin
+    ? `${customOrigin}/${encodeURIComponent(slug)}`
+    : `${baseUrl}/s/${encodeURIComponent(website.subdomain)}/${encodeURIComponent(slug)}`
 
   const copy = fallbackAddonCopy(pageType, tenant.name, inputs, formal)
   const landing = buildAddonPage({

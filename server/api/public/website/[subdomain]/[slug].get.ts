@@ -8,6 +8,7 @@ import {
   projectPublicWebsiteTenant,
   PUBLIC_WEBSITE_TENANT_SELECT,
 } from '~/server/utils/website-public-tenant-select'
+import { presentPublicWebsiteDomain } from '~/server/utils/custom-domain'
 
 export default defineEventHandler(async (event) => {
   const subdomain = getRouterParam(event, 'subdomain')?.trim().toLowerCase()
@@ -38,6 +39,8 @@ export default defineEventHandler(async (event) => {
       favicon_url,
       hero_image_url,
       custom_domain_verified,
+      custom_domain_status,
+      custom_domain_verification,
       last_published_at,
       addon_pages_enabled
     `,
@@ -100,13 +103,14 @@ export default defineEventHandler(async (event) => {
 
   const { applyLivePricesToLanding } = await import('~/server/utils/website-live-prices')
   const { enrichLandingPremium } = await import('~/server/utils/website-enrich-landing')
+  const websitePublic = await presentPublicWebsiteDomain(website)
+  const customOrigin = websitePublic.custom_domain_routing_enabled && website.custom_domain
+    ? `https://${website.custom_domain}`
+    : undefined
   let landing = await applyLivePricesToLanding(website.tenant_id, page.blocks || null)
   landing = await enrichLandingPremium(supabase, tenant, landing as any, {
     subdomain,
-    siteUrl:
-      website.custom_domain_verified && website.custom_domain
-        ? `https://${website.custom_domain}`
-        : undefined,
+    siteUrl: customOrigin,
     navPages: navPages || [],
     pageSlug: page.slug,
     pageTitle: page.title,
@@ -120,7 +124,7 @@ export default defineEventHandler(async (event) => {
   })
 
   return {
-    website,
+    website: websitePublic,
     page,
     tenant: projectPublicWebsiteTenant(tenantRecord),
     landing,

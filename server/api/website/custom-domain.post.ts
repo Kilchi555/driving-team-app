@@ -2,9 +2,12 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import {
+  ClientCustomDomainEvidenceError,
+  customDomainActivation,
   dnsInstructions,
   isValidHostname,
   normalizeHostname,
+  readCustomDomainClaimBody,
   vercelAddDomain,
 } from '~/server/utils/custom-domain'
 
@@ -13,7 +16,16 @@ export default defineEventHandler(async (event) => {
   if (!authUser) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 
   const body = await readBody(event)
-  const domain = normalizeHostname(String(body?.domain || ''))
+  let claimedDomain: string
+  try {
+    claimedDomain = readCustomDomainClaimBody(body).domain
+  } catch (err) {
+    if (err instanceof ClientCustomDomainEvidenceError) {
+      throw createError({ statusCode: 400, statusMessage: err.message })
+    }
+    throw err
+  }
+  const domain = normalizeHostname(claimedDomain)
 
   if (!isValidHostname(domain)) {
     throw createError({
@@ -80,48 +92,49 @@ export default defineEventHandler(async (event) => {
   }
 
   let verification: any = null
-  let status = 'dns_pending'
-  let verified = false
 
   try {
     const added = await vercelAddDomain(domain)
     if (added.configured && added.data) {
       verification = {
         vercel: {
-          verified: !!added.data.verified,
+          configured: true,
+          verified: added.data.verified === true,
           verification: added.data.verification || null,
           alreadyExists: !!added.alreadyExists,
         },
         checked_at: new Date().toISOString(),
       }
-      if (added.data.verified) {
-        verified = true
-        status = 'active'
-      }
     } else {
       verification = {
-        vercel: { configured: false },
+        vercel: { configured: false, verified: false },
         note: 'Vercel API nicht konfiguriert — Domain manuell im Vercel-Projekt hinzufügen, DNS setzen, dann «Prüfen».',
         checked_at: new Date().toISOString(),
       }
     }
   } catch (err: any) {
     verification = {
-      vercel: { error: err?.message || 'Vercel error' },
+      vercel: { configured: false, verified: false, error: err?.message || 'Vercel error' },
       note: 'Domain lokal gespeichert. Bitte Domain ggf. manuell in Vercel hinzufügen und DNS setzen.',
       checked_at: new Date().toISOString(),
     }
-    status = 'dns_pending'
   }
+
+  // Claim does not check DNS or TLS. Routing stays off until all three exist.
+  const activation = await customDomainActivation({
+    domain,
+    isPublished: website.is_published === true,
+    verification,
+  })
 
   const now = new Date().toISOString()
   const { data: updated, error } = await supabase
     .from('website_tenants')
     .update({
       custom_domain: domain,
-      custom_domain_status: status,
-      custom_domain_verified: verified,
-      custom_domain_verified_at: verified ? now : null,
+      custom_domain_status: activation.status,
+      custom_domain_verified: activation.verified,
+      custom_domain_verified_at: activation.verified ? now : null,
       custom_domain_verification: verification,
       updated_at: now,
     })
@@ -138,12 +151,12 @@ export default defineEventHandler(async (event) => {
   return {
     success: true,
     domain,
-    status,
-    verified,
+    status: activation.status,
+    verified: activation.verified,
     dns: dnsInstructions(domain),
     website: updated,
-    message: verified
+    message: activation.verified
       ? 'Domain aktiv'
-      : 'Domain gespeichert. Bitte DNS setzen und danach prüfen.',
+      : 'Domain gespeichert. Die öffentliche Zuordnung bleibt aus, bis Plattform, DNS und TLS geprüft sind.',
   }
 })

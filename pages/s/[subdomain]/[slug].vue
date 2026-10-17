@@ -790,7 +790,7 @@ const photoCredits = computed(() => {
 // On app.simy.ch/s/... prefer verified custom domain (SEO)
 if (import.meta.server && !preview.value) {
   const custom = data.value?.website?.custom_domain
-  const verified = data.value?.website?.custom_domain_verified
+  const routingEnabled = data.value?.website?.custom_domain_routing_enabled === true
   const host = useRequestHeaders(['host', 'x-forwarded-host'])
   const rawHost = String(host['x-forwarded-host'] || host.host || '')
     .split(',')[0]
@@ -804,7 +804,7 @@ if (import.meta.server && !preview.value) {
     rawHost.endsWith('.vercel.app') ||
     rawHost === 'localhost' ||
     rawHost.startsWith('127.0.0.1')
-  if (custom && verified && onAppHost) {
+  if (custom && routingEnabled && onAppHost) {
     await navigateTo(`https://${custom}/${pageSlug.value}`, { redirectCode: 301, external: true })
   }
 }
@@ -1233,8 +1233,8 @@ const seoDescription = computed(
 )
 const canonical = computed(() => {
   const custom = data.value?.website?.custom_domain
-  const verified = data.value?.website?.custom_domain_verified
-  if (custom && verified) return `https://${custom}/${pageSlug.value}`
+  const routingEnabled = data.value?.website?.custom_domain_routing_enabled === true
+  if (custom && routingEnabled) return `https://${custom}/${pageSlug.value}`
   const baked = String(landing.value?.siteUrl || '').replace(/\/$/, '')
   if (baked) return `${baked}/${pageSlug.value}`
   return `https://app.simy.ch/s/${subdomain.value}/${pageSlug.value}`

@@ -1,6 +1,7 @@
 // server/api/website/wizard-save.post.ts
 // Build + save + optionally publish a high-converting tenant landing page
 
+import { customDomainOrigin } from '~/server/utils/custom-domain'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { issueWebsitePreviewToken, previewUrlForPath } from '~/server/utils/website-preview-access'
@@ -206,9 +207,7 @@ export default defineEventHandler(async (event) => {
   const bookingUrl = `${base}/booking/availability/${encodeURIComponent(slug)}`
   // Canonical site URL: verified custom domain wins (schema + OG + absolute links)
   const siteUrl =
-    website.custom_domain_verified && website.custom_domain
-      ? `https://${String(website.custom_domain).replace(/\/$/, '')}`
-      : `${base}/s/${encodeURIComponent(website.subdomain)}`
+    (await customDomainOrigin(website)) || `${base}/s/${encodeURIComponent(website.subdomain)}`
 
   const landing = buildLandingPage({
     tenant: {
@@ -358,10 +357,7 @@ export default defineEventHandler(async (event) => {
   const previewUrl = issued
     ? previewUrlForPath(appBaseUrl(event), previewPath, issued.token)
     : `${appBaseUrl(event)}${previewPath}`
-  const liveUrl =
-    website.custom_domain_verified && website.custom_domain
-      ? `https://${website.custom_domain}`
-      : siteUrl
+  const liveUrl = siteUrl
 
   if (publish) {
     await supabase

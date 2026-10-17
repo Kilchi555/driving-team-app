@@ -1,4 +1,5 @@
 import Stripe from 'stripe'
+import { customDomainOrigin } from '~/server/utils/custom-domain'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import {
@@ -80,7 +81,7 @@ export default defineEventHandler(async (event) => {
   if ((tenant as any).website_only) {
     const { data: row } = await supabase
       .from('website_tenants')
-      .select('id, subdomain, is_published, custom_domain, custom_domain_verified')
+      .select('id, subdomain, is_published, custom_domain, custom_domain_verified, custom_domain_status, custom_domain_verification')
       .eq('tenant_id', userRow.tenant_id)
       .maybeSingle()
     if (row) {
@@ -90,9 +91,7 @@ export default defineEventHandler(async (event) => {
       website_homepage_ready = homepageHasContent(home?.blocks)
       const base = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
       website_preview_url = `${base}/s/${encodeURIComponent(row.subdomain)}`
-      website_live_url = row.custom_domain_verified && row.custom_domain
-        ? `https://${row.custom_domain}`
-        : `${base}/s/${encodeURIComponent(row.subdomain)}`
+      website_live_url = (await customDomainOrigin(row)) || `${base}/s/${encodeURIComponent(row.subdomain)}`
     }
   }
 

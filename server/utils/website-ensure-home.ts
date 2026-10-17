@@ -2,6 +2,7 @@
  * First editor open: create a real home landing from tenant + Simy data
  * so the wizard is not required.
  */
+import { customDomainOrigin } from '~/server/utils/custom-domain'
 import { buildLandingPage } from '~/server/utils/website-landing-builder'
 import { loadWebsiteServices } from '~/server/utils/website-services'
 import { resolveWebsiteCity } from '~/server/utils/website-local-seo'
@@ -33,9 +34,8 @@ export async function ensureWebsiteHomeLanding(
   const slug = tenant.slug || website.subdomain
   const bookingUrl = `${baseUrl.replace(/\/$/, '')}/booking/availability/${encodeURIComponent(slug)}`
   const siteUrl =
-    website.custom_domain_verified && website.custom_domain
-      ? `https://${String(website.custom_domain).replace(/\/$/, '')}`
-      : `${baseUrl.replace(/\/$/, '')}/s/${encodeURIComponent(website.subdomain)}`
+    (await customDomainOrigin(website)) ||
+    `${baseUrl.replace(/\/$/, '')}/s/${encodeURIComponent(website.subdomain)}`
 
   const pricing = await loadWebsiteServices(supabase as any, tenant.id)
   const services = pricing.slice(0, 12).map((p) => ({

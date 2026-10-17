@@ -1,6 +1,7 @@
 // POST /api/website/slots-save
 // Merge-save only CR/SEO-safe slots into website_pages.blocks (home or add-on by slug)
 
+import { customDomainOrigin } from '~/server/utils/custom-domain'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { notifySuperadminsWebsitePublished } from '~/server/utils/website-publish-notify'
@@ -189,12 +190,12 @@ export default defineEventHandler(async (event) => {
       : `/s/${encodeURIComponent(website.subdomain)}/${encodeURIComponent(page.slug)}`
   const issued = await issueWebsitePreviewToken(supabase, website.id)
   const previewUrl = issued ? previewUrlForPath(base, path, issued.token) : `${base}${path}`
-  const liveUrl =
-    website.custom_domain_verified && website.custom_domain
-      ? isHome || page.slug === 'index'
-        ? `https://${website.custom_domain}`
-        : `https://${website.custom_domain}/${encodeURIComponent(page.slug)}`
-      : `${base}${path}`
+  const customOrigin = await customDomainOrigin(website)
+  const liveUrl = customOrigin
+    ? isHome || page.slug === 'index'
+      ? customOrigin
+      : `${customOrigin}/${encodeURIComponent(page.slug)}`
+    : `${base}${path}`
 
   if (publish) {
     await supabase.from('tenants').update({ website_status: 'live' }).eq('id', user.tenant_id)

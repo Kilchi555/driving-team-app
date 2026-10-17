@@ -2,6 +2,7 @@
 // Input → AI draft → website_pages row (unpublished)
 
 import Anthropic from '@anthropic-ai/sdk'
+import { customDomainOrigin } from '~/server/utils/custom-domain'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { issueWebsitePreviewToken, previewUrlForPath } from '~/server/utils/website-preview-access'
@@ -205,10 +206,10 @@ export default defineEventHandler(async (event) => {
     slug = `${suggestAddonSlug(pageType, inputs)}-${i + 2}`
   }
 
-  const siteUrl =
-    website.custom_domain_verified && website.custom_domain
-      ? `https://${String(website.custom_domain).replace(/\/$/, '')}/${encodeURIComponent(slug)}`
-      : `${base}/s/${encodeURIComponent(website.subdomain)}/${encodeURIComponent(slug)}`
+  const customOrigin = await customDomainOrigin(website)
+  const siteUrl = customOrigin
+    ? `${customOrigin}/${encodeURIComponent(slug)}`
+    : `${base}/s/${encodeURIComponent(website.subdomain)}/${encodeURIComponent(slug)}`
 
   const aiCopy = await generateAiCopy({
     pageType,
