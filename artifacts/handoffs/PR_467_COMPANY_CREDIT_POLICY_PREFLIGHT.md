@@ -79,7 +79,9 @@ Requires a person to run the preflight before the next schema phase:
 - `artifacts/handoffs/PR_467_COMPANY_CREDIT_PREFLIGHT.sql`
 - `artifacts/handoffs/PR_467_COMPANY_CREDIT_POLICY_PREFLIGHT.md`
 
-The commit SHA is recorded in the commit that adds this file on `cursor/settlement-integrity-hardening-4274`.
+Documentation commit: `ecc996abdc05cd6ac6981d6ec1aa016a85daed96`
+Parent: `9d4d60ccafa96ecb7878e6c9a65008b8a52e1340`
+Branch: `cursor/settlement-integrity-hardening-4274`
 
 ## 6. Safety confirmation
 
