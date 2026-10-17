@@ -183,7 +183,6 @@
 - `POST /api/sari/enroll-student` - Student anmelden
 - `POST /api/sari/unenroll-student` - Student abmelden
 - `POST /api/sari/validate-student` - Student validieren
-- `POST /api/sari/validate-enrollment` - Anmeldung validieren
 - `POST /api/sari/lookup-customer` - Kunde suchen
 - `POST /api/sari/sync-participants` - Teilnehmer syncen
 - `POST /api/sari/test-participants` - Test-Teilnehmer
@@ -237,10 +236,10 @@
 
 ---
 
-## 🗺️ Location & Geocoding (2 endpoints)
+## 🗺️ Location & Geocoding
 
-- `POST /api/geocoding/resolve-plz` - PLZ auflösen
 - `POST /api/pickup/check-distance` - Entfernung prüfen
+- PLZ geocoding is server-only via `server/utils/resolve-plz.ts` (no public HTTP route; see `docs/PUBLIC_MUTATOR_REMOVAL.md`)
 
 ---
 
