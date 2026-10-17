@@ -1,6 +1,10 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import {
+  assertTombstoneReadyForAudit,
+  buildAccountSelfDeletedAuditInsert,
+} from '~/server/utils/delete-account-self-delete'
 import { logger } from '~/utils/logger'
 
 /**
@@ -11,6 +15,8 @@ import { logger } from '~/utils/logger'
  *   - Sets `is_active = false` so the user cannot log in anymore.
  *   - Deletes the Supabase Auth account (sign-in is no longer possible).
  *   - Removes the auth-user link so the row stops appearing in queries.
+ *   - Writes an audit_logs row attributed to the anonymized tombstone users.id
+ *     (satisfies audit_logs_has_identifier without fabricating IP/auth ids).
  *
  * Blocked when the customer still has open financial obligations
  * (pending/partial/invoiced payments, unpaid invoices, or negative credit).
@@ -19,6 +25,17 @@ import { logger } from '~/utils/logger'
  *   - Payments, invoices, payment_audit_logs (10-year Swiss bookkeeping duty)
  *   - Already-completed appointments (audit trail, instructor records)
  *   - Audit logs (regulatory compliance)
+ *   - The public.users row itself (tombstone retained)
+ *
+ * Ordering / partial failure (separate Supabase round-trips, not one DB txn):
+ *   1) Anonymize users row (required)
+ *   2) Re-read tombstone by id (required)
+ *   3) Soft-delete documents (best-effort)
+ *   4) Insert audit with tombstone user_id (required; before Auth delete)
+ *   5) Delete Auth user (required)
+ * If anonymization succeeded but a later required step fails, the profile may
+ * already be anonymized (auth_user_id cleared) while Auth still exists — retry
+ * via this endpoint may 404 on auth_user_id lookup (pre-existing limitation).
  *
  * The user is informed of this in the confirmation dialog. After the delete:
  *   - User cannot log in
@@ -213,6 +230,30 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const { data: tombstone, error: tombstoneError } = await serviceSupabase
+      .from('users')
+      .select('id, auth_user_id, is_active, email')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (tombstoneError) {
+      console.error('❌ [delete-account] Tombstone re-read failed:', tombstoneError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Anonymisiertes Benutzerprofil konnte nicht verifiziert werden.'
+      })
+    }
+
+    try {
+      assertTombstoneReadyForAudit(tombstone, userId)
+    } catch (tombstoneAssertErr) {
+      console.error('❌ [delete-account] Tombstone not ready:', tombstoneAssertErr)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Anonymisiertes Benutzerprofil ist unvollständig. Bitte kontaktiere den Support.'
+      })
+    }
+
     const { error: docDeleteError } = await serviceSupabase
       .from('user_documents')
       .update({ deleted_at: new Date().toISOString(), deleted_by: userId })
@@ -221,6 +262,26 @@ export default defineEventHandler(async (event) => {
 
     if (docDeleteError) {
       logger.warn('⚠️ [delete-account] Soft-deleting documents failed (continuing):', docDeleteError)
+    }
+
+    // Required audit write BEFORE Auth deletion, attributed to the tombstone row.
+    const auditInsert = buildAccountSelfDeletedAuditInsert({
+      tombstoneUserId: userId,
+      tenantId: userRow.tenant_id,
+      originalEmail,
+    })
+
+    const { error: auditError } = await serviceSupabase
+      .from('audit_logs')
+      .insert(auditInsert)
+
+    if (auditError) {
+      console.error('❌ [delete-account] Audit log insert failed:', auditError)
+      throw createError({
+        statusCode: 500,
+        statusMessage:
+          'Konto konnte nicht vollständig gelöscht werden (Audit-Protokollierung fehlgeschlagen). Bitte versuche es erneut oder kontaktiere den Support.'
+      })
     }
 
     const { error: authDeleteError } = await serviceSupabase.auth.admin.deleteUser(user.id)
@@ -233,29 +294,13 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    try {
-      await serviceSupabase.from('audit_logs').insert({
-        user_id: null,
-        tenant_id: userRow.tenant_id,
-        action: 'account_self_deleted',
-        details: {
-          deleted_user_id: userId,
-          deleted_email: originalEmail,
-          deleted_at: new Date().toISOString(),
-          method: 'in_app_self_service'
-        }
-      })
-    } catch (auditErr) {
-      logger.warn('⚠️ [delete-account] Audit log insert failed (non-fatal):', auditErr)
-    }
-
     logger.debug('✅ [delete-account] Account deletion completed for user:', userId)
 
     return {
       success: true,
       message: 'Dein Konto wurde erfolgreich gelöscht. Du wirst jetzt abgemeldet.'
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [delete-account] Error:', error)
     throw error
   }
