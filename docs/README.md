@@ -333,6 +333,17 @@ Dokumentation wichtiger Datenflüsse und Geschäftsprozesse der Anwendung.
 
 ---
 
+## Engineering Runbooks
+
+Concise, code-verified runbooks for recent subsystems. Prefer these over inventing parallel guides.
+
+| File | Topic |
+|------|-------|
+| [FLEXIBLE_COURSE_CATEGORY_SESSION_TEMPLATES.md](./FLEXIBLE_COURSE_CATEGORY_SESSION_TEMPLATES.md) | Unequal Kursart `session_structure.sessions[]` SoT, admin save rules, migration cutover (#384/#404) |
+| [E2E_FLEXIBLE_SESSION_PRODUCTION.md](./E2E_FLEXIBLE_SESSION_PRODUCTION.md) | Main-only Production Playwright workflow for flexible Kursart templates (#405) |
+
+---
+
 ## 📝 Wartung dieser Dokumentation
 
 Bei Änderungen am System:
@@ -341,6 +352,7 @@ Bei Änderungen am System:
 - Policy-Änderungen → Aktualisieren Sie RLS_POLICIES.csv
 - Feature-Änderungen → Aktualisieren Sie APP_DOCUMENTATION.csv
 - Prozess-Änderungen → Aktualisieren Sie DATA_FLOWS.csv
+- Neue Engineering-Runbooks → Datei unter `docs/` + Zeile in **Engineering Runbooks** oben
 
 ---
 
