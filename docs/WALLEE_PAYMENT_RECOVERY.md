@@ -1,5 +1,7 @@
 # Wallee Payment Recovery System
 
+**Related:** Top-up wallet deposits and charging the remaining amount after `credit_used_rappen` — see [WALLEE_WALLET_CREDIT_INTEGRITY.md](./WALLEE_WALLET_CREDIT_INTEGRITY.md) (#219 / #224). Recover-cron uses the same top-up credit path.
+
 ## Problem
 Payments were stuck in `pending` status even though Wallee had processed them as `FULFILL` (completed). This happened because:
 
