@@ -107,13 +107,26 @@
           <div>
             <p class="sa-kpi-l">Simy-Vorschau (nicht indexiert)</p>
             <button v-if="prospect.preview_url" type="button" class="sa-link" @click="openMintedPreview()">{{ previewPath || prospect.preview_url }}</button>
+            <label v-if="needsVatSelection || selectedVatRate !== ''" class="sa-field mt-3">
+              MwSt-Satz für den Prospect-Tenant
+              <select v-model="selectedVatRate" class="sa-input">
+                <option disabled value="">Bitte wählen…</option>
+                <option v-for="rate in vatRateOptions" :key="rate" :value="String(rate)">
+                  {{ rate === 0 ? '0% (befreit / keine MwSt)' : `${rate}%` }}
+                </option>
+              </select>
+              <span class="sa-hint" style="text-transform:none;font-weight:500;letter-spacing:0">
+                Kein stiller 8,1%-Default bei unklarem Betriebstyp. Auswahl wird gespeichert und bei erneuter Generierung wiederverwendet.
+                Dies ist keine Steuerberatung und bestätigt nicht die rechtliche Korrektheit des Satzes.
+              </span>
+            </label>
             <div class="mt-2 flex gap-2 flex-wrap">
-              <button class="sa-btn-primary" :disabled="generating" @click="generate">
+              <button class="sa-btn-primary" :disabled="generating || (needsVatSelection && selectedVatRate === '')" @click="generate">
                 {{ generating ? 'Baut Seite…' : prospect.preview_url ? 'Erneut generieren' : 'Website jetzt generieren' }}
               </button>
             </div>
             <p v-if="prospect.preview_url" class="sa-hint">
-              Baut Home, Extra-Seiten, Fotos und Stock neu. Tenant und URL bleiben.
+              Baut Home, Extra-Seiten, Fotos und Stock neu. Tenant und URL bleiben; der Preview-Token bleibt stabil, solange er gültig ist.
             </p>
           </div>
         </div>
@@ -156,6 +169,21 @@ const saving = ref(false)
 const flash = ref('')
 const prospect = ref<any>(null)
 const draft = reactive({ subject: '', text: '', html: '' })
+const vatRateOptions = [0, 2.6, 3.8, 8.1] as const
+const selectedVatRate = ref('')
+
+const educationTypes = new Set(['driving_school', 'tutoring', 'music_school'])
+
+const needsVatSelection = computed(() => {
+  const p = prospect.value
+  if (!p) return false
+  if (p.analysis?.vat_selection?.rate_percent != null) return false
+  const bt = String(p.business_type || '').trim()
+  // Education types resolve to 0% without UI. All others need an explicit rate
+  // (no silent 8.1% for generic / ambiguous).
+  if (educationTypes.has(bt)) return false
+  return true
+})
 
 useHead({ title: computed(() => `${prospect.value?.name || 'Prospect'} – Review`) })
 
@@ -200,6 +228,8 @@ const applyProspect = (row: any) => {
   draft.subject = row.email_draft?.subject || ''
   draft.text = row.email_draft?.text || ''
   draft.html = row.email_draft?.html || ''
+  const stored = row.analysis?.vat_selection?.rate_percent
+  selectedVatRate.value = stored != null && stored !== '' ? String(stored) : selectedVatRate.value
 }
 
 const load = async () => {
@@ -215,13 +245,25 @@ const load = async () => {
 }
 
 const generate = async () => {
+  if (needsVatSelection.value && selectedVatRate.value === '') {
+    flash.value = 'Bitte zuerst einen MwSt-Satz wählen.'
+    return
+  }
   generating.value = true
   flash.value = ''
   try {
+    if (selectedVatRate.value !== '') {
+      await $fetch(`/api/tenant-admin/website-prospects/${route.params.id}`, {
+        method: 'PATCH',
+        headers: await authHeaders(),
+        body: { vat_rate_percent: Number(selectedVatRate.value) },
+      })
+    }
     const res = await $fetch<{ prospect: any }>(`/api/tenant-admin/website-prospects/${route.params.id}/generate`, {
       method: 'POST',
       headers: await authHeaders(),
       timeout: 90_000,
+      body: selectedVatRate.value !== '' ? { vat_rate_percent: Number(selectedVatRate.value) } : {},
     })
     applyProspect(res.prospect)
     flash.value = 'Neu gebaut — Vorschau hart neu laden.'

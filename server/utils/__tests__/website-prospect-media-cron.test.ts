@@ -1,7 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ingestProspectMedia } from '../website-prospect-media'
+import {
+  ingestProspectMedia,
+  isProspectIngestStoragePath,
+  removeProspectUploadedPaths,
+} from '../website-prospect-media'
 
 const mocks = vi.hoisted(() => ({
   fetchProspectPlaceDetails: vi.fn(),
@@ -122,5 +126,30 @@ describe('prospect media place-photo policy', () => {
   it('wires places_cron generate to skip the Place Photo refill', () => {
     const src = readFileSync(resolve(process.cwd(), 'server/utils/website-prospect-generate.ts'), 'utf8')
     expect(src).toContain("refetchPlacePhotos: prospect.source !== 'places_cron'")
+  })
+
+  it('removeProspectUploadedPaths only deletes allowlisted prospect ingest paths', async () => {
+    const removed: string[][] = []
+    const sb = {
+      storage: {
+        from: () => ({
+          remove: async (paths: string[]) => {
+            removed.push(paths)
+            return { error: null }
+          },
+        }),
+      },
+    }
+    expect(isProspectIngestStoragePath('tenant-1/website/prospect-hero-a.webp', 'tenant-1')).toBe(true)
+    const first = await removeProspectUploadedPaths(
+      sb,
+      ['tenant-1/website/prospect-hero-a.webp', 'evil/../x', 'tenant-1/other.png'],
+      'tenant-1',
+    )
+    expect(first.removed).toEqual(['tenant-1/website/prospect-hero-a.webp'])
+    expect(first.skipped.length).toBe(2)
+    const second = await removeProspectUploadedPaths(sb, [], 'tenant-1')
+    expect(second.removed).toEqual([])
+    expect(removed.length).toBe(1)
   })
 })

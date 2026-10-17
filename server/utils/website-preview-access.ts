@@ -78,6 +78,55 @@ export async function issueWebsitePreviewToken(
   return { token, expiresAt }
 }
 
+/** Extract a raw preview token from a stored preview URL (query param only). */
+export function extractPreviewTokenFromUrl(url: string | null | undefined): string {
+  if (!url) return ''
+  try {
+    const parsed = new URL(String(url))
+    return readPreviewToken(Object.fromEntries(parsed.searchParams))
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Reuse a still-valid raw token from an existing preview URL when the stored
+ * hash and expiry still match. Mint a new token when the URL is missing, the
+ * raw token cannot be recovered, the hash/expiry no longer match, or when
+ * `forceRotate` is set (deliberate invalidation).
+ */
+export async function ensureWebsitePreviewToken(
+  supabase: any,
+  websiteId: string,
+  opts?: {
+    existingPreviewUrl?: string | null
+    forceRotate?: boolean
+    now?: number
+  },
+): Promise<{ token: string; expiresAt: string; reused: boolean } | null> {
+  const now = opts?.now ?? Date.now()
+  if (!opts?.forceRotate) {
+    const existing = extractPreviewTokenFromUrl(opts?.existingPreviewUrl)
+    if (existing) {
+      const row = await loadPreviewTokenRow(supabase, websiteId)
+      if (
+        row &&
+        !previewTokenExpired(row.preview_token_expires_at, now) &&
+        previewTokensMatch(row.preview_token_hash, existing)
+      ) {
+        return {
+          token: existing,
+          expiresAt: String(row.preview_token_expires_at),
+          reused: true,
+        }
+      }
+    }
+  }
+  const issued = await issueWebsitePreviewToken(supabase, websiteId, now)
+  if (!issued) return null
+  return { ...issued, reused: false }
+}
+
 async function loadPreviewTokenRow(supabase: any, websiteId: string): Promise<TokenRow | null> {
   const { data, error } = await supabase
     .from('website_tenants')
