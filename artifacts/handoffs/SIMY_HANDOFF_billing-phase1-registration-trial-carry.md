@@ -15,7 +15,7 @@
 | `origin/main` | `0ec08fababd8e8ef1b9251fa74d0ef388c7e3300` |
 | PR #472 base (`main`) | `0ec08fababd8e8ef1b9251fa74d0ef388c7e3300` |
 | PR #472 head (pre-Phase-1 commits on branch) | `30e1c4443bc5e50bf3f311c2ca41b25695ff5e24` |
-| Phase 1 commit (current head) | `878b50e3e7c378f4dccaa349b059b702a3f9b70d` |
+| Phase 1 commit (current head) | `8449681d3e8b82bb914f00223470b198a3978e18` |
 
 PR #472 was retained as the draft vehicle (already scoped to Wallee/Stripe trial removal). Phase 1 extends that draft rather than opening a successor.
 
